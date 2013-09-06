@@ -27,15 +27,25 @@ func (store *ETCDStore) Set(key string, value string, ttl uint64) error {
 	return err
 }
 
-func (store *ETCDStore) Get(key string) (string, error) {
+func (store *ETCDStore) Get(key string) (StoreNode, error) {
 	responses, err := store.client.Get(key)
+
 	if len(responses) == 0 {
-		return "", ETCDError{reason: ETCDErrorKeyNotFound}
+		return StoreNode{}, ETCDError{reason: ETCDErrorKeyNotFound}
+	}
+	if err != nil {
+		return StoreNode{}, err
 	}
 	if len(responses) > 1 || responses[0].Key != key {
-		return "", ETCDError{reason: ETCDErrorIsDirectory}
+		return StoreNode{}, ETCDError{reason: ETCDErrorIsDirectory}
 	}
-	return responses[0].Value, err
+
+	return StoreNode{
+		Key:   responses[0].Key,
+		Value: responses[0].Value,
+		Dir:   responses[0].Dir,
+		TTL:   uint64(responses[0].TTL),
+	}, nil
 }
 
 func (store *ETCDStore) List(key string) ([]StoreNode, error) {
@@ -55,6 +65,7 @@ func (store *ETCDStore) List(key string) ([]StoreNode, error) {
 			Key:   response.Key,
 			Value: response.Value,
 			Dir:   response.Dir,
+			TTL:   uint64(response.TTL),
 		}
 	}
 

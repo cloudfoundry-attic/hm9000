@@ -8,18 +8,18 @@ import (
 	"syscall"
 )
 
-type etcdRunner struct {
+type ETCDRunner struct {
 	path        string
 	etcdCommand *exec.Cmd
 }
 
-func NewETCDRunner(path string) *etcdRunner {
-	return &etcdRunner{
+func NewETCDRunner(path string) *ETCDRunner {
+	return &ETCDRunner{
 		path: path,
 	}
 }
 
-func (etcd *etcdRunner) StartETCD() {
+func (etcd *ETCDRunner) StartETCD() {
 	etcd.etcdCommand = exec.Command(etcd.path, "-d", "/tmp")
 
 	err := etcd.etcdCommand.Start()
@@ -29,7 +29,7 @@ func (etcd *etcdRunner) StartETCD() {
 	}, 1, 0.05).Should(BeTrue())
 }
 
-func (etcd *etcdRunner) StopETCD() {
+func (etcd *ETCDRunner) StopETCD() {
 	if etcd.etcdCommand != nil {
 		etcd.etcdCommand.Process.Signal(syscall.SIGINT)
 		etcd.etcdCommand.Process.Wait()
@@ -41,7 +41,7 @@ func (etcd *etcdRunner) StopETCD() {
 	}
 }
 
-func (etcd *etcdRunner) exists() bool {
+func (etcd *ETCDRunner) exists() bool {
 	_, err := os.Stat("/tmp/info")
 	if err == nil {
 		return true

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var runner *etcdRunner
+var runner *ETCDRunner
 
 func TestBootstrap(t *testing.T) {
 	RegisterFailHandler(Fail)

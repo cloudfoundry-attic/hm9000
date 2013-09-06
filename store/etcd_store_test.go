@@ -21,6 +21,9 @@ var _ = Describe("ETCD Store", func() {
 		var dir_key string
 		var dir_entry_key string
 
+		var expectedLeafNode StoreNode
+		var expectedDirNode StoreNode
+
 		BeforeEach(func() {
 			key = "/foo/bar"
 			value = "my_stuff"
@@ -32,27 +35,29 @@ var _ = Describe("ETCD Store", func() {
 			value = "my_stuff"
 			err = store.Set(dir_key+dir_entry_key, value, 0)
 			Ω(err).ShouldNot(HaveOccured())
+
+			expectedLeafNode = StoreNode{
+				Key:   key,
+				Value: value,
+				Dir:   false,
+				TTL:   0,
+			}
+
+			expectedDirNode = StoreNode{
+				Key:   dir_key,
+				Value: "",
+				Dir:   true,
+				TTL:   0,
+			}
 		})
 
 		It("should be able to set and get things from the store", func() {
 			value, err := store.Get("/foo/bar")
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(value).Should(Equal("my_stuff"))
+			Ω(value).Should(Equal(expectedLeafNode))
 		})
 
 		It("Should list directory contents", func() {
-			expectedLeafNode := StoreNode{
-				Key:   key,
-				Value: value,
-				Dir:   false,
-			}
-
-			expectedDirNode := StoreNode{
-				Key:   dir_key,
-				Value: "",
-				Dir:   true,
-			}
-
 			value, err := store.List("/foo")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(value).Should(HaveLen(2))
@@ -62,8 +67,7 @@ var _ = Describe("ETCD Store", func() {
 
 		It("should be able to delete things from the store", func() {
 			err := store.Delete("/foo/bar")
-			Ω(err).ShouldNot(HaveOccured())
-			value, err = store.Get("/foo/bar")
+			_, err = store.Get("/foo/bar")
 			Ω(err).Should(HaveOccured())
 			Ω(IsKeyNotFoundError(err)).Should(BeTrue())
 		})
