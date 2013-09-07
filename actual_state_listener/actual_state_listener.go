@@ -40,20 +40,33 @@ func (listener *ActualStateListener) Start() {
 		err := json.Unmarshal(messageBody, &heartbeat)
 
 		if err != nil {
-			listener.logger.Info("Could not unmarshal heartbeat from store", map[string]string{"Error": err.Error(), "MessageBody": string(messageBody)})
+			listener.logger.Info("Could not unmarshal heartbeat from store",
+				map[string]string{
+					"Error":       err.Error(),
+					"MessageBody": string(messageBody),
+				})
 			return
 		}
 
 		for _, instance := range heartbeat.InstanceHeartbeats {
 			key := "/actual/" + instance.AppGuid + "-" + instance.AppVersion + "/" + strconv.Itoa(instance.InstanceIndex) + "/" + instance.InstanceGuid
+
 			value, err := json.Marshal(instance)
 			if err != nil {
-				listener.logger.Info("Could not json Marshal instance", map[string]string{"Error": err.Error()})
+				listener.logger.Info("Could not json Marshal instance",
+					map[string]string{
+						"Error": err.Error(),
+					})
 				continue
 			}
+
 			err = listener.heartbeatStore.Set(key, string(value), config.HEARTBEAT_TTL)
 			if err != nil {
-				listener.logger.Info("Could not put instance heartbeat in store:", map[string]string{"Error": err.Error(), "Heartbeat": string(value)})
+				listener.logger.Info("Could not put instance heartbeat in store:",
+					map[string]string{
+						"Error":     err.Error(),
+						"Heartbeat": string(value),
+					})
 			}
 		}
 	})
@@ -72,7 +85,11 @@ func (listener *ActualStateListener) bumpFreshness() {
 	}
 
 	err = listener.heartbeatStore.Set(config.ACTUAL_FRESHNESS_KEY, jsonTimestamp, config.ACTUAL_FRESHNESS_TTL)
+
 	if err != nil {
-		listener.logger.Info("Could not update actual freshness", map[string]string{"Error": err.Error()})
+		listener.logger.Info("Could not update actual freshness",
+			map[string]string{
+				"Error": err.Error(),
+			})
 	}
 }
