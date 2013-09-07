@@ -92,8 +92,36 @@ var _ = Describe("ETCD Store", func() {
 	})
 
 	Context("when the store is down", func() {
-		PIt("should return a timeout error", func() {
+		BeforeEach(func() {
+			runner.StopETCD()
+		})
 
+		Context("when we get", func() {
+			It("should return a timeout error", func() {
+				_, err := store.Get("/foo/bar")
+				Ω(IsTimeoutError(err)).Should(BeTrue())
+			})
+		})
+
+		Context("when we set", func() {
+			It("should return a timeout error", func() {
+				err := store.Set("/foo/bar", "baz", 0)
+				Ω(IsTimeoutError(err)).Should(BeTrue())
+			})
+		})
+
+		Context("when we list", func() {
+			It("should return a timeout error", func() {
+				_, err := store.List("/foo/bar")
+				Ω(IsTimeoutError(err)).Should(BeTrue())
+			})
+		})
+
+		Context("when we delete", func() {
+			It("should return a timeout error", func() {
+				err := store.Delete("/foo/bar")
+				Ω(IsTimeoutError(err)).Should(BeTrue())
+			})
 		})
 	})
 

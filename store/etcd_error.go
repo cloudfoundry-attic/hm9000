@@ -7,6 +7,7 @@ const (
 	ETCDErrorKeyNotFound    ETCDErrorReason = "KeyNotFound"
 	ETCDErrorIsDirectory    ETCDErrorReason = "IsDirectory"
 	ETCDErrorIsNotDirectory ETCDErrorReason = "IsNotDirectory"
+	ETCDErrorTimeout        ETCDErrorReason = "Timeout Reaching Store"
 )
 
 type ETCDError struct {
@@ -39,4 +40,12 @@ func IsNotDirectoryError(err error) bool {
 		return false
 	}
 	return etcdErr.reason == ETCDErrorIsNotDirectory
+}
+
+func IsTimeoutError(err error) bool {
+	etcdErr, ok := err.(ETCDError)
+	if !ok {
+		return false
+	}
+	return etcdErr.reason == ETCDErrorTimeout
 }

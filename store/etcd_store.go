@@ -22,13 +22,24 @@ func (store *ETCDStore) Connect() error {
 	return nil
 }
 
+func (store *ETCDStore) isTimeoutError(err error) bool {
+	return err != nil && err.Error() == "Cannot reach servers"
+}
+
 func (store *ETCDStore) Set(key string, value string, ttl uint64) error {
 	_, err := store.client.Set(key, value, ttl)
+	if store.isTimeoutError(err) {
+		return ETCDError{reason: ETCDErrorTimeout}
+	}
+
 	return err
 }
 
 func (store *ETCDStore) Get(key string) (StoreNode, error) {
 	responses, err := store.client.Get(key)
+	if store.isTimeoutError(err) {
+		return StoreNode{}, ETCDError{reason: ETCDErrorTimeout}
+	}
 
 	if len(responses) == 0 {
 		return StoreNode{}, ETCDError{reason: ETCDErrorKeyNotFound}
@@ -50,6 +61,10 @@ func (store *ETCDStore) Get(key string) (StoreNode, error) {
 
 func (store *ETCDStore) List(key string) ([]StoreNode, error) {
 	responses, err := store.client.Get(key)
+	if store.isTimeoutError(err) {
+		return []StoreNode{}, ETCDError{reason: ETCDErrorTimeout}
+	}
+
 	if err != nil {
 		return []StoreNode{}, err
 	}
@@ -74,5 +89,9 @@ func (store *ETCDStore) List(key string) ([]StoreNode, error) {
 
 func (store *ETCDStore) Delete(key string) error {
 	_, err := store.client.Delete(key)
+	if store.isTimeoutError(err) {
+		return ETCDError{reason: ETCDErrorTimeout}
+	}
+
 	return err
 }
