@@ -3,6 +3,8 @@ package store
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/cloudfoundry/hm9000/config"
 )
 
 var _ = Describe("ETCD Store", func() {
@@ -10,7 +12,7 @@ var _ = Describe("ETCD Store", func() {
 	BeforeEach(func() {
 		runner.StartETCD()
 
-		store = NewETCDStore("http://127.0.0.1:4001")
+		store = NewETCDStore(config.ETCD_URL)
 		err := store.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 	})
@@ -89,6 +91,12 @@ var _ = Describe("ETCD Store", func() {
 		})
 	})
 
+	Context("when the store is down", func() {
+		PIt("should return a timeout error", func() {
+
+		})
+	})
+
 	Context("When fetching a non-existent key", func() {
 		It("should return an error", func() {
 			_, err := store.Get("/not_a_key")
@@ -108,7 +116,7 @@ var _ = Describe("ETCD Store", func() {
 			Eventually(func() interface{} {
 				_, err = store.Get("/foo")
 				return err
-			}, 1.01, 0.01).Should(HaveOccured())
+			}, 1.05, 0.01).Should(HaveOccured())
 		})
 	})
 })
