@@ -36,7 +36,7 @@ var _ = Describe("Actual state listener", func() {
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		listener = NewActualStateListener(natsRunner.MessageBus, etcdStore, timeProvider)
+		listener = NewActualStateListener(natsRunner.MessageBus, etcdStore, timeProvider, helpers.NewFakeLogger())
 		listener.Start()
 	})
 
