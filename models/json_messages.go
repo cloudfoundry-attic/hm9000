@@ -30,6 +30,7 @@ type DesiredAppState struct {
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
+//Actual app state
 //Heartbeats
 type InstanceState string
 
@@ -56,7 +57,6 @@ type InstanceHeartbeat struct {
 }
 
 //Start and Stop Messages
-
 type StartMessage struct {
 	AppGuid                   string         `json:"droplet"`
 	AppVersion                string         `json:"version"`
@@ -75,7 +75,6 @@ type StopMessage struct {
 }
 
 //Droplet Exited
-
 type DropletExitedReason string
 
 const (

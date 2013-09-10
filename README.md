@@ -11,12 +11,12 @@ As a result there are several Go Packages in this repository, each with a compre
 WIP: Eventually this will house the `hm9000` CLI. This executable will wrap all the subcomponents, enacpsulate any common operations (e.g. loading configuration data from YML files), and make it possible to launch individual components a la (e.g.):
 
 ```bash
-hm9000 actual_state_listener -config=/path/to/config.yml
+hm9000 actualstatelistener -config=/path/to/config.yml
 ```
 
-### `actual_state_listener`
+### `actualstatelistener`
 
-The `actual_state_listener` provides a simple listener daemon that monitors the `NATS` stream for app heartbeats.  It generates an entry in the `store` for each heartbeating app under `/actual/INSTANCE_GUID`.
+The `actualstatelistener` provides a simple listener daemon that monitors the `NATS` stream for app heartbeats.  It generates an entry in the `store` for each heartbeating app under `/actual/INSTANCE_GUID`.
 
 It also maintains a `FreshnessTimestamp`  under `/actual-fresh` to allow other components to know whether or not they can trust the information under `/actual`
 

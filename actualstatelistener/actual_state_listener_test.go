@@ -1,4 +1,4 @@
-package actual_state_listener
+package actualstatelistener
 
 import (
 	. "github.com/onsi/ginkgo"

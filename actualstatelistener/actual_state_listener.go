@@ -1,4 +1,4 @@
-package actual_state_listener
+package actualstatelistener
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
@@ -13,10 +13,10 @@ import (
 )
 
 type ActualStateListener struct {
+	logger.Logger
 	messageBus     cfmessagebus.MessageBus
 	heartbeatStore store.Store
 	timeProvider   time_provider.TimeProvider
-	logger         logger.Logger
 }
 
 func NewActualStateListener(messageBus cfmessagebus.MessageBus,
@@ -25,10 +25,10 @@ func NewActualStateListener(messageBus cfmessagebus.MessageBus,
 	logger logger.Logger) *ActualStateListener {
 
 	return &ActualStateListener{
+		Logger:         logger,
 		messageBus:     messageBus,
 		heartbeatStore: heartbeatStore,
 		timeProvider:   timeProvider,
-		logger:         logger,
 	}
 }
 
@@ -40,7 +40,7 @@ func (listener *ActualStateListener) Start() {
 		err := json.Unmarshal(messageBody, &heartbeat)
 
 		if err != nil {
-			listener.logger.Info("Could not unmarshal heartbeat from store",
+			listener.Info("Could not unmarshal heartbeat from store",
 				map[string]string{
 					"Error":       err.Error(),
 					"MessageBody": string(messageBody),
@@ -53,7 +53,7 @@ func (listener *ActualStateListener) Start() {
 
 			value, err := json.Marshal(instance)
 			if err != nil {
-				listener.logger.Info("Could not json Marshal instance",
+				listener.Info("Could not json Marshal instance",
 					map[string]string{
 						"Error": err.Error(),
 					})
@@ -62,7 +62,7 @@ func (listener *ActualStateListener) Start() {
 
 			err = listener.heartbeatStore.Set(key, string(value), config.HEARTBEAT_TTL)
 			if err != nil {
-				listener.logger.Info("Could not put instance heartbeat in store:",
+				listener.Info("Could not put instance heartbeat in store:",
 					map[string]string{
 						"Error":     err.Error(),
 						"Heartbeat": string(value),
@@ -87,7 +87,7 @@ func (listener *ActualStateListener) bumpFreshness() {
 	err = listener.heartbeatStore.Set(config.ACTUAL_FRESHNESS_KEY, jsonTimestamp, config.ACTUAL_FRESHNESS_TTL)
 
 	if err != nil {
-		listener.logger.Info("Could not update actual freshness",
+		listener.Info("Could not update actual freshness",
 			map[string]string{
 				"Error": err.Error(),
 			})

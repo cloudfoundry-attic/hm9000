@@ -15,10 +15,9 @@ var etcdPort int
 
 func TestBootstrap(t *testing.T) {
 	etcdPort = 4000 + config.GinkgoConfig.ParallelNode
-	RegisterFailHandler(Fail)
-
 	runner = etcd_runner.NewETCDRunner("etcd", etcdPort)
 
+	RegisterFailHandler(Fail)
 	RunSpecs(t, "Store tests")
 
 	runner.StopETCD()

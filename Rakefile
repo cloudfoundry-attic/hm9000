@@ -16,10 +16,9 @@ task :test_helpers do |t|
     test_dir("./test_helpers/desired_state_server")
 end
 
-
 desc "Run all the component tests"
 task :test_components do |t|
-    test_dir("./actual_state_listener")
+    test_dir("./actualstatelistener")
     test_dir("./store")
 end
 

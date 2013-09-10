@@ -28,6 +28,7 @@ func (etcd *ETCDRunner) StartETCD() {
 
 	err := etcd.etcdCommand.Start()
 	Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
+
 	Eventually(func() interface{} {
 		return etcd.exists()
 	}, 1, 0.05).Should(BeTrue(), "Expected ETCD")

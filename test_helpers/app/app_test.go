@@ -14,7 +14,7 @@ func TestBootstrap(t *testing.T) {
 	RunSpecs(t, "App")
 }
 
-var _ = Describe("MCAT Models", func() {
+var _ = Describe("App Model", func() {
 	var app App
 
 	BeforeEach(func() {
