@@ -1,6 +1,7 @@
 package etcd_runner
 
 import (
+	"fmt"
 	. "github.com/onsi/gomega"
 
 	"os"
@@ -10,23 +11,26 @@ import (
 
 type ETCDRunner struct {
 	path        string
+	port        int
 	etcdCommand *exec.Cmd
 }
 
-func NewETCDRunner(path string) *ETCDRunner {
+func NewETCDRunner(path string, port int) *ETCDRunner {
 	return &ETCDRunner{
 		path: path,
+		port: port,
 	}
 }
 
 func (etcd *ETCDRunner) StartETCD() {
-	etcd.etcdCommand = exec.Command(etcd.path, "-d", "/tmp")
+	os.MkdirAll(etcd.tmpPath(), 0700)
+	etcd.etcdCommand = exec.Command(etcd.path, "-d", etcd.tmpPath(), "-c", fmt.Sprintf("127.0.0.1:%d", etcd.port))
 
 	err := etcd.etcdCommand.Start()
 	Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
 	Eventually(func() interface{} {
 		return etcd.exists()
-	}, 1, 0.05).Should(BeTrue())
+	}, 1, 0.05).Should(BeTrue(), "Expected ETCD")
 }
 
 func (etcd *ETCDRunner) StopETCD() {
@@ -34,15 +38,23 @@ func (etcd *ETCDRunner) StopETCD() {
 		etcd.etcdCommand.Process.Signal(syscall.SIGINT)
 		etcd.etcdCommand.Process.Wait()
 		etcd.etcdCommand = nil
-		os.Remove("/tmp/log")
-		os.Remove("/tmp/info")
-		os.Remove("/tmp/snapshot")
-		os.Remove("/tmp/conf")
+		os.Remove(etcd.tmpPathTo("log"))
+		os.Remove(etcd.tmpPathTo("info"))
+		os.Remove(etcd.tmpPathTo("snapshot"))
+		os.Remove(etcd.tmpPathTo("conf"))
 	}
 }
 
+func (etcd *ETCDRunner) tmpPath() string {
+	return fmt.Sprintf("/tmp/ETCD_%d", etcd.port)
+}
+
+func (etcd *ETCDRunner) tmpPathTo(subdir string) string {
+	return fmt.Sprintf("/%s/%s", etcd.tmpPath(), subdir)
+}
+
 func (etcd *ETCDRunner) exists() bool {
-	_, err := os.Stat("/tmp/info")
+	_, err := os.Stat(etcd.tmpPathTo("info"))
 	if err == nil {
 		return true
 	}

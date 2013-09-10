@@ -12,7 +12,7 @@ var _ = Describe("ETCD Store", func() {
 	BeforeEach(func() {
 		runner.StartETCD()
 
-		store = NewETCDStore(config.ETCD_URL)
+		store = NewETCDStore(config.ETCD_URL(etcdPort))
 		err := store.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 	})

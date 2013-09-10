@@ -32,7 +32,7 @@ var _ = Describe("Actual state listener", func() {
 		app = NewApp()
 		anotherApp = NewApp()
 
-		etcdStore = store.NewETCDStore(config.ETCD_URL)
+		etcdStore = store.NewETCDStore(config.ETCD_URL(4001))
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 

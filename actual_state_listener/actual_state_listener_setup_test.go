@@ -24,7 +24,7 @@ func TestBootstrap(t *testing.T) {
 	natsRunner = nats_runner.NewNATSRunner(4222)
 	natsRunner.Start()
 
-	etcdRunner = etcd_runner.NewETCDRunner("etcd")
+	etcdRunner = etcd_runner.NewETCDRunner("etcd", 4001)
 	messagePublisher = message_publisher.NewMessagePublisher(natsRunner.MessageBus)
 
 	RunSpecs(t, "Actual State Listener Tests")
