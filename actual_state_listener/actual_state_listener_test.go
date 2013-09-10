@@ -102,7 +102,7 @@ var _ = Describe("Actual state listener", func() {
 					messagePublisher.PublishHeartbeat(app.Heartbeat(1, 17))
 				})
 
-				It("should create /actual/fresh with the current timestamp and a TTL", func() {
+				It("should create /actual-fresh with the current timestamp and a TTL", func() {
 					var value store.StoreNode
 					var err error
 
@@ -121,7 +121,7 @@ var _ = Describe("Actual state listener", func() {
 			})
 		})
 
-		Context("when /actual/fresh is present", func() {
+		Context("when /actual-fresh is present", func() {
 			BeforeEach(func() {
 				timestamp, _ := json.Marshal(FreshnessTimestamp{Timestamp: 100})
 				etcdStore.Set(config.ACTUAL_FRESHNESS_KEY, string(timestamp), 2)

@@ -16,7 +16,9 @@ hm9000 actual_state_listener -config=/path/to/config.yml
 
 ### `actual_state_listener`
 
-The `actual_state_listener` provides a simple listener daemon that monitors the `NATS` stream for app heartbeats.  It generates an entry in the `store` for each heartbeating app under.
+The `actual_state_listener` provides a simple listener daemon that monitors the `NATS` stream for app heartbeats.  It generates an entry in the `store` for each heartbeating app under `/actual/INSTANCE_GUID`.
+
+It also maintains a `FreshnessTimestamp`  under `/actual-fresh` to allow other components to know whether or not they can trust the information under `/actual`
 
 #### WIP:`desired_state_listener`
 
