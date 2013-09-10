@@ -63,20 +63,77 @@ The `store` is an generalized client for connecting to a Zookeeper/ETCD-like hig
 
 ## Test Support Packages (under test_helpers)
 
-### `test_helpers`
-
 `test_helpers` contains a (large) number of test support packages.  These range from simple fakes to comprehensive libraries used for faking out other CloudFoundry components (e.g. heartbeating DEAs) in integration tests.
 
-- `app`: a simple domain object that encapsulates a running CloudFoundry app.
+### Fakes
 
-  The `app` package can be used to generate consistent data structures (heartbeats, desired state).  These data structures are then passed into the other test helpers to simulate a CloudFoundry eco-system.
-  
-  Think of `app` as your source of fixture test data.  It's used in integration tests *and* unit tests.
-- `fake_logger`: provides a fake logger
-- `fake_time_provider`: provides a fake `TimeProvider`
-- `message_publisher`: publishes message to the NATS bus.
-- `nats_runner`: starts and manages a NATS server.
-- `etcd_runner`: starts and manages an ETCD server.
+#### `fake_logger`
+
+Provides a fake implementation of the `helpers/logger` interface
+
+#### `fake_time_provider`
+
+Provides a fake implementation of the `helpers/time_provider` interface.  Useful for injecting time dependency in test.
+
+### Fixtures
+
+#### `app`
+
+`app` is a simple domain object that encapsulates a running CloudFoundry app.
+
+The `app` package can be used to generate self-consistent data structures (heartbeats, desired state).  These data structures are then passed into the other test helpers to simulate a CloudFoundry eco-system.
+
+Think of `app` as your source of fixture test data.  It's intended to be used in integration tests *and* unit tests.
+
+Some brief documentation -- look at the code and tests for more:
+
+```go
+//get a new fixture app, this will generate appropriate
+//random APP and VERSION GUIDs
+app := NewApp()
+
+//Get the desired state for the app.  This can be passed into
+//the desired state server to simulate the APP's precense in 
+//the CC's DB.  By default the app is staged and started, to change
+//this, modify the return value.  Time is always injected.
+desiredState := app.DesiredState(UPDATED_AT_TIMESTAMP)
+
+//get an instance at index 0.  this getter will lazily create and memoize
+//instances and populate them with an INSTANCE_GUID and the correct
+//INDEX.
+instance0 := app.GetInstance(0)
+
+//fetch, for example, the exit message for the instance. Time is always injected
+exitedMessage := instance0.DropletExited(DropletExitReasonCrashed, TIMESTAMP)
+
+//generate a heartbeat for the app.  first argument is the # of instances,
+// second is a timestamp denoting *when the app transitioned into its current state*  
+//note that the INSTANCE_GUID associated with the instance at index 0 will
+//match that provided by app.GetInstance(0)
+app.Heartbeat(2, TIMESTAMP)
+```
+
+### Infrastructure Helpers
+
+#### `message_publisher`
+
+Provides a simple mechanism to publish actual_state related messages to the NATS bus.  Handles JSON encoding.
+
+#### `start_stop_listener`
+
+Listens on the NATS bus for `health.start` and `health.stop` messages.  It parses these messages and makes them available via a simple interface.  Useful for testing that messages are sent by the health manager appropriately.
+
+#### `desired_state_server`
+
+Brings up an in-process http server that mimics the CC's bulk endpoints (including authentication via NATS and pagination).
+
+#### `nats_runner`
+
+Brings up and manages the lifecycle of a live NATS server.  After bringing the server up it provides a fully configured cfmessagebus object that you can pass to your test subjects.
+
+#### `etcd_runner`
+
+Brings up and manages the lifecycle of a live ETCD server.
 
 ## The MCAT
 
