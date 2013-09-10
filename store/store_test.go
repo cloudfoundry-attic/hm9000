@@ -4,15 +4,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/cloudfoundry/hm9000/test_helpers/etcd_runner"
+
 	"testing"
 )
 
-var runner *ETCDRunner
+var runner *etcd_runner.ETCDRunner
 
 func TestBootstrap(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	runner = NewETCDRunner("etcd")
+	runner = etcd_runner.NewETCDRunner("etcd")
 
 	RunSpecs(t, "Store tests")
 

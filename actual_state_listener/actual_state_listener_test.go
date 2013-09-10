@@ -8,11 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/cloudfoundry/hm9000/mcat/app"
 	. "github.com/cloudfoundry/hm9000/models"
+	. "github.com/cloudfoundry/hm9000/test_helpers/app"
+	"github.com/cloudfoundry/hm9000/test_helpers/fake_logger"
+	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
 
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers"
 	"github.com/cloudfoundry/hm9000/store"
 )
 
@@ -22,10 +23,10 @@ var _ = Describe("Actual state listener", func() {
 	var etcdStore store.Store
 
 	var listener *ActualStateListener
-	var timeProvider *helpers.FakeTimeProvider
+	var timeProvider *fake_time_provider.FakeTimeProvider
 
 	BeforeEach(func() {
-		timeProvider = &helpers.FakeTimeProvider{
+		timeProvider = &fake_time_provider.FakeTimeProvider{
 			TimeToProvide: time.Now(),
 		}
 
@@ -36,7 +37,7 @@ var _ = Describe("Actual state listener", func() {
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		listener = NewActualStateListener(natsRunner.MessageBus, etcdStore, timeProvider, helpers.NewFakeLogger())
+		listener = NewActualStateListener(natsRunner.MessageBus, etcdStore, timeProvider, fake_logger.NewFakeLogger())
 		listener.Start()
 	})
 

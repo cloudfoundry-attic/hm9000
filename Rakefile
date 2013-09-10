@@ -12,9 +12,9 @@ end
 
 desc "Run all the component tests"
 task :test do |t|
+    test_dir("./test_helpers/message_publisher")
+    test_dir("./test_helpers/app")
     test_dir("./actual_state_listener")
-    test_dir("./mcat/message_publisher")
-    test_dir("./mcat/app")
     test_dir("./store")
 end
 

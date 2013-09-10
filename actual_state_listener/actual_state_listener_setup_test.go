@@ -4,9 +4,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/hm9000/mcat/message_publisher"
-	"github.com/cloudfoundry/hm9000/mcat/nats_runner"
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/test_helpers/etcd_runner"
+	"github.com/cloudfoundry/hm9000/test_helpers/message_publisher"
+	"github.com/cloudfoundry/hm9000/test_helpers/nats_runner"
 
 	"os"
 	"os/signal"
@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-var etcdRunner *store.ETCDRunner
+var etcdRunner *etcd_runner.ETCDRunner
 var natsRunner *nats_runner.NATSRunner
 var messagePublisher *message_publisher.MessagePublisher
 
@@ -24,7 +24,7 @@ func TestBootstrap(t *testing.T) {
 	natsRunner = nats_runner.NewNATSRunner(4222)
 	natsRunner.Start()
 
-	etcdRunner = store.NewETCDRunner("etcd")
+	etcdRunner = etcd_runner.NewETCDRunner("etcd")
 	messagePublisher = message_publisher.NewMessagePublisher(natsRunner.MessageBus)
 
 	RunSpecs(t, "Actual State Listener Tests")

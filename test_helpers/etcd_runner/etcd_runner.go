@@ -1,4 +1,4 @@
-package store
+package etcd_runner
 
 import (
 	. "github.com/onsi/gomega"

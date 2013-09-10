@@ -1,4 +1,4 @@
-package helpers
+package time_provider
 
 import "time"
 
@@ -10,12 +10,4 @@ type RealTimeProvider struct{}
 
 func (provider *RealTimeProvider) Time() time.Time {
 	return time.Now()
-}
-
-type FakeTimeProvider struct {
-	TimeToProvide time.Time
-}
-
-func (provider *FakeTimeProvider) Time() time.Time {
-	return provider.TimeToProvide
 }

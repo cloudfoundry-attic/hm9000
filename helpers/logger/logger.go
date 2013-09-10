@@ -1,8 +1,7 @@
-package helpers
+package logger
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"log/syslog"
 	"os"
@@ -37,17 +36,4 @@ func (logger *RealLogger) Info(subject string, message map[string]string) {
 
 	logger.logger.Printf("%s - %s", subject, messageString)
 	logger.infoSysLogger.Printf("%s - %s", subject, messageString)
-}
-
-type FakeLogger struct{}
-
-func NewFakeLogger() *FakeLogger {
-	return &FakeLogger{}
-}
-
-func (logger *FakeLogger) Info(subject string, message map[string]string) {
-	_, err := json.Marshal(message)
-	if err != nil {
-		panic(fmt.Sprintf("LOGGER GOT AN UNMARSHALABLE MESSAGE: %s", err.Error()))
-	}
 }

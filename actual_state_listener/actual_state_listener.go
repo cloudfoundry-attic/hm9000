@@ -2,7 +2,8 @@ package actual_state_listener
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers"
+	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 
@@ -15,14 +16,14 @@ import (
 type ActualStateListener struct {
 	messageBus     cfmessagebus.MessageBus
 	heartbeatStore store.Store
-	timeProvider   helpers.TimeProvider
-	logger         helpers.Logger
+	timeProvider   time_provider.TimeProvider
+	logger         logger.Logger
 }
 
 func NewActualStateListener(messageBus cfmessagebus.MessageBus,
 	heartbeatStore store.Store,
-	timeProvider helpers.TimeProvider,
-	logger helpers.Logger) *ActualStateListener {
+	timeProvider time_provider.TimeProvider,
+	logger logger.Logger) *ActualStateListener {
 
 	return &ActualStateListener{
 		messageBus:     messageBus,
