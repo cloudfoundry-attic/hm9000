@@ -10,7 +10,6 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus"
 
 	"encoding/json"
-	"strconv"
 )
 
 type ActualStateListener struct {
@@ -50,7 +49,7 @@ func (listener *ActualStateListener) Start() {
 		}
 
 		for _, instance := range heartbeat.InstanceHeartbeats {
-			key := "/actual/" + instance.AppGuid + "-" + instance.AppVersion + "/" + strconv.Itoa(instance.InstanceIndex) + "/" + instance.InstanceGuid
+			key := "/actual/" + instance.InstanceGuid
 
 			value, err := json.Marshal(instance)
 			if err != nil {

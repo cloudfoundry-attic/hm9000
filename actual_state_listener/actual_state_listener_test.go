@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"encoding/json"
-	"strconv"
 	"time"
 
 	. "github.com/cloudfoundry/hm9000/models"
@@ -42,7 +41,7 @@ var _ = Describe("Actual state listener", func() {
 	})
 
 	verifyHeartbeatInStore := func(hb InstanceHeartbeat) {
-		storeKey := "/actual/" + hb.AppGuid + "-" + hb.AppVersion + "/" + strconv.Itoa(hb.InstanceIndex) + "/" + hb.InstanceGuid
+		storeKey := "/actual/" + hb.InstanceGuid
 		var value store.StoreNode
 		var err error
 
