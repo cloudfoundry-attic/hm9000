@@ -6,7 +6,7 @@ As a result there are several Go Packages in this repository, each with a compre
 
 ## HM9000 components
 
-### `hm9000`: the top level
+### WIP: `hm9000`: the top level
 
 WIP: Eventually this will house the `hm9000` CLI. This executable will wrap all the subcomponents, enacpsulate any common operations (e.g. loading configuration data from YML files), and make it possible to launch individual components a la (e.g.):
 
@@ -18,19 +18,19 @@ hm9000 actual_state_listener -config=/path/to/config.yml
 
 The `actual_state_listener` provides a simple listener daemon that monitors the `NATS` stream for app heartbeats.  It generates an entry in the `store` for each heartbeating app under.
 
-#### `desired_state_listener`
+#### WIP:`desired_state_listener`
 
 WIP: The `desired_state_listener` provides a simple daemon that polls the cloud controller for the desired state.  It generates an entry in the `store` for each desired app instance.
 
-### `analyzer`
+### WIP:`analyzer`
 
 WIP: The `analyzer` runs periodically and uses the `outbox` to put `start` and `stop` messages in the queue.
 
-### `sender`
+### WIP:`sender`
 
 WIP: The `sender` runs periodically and uses the `outbox` to pull messages off the queue and send them over `NATS`.  The `sender` is responsible for throttling the rate at which messages are sent over NATS.
 
-### `api`
+### WIP:`api`
 
 WIP: The `api` is a simple HTTP server that provides access to information about the actual state.  It uses the high availability store to fulfill these requests.
 
@@ -53,7 +53,7 @@ Many more advanced test helpers are in the `MCAT` subpackages.  See below.
 
 `models` encapsulates the various JSON structs that are sent/received over NATS/HTTP.
 
-### `outbox`
+### WIP:`outbox`
 
 WIP: `outboux` is a library used by the analyzer and scheduler to add/remove messages from the message queue.  The message queue is stored in the high availability `store`.  The `outbox` guarantees that a message is only added once to the queue (i.e. if a `start` message for a given app guid, version guid, and index has not been sent yet, the `outbox` will prevent another identical `start` message from being inserted in the queue).
 
@@ -82,11 +82,11 @@ The `store` is an generalized client for connecting to a Zookeeper/ETCD-like hig
 
 The MCAT is comprised of two major integration test suites:
 
-### The `MD` Test Suite
+### WIP:The `MD` Test Suite
 
 The `MD` test suite excercises the `HM9000` components through a series of integration-level tests.  The individual components are designed to be simple and have comprehensive unit test coverage.  However, it's crucial that we have comprehensive test coverage for the *interactions* between these components.  That's what the `MD` suite is for.
 
-### The `PHD` Benchmark Suite
+### WIP:The `PHD` Benchmark Suite
 
 The `PHD` suite is a collection of benchmark tests.  This is a slow-running suite that is intended, primarily, to evaluate the performance of the various components (especially the high-availability store) under various loads.
 
