@@ -3,6 +3,7 @@ package desiredstatepoller
 import (
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/http_client"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
@@ -12,23 +13,26 @@ import (
 const initialBulkToken = "{}"
 
 type desiredStatePoller struct {
-	messageBus        cfmessagebus.MessageBus
-	httpClientFactory http_client.HttpClientFactory
-	store             store.Store
-	authorization     string
-	ccBaseURL         string
+	messageBus    cfmessagebus.MessageBus
+	httpClient    http_client.HttpClient
+	store         store.Store
+	authorization string
+	ccBaseURL     string
+	batchSize     int
 }
 
 func NewDesiredStatePoller(messageBus cfmessagebus.MessageBus,
 	store store.Store,
-	httpClientFactory http_client.HttpClientFactory,
-	ccBaseURL string) *desiredStatePoller {
+	httpClient http_client.HttpClient,
+	ccBaseURL string,
+	batchSize int) *desiredStatePoller {
 
 	return &desiredStatePoller{
-		messageBus:        messageBus,
-		httpClientFactory: httpClientFactory,
-		store:             store,
-		ccBaseURL:         ccBaseURL,
+		messageBus: messageBus,
+		httpClient: httpClient,
+		store:      store,
+		ccBaseURL:  ccBaseURL,
+		batchSize:  batchSize,
 	}
 }
 
@@ -58,7 +62,11 @@ func (poller *desiredStatePoller) bulkURL(batchSize int, bulkToken string) strin
 }
 
 func (poller *desiredStatePoller) fetch() {
-	req, err := http.NewRequest("GET", poller.bulkURL(10, initialBulkToken), nil)
+	poller.fetchBatch(initialBulkToken)
+}
+
+func (poller *desiredStatePoller) fetchBatch(token string) {
+	req, err := http.NewRequest("GET", poller.bulkURL(poller.batchSize, token), nil)
 
 	if err != nil {
 		//TODO: Log
@@ -67,35 +75,41 @@ func (poller *desiredStatePoller) fetch() {
 
 	req.Header.Add("Authorization", poller.authorization)
 
-	client := poller.httpClientFactory.NewClient()
-	httpResult := <-client.Do(req)
-	defer httpResult.Response.Body.Close()
+	poller.httpClient.Do(req, func(resp *http.Response, err error) {
+		if err != nil {
+			//TODO: Log
+			return
+		}
 
-	if httpResult.Err != nil {
-		//TODO: Log
-		return
-	}
+		defer resp.Body.Close()
 
-	body := make([]byte, httpResult.Response.ContentLength)
-	_, err = httpResult.Response.Body.Read(body)
+		if resp.StatusCode == http.StatusUnauthorized {
+			poller.authorization = ""
+			//TODO: Log
+			return
+		}
 
-	if err != nil {
-		//TODO: Log
-		return
-	}
+		body := make([]byte, resp.ContentLength)
+		_, err = resp.Body.Read(body)
 
-	desiredState, err := NewDesiredStateServerResponse(body)
-	if err != nil {
-		//TODO: Log
-		return
-	}
+		if err != nil {
+			//TODO: Log
+			return
+		}
 
-	poller.pushToStore(desiredState)
+		desiredState, _ := NewDesiredStateServerResponse(body)
+		if len(desiredState.Results) == 0 {
+			return
+		}
+
+		poller.pushToStore(desiredState)
+		poller.fetchBatch(desiredState.BulkTokenRepresentation())
+	})
 }
 
 func (poller *desiredStatePoller) pushToStore(desiredState desiredStateServerResponse) {
 	for _, desiredAppState := range desiredState.Results {
 		key := "/desired/" + desiredAppState.AppGuid + "-" + desiredAppState.AppVersion
-		poller.store.Set(key, desiredAppState.ToJson(), 10*60)
+		poller.store.Set(key, desiredAppState.ToJson(), config.DESIRED_STATE_TTL)
 	}
 }

@@ -15,18 +15,21 @@ var _ = Describe("Polling CC and storing the result in the Store", func() {
 		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
 		a1             app.App
 		a2             app.App
+		a3             app.App
 	)
 
 	BeforeEach(func() {
 		a1 = app.NewApp()
 		a2 = app.NewApp()
+		a3 = app.NewApp()
 
 		stateServer.SetDesiredState([]models.DesiredAppState{
 			a1.DesiredState(0),
 			a2.DesiredState(0),
+			a3.DesiredState(0),
 		})
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
-		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, &http_client.RealHttpClientFactory{}, desiredStateServerBaseUrl)
+		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, http_client.NewHttpClient(), desiredStateServerBaseUrl, 2)
 		poller.Poll()
 		fakeMessageBus.Requests[authNatsSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 	})
@@ -35,17 +38,22 @@ var _ = Describe("Polling CC and storing the result in the Store", func() {
 		node, err := etcdStore.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
 
-		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
-		Ω(node.TTL).Should(BeNumerically(">", 10*60-5))
+		Ω(node.TTL).Should(BeNumerically("==", 10*60-1))
 
 		Ω(node.Value).Should(Equal(a1.DesiredState(0).ToJson()))
 
 		node, err = etcdStore.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
 
-		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
-		Ω(node.TTL).Should(BeNumerically(">", 10*60-5))
+		Ω(node.TTL).Should(BeNumerically("==", 10*60-1))
 
 		Ω(node.Value).Should(Equal(a2.DesiredState(0).ToJson()))
+
+		node, err = etcdStore.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
+		Ω(err).ShouldNot(HaveOccured())
+
+		Ω(node.TTL).Should(BeNumerically("==", 10*60-1))
+
+		Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJson()))
 	})
 })

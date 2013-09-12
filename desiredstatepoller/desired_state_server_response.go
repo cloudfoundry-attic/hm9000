@@ -24,3 +24,8 @@ func (response desiredStateServerResponse) BulkTokenRepresentation() string {
 	bulkTokenRepresentation, _ := json.Marshal(response.BulkToken)
 	return string(bulkTokenRepresentation)
 }
+
+func (response desiredStateServerResponse) ToJson() string {
+	encoded, _ := json.Marshal(response)
+	return string(encoded)
+}

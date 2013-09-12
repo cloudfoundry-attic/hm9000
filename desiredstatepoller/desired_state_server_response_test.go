@@ -45,4 +45,13 @@ var _ = Describe("Desired State Server Response JSON", func() {
 			Ω(err).Should(HaveOccured())
 		})
 	})
+
+	Describe("ToJson", func() {
+		It("should return json that survives the round trip", func() {
+			json := []byte(response.ToJson())
+			resurrectedResponse, err := NewDesiredStateServerResponse(json)
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(resurrectedResponse).Should(Equal(response))
+		})
+	})
 })
