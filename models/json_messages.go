@@ -1,35 +1,5 @@
 package models
 
-import "time"
-
-//Desired app state
-type AppState string
-
-const (
-	AppStateInvalid AppState = ""
-	AppStateStarted AppState = "STARTED"
-	AppStateStopped AppState = "STOPPED"
-)
-
-type AppPackageState string
-
-const (
-	AppPackageStateInvalid AppPackageState = ""
-	AppPackageStateFailed  AppPackageState = "FAILED"
-	AppPackageStatePending AppPackageState = "PENDING"
-	AppPackageStateStaged  AppPackageState = "STAGED"
-)
-
-type DesiredAppState struct {
-	AppGuid           string          `json:"id"`
-	AppVersion        string          `json:"version"`
-	NumberOfInstances int             `json:"instances"`
-	Memory            int             `json:"memory"`
-	State             AppState        `json:"state"`
-	PackageState      AppPackageState `json:"package_state"`
-	UpdatedAt         time.Time       `json:"updated_at"`
-}
-
 //Actual app state
 //Heartbeats
 type InstanceState string

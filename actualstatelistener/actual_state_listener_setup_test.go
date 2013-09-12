@@ -19,6 +19,7 @@ var natsRunner *nats_runner.NATSRunner
 var messagePublisher *message_publisher.MessagePublisher
 
 func TestBootstrap(t *testing.T) {
+	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
 	natsRunner = nats_runner.NewNATSRunner(4222)
