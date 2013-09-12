@@ -2,6 +2,7 @@ package desiredstatepoller
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/helpers/http_client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -14,7 +15,7 @@ var _ = Describe("Authentication", func() {
 
 	BeforeEach(func() {
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
-		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, desiredStateServerBaseUrl)
+		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, &http_client.RealHttpClientFactory{}, desiredStateServerBaseUrl)
 	})
 
 	Context("the first time it polls", func() {

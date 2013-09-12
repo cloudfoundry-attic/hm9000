@@ -2,6 +2,7 @@ package desiredstatepoller
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/helpers/http_client"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/test_helpers/app"
 	. "github.com/onsi/ginkgo"
@@ -25,7 +26,7 @@ var _ = Describe("Polling CC and storing the result in the Store", func() {
 			a2.DesiredState(0),
 		})
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
-		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, desiredStateServerBaseUrl)
+		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, &http_client.RealHttpClientFactory{}, desiredStateServerBaseUrl)
 		poller.Poll()
 		fakeMessageBus.Requests[authNatsSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 	})

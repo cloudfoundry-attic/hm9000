@@ -7,10 +7,10 @@ type HttpClientFactory interface {
 }
 
 type HttpClient interface {
-	Do(req *http.Request) chan HttpResponseErr
+	Do(req *http.Request) chan HttpResult
 }
 
-type HttpResponseErr struct {
+type HttpResult struct {
 	Response *http.Response
 	Err      error
 }

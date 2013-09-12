@@ -12,14 +12,24 @@ import (
 const initialBulkToken = "{}"
 
 type desiredStatePoller struct {
-	messageBus    cfmessagebus.MessageBus
-	store         store.Store
-	authorization string
-	ccBaseURL     string
+	messageBus        cfmessagebus.MessageBus
+	httpClientFactory http_client.HttpClientFactory
+	store             store.Store
+	authorization     string
+	ccBaseURL         string
 }
 
-func NewDesiredStatePoller(messageBus cfmessagebus.MessageBus, store store.Store, ccBaseURL string) *desiredStatePoller {
-	return &desiredStatePoller{messageBus: messageBus, store: store, ccBaseURL: ccBaseURL}
+func NewDesiredStatePoller(messageBus cfmessagebus.MessageBus,
+	store store.Store,
+	httpClientFactory http_client.HttpClientFactory,
+	ccBaseURL string) *desiredStatePoller {
+
+	return &desiredStatePoller{
+		messageBus:        messageBus,
+		httpClientFactory: httpClientFactory,
+		store:             store,
+		ccBaseURL:         ccBaseURL,
+	}
 }
 
 func (poller *desiredStatePoller) Poll() {
@@ -57,19 +67,17 @@ func (poller *desiredStatePoller) fetch() {
 
 	req.Header.Add("Authorization", poller.authorization)
 
-	factory := &http_client.RealHttpClientFactory{}
+	client := poller.httpClientFactory.NewClient()
+	httpResult := <-client.Do(req)
+	defer httpResult.Response.Body.Close()
 
-	client := factory.NewClient()
-	responseErr := <-client.Do(req)
-	defer responseErr.Response.Body.Close()
-
-	if responseErr.Err != nil {
+	if httpResult.Err != nil {
 		//TODO: Log
 		return
 	}
 
-	body := make([]byte, responseErr.Response.ContentLength)
-	_, err = responseErr.Response.Body.Read(body)
+	body := make([]byte, httpResult.Response.ContentLength)
+	_, err = httpResult.Response.Body.Read(body)
 
 	if err != nil {
 		//TODO: Log
