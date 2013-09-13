@@ -17,6 +17,6 @@ var _ = Describe("BasicAuthInfo", func() {
 			PackageState:      AppPackageStatePending,
 			UpdatedAt:         time.Unix(0, 0),
 		}
-		Ω(appState.ToJson()).Should(Equal(`{"id":"myAppId","version":"123","instances":1,"memory":1024,"state":"STARTED","package_state":"PENDING","updated_at":"1969-12-31T16:00:00-08:00"}`))
+		Ω(string(appState.ToJson())).Should(Equal(`{"id":"myAppId","version":"123","instances":1,"memory":1024,"state":"STARTED","package_state":"PENDING","updated_at":"1969-12-31T16:00:00-08:00"}`))
 	})
 })

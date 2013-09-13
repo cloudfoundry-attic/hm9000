@@ -19,7 +19,7 @@ var _ = Describe("ETCD Store", func() {
 
 	Context("With something in the store", func() {
 		var key string
-		var value string
+		var value []byte
 		var dir_key string
 		var dir_entry_key string
 
@@ -27,14 +27,14 @@ var _ = Describe("ETCD Store", func() {
 		var expectedDirNode StoreNode
 
 		BeforeEach(func() {
+			value = []byte("my_stuff")
+
 			key = "/foo/bar"
-			value = "my_stuff"
 			err := store.Set(key, value, 0)
 			Ω(err).ShouldNot(HaveOccured())
 
 			dir_key = "/foo/baz"
 			dir_entry_key = "/bar"
-			value = "my_stuff"
 			err = store.Set(dir_key+dir_entry_key, value, 0)
 			Ω(err).ShouldNot(HaveOccured())
 
@@ -47,7 +47,7 @@ var _ = Describe("ETCD Store", func() {
 
 			expectedDirNode = StoreNode{
 				Key:   dir_key,
-				Value: "",
+				Value: []byte(""),
 				Dir:   true,
 				TTL:   0,
 			}
@@ -105,7 +105,7 @@ var _ = Describe("ETCD Store", func() {
 
 		Context("when we set", func() {
 			It("should return a timeout error", func() {
-				err := store.Set("/foo/bar", "baz", 0)
+				err := store.Set("/foo/bar", []byte("baz"), 0)
 				Ω(IsTimeoutError(err)).Should(BeTrue())
 			})
 		})
@@ -135,7 +135,7 @@ var _ = Describe("ETCD Store", func() {
 
 	Context("When setting a key with a non-zero TTL", func() {
 		It("should stay in the store for its TTL and then disappear", func() {
-			err := store.Set("/foo", "bar", 1)
+			err := store.Set("/foo", []byte("bar"), 1)
 			Ω(err).ShouldNot(HaveOccured())
 
 			_, err = store.Get("/foo")

@@ -65,7 +65,7 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 				Ω(err).ShouldNot(HaveOccured())
 
 				var freshnessTimestamp models.FreshnessTimestamp
-				json.Unmarshal([]byte(value.Value), &freshnessTimestamp)
+				json.Unmarshal(value.Value, &freshnessTimestamp)
 
 				Ω(freshnessTimestamp.Timestamp).Should(Equal(timestamp.Unix()))
 				Ω(value.TTL).Should(BeNumerically("==", ttl-1))
@@ -76,7 +76,7 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 		Context("when the key is present", func() {
 			BeforeEach(func() {
 				freshnessTimestamp, _ := json.Marshal(models.FreshnessTimestamp{Timestamp: 100})
-				etcdStore.Set(key, string(freshnessTimestamp), 2)
+				etcdStore.Set(key, freshnessTimestamp, 2)
 
 				freshPrince.Bump(key, ttl, timestamp)
 			})
@@ -87,7 +87,7 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 				Ω(value.TTL).Should(BeNumerically("==", ttl-1))
 
 				var freshnessTimestamp models.FreshnessTimestamp
-				json.Unmarshal([]byte(value.Value), &freshnessTimestamp)
+				json.Unmarshal(value.Value, &freshnessTimestamp)
 
 				Ω(freshnessTimestamp.Timestamp).Should(BeNumerically("==", 100))
 				Ω(value.Key).Should(Equal(key))

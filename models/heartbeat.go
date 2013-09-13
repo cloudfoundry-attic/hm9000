@@ -37,22 +37,21 @@ func NewHeartbeatFromJSON(encoded []byte) (Heartbeat, error) {
 	return heartbeat, nil
 }
 
-func (heartbeat Heartbeat) ToJson() string {
+func (heartbeat Heartbeat) ToJson() []byte {
 	encoded, _ := json.Marshal(heartbeat)
-	return string(encoded)
+	return encoded
 }
-
 
 func NewInstanceHeartbeatFromJSON(encoded []byte) (InstanceHeartbeat, error) {
-    var instance InstanceHeartbeat
-    err := json.Unmarshal(encoded, &instance)
-    if err != nil {
-        return InstanceHeartbeat{}, err
-    }
-    return instance, nil
+	var instance InstanceHeartbeat
+	err := json.Unmarshal(encoded, &instance)
+	if err != nil {
+		return InstanceHeartbeat{}, err
+	}
+	return instance, nil
 }
 
-func (instance InstanceHeartbeat) ToJson() string {
+func (instance InstanceHeartbeat) ToJson() []byte {
 	encoded, _ := json.Marshal(instance)
-	return string(encoded)
+	return encoded
 }

@@ -22,14 +22,13 @@ func NewFreshPrince(store store.Store) FreshPrince {
 }
 
 func (dj *RealFreshPrince) Bump(key string, ttl uint64, timestamp time.Time) error {
-	var jsonTimestamp string
+	var jsonTimestamp []byte
 	oldTimestamp, err := dj.store.Get(key)
 
 	if err == nil {
 		jsonTimestamp = oldTimestamp.Value
 	} else {
-		jsonBytes, _ := json.Marshal(models.FreshnessTimestamp{Timestamp: timestamp.Unix()})
-		jsonTimestamp = string(jsonBytes)
+		jsonTimestamp, _ = json.Marshal(models.FreshnessTimestamp{Timestamp: timestamp.Unix()})
 	}
 
 	return dj.store.Set(key, jsonTimestamp, ttl)

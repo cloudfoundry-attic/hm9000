@@ -33,7 +33,7 @@ type DesiredAppState struct {
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
-func (state DesiredAppState) ToJson() string {
+func (state DesiredAppState) ToJson() []byte {
 	result, _ := json.Marshal(state)
-	return string(result)
+	return result
 }

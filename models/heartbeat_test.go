@@ -61,7 +61,7 @@ var _ = Describe("Heartbeat", func() {
 
 	Describe("ToJson", func() {
 		It("should, like, totally encode JSON", func() {
-			jsonHeartbeat, err := NewHeartbeatFromJSON([]byte(heartbeat.ToJson()))
+			jsonHeartbeat, err := NewHeartbeatFromJSON(heartbeat.ToJson())
 
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(jsonHeartbeat).Should(Equal(heartbeat))
@@ -115,7 +115,7 @@ var _ = Describe("InstanceHeartbeat", func() {
 
 	Describe("ToJson", func() {
 		It("should, like, totally encode JSON", func() {
-			jsonInstance, err := NewInstanceHeartbeatFromJSON([]byte(instance.ToJson()))
+			jsonInstance, err := NewInstanceHeartbeatFromJSON(instance.ToJson())
 
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(jsonInstance).Should(Equal(instance))

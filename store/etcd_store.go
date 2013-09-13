@@ -26,8 +26,8 @@ func (store *ETCDStore) isTimeoutError(err error) bool {
 	return err != nil && err.Error() == "Cannot reach servers"
 }
 
-func (store *ETCDStore) Set(key string, value string, ttl uint64) error {
-	_, err := store.client.Set(key, value, ttl)
+func (store *ETCDStore) Set(key string, value []byte, ttl uint64) error {
+	_, err := store.client.Set(key, string(value), ttl)
 	if store.isTimeoutError(err) {
 		return ETCDError{reason: ETCDErrorTimeout}
 	}
@@ -53,7 +53,7 @@ func (store *ETCDStore) Get(key string) (StoreNode, error) {
 
 	return StoreNode{
 		Key:   responses[0].Key,
-		Value: responses[0].Value,
+		Value: []byte(responses[0].Value),
 		Dir:   responses[0].Dir,
 		TTL:   uint64(responses[0].TTL),
 	}, nil
@@ -78,7 +78,7 @@ func (store *ETCDStore) List(key string) ([]StoreNode, error) {
 	for i, response := range responses {
 		values[i] = StoreNode{
 			Key:   response.Key,
-			Value: response.Value,
+			Value: []byte(response.Value),
 			Dir:   response.Dir,
 			TTL:   uint64(response.TTL),
 		}

@@ -38,15 +38,15 @@ func (client *FakeHttpClient) Do(req *http.Request, callback func(*http.Response
 }
 
 func (request *Request) RespondWithStatus(statusCode int) {
-	request.Respond(statusCode, "", nil)
+	request.Respond(statusCode, []byte(""), nil)
 }
 
-func (request *Request) Succeed(body string) {
+func (request *Request) Succeed(body []byte) {
 	request.Respond(http.StatusOK, body, nil)
 }
 
-func (request *Request) Respond(statusCode int, body string, err error) {
-	reader := strings.NewReader(body)
+func (request *Request) Respond(statusCode int, body []byte, err error) {
+	reader := strings.NewReader(string(body))
 	response := &http.Response{
 		Status:     fmt.Sprintf("%d %s", statusCode, http.StatusText(statusCode)),
 		StatusCode: statusCode,

@@ -183,7 +183,7 @@ var _ = Describe("DesiredStatePoller", func() {
 
 		Context("when a malformed response is received", func() {
 			BeforeEach(func() {
-				httpClient.LastRequest().Succeed("ß")
+				httpClient.LastRequest().Succeed([]byte("ß"))
 			})
 
 			It("should stop requesting batches", func() {

@@ -61,7 +61,7 @@ var _ = Describe("Actual state listener", func() {
 		Ω(value.TTL).Should(BeNumerically("==", config.HEARTBEAT_TTL-1), "TTL starts decrementing immediately")
 		Ω(value.Key).Should(Equal(storeKey))
 
-		instanceHeartbeat, err := NewInstanceHeartbeatFromJSON([]byte(value.Value))
+		instanceHeartbeat, err := NewInstanceHeartbeatFromJSON(value.Value)
 		Ω(err).ShouldNot(HaveOccured())
 		Ω(instanceHeartbeat).Should(Equal(hb))
 	}
@@ -73,7 +73,7 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a simple heartbeat over the message bus", func() {
 		BeforeEach(func() {
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback([]byte(app.Heartbeat(1, 17).ToJson()))
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJson())
 		})
 
 		It("Stores it in the store", func() {
@@ -92,7 +92,7 @@ var _ = Describe("Actual state listener", func() {
 				},
 			}
 
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback([]byte(heartbeat.ToJson()))
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(heartbeat.ToJson())
 		})
 
 		It("Stores it in the store", func() {
@@ -105,7 +105,7 @@ var _ = Describe("Actual state listener", func() {
 	Describe("freshness", func() {
 		Context("when a heartbeat arrives", func() {
 			BeforeEach(func() {
-				messageBus.Subscriptions["dea.heartbeat"][0].Callback([]byte(app.Heartbeat(1, 17).ToJson()))
+				messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJson())
 			})
 
 			It("should instruct the prince to bump the freshness", func() {
