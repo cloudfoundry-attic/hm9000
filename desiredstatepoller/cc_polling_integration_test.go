@@ -2,6 +2,7 @@ package desiredstatepoller
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/bel_air"
 	"github.com/cloudfoundry/hm9000/helpers/http_client"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
@@ -57,5 +58,10 @@ var _ = Describe("Polling CC and storing the result in the Store", func() {
 		Ω(node.TTL).Should(BeNumerically("==", 10*60-1))
 
 		Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJson()))
+	})
+
+	It("bumps the freshness", func() {
+		_, err := etcdStore.Get(config.DESIRED_FRESHNESS_KEY)
+		Ω(err).ShouldNot(HaveOccured())
 	})
 })
