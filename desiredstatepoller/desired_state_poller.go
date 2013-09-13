@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/bel_air"
 	"github.com/cloudfoundry/hm9000/helpers/http_client"
+	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"net/http"
@@ -16,6 +18,8 @@ type desiredStatePoller struct {
 	messageBus    cfmessagebus.MessageBus
 	httpClient    http_client.HttpClient
 	store         store.Store
+	freshPrince   bel_air.FreshPrince
+	timeProvider  time_provider.TimeProvider
 	authorization string
 	ccBaseURL     string
 	batchSize     int
@@ -24,15 +28,19 @@ type desiredStatePoller struct {
 func NewDesiredStatePoller(messageBus cfmessagebus.MessageBus,
 	store store.Store,
 	httpClient http_client.HttpClient,
+	freshPrince bel_air.FreshPrince,
+	timeProvider time_provider.TimeProvider,
 	ccBaseURL string,
 	batchSize int) *desiredStatePoller {
 
 	return &desiredStatePoller{
-		messageBus: messageBus,
-		httpClient: httpClient,
-		store:      store,
-		ccBaseURL:  ccBaseURL,
-		batchSize:  batchSize,
+		messageBus:   messageBus,
+		httpClient:   httpClient,
+		store:        store,
+		freshPrince:  freshPrince,
+		timeProvider: timeProvider,
+		ccBaseURL:    ccBaseURL,
+		batchSize:    batchSize,
 	}
 }
 
@@ -97,8 +105,12 @@ func (poller *desiredStatePoller) fetchBatch(token string) {
 			return
 		}
 
-		desiredState, _ := NewDesiredStateServerResponse(body)
+		desiredState, err := NewDesiredStateServerResponse(body)
+		if err != nil {
+			return
+		}
 		if len(desiredState.Results) == 0 {
+			poller.freshPrince.Bump(config.DESIRED_FRESHNESS_KEY, config.DESIRED_FRESHNESS_TTL, poller.timeProvider.Time())
 			return
 		}
 

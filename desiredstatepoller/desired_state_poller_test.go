@@ -6,7 +6,11 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/test_helpers/app"
+	"github.com/cloudfoundry/hm9000/test_helpers/fake_bel_air"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_http_client"
+	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"net/http"
@@ -17,13 +21,20 @@ var _ = Describe("DesiredStatePoller", func() {
 		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
 		poller         *desiredStatePoller
 		httpClient     *fake_http_client.FakeHttpClient
+		timeProvider   *fake_time_provider.FakeTimeProvider
+		freshPrince    *fake_bel_air.FakeFreshPrince
 	)
 
 	BeforeEach(func() {
+		timeProvider = &fake_time_provider.FakeTimeProvider{
+			TimeToProvide: time.Now(),
+		}
+
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
 		httpClient = fake_http_client.NewFakeHttpClient()
+		freshPrince = &fake_bel_air.FakeFreshPrince{}
 
-		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, httpClient, desiredStateServerBaseUrl, config.DESIRED_STATE_POLLING_BATCH_SIZE)
+		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider, desiredStateServerBaseUrl, config.DESIRED_STATE_POLLING_BATCH_SIZE)
 		poller.Poll()
 	})
 
@@ -164,6 +175,10 @@ var _ = Describe("DesiredStatePoller", func() {
 				Ω(httpClient.Requests).Should(HaveLen(2))
 				Ω(httpClient.LastRequest().URL.Query().Get("bulk_token")).Should(Equal(response.BulkTokenRepresentation()))
 			})
+
+			It("should not bump the freshness yet", func() {
+				Ω(freshPrince.Key).Should(BeZero())
+			})
 		})
 
 		Context("when a malformed response is received", func() {
@@ -173,6 +188,24 @@ var _ = Describe("DesiredStatePoller", func() {
 
 			It("should stop requesting batches", func() {
 				Ω(httpClient.Requests).Should(HaveLen(1))
+			})
+
+			It("should not bump the freshness", func() {
+				Ω(freshPrince.Key).Should(BeZero())
+			})
+		})
+
+		Context("when an unauthorized response is received", func() {
+			BeforeEach(func() {
+				httpClient.LastRequest().RespondWithStatus(http.StatusUnauthorized)
+			})
+
+			It("should stop requesting batches", func() {
+				Ω(httpClient.Requests).Should(HaveLen(1))
+			})
+
+			It("should not bump the freshness", func() {
+				Ω(freshPrince.Key).Should(BeZero())
 			})
 		})
 
@@ -190,6 +223,12 @@ var _ = Describe("DesiredStatePoller", func() {
 
 			It("should stop requesting batches", func() {
 				Ω(httpClient.Requests).Should(HaveLen(1))
+			})
+
+			It("should bump the freshness", func() {
+				Ω(freshPrince.Key).Should(Equal(config.DESIRED_FRESHNESS_KEY))
+				Ω(freshPrince.Timestamp).Should(Equal(timeProvider.Time()))
+				Ω(freshPrince.TTL).Should(BeNumerically("==", config.DESIRED_FRESHNESS_TTL))
 			})
 		})
 	})

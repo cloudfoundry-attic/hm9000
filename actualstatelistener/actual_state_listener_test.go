@@ -18,13 +18,14 @@ import (
 )
 
 var _ = Describe("Actual state listener", func() {
-	var app App
-	var anotherApp App
-	var etcdStore store.Store
-
-	var listener *ActualStateListener
-	var timeProvider *fake_time_provider.FakeTimeProvider
-	var freshPrince *fake_bel_air.FakeFreshPrince
+	var (
+		app          App
+		anotherApp   App
+		etcdStore    store.Store
+		listener     *ActualStateListener
+		timeProvider *fake_time_provider.FakeTimeProvider
+		freshPrince  *fake_bel_air.FakeFreshPrince
+	)
 
 	BeforeEach(func() {
 		timeProvider = &fake_time_provider.FakeTimeProvider{
