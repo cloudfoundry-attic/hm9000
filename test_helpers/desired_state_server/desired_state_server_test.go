@@ -33,7 +33,7 @@ var _ = BeforeEach(func() {
 	if !didRunGlobalBeforeEach {
 		fakeMessageBus = mock_cfmessagebus.NewMockMessageBus()
 		server = NewDesiredStateServer(fakeMessageBus)
-		go server.SpinUp(1234)
+		go server.SpinUp(6000)
 		didRunGlobalBeforeEach = true
 	}
 
@@ -41,7 +41,7 @@ var _ = BeforeEach(func() {
 })
 
 var _ = Describe("making requests", func() {
-	var serverURL = "http://localhost:1234"
+	var serverURL = "http://localhost:6000"
 
 	Describe("/bulk/counts", func() {
 		var response UserCountResponse
