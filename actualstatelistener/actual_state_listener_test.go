@@ -4,17 +4,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"encoding/json"
 	"time"
 
 	. "github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/test_helpers/app"
+
+	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_bel_air"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_logger"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
-
-	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/store"
 )
 
 var _ = Describe("Actual state listener", func() {
@@ -25,6 +25,7 @@ var _ = Describe("Actual state listener", func() {
 		listener     *ActualStateListener
 		timeProvider *fake_time_provider.FakeTimeProvider
 		freshPrince  *fake_bel_air.FakeFreshPrince
+		messageBus   *fake_cfmessagebus.FakeMessageBus
 	)
 
 	BeforeEach(func() {
@@ -39,9 +40,11 @@ var _ = Describe("Actual state listener", func() {
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
+		messageBus = fake_cfmessagebus.NewFakeMessageBus()
+
 		freshPrince = &fake_bel_air.FakeFreshPrince{}
 
-		listener = NewActualStateListener(natsRunner.MessageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
+		listener = NewActualStateListener(messageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
 		listener.Start()
 	})
 
@@ -58,15 +61,19 @@ var _ = Describe("Actual state listener", func() {
 		Ω(value.TTL).Should(BeNumerically("==", config.HEARTBEAT_TTL-1), "TTL starts decrementing immediately")
 		Ω(value.Key).Should(Equal(storeKey))
 
-		var instanceHeartbeat InstanceHeartbeat
-		json.Unmarshal([]byte(value.Value), &instanceHeartbeat)
-
+		instanceHeartbeat, err := NewInstanceHeartbeatFromJSON([]byte(value.Value))
+		Ω(err).ShouldNot(HaveOccured())
 		Ω(instanceHeartbeat).Should(Equal(hb))
 	}
 
-	Context("When it receives a simple heartbeat on NATS", func() {
+	It("should subscribe to the dea.heartbeat subject", func() {
+		Ω(messageBus.Subscriptions).Should(HaveKey("dea.heartbeat"))
+		Ω(messageBus.Subscriptions["dea.heartbeat"]).Should(HaveLen(1))
+	})
+
+	Context("When it receives a simple heartbeat over the message bus", func() {
 		BeforeEach(func() {
-			messagePublisher.PublishHeartbeat(app.Heartbeat(1, 17))
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback([]byte(app.Heartbeat(1, 17).ToJson()))
 		})
 
 		It("Stores it in the store", func() {
@@ -85,7 +92,7 @@ var _ = Describe("Actual state listener", func() {
 				},
 			}
 
-			messagePublisher.PublishHeartbeat(heartbeat)
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback([]byte(heartbeat.ToJson()))
 		})
 
 		It("Stores it in the store", func() {
@@ -98,10 +105,10 @@ var _ = Describe("Actual state listener", func() {
 	Describe("freshness", func() {
 		Context("when a heartbeat arrives", func() {
 			BeforeEach(func() {
-				messagePublisher.PublishHeartbeat(app.Heartbeat(1, 17))
+				messageBus.Subscriptions["dea.heartbeat"][0].Callback([]byte(app.Heartbeat(1, 17).ToJson()))
 			})
 
-			It("should create /actual-fresh with the current timestamp and a TTL", func() {
+			It("should instruct the prince to bump the freshness", func() {
 				Eventually(func() interface{} {
 					return freshPrince.Key
 				}, 0.1, 0.01).Should(Equal(config.ACTUAL_FRESHNESS_KEY))

@@ -9,8 +9,6 @@ import (
 	"github.com/cloudfoundry/hm9000/store"
 
 	"github.com/cloudfoundry/go_cfmessagebus"
-
-	"encoding/json"
 )
 
 type ActualStateListener struct {
@@ -40,8 +38,7 @@ func (listener *ActualStateListener) Start() {
 	listener.messageBus.Subscribe("dea.heartbeat", func(messageBody []byte) {
 		listener.bumpFreshness()
 
-		var heartbeat models.Heartbeat
-		err := json.Unmarshal(messageBody, &heartbeat)
+		heartbeat, err := models.NewHeartbeatFromJSON(messageBody)
 
 		if err != nil {
 			listener.Info("Could not unmarshal heartbeat from store",
@@ -55,16 +52,8 @@ func (listener *ActualStateListener) Start() {
 		for _, instance := range heartbeat.InstanceHeartbeats {
 			key := "/actual/" + instance.InstanceGuid
 
-			value, err := json.Marshal(instance)
-			if err != nil {
-				listener.Info("Could not json Marshal instance",
-					map[string]string{
-						"Error": err.Error(),
-					})
-				continue
-			}
-
-			err = listener.heartbeatStore.Set(key, string(value), config.HEARTBEAT_TTL)
+			value := instance.ToJson()
+			err = listener.heartbeatStore.Set(key, value, config.HEARTBEAT_TTL)
 			if err != nil {
 				listener.Info("Could not put instance heartbeat in store:",
 					map[string]string{

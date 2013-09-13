@@ -1,31 +1,5 @@
 package models
 
-//Actual app state
-//Heartbeats
-type InstanceState string
-
-const (
-	InstanceStateInvalid  InstanceState = ""
-	InstanceStateStarting InstanceState = "STARTING"
-	InstanceStateRunning  InstanceState = "RUNNING"
-	InstanceStateCrashed  InstanceState = "CRASHED"
-)
-
-type Heartbeat struct {
-	DeaGuid            string              `json:"dea"`
-	InstanceHeartbeats []InstanceHeartbeat `json:"droplets"`
-}
-
-type InstanceHeartbeat struct {
-	CCPartition    string        `json:"cc_partition"`
-	AppGuid        string        `json:"droplet"`
-	AppVersion     string        `json:"version"`
-	InstanceGuid   string        `json:"instance"`
-	InstanceIndex  int           `json:"index"`
-	State          InstanceState `json:"state"`
-	StateTimestamp float64       `json:"state_timestamp"`
-}
-
 //Start and Stop Messages
 type StartMessage struct {
 	AppGuid                   string         `json:"droplet"`
