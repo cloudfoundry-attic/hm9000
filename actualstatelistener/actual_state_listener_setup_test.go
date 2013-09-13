@@ -15,6 +15,7 @@ func TestBootstrap(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	etcdRunner = etcd_runner.NewETCDRunner("etcd", 4001)
+	etcdRunner.StartETCD()
 
 	RunSpecs(t, "Actual State Listener Tests")
 
@@ -22,6 +23,5 @@ func TestBootstrap(t *testing.T) {
 }
 
 var _ = BeforeEach(func() {
-	etcdRunner.StopETCD()
-	etcdRunner.StartETCD()
+	etcdRunner.Reset()
 })

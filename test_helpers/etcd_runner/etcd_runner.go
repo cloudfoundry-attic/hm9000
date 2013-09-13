@@ -4,6 +4,8 @@ import (
 	"fmt"
 	. "github.com/onsi/gomega"
 
+	etcdclient "github.com/coreos/go-etcd/etcd"
+
 	"os"
 	"os/exec"
 	"syscall"
@@ -24,7 +26,7 @@ func NewETCDRunner(path string, port int) *ETCDRunner {
 
 func (etcd *ETCDRunner) StartETCD() {
 	os.MkdirAll(etcd.tmpPath(), 0700)
-	etcd.etcdCommand = exec.Command(etcd.path, "-d", etcd.tmpPath(), "-c", fmt.Sprintf("127.0.0.1:%d", etcd.port))
+	etcd.etcdCommand = exec.Command(etcd.path, "-d", etcd.tmpPath(), "-c", etcd.url())
 
 	err := etcd.etcdCommand.Start()
 	Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
@@ -32,6 +34,28 @@ func (etcd *ETCDRunner) StartETCD() {
 	Eventually(func() interface{} {
 		return etcd.exists()
 	}, 1, 0.05).Should(BeTrue(), "Expected ETCD")
+}
+
+func (etcd *ETCDRunner) Reset() {
+	client := etcdclient.NewClient()
+	client.SetCluster([]string{"http://" + etcd.url()})
+
+	etcd.deleteDir(client, "/")
+}
+
+func (etcd *ETCDRunner) deleteDir(client *etcdclient.Client, dir string) {
+	responses, err := client.Get(dir)
+	Ω(err).ShouldNot(HaveOccured())
+	for _, response := range responses {
+		if response.Key != "/_etcd" {
+			if response.Dir == true {
+				etcd.deleteDir(client, response.Key)
+			} else {
+				_, err := client.Delete(response.Key)
+				Ω(err).ShouldNot(HaveOccured())
+			}
+		}
+	}
 }
 
 func (etcd *ETCDRunner) StopETCD() {
@@ -44,6 +68,10 @@ func (etcd *ETCDRunner) StopETCD() {
 		os.Remove(etcd.tmpPathTo("snapshot"))
 		os.Remove(etcd.tmpPathTo("conf"))
 	}
+}
+
+func (etcd *ETCDRunner) url() string {
+	return fmt.Sprintf("127.0.0.1:%d", etcd.port)
 }
 
 func (etcd *ETCDRunner) tmpPath() string {

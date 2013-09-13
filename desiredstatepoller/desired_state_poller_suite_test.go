@@ -25,8 +25,7 @@ var (
 )
 
 var _ = BeforeEach(func() {
-	etcdRunner.StopETCD()
-	etcdRunner.StartETCD()
+	etcdRunner.Reset()
 
 	etcdStore = store.NewETCDStore(config.ETCD_URL(etcdPort))
 	err := etcdStore.Connect()
@@ -42,6 +41,7 @@ func TestBootstrap(t *testing.T) {
 	go stateServer.SpinUp(6001)
 
 	etcdRunner = etcd_runner.NewETCDRunner("etcd", etcdPort)
+	etcdRunner.StartETCD()
 
 	RunSpecs(t, "Desired State Poller")
 

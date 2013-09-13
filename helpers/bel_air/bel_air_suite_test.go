@@ -18,6 +18,7 @@ var etcdRunner *etcd_runner.ETCDRunner
 
 func TestBootstrap(t *testing.T) {
 	etcdRunner = etcd_runner.NewETCDRunner("etcd", 4001)
+	etcdRunner.StartETCD()
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Bel Air Suite")
@@ -35,8 +36,7 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 	)
 
 	BeforeEach(func() {
-		etcdRunner.StopETCD()
-		etcdRunner.StartETCD()
+		etcdRunner.Reset()
 
 		etcdStore = store.NewETCDStore(config.ETCD_URL(4001))
 		err := etcdStore.Connect()

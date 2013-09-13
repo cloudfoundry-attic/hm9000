@@ -10,8 +10,6 @@ import (
 var _ = Describe("ETCD Store", func() {
 	var store Store
 	BeforeEach(func() {
-		runner.StartETCD()
-
 		store = NewETCDStore(config.ETCD_URL(etcdPort))
 		err := store.Connect()
 		Ω(err).ShouldNot(HaveOccured())
@@ -94,6 +92,10 @@ var _ = Describe("ETCD Store", func() {
 	Context("when the store is down", func() {
 		BeforeEach(func() {
 			runner.StopETCD()
+		})
+
+		AfterEach(func() {
+			runner.StartETCD()
 		})
 
 		Context("when we get", func() {
