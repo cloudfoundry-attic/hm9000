@@ -9,6 +9,7 @@ import (
 
 	. "github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/test_helpers/app"
+	"github.com/cloudfoundry/hm9000/test_helpers/fake_bel_air"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_logger"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
 
@@ -23,6 +24,7 @@ var _ = Describe("Actual state listener", func() {
 
 	var listener *ActualStateListener
 	var timeProvider *fake_time_provider.FakeTimeProvider
+	var freshPrince *fake_bel_air.FakeFreshPrince
 
 	BeforeEach(func() {
 		timeProvider = &fake_time_provider.FakeTimeProvider{
@@ -36,7 +38,9 @@ var _ = Describe("Actual state listener", func() {
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		listener = NewActualStateListener(natsRunner.MessageBus, etcdStore, timeProvider, fake_logger.NewFakeLogger())
+		freshPrince = &fake_bel_air.FakeFreshPrince{}
+
+		listener = NewActualStateListener(natsRunner.MessageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
 		listener.Start()
 	})
 
@@ -91,61 +95,18 @@ var _ = Describe("Actual state listener", func() {
 	})
 
 	Describe("freshness", func() {
-		Context("when /actual/fresh is missing", func() {
+		Context("when a heartbeat arrives", func() {
 			BeforeEach(func() {
-				_, err := etcdStore.Get(config.ACTUAL_FRESHNESS_KEY)
-				Ω(store.IsKeyNotFoundError(err)).Should(BeTrue())
+				messagePublisher.PublishHeartbeat(app.Heartbeat(1, 17))
 			})
 
-			Context("and a heartbeat arrives", func() {
-				BeforeEach(func() {
-					messagePublisher.PublishHeartbeat(app.Heartbeat(1, 17))
-				})
+			It("should create /actual-fresh with the current timestamp and a TTL", func() {
+				Eventually(func() interface{} {
+					return freshPrince.Key
+				}, 0.1, 0.01).Should(Equal(config.ACTUAL_FRESHNESS_KEY))
 
-				It("should create /actual-fresh with the current timestamp and a TTL", func() {
-					var value store.StoreNode
-					var err error
-
-					Eventually(func() interface{} {
-						value, err = etcdStore.Get(config.ACTUAL_FRESHNESS_KEY)
-						return err
-					}, 0.1, 0.01).ShouldNot(HaveOccured())
-
-					var timestamp FreshnessTimestamp
-					json.Unmarshal([]byte(value.Value), &timestamp)
-
-					Ω(timestamp.Timestamp).Should(Equal(timeProvider.Time().Unix()))
-					Ω(value.TTL).Should(BeNumerically("==", config.ACTUAL_FRESHNESS_TTL-1))
-					Ω(value.Key).Should(Equal(config.ACTUAL_FRESHNESS_KEY))
-				})
-			})
-		})
-
-		Context("when /actual-fresh is present", func() {
-			BeforeEach(func() {
-				timestamp, _ := json.Marshal(FreshnessTimestamp{Timestamp: 100})
-				etcdStore.Set(config.ACTUAL_FRESHNESS_KEY, string(timestamp), 2)
-			})
-
-			Context("and a heartbeat arrives", func() {
-				BeforeEach(func() {
-					messagePublisher.PublishHeartbeat(app.Heartbeat(1, 17))
-				})
-
-				It("should bump /actual/fresh's TTL but not change the timestamp", func() {
-					var value store.StoreNode
-
-					Eventually(func() interface{} {
-						value, _ = etcdStore.Get(config.ACTUAL_FRESHNESS_KEY)
-						return value.TTL
-					}, 0.1, 0.01).Should(BeNumerically("==", config.ACTUAL_FRESHNESS_TTL-1))
-
-					var timestamp FreshnessTimestamp
-					json.Unmarshal([]byte(value.Value), &timestamp)
-
-					Ω(timestamp.Timestamp).Should(BeNumerically("==", 100))
-					Ω(value.Key).Should(Equal(config.ACTUAL_FRESHNESS_KEY))
-				})
+				Ω(freshPrince.Timestamp).Should(Equal(timeProvider.Time()))
+				Ω(freshPrince.TTL).Should(BeNumerically("==", config.ACTUAL_FRESHNESS_TTL))
 			})
 		})
 	})

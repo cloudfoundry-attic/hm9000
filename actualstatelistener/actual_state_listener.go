@@ -2,6 +2,7 @@ package actualstatelistener
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/bel_air"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/models"
@@ -16,11 +17,13 @@ type ActualStateListener struct {
 	logger.Logger
 	messageBus     cfmessagebus.MessageBus
 	heartbeatStore store.Store
+	freshPrince    bel_air.FreshPrince
 	timeProvider   time_provider.TimeProvider
 }
 
 func NewActualStateListener(messageBus cfmessagebus.MessageBus,
 	heartbeatStore store.Store,
+	freshPrince bel_air.FreshPrince,
 	timeProvider time_provider.TimeProvider,
 	logger logger.Logger) *ActualStateListener {
 
@@ -28,6 +31,7 @@ func NewActualStateListener(messageBus cfmessagebus.MessageBus,
 		Logger:         logger,
 		messageBus:     messageBus,
 		heartbeatStore: heartbeatStore,
+		freshPrince:    freshPrince,
 		timeProvider:   timeProvider,
 	}
 }
@@ -73,18 +77,7 @@ func (listener *ActualStateListener) Start() {
 }
 
 func (listener *ActualStateListener) bumpFreshness() {
-	var jsonTimestamp string
-	oldTimestamp, err := listener.heartbeatStore.Get(config.ACTUAL_FRESHNESS_KEY)
-
-	if err == nil {
-		jsonTimestamp = oldTimestamp.Value
-	} else {
-		now := listener.timeProvider.Time().Unix()
-		jsonBytes, _ := json.Marshal(models.FreshnessTimestamp{Timestamp: now})
-		jsonTimestamp = string(jsonBytes)
-	}
-
-	err = listener.heartbeatStore.Set(config.ACTUAL_FRESHNESS_KEY, jsonTimestamp, config.ACTUAL_FRESHNESS_TTL)
+	err := listener.freshPrince.Bump(config.ACTUAL_FRESHNESS_KEY, config.ACTUAL_FRESHNESS_TTL, listener.timeProvider.Time())
 
 	if err != nil {
 		listener.Info("Could not update actual freshness",
