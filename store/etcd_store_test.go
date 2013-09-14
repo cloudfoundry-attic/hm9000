@@ -137,14 +137,14 @@ var _ = Describe("ETCD Store", func() {
 
 	Context("When setting a key with a non-zero TTL", func() {
 		It("should stay in the store for its TTL and then disappear", func() {
-			err := store.Set("/foo", []byte("bar"), 1)
+			err := store.Set("/floop", []byte("bar"), 1)
 			Ω(err).ShouldNot(HaveOccured())
 
-			_, err = store.Get("/foo")
+			_, err = store.Get("/floop")
 			Ω(err).ShouldNot(HaveOccured())
 
 			Eventually(func() interface{} {
-				_, err = store.Get("/foo")
+				_, err = store.Get("/floop")
 				return err
 			}, 1.05, 0.01).Should(HaveOccured())
 		})
