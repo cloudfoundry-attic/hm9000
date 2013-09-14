@@ -22,11 +22,15 @@ type Instance struct {
 }
 
 func NewApp() App {
+	return newAppForDeaGuid(Guid())
+}
+
+func newAppForDeaGuid(deaGuid string) App {
 	return App{
 		AppGuid:    Guid(),
 		AppVersion: Guid(),
 		instances:  make(map[int]Instance, 0),
-		deaGuid:    Guid(),
+		deaGuid:    deaGuid,
 	}
 }
 

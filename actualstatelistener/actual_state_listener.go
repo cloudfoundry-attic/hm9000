@@ -51,9 +51,9 @@ func (listener *ActualStateListener) Start() {
 
 		for _, instance := range heartbeat.InstanceHeartbeats {
 			key := "/actual/" + instance.InstanceGuid
-
 			value := instance.ToJson()
 			err = listener.heartbeatStore.Set(key, value, config.HEARTBEAT_TTL)
+
 			if err != nil {
 				listener.Info("Could not put instance heartbeat in store:",
 					map[string]string{
