@@ -1,6 +1,7 @@
-package desiredstatepoller
+package desiredstatefetcher
 
 import (
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
@@ -16,16 +17,28 @@ import (
 	"net/http"
 )
 
-var _ = Describe("DesiredStatePoller", func() {
+type brokenReader struct{}
+
+func (b *brokenReader) Read([]byte) (int, error) {
+	return 0, errors.New("oh no you didn't!")
+}
+
+func (b *brokenReader) Close() error {
+	return nil
+}
+
+var _ = Describe("DesiredStateFetcher", func() {
 	var (
 		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
-		poller         *desiredStatePoller
+		fetcher        *desiredStateFetcher
 		httpClient     *fake_http_client.FakeHttpClient
 		timeProvider   *fake_time_provider.FakeTimeProvider
 		freshPrince    *fake_bel_air.FakeFreshPrince
+		resultChan     chan DesiredStateFetcherResult
 	)
 
 	BeforeEach(func() {
+		resultChan = make(chan DesiredStateFetcherResult, 1)
 		timeProvider = &fake_time_provider.FakeTimeProvider{
 			TimeToProvide: time.Now(),
 		}
@@ -34,8 +47,8 @@ var _ = Describe("DesiredStatePoller", func() {
 		httpClient = fake_http_client.NewFakeHttpClient()
 		freshPrince = &fake_bel_air.FakeFreshPrince{}
 
-		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider, desiredStateServerBaseUrl, config.DESIRED_STATE_POLLING_BATCH_SIZE)
-		poller.Poll()
+		fetcher = NewDesiredStateFetcher(fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider, desiredStateServerBaseUrl, config.DESIRED_STATE_POLLING_BATCH_SIZE)
+		fetcher.Fetch(resultChan)
 	})
 
 	Describe("Authentication", func() {
@@ -66,30 +79,6 @@ var _ = Describe("DesiredStatePoller", func() {
 
 				Ω(request.Header.Get("Authorization")).Should(Equal(expectedAuth))
 			})
-
-			Context("when the authentication fails", func() {
-				BeforeEach(func() {
-					request.RespondWithStatus(http.StatusUnauthorized)
-				})
-
-				It("should fetch the authentication again when it polls next", func() {
-					poller.Poll()
-					Ω(fakeMessageBus.Requests[authNatsSubject]).Should(HaveLen(2))
-				})
-			})
-
-			Context("when the authentication succeeds", func() {
-				BeforeEach(func() {
-					request.RespondWithStatus(http.StatusOK)
-				})
-
-				It("should not fetch the authentication again when it polls next", func() {
-					httpClient.Reset()
-					poller.Poll()
-					Ω(fakeMessageBus.Requests[authNatsSubject]).Should(HaveLen(1))
-					Ω(httpClient.Requests).Should(HaveLen(1))
-				})
-			})
 		})
 
 		Context("when the authentication information was corrupted", func() {
@@ -101,22 +90,37 @@ var _ = Describe("DesiredStatePoller", func() {
 				Ω(httpClient.Requests).Should(HaveLen(0))
 			})
 
-			It("should fetch the authentication again when it polls next", func() {
-				poller.Poll()
-				Ω(fakeMessageBus.Requests[authNatsSubject]).Should(HaveLen(2))
-			})
+			It("should send an error down the result channel", func(done Done) {
+				result := <-resultChan
+				Ω(result.Success).Should(BeFalse())
+				Ω(result.Message).Should(Equal("Failed to parse authentication info from JSON"))
+				Ω(result.Error).Should(HaveOccured())
+				close(done)
+			}, 0.1)
 		})
 
 		Context("when the authentication information fails to arrive", func() {
 			It("should not make any requests", func() {
 				Ω(httpClient.Requests).Should(HaveLen(0))
 			})
-
-			It("should fetch the authentication again when it polls next", func() {
-				poller.Poll()
-				Ω(fakeMessageBus.Requests[authNatsSubject]).Should(HaveLen(2))
-			})
 		})
+	})
+
+	Describe("Fetching with an invalid URL", func() {
+		BeforeEach(func() {
+			fetcher = NewDesiredStateFetcher(fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider, "http://example.com/#%ZZ", config.DESIRED_STATE_POLLING_BATCH_SIZE)
+			fetcher.Fetch(resultChan)
+
+			fakeMessageBus.Requests[authNatsSubject][1].Callback([]byte(`{"user":"mcat","password":"testing"}`))
+		})
+
+		It("should send an error down the result channel", func(done Done) {
+			result := <-resultChan
+			Ω(result.Success).Should(BeFalse())
+			Ω(result.Message).Should(Equal("Failed to generate URL request"))
+			Ω(result.Error).Should(HaveOccured())
+			close(done)
+		}, 0.1)
 	})
 
 	Describe("Fetching batches", func() {
@@ -179,33 +183,9 @@ var _ = Describe("DesiredStatePoller", func() {
 			It("should not bump the freshness yet", func() {
 				Ω(freshPrince.Key).Should(BeZero())
 			})
-		})
 
-		Context("when a malformed response is received", func() {
-			BeforeEach(func() {
-				httpClient.LastRequest().Succeed([]byte("ß"))
-			})
-
-			It("should stop requesting batches", func() {
-				Ω(httpClient.Requests).Should(HaveLen(1))
-			})
-
-			It("should not bump the freshness", func() {
-				Ω(freshPrince.Key).Should(BeZero())
-			})
-		})
-
-		Context("when an unauthorized response is received", func() {
-			BeforeEach(func() {
-				httpClient.LastRequest().RespondWithStatus(http.StatusUnauthorized)
-			})
-
-			It("should stop requesting batches", func() {
-				Ω(httpClient.Requests).Should(HaveLen(1))
-			})
-
-			It("should not bump the freshness", func() {
-				Ω(freshPrince.Key).Should(BeZero())
+			It("should not send a result down the resultChan yet", func() {
+				Ω(resultChan).Should(HaveLen(0))
 			})
 		})
 
@@ -230,6 +210,100 @@ var _ = Describe("DesiredStatePoller", func() {
 				Ω(freshPrince.Timestamp).Should(Equal(timeProvider.Time()))
 				Ω(freshPrince.TTL).Should(BeNumerically("==", config.DESIRED_FRESHNESS_TTL))
 			})
+
+			It("should send a succesful result down the result channel", func(done Done) {
+				result := <-resultChan
+				Ω(result.Success).Should(BeTrue())
+				Ω(result.Message).Should(BeZero())
+				Ω(result.Error).ShouldNot(HaveOccured())
+				close(done)
+			}, 0.1)
+		})
+
+		assertFailure := func(expectedMessage string) {
+			It("should stop requesting batches", func() {
+				Ω(httpClient.Requests).Should(HaveLen(1))
+			})
+
+			It("should not bump the freshness", func() {
+				Ω(freshPrince.Key).Should(BeZero())
+			})
+
+			It("should send an error down the result channel", func(done Done) {
+				result := <-resultChan
+				Ω(result.Success).Should(BeFalse())
+				Ω(result.Message).Should(Equal(expectedMessage))
+				Ω(result.Error).Should(HaveOccured())
+				close(done)
+			}, 1.0)
+		}
+
+		Context("when an unauthorized response is received", func() {
+			BeforeEach(func() {
+				httpClient.LastRequest().RespondWithStatus(http.StatusUnauthorized)
+			})
+
+			assertFailure("HTTP request received unauthorized response code")
+		})
+
+		Context("when the HTTP request returns a non-200 response", func() {
+			BeforeEach(func() {
+				httpClient.LastRequest().RespondWithStatus(http.StatusNotFound)
+			})
+
+			assertFailure("HTTP request received non-200 response (404)")
+		})
+
+		Context("when the HTTP request fails with an error", func() {
+			BeforeEach(func() {
+				httpClient.LastRequest().RespondWithError(errors.New(":("))
+			})
+
+			assertFailure("HTTP request failed with error")
+		})
+
+		Context("when a broken body is received", func() {
+			BeforeEach(func() {
+				response := &http.Response{
+					Status:     "StatusOK (200)",
+					StatusCode: http.StatusOK,
+
+					ContentLength: 17,
+					Body:          &brokenReader{},
+				}
+
+				httpClient.LastRequest().Callback(response, nil)
+			})
+
+			assertFailure("Failed to read HTTP response body")
+		})
+
+		Context("when a malformed response is received", func() {
+			BeforeEach(func() {
+				httpClient.LastRequest().Succeed([]byte("ß"))
+			})
+
+			assertFailure("Failed to parse HTTP response body JSON")
+		})
+
+		Context("when it fails to write to the store", func() {
+			BeforeEach(func() {
+				a := app.NewApp()
+				etcdStore.Set("/desired/"+a.AppGuid+"-"+a.AppVersion+"/foo", []byte("mwahahaha"), 10)
+
+				response = desiredStateServerResponse{
+					Results: map[string]models.DesiredAppState{
+						a.AppGuid: a.DesiredState(0),
+					},
+					BulkToken: bulkToken{
+						Id: 5,
+					},
+				}
+
+				httpClient.LastRequest().Succeed(response.ToJson())
+			})
+
+			assertFailure("Failed to store desired state in store")
 		})
 	})
 })

@@ -1,4 +1,4 @@
-package desiredstatepoller
+package desiredstatefetcher
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
@@ -12,16 +12,18 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Polling CC and storing the result in the Store", func() {
+var _ = Describe("Fetching from CC and storing the result in the Store", func() {
 	var (
-		poller         *desiredStatePoller
+		fetcher        *desiredStateFetcher
 		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
 		a1             app.App
 		a2             app.App
 		a3             app.App
+		resultChan     chan DesiredStateFetcherResult
 	)
 
 	BeforeEach(func() {
+		resultChan = make(chan DesiredStateFetcherResult, 1)
 		a1 = app.NewApp()
 		a2 = app.NewApp()
 		a3 = app.NewApp()
@@ -32,8 +34,8 @@ var _ = Describe("Polling CC and storing the result in the Store", func() {
 			a3.DesiredState(0),
 		})
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
-		poller = NewDesiredStatePoller(fakeMessageBus, etcdStore, http_client.NewHttpClient(), bel_air.NewFreshPrince(etcdStore), &time_provider.RealTimeProvider{}, desiredStateServerBaseUrl, 2)
-		poller.Poll()
+		fetcher = NewDesiredStateFetcher(fakeMessageBus, etcdStore, http_client.NewHttpClient(), bel_air.NewFreshPrince(etcdStore), &time_provider.RealTimeProvider{}, desiredStateServerBaseUrl, 2)
+		fetcher.Fetch(resultChan)
 		fakeMessageBus.Requests[authNatsSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 	})
 
@@ -63,5 +65,12 @@ var _ = Describe("Polling CC and storing the result in the Store", func() {
 	It("bumps the freshness", func() {
 		_, err := etcdStore.Get(config.DESIRED_FRESHNESS_KEY)
 		Ω(err).ShouldNot(HaveOccured())
+	})
+
+	It("reports success to the channel", func() {
+		result := <-resultChan
+		Ω(result.Success).Should(BeTrue())
+		Ω(result.Message).Should(BeZero())
+		Ω(result.Error).ShouldNot(HaveOccured())
 	})
 })

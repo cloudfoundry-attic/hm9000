@@ -1,4 +1,4 @@
-package desiredstatepoller
+package desiredstatefetcher
 
 import (
 	"encoding/json"

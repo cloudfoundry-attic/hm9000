@@ -1,4 +1,4 @@
-package desiredstatepoller
+package desiredstatefetcher
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
@@ -43,7 +43,7 @@ func TestBootstrap(t *testing.T) {
 	etcdRunner = etcd_runner.NewETCDRunner("etcd", etcdPort)
 	etcdRunner.StartETCD()
 
-	RunSpecs(t, "Desired State Poller")
+	RunSpecs(t, "Desired State Fetcher")
 
 	etcdRunner.StopETCD()
 }

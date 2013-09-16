@@ -41,6 +41,10 @@ func (request *Request) RespondWithStatus(statusCode int) {
 	request.Respond(statusCode, []byte(""), nil)
 }
 
+func (request *Request) RespondWithError(err error) {
+	request.Callback(nil, err)
+}
+
 func (request *Request) Succeed(body []byte) {
 	request.Respond(http.StatusOK, body, nil)
 }
