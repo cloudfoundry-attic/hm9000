@@ -13,13 +13,15 @@ import (
 
 type ActualStateListener struct {
 	logger.Logger
+	config         config.Config
 	messageBus     cfmessagebus.MessageBus
 	heartbeatStore store.Store
 	freshPrince    bel_air.FreshPrince
 	timeProvider   time_provider.TimeProvider
 }
 
-func NewActualStateListener(messageBus cfmessagebus.MessageBus,
+func NewActualStateListener(config config.Config,
+	messageBus cfmessagebus.MessageBus,
 	heartbeatStore store.Store,
 	freshPrince bel_air.FreshPrince,
 	timeProvider time_provider.TimeProvider,
@@ -27,6 +29,7 @@ func NewActualStateListener(messageBus cfmessagebus.MessageBus,
 
 	return &ActualStateListener{
 		Logger:         logger,
+		config:         config,
 		messageBus:     messageBus,
 		heartbeatStore: heartbeatStore,
 		freshPrince:    freshPrince,
@@ -52,7 +55,7 @@ func (listener *ActualStateListener) Start() {
 		for _, instance := range heartbeat.InstanceHeartbeats {
 			key := "/actual/" + instance.InstanceGuid
 			value := instance.ToJson()
-			err = listener.heartbeatStore.Set(key, value, config.HEARTBEAT_TTL)
+			err = listener.heartbeatStore.Set(key, value, listener.config.HeartbeatTTL)
 
 			if err != nil {
 				listener.Info("Could not put instance heartbeat in store:",
@@ -66,7 +69,7 @@ func (listener *ActualStateListener) Start() {
 }
 
 func (listener *ActualStateListener) bumpFreshness() {
-	err := listener.freshPrince.Bump(config.ACTUAL_FRESHNESS_KEY, config.ACTUAL_FRESHNESS_TTL, listener.timeProvider.Time())
+	err := listener.freshPrince.Bump(listener.config.ActualFreshnessKey, listener.config.ActualFreshnessTTL, listener.timeProvider.Time())
 
 	if err != nil {
 		listener.Info("Could not update actual freshness",

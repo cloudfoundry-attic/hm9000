@@ -25,9 +25,14 @@ var _ = Describe("StorePerformance", func() {
 	BeforeEach(func() {
 		realStore = store.NewETCDStore(config.ETCD_URL(4001))
 		err := realStore.Connect()
-
 		Ω(err).ShouldNot(HaveOccured())
-		listener = actualstatelistener.NewActualStateListener(natsRunner.MessageBus,
+
+		conf, err := config.DefaultConfig()
+		Ω(err).ShouldNot(HaveOccured())
+
+		listener = actualstatelistener.NewActualStateListener(
+			conf,
+			natsRunner.MessageBus,
 			realStore,
 			bel_air.NewFreshPrince(realStore),
 			&time_provider.RealTimeProvider{},

@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/test_helpers/app"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_bel_air"
+
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_http_client"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
 	"time"
@@ -29,6 +30,7 @@ func (b *brokenReader) Close() error {
 
 var _ = Describe("DesiredStateFetcher", func() {
 	var (
+		conf           config.Config
 		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
 		fetcher        *desiredStateFetcher
 		httpClient     *fake_http_client.FakeHttpClient
@@ -47,7 +49,11 @@ var _ = Describe("DesiredStateFetcher", func() {
 		httpClient = fake_http_client.NewFakeHttpClient()
 		freshPrince = &fake_bel_air.FakeFreshPrince{}
 
-		fetcher = NewDesiredStateFetcher(fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider, desiredStateServerBaseUrl, config.DESIRED_STATE_POLLING_BATCH_SIZE)
+		var err error
+		conf, err = config.DefaultConfig()
+		Ω(err).ShouldNot(HaveOccured())
+
+		fetcher = NewDesiredStateFetcher(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
 		fetcher.Fetch(resultChan)
 	})
 
@@ -108,7 +114,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 	Describe("Fetching with an invalid URL", func() {
 		BeforeEach(func() {
-			fetcher = NewDesiredStateFetcher(fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider, "http://example.com/#%ZZ", config.DESIRED_STATE_POLLING_BATCH_SIZE)
+			conf.CCBaseURL = "http://example.com/#%ZZ"
+			fetcher = NewDesiredStateFetcher(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
 			fetcher.Fetch(resultChan)
 
 			fakeMessageBus.Requests[authNatsSubject][1].Callback([]byte(`{"user":"mcat","password":"testing"}`))
@@ -132,7 +139,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		It("should request a batch size with an empty bulk token", func() {
 			query := httpClient.LastRequest().URL.Query()
-			Ω(query.Get("batch_size")).Should(Equal(fmt.Sprintf("%d", config.DESIRED_STATE_POLLING_BATCH_SIZE)))
+			Ω(query.Get("batch_size")).Should(Equal(fmt.Sprintf("%d", conf.DesiredStateBatchSize)))
 			Ω(query.Get("bulk_token")).Should(Equal("{}"))
 		})
 
@@ -163,14 +170,14 @@ var _ = Describe("DesiredStateFetcher", func() {
 				node, err := etcdStore.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
 				Ω(err).ShouldNot(HaveOccured())
 
-				Ω(node.TTL).Should(BeNumerically("==", config.DESIRED_STATE_TTL-1))
+				Ω(node.TTL).Should(BeNumerically("==", conf.DesiredStateTTL-1))
 
 				Ω(node.Value).Should(Equal(a1.DesiredState(0).ToJson()))
 
 				node, err = etcdStore.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
 				Ω(err).ShouldNot(HaveOccured())
 
-				Ω(node.TTL).Should(BeNumerically("==", config.DESIRED_STATE_TTL-1))
+				Ω(node.TTL).Should(BeNumerically("==", conf.DesiredStateTTL-1))
 
 				Ω(node.Value).Should(Equal(a2.DesiredState(0).ToJson()))
 			})
@@ -206,9 +213,9 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should bump the freshness", func() {
-				Ω(freshPrince.Key).Should(Equal(config.DESIRED_FRESHNESS_KEY))
+				Ω(freshPrince.Key).Should(Equal(conf.DesiredFreshnessKey))
 				Ω(freshPrince.Timestamp).Should(Equal(timeProvider.Time()))
-				Ω(freshPrince.TTL).Should(BeNumerically("==", config.DESIRED_FRESHNESS_TTL))
+				Ω(freshPrince.TTL).Should(BeNumerically("==", conf.DesiredFreshnessTTL))
 			})
 
 			It("should send a succesful result down the result channel", func(done Done) {

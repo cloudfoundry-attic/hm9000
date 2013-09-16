@@ -26,6 +26,7 @@ var _ = Describe("Actual state listener", func() {
 		timeProvider *fake_time_provider.FakeTimeProvider
 		freshPrince  *fake_bel_air.FakeFreshPrince
 		messageBus   *fake_cfmessagebus.FakeMessageBus
+		conf         config.Config
 	)
 
 	BeforeEach(func() {
@@ -44,7 +45,10 @@ var _ = Describe("Actual state listener", func() {
 
 		freshPrince = &fake_bel_air.FakeFreshPrince{}
 
-		listener = NewActualStateListener(messageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
+		conf, err = config.DefaultConfig()
+		Ω(err).ShouldNot(HaveOccured())
+
+		listener = NewActualStateListener(conf, messageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
 		listener.Start()
 	})
 
@@ -58,7 +62,7 @@ var _ = Describe("Actual state listener", func() {
 			return err
 		}, 0.1, 0.01).ShouldNot(HaveOccured())
 
-		Ω(value.TTL).Should(BeNumerically("==", config.HEARTBEAT_TTL-1), "TTL starts decrementing immediately")
+		Ω(value.TTL).Should(BeNumerically("==", conf.HeartbeatTTL-1), "TTL starts decrementing immediately")
 		Ω(value.Key).Should(Equal(storeKey))
 
 		instanceHeartbeat, err := NewInstanceHeartbeatFromJSON(value.Value)
@@ -111,10 +115,10 @@ var _ = Describe("Actual state listener", func() {
 			It("should instruct the prince to bump the freshness", func() {
 				Eventually(func() interface{} {
 					return freshPrince.Key
-				}, 0.1, 0.01).Should(Equal(config.ACTUAL_FRESHNESS_KEY))
+				}, 0.1, 0.01).Should(Equal(conf.ActualFreshnessKey))
 
 				Ω(freshPrince.Timestamp).Should(Equal(timeProvider.Time()))
-				Ω(freshPrince.TTL).Should(BeNumerically("==", config.ACTUAL_FRESHNESS_TTL))
+				Ω(freshPrince.TTL).Should(BeNumerically("==", conf.ActualFreshnessTTL))
 			})
 		})
 	})

@@ -14,6 +14,7 @@ import (
 
 var _ = Describe("Fetching from CC and storing the result in the Store", func() {
 	var (
+		conf           config.Config
 		fetcher        *desiredStateFetcher
 		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
 		a1             app.App
@@ -34,7 +35,12 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			a3.DesiredState(0),
 		})
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
-		fetcher = NewDesiredStateFetcher(fakeMessageBus, etcdStore, http_client.NewHttpClient(), bel_air.NewFreshPrince(etcdStore), &time_provider.RealTimeProvider{}, desiredStateServerBaseUrl, 2)
+
+		var err error
+		conf, err = config.DefaultConfig()
+		Ω(err).ShouldNot(HaveOccured())
+
+		fetcher = NewDesiredStateFetcher(conf, fakeMessageBus, etcdStore, http_client.NewHttpClient(), bel_air.NewFreshPrince(etcdStore), &time_provider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
 		fakeMessageBus.Requests[authNatsSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 	})
@@ -63,7 +69,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 	})
 
 	It("bumps the freshness", func() {
-		_, err := etcdStore.Get(config.DESIRED_FRESHNESS_KEY)
+		_, err := etcdStore.Get(conf.DesiredFreshnessKey)
 		Ω(err).ShouldNot(HaveOccured())
 	})
 
