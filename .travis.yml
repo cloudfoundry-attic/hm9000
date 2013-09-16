@@ -4,6 +4,7 @@ go:
   - tip
 
 install:
+  - gem install nats
   - go get -v ./...
   - go get -v github.com/onsi/ginkgo
   - go install -v github.com/onsi/ginkgo/ginkgo
