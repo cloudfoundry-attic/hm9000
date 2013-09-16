@@ -37,3 +37,13 @@ func (state DesiredAppState) ToJson() []byte {
 	result, _ := json.Marshal(state)
 	return result
 }
+
+func (state DesiredAppState) Equal(other DesiredAppState) bool {
+	return state.AppGuid == other.AppGuid &&
+		state.AppVersion == other.AppVersion &&
+		state.NumberOfInstances == other.NumberOfInstances &&
+		state.Memory == other.Memory &&
+		state.State == other.State &&
+		state.PackageState == other.PackageState &&
+		state.UpdatedAt.Equal(other.UpdatedAt)
+}

@@ -3,6 +3,7 @@ package desiredstatepoller
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/test_helpers/app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,11 +32,7 @@ var _ = Describe("Desired State Server Response JSON", func() {
 
 	It("can parse from JSON", func() {
 		Ω(response.Results).Should(HaveLen(1))
-		fmt.Printf("%v\n", response.Results[a.AppGuid])
-		fmt.Printf("%#v\n", response.Results[a.AppGuid])
-		fmt.Printf("%v\n", a.DesiredState(0))
-		fmt.Printf("%#v\n", a.DesiredState(0))
-		Ω(response.Results[a.AppGuid]).Should(Equal(a.DesiredState(0)))
+		Ω(response.Results[a.AppGuid]).Should(models.EqualDesiredState(a.DesiredState(0)))
 		Ω(response.BulkToken.Id).Should(Equal(17))
 	})
 

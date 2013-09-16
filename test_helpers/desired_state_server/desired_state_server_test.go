@@ -174,7 +174,9 @@ var _ = Describe("making requests", func() {
 				})
 
 				It("JSON encodes and returns the desired state", func() {
-					Ω(response.Results).Should(Equal(map[string]DesiredAppState{"abc": app1, "def": app2}))
+					Ω(response.Results).Should(HaveLen(2))
+					Ω(response.Results["abc"]).Should(EqualDesiredState(app1))
+					Ω(response.Results["def"]).Should(EqualDesiredState(app2))
 					Ω(response.BulkToken.Id).Should(Equal(2))
 				})
 			})
@@ -197,7 +199,9 @@ var _ = Describe("making requests", func() {
 				})
 
 				It("returns a list only the length of the batch size", func() {
-					Ω(response.Results).Should(Equal(map[string]DesiredAppState{"abc": app1, "def": app2}))
+					Ω(response.Results).Should(HaveLen(2))
+					Ω(response.Results["abc"]).Should(EqualDesiredState(app1))
+					Ω(response.Results["def"]).Should(EqualDesiredState(app2))
 					Ω(response.BulkToken.Id).Should(Equal(2))
 				})
 
@@ -212,7 +216,8 @@ var _ = Describe("making requests", func() {
 					})
 
 					It("returns a list only the length of the batch size", func() {
-						Ω(response.Results).Should(Equal(map[string]DesiredAppState{"cba": app3}))
+						Ω(response.Results).Should(HaveLen(1))
+						Ω(response.Results["cba"]).Should(EqualDesiredState(app3))
 						Ω(response.BulkToken.Id).Should(Equal(3))
 					})
 
