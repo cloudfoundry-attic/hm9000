@@ -30,7 +30,7 @@ type desiredStateFetcher struct {
 	timeProvider time_provider.TimeProvider
 }
 
-func NewDesiredStateFetcher(config config.Config,
+func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
 	store store.Store,
 	httpClient http_client.HttpClient,

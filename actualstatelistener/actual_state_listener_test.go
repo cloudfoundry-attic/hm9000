@@ -48,7 +48,7 @@ var _ = Describe("Actual state listener", func() {
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
 
-		listener = NewActualStateListener(conf, messageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
+		listener = New(conf, messageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
 		listener.Start()
 	})
 

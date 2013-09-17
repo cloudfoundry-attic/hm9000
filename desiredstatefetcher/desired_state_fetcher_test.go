@@ -53,7 +53,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
 
-		fetcher = NewDesiredStateFetcher(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
+		fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
 		fetcher.Fetch(resultChan)
 	})
 
@@ -134,7 +134,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 	Describe("Fetching with an invalid URL", func() {
 		BeforeEach(func() {
 			conf.CCBaseURL = "http://example.com/#%ZZ"
-			fetcher = NewDesiredStateFetcher(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
+			fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
 			fetcher.Fetch(resultChan)
 
 			fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][1].Callback([]byte(`{"user":"mcat","password":"testing"}`))

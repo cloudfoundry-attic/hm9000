@@ -20,7 +20,7 @@ type ActualStateListener struct {
 	timeProvider   time_provider.TimeProvider
 }
 
-func NewActualStateListener(config config.Config,
+func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
 	heartbeatStore store.Store,
 	freshPrince bel_air.FreshPrince,

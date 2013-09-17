@@ -101,7 +101,7 @@ func fetchDesiredState(l logger.Logger, c *cli.Context) {
 	messageBus := connectToMessageBus(l, conf)
 	etcdStore := connectToETCDStore(l, conf)
 
-	fetcher := desiredstatefetcher.NewDesiredStateFetcher(conf,
+	fetcher := desiredstatefetcher.New(conf,
 		messageBus,
 		etcdStore,
 		http_client.NewHttpClient(),
@@ -132,7 +132,7 @@ func startListeningForActual(l logger.Logger, c *cli.Context) {
 	messageBus := connectToMessageBus(l, conf)
 	etcdStore := connectToETCDStore(l, conf)
 
-	listener := actualstatelistener.NewActualStateListener(conf,
+	listener := actualstatelistener.New(conf,
 		messageBus,
 		etcdStore,
 		bel_air.NewFreshPrince(etcdStore),

@@ -30,7 +30,7 @@ var _ = Describe("StorePerformance", func() {
 		conf, err := config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
 
-		listener = actualstatelistener.NewActualStateListener(
+		listener = actualstatelistener.New(
 			conf,
 			natsRunner.MessageBus,
 			realStore,
