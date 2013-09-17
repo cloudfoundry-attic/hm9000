@@ -26,7 +26,7 @@ func NewETCDRunner(path string, port int) *ETCDRunner {
 
 func (etcd *ETCDRunner) StartETCD() {
 	os.MkdirAll(etcd.tmpPath(), 0700)
-	etcd.etcdCommand = exec.Command(etcd.path, "-d", etcd.tmpPath(), "-c", etcd.url())
+	etcd.etcdCommand = exec.Command(etcd.path, "-d", etcd.tmpPath(), "-c", etcd.url(), "-s", etcd.raftUrl())
 
 	err := etcd.etcdCommand.Start()
 	Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
@@ -72,6 +72,10 @@ func (etcd *ETCDRunner) StopETCD() {
 
 func (etcd *ETCDRunner) url() string {
 	return fmt.Sprintf("127.0.0.1:%d", etcd.port)
+}
+
+func (etcd *ETCDRunner) raftUrl() string {
+	return fmt.Sprintf("127.0.0.1:%d", etcd.port+3000)
 }
 
 func (etcd *ETCDRunner) tmpPath() string {

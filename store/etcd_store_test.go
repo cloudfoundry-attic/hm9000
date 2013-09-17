@@ -87,6 +87,16 @@ var _ = Describe("ETCD Store", func() {
 				Ω(IsDirectoryError(err)).Should(BeTrue())
 			})
 		})
+
+		Context("when listing an empty directory", func() {
+			It("should return an empty list of nodes and no error", func() {
+				store.Set("/menu/waffles", []byte("tasty"), 0)
+				store.Delete("/menu/waffles")
+				results, err := store.List("/menu")
+				Ω(results).Should(BeEmpty())
+				Ω(err).ShouldNot(HaveOccured())
+			})
+		})
 	})
 
 	Context("when the store is down", func() {

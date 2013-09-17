@@ -69,6 +69,10 @@ func (store *ETCDStore) List(key string) ([]StoreNode, error) {
 		return []StoreNode{}, err
 	}
 
+	if len(responses) == 0 {
+		return []StoreNode{}, nil
+	}
+
 	if responses[0].Key == key {
 		return []StoreNode{}, ETCDError{reason: ETCDErrorIsNotDirectory}
 	}
