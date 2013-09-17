@@ -31,7 +31,12 @@ func (etcd *ETCDClusterRunner) Start() {
 
 	for i := 0; i < etcd.numNodes; i++ {
 		os.MkdirAll(etcd.tmpPath(i), 0700)
-		etcd.etcdCommands[i] = exec.Command(etcd.pathToEtcd, "-d", etcd.tmpPath(i), "-c", etcd.url(i), "-s", etcd.raftUrl())
+		args := []string{"-d", etcd.tmpPath(i), "-c", etcd.clientUrl(i), "-s", etcd.serverUrl(i), "-n", etcd.nodeName(i)}
+		if i != 0 {
+			args = append(args, "-C", etcd.serverUrl(0))
+		}
+
+		etcd.etcdCommands[i] = exec.Command(etcd.pathToEtcd, args...)
 
 		err := etcd.etcdCommands[i].Start()
 		Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
@@ -59,7 +64,7 @@ func (etcd *ETCDClusterRunner) Stop() {
 func (etcd *ETCDClusterRunner) NodeURLS() []string {
 	urls := make([]string, etcd.numNodes)
 	for i := 0; i < etcd.numNodes; i++ {
-		urls[i] = "http://" + etcd.url(i)
+		urls[i] = "http://" + etcd.clientUrl(i)
 	}
 	return urls
 }
@@ -86,12 +91,16 @@ func (etcd *ETCDClusterRunner) deleteDir(client *etcdclient.Client, dir string) 
 	}
 }
 
-func (etcd *ETCDClusterRunner) url(index int) string {
+func (etcd *ETCDClusterRunner) clientUrl(index int) string {
 	return fmt.Sprintf("127.0.0.1:%d", etcd.port(index))
 }
 
-func (etcd *ETCDClusterRunner) raftUrl() string {
-	return fmt.Sprintf("127.0.0.1:%d", etcd.startingPort+3000)
+func (etcd *ETCDClusterRunner) serverUrl(index int) string {
+	return fmt.Sprintf("127.0.0.1:%d", etcd.port(index)+3000)
+}
+
+func (etcd *ETCDClusterRunner) nodeName(index int) string {
+	return fmt.Sprintf("node%d", index)
 }
 
 func (etcd *ETCDClusterRunner) port(index int) int {
