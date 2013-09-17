@@ -33,7 +33,7 @@ func (etcd *ETCDRunner) StartETCD() {
 
 	Eventually(func() interface{} {
 		return etcd.exists()
-	}, 1, 0.05).Should(BeTrue(), "Expected ETCD")
+	}, 3, 0.05).Should(BeTrue(), "Expected ETCD")
 }
 
 func (etcd *ETCDRunner) Reset() {
