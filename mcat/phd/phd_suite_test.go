@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-var etcdRunner *etcd_runner.ETCDRunner
+var etcdRunner *etcd_runner.ETCDClusterRunner
 var natsRunner *nats_runner.NATSRunner
 
 func TestBootstrap(t *testing.T) {
@@ -22,13 +22,13 @@ func TestBootstrap(t *testing.T) {
 	natsRunner = nats_runner.NewNATSRunner(4223)
 	natsRunner.Start()
 
-	etcdRunner = etcd_runner.NewETCDRunner("etcd", 4001)
-	etcdRunner.StartETCD()
+	etcdRunner = etcd_runner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner.Start()
 
 	RunSpecs(t, "Phd Suite")
 
 	natsRunner.Stop()
-	etcdRunner.StopETCD()
+	etcdRunner.Stop()
 }
 
 var _ = BeforeEach(func() {
@@ -43,7 +43,7 @@ func registerSignalHandler() {
 
 		select {
 		case <-c:
-			etcdRunner.StopETCD()
+			etcdRunner.Stop()
 			natsRunner.Stop()
 			os.Exit(0)
 		}

@@ -9,6 +9,7 @@
     "desired_freshness_key": "/desired-fresh",
     "cc_auth_message_bus_subject": "cloudcontroller.bulk.credentials.default",
     "cc_base_url": "http://127.0.0.1:6001",
+    "store_urls": ["http://127.0.0.1:4001"],
     "nats": {
         "host": "127.0.0.1",
         "port": 4222,

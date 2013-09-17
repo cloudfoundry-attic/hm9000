@@ -2,7 +2,6 @@ package bel_air
 
 import (
 	"encoding/json"
-	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,16 +13,16 @@ import (
 	"testing"
 )
 
-var etcdRunner *etcd_runner.ETCDRunner
+var etcdRunner *etcd_runner.ETCDClusterRunner
 
 func TestBootstrap(t *testing.T) {
-	etcdRunner = etcd_runner.NewETCDRunner("etcd", 4001)
-	etcdRunner.StartETCD()
+	etcdRunner = etcd_runner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner.Start()
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Bel Air Suite")
 
-	etcdRunner.StopETCD()
+	etcdRunner.Stop()
 }
 
 var _ = Describe("The Fresh Prince of Bel Air", func() {
@@ -38,7 +37,7 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 	BeforeEach(func() {
 		etcdRunner.Reset()
 
-		etcdStore = store.NewETCDStore(config.ETCD_URL(4001))
+		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS())
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 

@@ -3,14 +3,12 @@ package store
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/cloudfoundry/hm9000/config"
 )
 
 var _ = Describe("ETCD Store", func() {
 	var store Store
 	BeforeEach(func() {
-		store = NewETCDStore(config.ETCD_URL(etcdPort))
+		store = NewETCDStore(runner.NodeURLS())
 		err := store.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 	})
@@ -101,11 +99,11 @@ var _ = Describe("ETCD Store", func() {
 
 	Context("when the store is down", func() {
 		BeforeEach(func() {
-			runner.StopETCD()
+			runner.Stop()
 		})
 
 		AfterEach(func() {
-			runner.StartETCD()
+			runner.Start()
 		})
 
 		Context("when we get", func() {

@@ -2,7 +2,6 @@ package desiredstatefetcher
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
-	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/test_helpers/desired_state_server"
 	"github.com/cloudfoundry/hm9000/test_helpers/etcd_runner"
@@ -15,18 +14,17 @@ import (
 )
 
 const desiredStateServerBaseUrl = "http://127.0.0.1:6001"
-const etcdPort = 4001
 
 var (
 	stateServer *desired_state_server.DesiredStateServer
-	etcdRunner  *etcd_runner.ETCDRunner
+	etcdRunner  *etcd_runner.ETCDClusterRunner
 	etcdStore   store.Store
 )
 
 var _ = BeforeEach(func() {
 	etcdRunner.Reset()
 
-	etcdStore = store.NewETCDStore(config.ETCD_URL(etcdPort))
+	etcdStore = store.NewETCDStore(etcdRunner.NodeURLS())
 	err := etcdStore.Connect()
 	Ω(err).ShouldNot(HaveOccured())
 })
@@ -39,12 +37,12 @@ func TestBootstrap(t *testing.T) {
 	stateServer = desired_state_server.NewDesiredStateServer(fakeMessageBus)
 	go stateServer.SpinUp(6001)
 
-	etcdRunner = etcd_runner.NewETCDRunner("etcd", etcdPort)
-	etcdRunner.StartETCD()
+	etcdRunner = etcd_runner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner.Start()
 
 	RunSpecs(t, "Desired State Fetcher")
 
-	etcdRunner.StopETCD()
+	etcdRunner.Stop()
 }
 
 func registerSignalHandler() {
@@ -54,7 +52,7 @@ func registerSignalHandler() {
 
 		select {
 		case <-c:
-			etcdRunner.StopETCD()
+			etcdRunner.Stop()
 			os.Exit(0)
 		}
 	}()

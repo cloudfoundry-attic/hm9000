@@ -23,7 +23,7 @@ var _ = Describe("StorePerformance", func() {
 	)
 
 	BeforeEach(func() {
-		realStore = store.NewETCDStore(config.ETCD_URL(4001))
+		realStore = store.NewETCDStore(etcdRunner.NodeURLS())
 		err := realStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 

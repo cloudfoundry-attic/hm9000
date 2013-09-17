@@ -10,19 +10,19 @@ import (
 	"testing"
 )
 
-var runner *etcd_runner.ETCDRunner
+var runner *etcd_runner.ETCDClusterRunner
 var etcdPort int
 
 func TestBootstrap(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	etcdPort = 5000 + config.GinkgoConfig.ParallelNode
-	runner = etcd_runner.NewETCDRunner("etcd", etcdPort)
-	runner.StartETCD()
+	etcdPort = 5000 + config.GinkgoConfig.ParallelNode*10
+	runner = etcd_runner.NewETCDClusterRunner("etcd", etcdPort, 5)
+	runner.Start()
 
 	RunSpecs(t, "Store tests")
 
-	runner.StopETCD()
+	runner.Stop()
 }
 
 var _ = BeforeEach(func() {

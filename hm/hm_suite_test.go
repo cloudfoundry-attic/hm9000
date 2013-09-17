@@ -9,17 +9,17 @@ import (
 	"testing"
 )
 
-var etcdRunner *etcd_runner.ETCDRunner
+var etcdRunner *etcd_runner.ETCDClusterRunner
 
 func TestHm9000(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	etcdRunner = etcd_runner.NewETCDRunner("etcd", 4001)
-	etcdRunner.StartETCD()
+	etcdRunner = etcd_runner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner.Start()
 
 	RunSpecs(t, "Hm9000 Suite")
 
-	etcdRunner.StopETCD()
+	etcdRunner.Stop()
 }
 
 var _ = BeforeEach(func() {

@@ -19,6 +19,7 @@ var _ = Describe("Config", func() {
         "desired_freshness_key": "/desired-fresh",
         "cc_auth_message_bus_subject": "cloudcontroller.bulk.credentials.default",
         "cc_base_url": "http://127.0.0.1:6001",
+        "store_urls": ["http://127.0.0.1:4001"],
         "nats": {
             "host": "127.0.0.1",
             "port": 4222,
@@ -42,6 +43,7 @@ var _ = Describe("Config", func() {
 			Ω(config.DesiredFreshnessKey).Should(Equal("/desired-fresh"))
 			Ω(config.CCAuthMessageBusSubject).Should(Equal("cloudcontroller.bulk.credentials.default"))
 			Ω(config.CCBaseURL).Should(Equal("http://127.0.0.1:6001"))
+			Ω(config.StoreURLs).Should(Equal([]string{"http://127.0.0.1:4001"}))
 
 			Ω(config.NATS.Host).Should(Equal("127.0.0.1"))
 			Ω(config.NATS.Port).Should(Equal(4222))

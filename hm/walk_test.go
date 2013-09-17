@@ -1,7 +1,6 @@
 package hm
 
 import (
-	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,7 +9,7 @@ import (
 var _ = Describe("Walk", func() {
 	var etcdStore store.Store
 	BeforeEach(func() {
-		etcdStore = store.NewETCDStore(config.ETCD_URL(4001))
+		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS())
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 

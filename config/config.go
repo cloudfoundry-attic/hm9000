@@ -2,23 +2,23 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
 )
 
 type Config struct {
-	HeartbeatTTL            uint64 `json:"heartbeat_ttl_in_seconds"`
-	ActualFreshnessTTL      uint64 `json:"actual_freshness_ttl_in_seconds"`
-	GracePeriod             int    `json:"grace_period_in_seconds"`
-	DesiredStateTTL         uint64 `json:"desired_state_ttl_in_seconds"`
-	DesiredFreshnessTTL     uint64 `json:"desired_freshness_ttl_in_seconds"`
-	DesiredStateBatchSize   int    `json:"desired_state_batch_size"`
-	ActualFreshnessKey      string `json:"actual_freshness_key"`
-	DesiredFreshnessKey     string `json:"desired_freshness_key"`
-	CCAuthMessageBusSubject string `json:"cc_auth_message_bus_subject"`
-	CCBaseURL               string `json:"cc_base_url"`
+	HeartbeatTTL            uint64   `json:"heartbeat_ttl_in_seconds"`
+	ActualFreshnessTTL      uint64   `json:"actual_freshness_ttl_in_seconds"`
+	GracePeriod             int      `json:"grace_period_in_seconds"`
+	DesiredStateTTL         uint64   `json:"desired_state_ttl_in_seconds"`
+	DesiredFreshnessTTL     uint64   `json:"desired_freshness_ttl_in_seconds"`
+	DesiredStateBatchSize   int      `json:"desired_state_batch_size"`
+	ActualFreshnessKey      string   `json:"actual_freshness_key"`
+	DesiredFreshnessKey     string   `json:"desired_freshness_key"`
+	CCAuthMessageBusSubject string   `json:"cc_auth_message_bus_subject"`
+	CCBaseURL               string   `json:"cc_base_url"`
+	StoreURLs               []string `json:"store_urls"`
 	NATS                    struct {
 		Host     string `json:"host"`
 		Port     int    `json:"port"`
@@ -51,9 +51,4 @@ func FromJSON(JSON []byte) (Config, error) {
 	} else {
 		return Config{}, err
 	}
-}
-
-func ETCD_URL(port int) string {
-	//TODO: get rid of this and move it to config as an array of etcd nodes
-	return fmt.Sprintf("http://127.0.0.1:%d", port)
 }

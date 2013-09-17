@@ -44,7 +44,7 @@ func connectToMessageBus(l logger.Logger, conf config.Config) cfmessagebus.Messa
 }
 
 func connectToETCDStore(l logger.Logger, conf config.Config) store.Store {
-	etcdStore := store.NewETCDStore(config.ETCD_URL(4001))
+	etcdStore := store.NewETCDStore(conf.StoreURLs)
 	err := etcdStore.Connect()
 	if err != nil {
 		l.Info("Failed to connect to the store", map[string]string{"Error": err.Error()})

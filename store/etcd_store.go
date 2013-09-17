@@ -5,19 +5,19 @@ import (
 )
 
 type ETCDStore struct {
-	url    string
+	urls   []string
 	client *etcd.Client
 }
 
-func NewETCDStore(url string) *ETCDStore {
+func NewETCDStore(urls []string) *ETCDStore {
 	return &ETCDStore{
-		url: url,
+		urls: urls,
 	}
 }
 
 func (store *ETCDStore) Connect() error {
 	store.client = etcd.NewClient()
-	store.client.SetCluster([]string{store.url})
+	store.client.SetCluster(store.urls)
 
 	return nil
 }
