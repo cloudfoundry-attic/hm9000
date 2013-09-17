@@ -14,7 +14,6 @@ import (
 	"testing"
 )
 
-const authNatsSubject = "cloudcontroller.bulk.credentials.default"
 const desiredStateServerBaseUrl = "http://127.0.0.1:6001"
 const etcdPort = 4001
 

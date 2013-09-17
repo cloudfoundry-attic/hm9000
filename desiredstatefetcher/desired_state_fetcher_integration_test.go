@@ -42,7 +42,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 
 		fetcher = NewDesiredStateFetcher(conf, fakeMessageBus, etcdStore, http_client.NewHttpClient(), bel_air.NewFreshPrince(etcdStore), &time_provider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
-		fakeMessageBus.Requests[authNatsSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
+		fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 	})
 
 	It("requests for the first set of data from the CC and stores the response", func() {

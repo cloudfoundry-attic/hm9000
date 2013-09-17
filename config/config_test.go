@@ -3,6 +3,7 @@ package config
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"io/ioutil"
 )
 
 var _ = Describe("Config", func() {
@@ -16,7 +17,14 @@ var _ = Describe("Config", func() {
         "desired_state_batch_size": 500,
         "actual_freshness_key": "/actual-fresh",
         "desired_freshness_key": "/desired-fresh",
-        "cc_base_url": "http://127.0.0.1:6001"
+        "cc_auth_message_bus_subject": "cloudcontroller.bulk.credentials.default",
+        "cc_base_url": "http://127.0.0.1:6001",
+        "nats": {
+            "host": "127.0.0.1",
+            "port": 4222,
+            "user": "",
+            "password": ""
+        }
     }
     `
 
@@ -32,13 +40,31 @@ var _ = Describe("Config", func() {
 			Ω(config.DesiredStateBatchSize).Should(BeNumerically("==", 500))
 			Ω(config.ActualFreshnessKey).Should(Equal("/actual-fresh"))
 			Ω(config.DesiredFreshnessKey).Should(Equal("/desired-fresh"))
+			Ω(config.CCAuthMessageBusSubject).Should(Equal("cloudcontroller.bulk.credentials.default"))
 			Ω(config.CCBaseURL).Should(Equal("http://127.0.0.1:6001"))
+
+			Ω(config.NATS.Host).Should(Equal("127.0.0.1"))
+			Ω(config.NATS.Port).Should(Equal(4222))
+			Ω(config.NATS.User).Should(Equal(""))
+			Ω(config.NATS.Password).Should(Equal(""))
 		})
 	})
 
 	Describe("loading up the default config", func() {
 		It("should load up the JSON in default_config.json", func() {
 			config, err := DefaultConfig()
+			Ω(err).ShouldNot(HaveOccured())
+
+			expectedConfig, _ := FromJSON([]byte(configJSON))
+			Ω(config).Should(Equal(expectedConfig))
+		})
+	})
+
+	Describe("loading from a file", func() {
+		It("should load up the JSON in default_config.json", func() {
+			ioutil.WriteFile("/tmp/_test_config.json", []byte(configJSON), 0777)
+
+			config, err := FromFile("/tmp/_test_config.json")
 			Ω(err).ShouldNot(HaveOccured())
 
 			expectedConfig, _ := FromJSON([]byte(configJSON))

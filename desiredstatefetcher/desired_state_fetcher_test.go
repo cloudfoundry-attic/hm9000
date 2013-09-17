@@ -59,16 +59,16 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 	Describe("Authentication", func() {
 		It("should request the CC credentials over NATS", func() {
-			Ω(fakeMessageBus.Requests).Should(HaveKey(authNatsSubject))
-			Ω(fakeMessageBus.Requests[authNatsSubject]).Should(HaveLen(1))
-			Ω(fakeMessageBus.Requests[authNatsSubject][0].Message).Should(BeEmpty())
+			Ω(fakeMessageBus.Requests).Should(HaveKey(conf.CCAuthMessageBusSubject))
+			Ω(fakeMessageBus.Requests[conf.CCAuthMessageBusSubject]).Should(HaveLen(1))
+			Ω(fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Message).Should(BeEmpty())
 		})
 
 		Context("when we've received the authentication information", func() {
 			var request *fake_http_client.Request
 
 			BeforeEach(func() {
-				fakeMessageBus.Requests[authNatsSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
+				fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 				request = httpClient.LastRequest()
 			})
 
@@ -89,7 +89,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		Context("when the authentication information was corrupted", func() {
 			BeforeEach(func() {
-				fakeMessageBus.Requests[authNatsSubject][0].Callback([]byte(`{`))
+				fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{`))
 			})
 
 			It("should not make any requests", func() {
@@ -110,6 +110,25 @@ var _ = Describe("DesiredStateFetcher", func() {
 				Ω(httpClient.Requests).Should(HaveLen(0))
 			})
 		})
+
+		Context("when the message bus request errors", func() {
+			BeforeEach(func() {
+				fakeMessageBus.RequestError = errors.New("oops!")
+				fetcher.Fetch(resultChan)
+			})
+
+			It("should not make any requests", func() {
+				Ω(httpClient.Requests).Should(HaveLen(0))
+			})
+
+			It("should send an error down the result channel", func(done Done) {
+				result := <-resultChan
+				Ω(result.Success).Should(BeFalse())
+				Ω(result.Message).Should(Equal("Failed to request auth info"))
+				Ω(result.Error).Should(HaveOccured())
+				close(done)
+			}, 0.1)
+		})
 	})
 
 	Describe("Fetching with an invalid URL", func() {
@@ -118,7 +137,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			fetcher = NewDesiredStateFetcher(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
 			fetcher.Fetch(resultChan)
 
-			fakeMessageBus.Requests[authNatsSubject][1].Callback([]byte(`{"user":"mcat","password":"testing"}`))
+			fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][1].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 		})
 
 		It("should send an error down the result channel", func(done Done) {
@@ -134,7 +153,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 		var response desiredStateServerResponse
 
 		BeforeEach(func() {
-			fakeMessageBus.Requests[authNatsSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
+			fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 		})
 
 		It("should request a batch size with an empty bulk token", func() {

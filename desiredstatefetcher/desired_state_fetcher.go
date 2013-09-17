@@ -47,7 +47,7 @@ func NewDesiredStateFetcher(config config.Config,
 }
 
 func (fetcher *desiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult) {
-	fetcher.messageBus.Request("cloudcontroller.bulk.credentials.default", []byte{}, func(response []byte) {
+	err := fetcher.messageBus.Request(fetcher.config.CCAuthMessageBusSubject, []byte{}, func(response []byte) {
 		authInfo, err := models.NewBasicAuthInfoFromJSON(response)
 		if err != nil {
 			resultChan <- DesiredStateFetcherResult{Message: "Failed to parse authentication info from JSON", Error: err}
@@ -56,6 +56,9 @@ func (fetcher *desiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherRes
 
 		fetcher.fetchBatch(authInfo.Encode(), initialBulkToken, resultChan)
 	})
+	if err != nil {
+		resultChan <- DesiredStateFetcherResult{Message: "Failed to request auth info", Error: err}
+	}
 }
 
 func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token string, resultChan chan DesiredStateFetcherResult) {
@@ -110,7 +113,6 @@ func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token strin
 			resultChan <- DesiredStateFetcherResult{Message: "Failed to store desired state in store", Error: err}
 			return
 		}
-
 		fetcher.fetchBatch(authorization, desiredState.BulkTokenRepresentation(), resultChan)
 	})
 }

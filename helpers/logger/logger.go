@@ -27,13 +27,13 @@ func NewRealLogger() *RealLogger {
 }
 
 func (logger *RealLogger) Info(subject string, message map[string]string) {
-	messageString := "No Message"
+	messageString := ""
 
 	if message != nil {
 		messageBytes, _ := json.Marshal(message)
-		messageString = string(messageBytes)
+		messageString = " - " + string(messageBytes)
 	}
 
-	logger.logger.Printf("%s - %s", subject, messageString)
-	logger.infoSysLogger.Printf("%s - %s", subject, messageString)
+	logger.logger.Printf("%s%s", subject, messageString)
+	logger.infoSysLogger.Printf("%s%s", subject, messageString)
 }
