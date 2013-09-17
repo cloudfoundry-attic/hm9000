@@ -76,6 +76,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 	It("reports success to the channel", func() {
 		result := <-resultChan
 		Ω(result.Success).Should(BeTrue())
+		Ω(result.NumResults).Should(Equal(3))
 		Ω(result.Message).Should(BeZero())
 		Ω(result.Error).ShouldNot(HaveOccured())
 	})

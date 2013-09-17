@@ -13,9 +13,10 @@ import (
 )
 
 type DesiredStateFetcherResult struct {
-	Success bool
-	Message string
-	Error   error
+	Success    bool
+	Message    string
+	Error      error
+	NumResults int
 }
 
 const initialBulkToken = "{}"
@@ -54,14 +55,14 @@ func (fetcher *desiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherRes
 			return
 		}
 
-		fetcher.fetchBatch(authInfo.Encode(), initialBulkToken, resultChan)
+		fetcher.fetchBatch(authInfo.Encode(), initialBulkToken, 0, resultChan)
 	})
 	if err != nil {
 		resultChan <- DesiredStateFetcherResult{Message: "Failed to request auth info", Error: err}
 	}
 }
 
-func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token string, resultChan chan DesiredStateFetcherResult) {
+func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult) {
 	req, err := http.NewRequest("GET", fetcher.bulkURL(fetcher.config.DesiredStateBatchSize, token), nil)
 
 	if err != nil {
@@ -104,7 +105,7 @@ func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token strin
 		}
 		if len(desiredState.Results) == 0 {
 			fetcher.freshPrince.Bump(fetcher.config.DesiredFreshnessKey, fetcher.config.DesiredFreshnessTTL, fetcher.timeProvider.Time())
-			resultChan <- DesiredStateFetcherResult{Success: true}
+			resultChan <- DesiredStateFetcherResult{Success: true, NumResults: numResults}
 			return
 		}
 
@@ -113,7 +114,7 @@ func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token strin
 			resultChan <- DesiredStateFetcherResult{Message: "Failed to store desired state in store", Error: err}
 			return
 		}
-		fetcher.fetchBatch(authorization, desiredState.BulkTokenRepresentation(), resultChan)
+		fetcher.fetchBatch(authorization, desiredState.BulkTokenRepresentation(), numResults+len(desiredState.Results), resultChan)
 	})
 }
 

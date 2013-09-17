@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/store"
+	"strconv"
 	"time"
 
 	"github.com/codegangsta/cli"
@@ -86,7 +87,7 @@ func fetchDesiredState(l logger.Logger, c *cli.Context) {
 	select {
 	case result := <-resultChan:
 		if result.Success {
-			l.Info("Success", nil)
+			l.Info("Success", map[string]string{"Number of Desired Apps Fetched": strconv.Itoa(result.NumResults)})
 			os.Exit(0)
 		} else {
 			l.Info(result.Message, map[string]string{"Error": result.Error.Error(), "Message": result.Message})
