@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/actualstatelistener"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/bel_air"
@@ -35,12 +36,23 @@ func main() {
 				fetchDesiredState(l, c)
 			},
 		},
+		cli.Command{
+			Name:        "listen",
+			Description: "Listens over the NATS for the actual state",
+			Usage:       "hm listen --config=/path/to/config",
+			Flags: []cli.Flag{
+				cli.StringFlag{"config", "", "Path to config file"},
+			},
+			Action: func(c *cli.Context) {
+				startListeningForActual(l, c)
+			},
+		},
 	}
 
 	app.Run(os.Args)
 }
 
-func fetchDesiredState(l logger.Logger, c *cli.Context) {
+func loadConfig(l logger.Logger, c *cli.Context) config.Config {
 	configPath := c.String("config")
 	if configPath == "" {
 		l.Info("Config path required", nil)
@@ -53,6 +65,10 @@ func fetchDesiredState(l logger.Logger, c *cli.Context) {
 		os.Exit(1)
 	}
 
+	return conf
+}
+
+func connectToMessageBus(l logger.Logger, conf config.Config) cfmessagebus.MessageBus {
 	messageBus, err := cfmessagebus.NewMessageBus("NATS")
 	if err != nil {
 		l.Info("Failed to initialize the message bus", map[string]string{"Error": err.Error()})
@@ -66,12 +82,24 @@ func fetchDesiredState(l logger.Logger, c *cli.Context) {
 		os.Exit(1)
 	}
 
+	return messageBus
+}
+
+func connectToETCDStore(l logger.Logger, conf config.Config) store.Store {
 	etcdStore := store.NewETCDStore(config.ETCD_URL(4001))
-	err = etcdStore.Connect()
+	err := etcdStore.Connect()
 	if err != nil {
 		l.Info("Failed to connect to the store", map[string]string{"Error": err.Error()})
 		os.Exit(1)
 	}
+
+	return etcdStore
+}
+
+func fetchDesiredState(l logger.Logger, c *cli.Context) {
+	conf := loadConfig(l, c)
+	messageBus := connectToMessageBus(l, conf)
+	etcdStore := connectToETCDStore(l, conf)
 
 	fetcher := desiredstatefetcher.NewDesiredStateFetcher(conf,
 		messageBus,
@@ -97,4 +125,21 @@ func fetchDesiredState(l logger.Logger, c *cli.Context) {
 		l.Info("Timed out when fetching desired state", nil)
 		os.Exit(1)
 	}
+}
+
+func startListeningForActual(l logger.Logger, c *cli.Context) {
+	conf := loadConfig(l, c)
+	messageBus := connectToMessageBus(l, conf)
+	etcdStore := connectToETCDStore(l, conf)
+
+	listener := actualstatelistener.NewActualStateListener(conf,
+		messageBus,
+		etcdStore,
+		bel_air.NewFreshPrince(etcdStore),
+		time_provider.NewTimeProvider(),
+		l)
+
+	listener.Start()
+	l.Info("Listening for Actual State", nil)
+	select {}
 }

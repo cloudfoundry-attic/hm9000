@@ -44,7 +44,7 @@ func (listener *ActualStateListener) Start() {
 		heartbeat, err := models.NewHeartbeatFromJSON(messageBody)
 
 		if err != nil {
-			listener.Info("Could not unmarshal heartbeat from store",
+			listener.Info("Could not unmarshal heartbeat",
 				map[string]string{
 					"Error":       err.Error(),
 					"MessageBody": string(messageBody),
