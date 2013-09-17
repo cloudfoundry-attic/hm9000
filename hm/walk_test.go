@@ -1,6 +1,7 @@
 package hm
 
 import (
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -9,17 +10,20 @@ import (
 var _ = Describe("Walk", func() {
 	var etcdStore store.Store
 	BeforeEach(func() {
-		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS())
+		conf, _ := config.DefaultConfig()
+		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		etcdStore.Set("/desired-fresh", []byte("123"), 1000)
-		etcdStore.Set("/actual-fresh", []byte("456"), 1000)
-		etcdStore.Set("/desired/guid1", []byte("guid1"), 1000)
-		etcdStore.Set("/desired/guid2", []byte("guid2"), 1000)
-		etcdStore.Set("/menu/oj", []byte("sweet"), 1000)
-		etcdStore.Set("/menu/breakfast/pancakes", []byte("tasty"), 1000)
-		etcdStore.Set("/menu/breakfast/waffles", []byte("delish"), 1000)
+		etcdStore.Set([]store.StoreNode{
+			store.StoreNode{Key: "/desired-fresh", Value: []byte("123"), TTL: 0},
+			store.StoreNode{Key: "/actual-fresh", Value: []byte("456"), TTL: 0},
+			store.StoreNode{Key: "/desired/guid1", Value: []byte("guid1"), TTL: 0},
+			store.StoreNode{Key: "/desired/guid2", Value: []byte("guid2"), TTL: 0},
+			store.StoreNode{Key: "/menu/oj", Value: []byte("sweet"), TTL: 0},
+			store.StoreNode{Key: "/menu/breakfast/pancakes", Value: []byte("tasty"), TTL: 0},
+			store.StoreNode{Key: "/menu/breakfast/waffles", Value: []byte("delish"), TTL: 0},
+		})
 	})
 
 	It("can recurse through keys in the store", func() {

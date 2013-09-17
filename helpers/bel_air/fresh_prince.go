@@ -31,5 +31,11 @@ func (dj *RealFreshPrince) Bump(key string, ttl uint64, timestamp time.Time) err
 		jsonTimestamp, _ = json.Marshal(models.FreshnessTimestamp{Timestamp: timestamp.Unix()})
 	}
 
-	return dj.store.Set(key, jsonTimestamp, ttl)
+	return dj.store.Set([]store.StoreNode{
+		store.StoreNode{
+			Key:   key,
+			Value: jsonTimestamp,
+			TTL:   ttl,
+		},
+	})
 }

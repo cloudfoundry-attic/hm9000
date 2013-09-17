@@ -8,18 +8,20 @@ import (
 )
 
 type Config struct {
-	HeartbeatTTL            uint64   `json:"heartbeat_ttl_in_seconds"`
-	ActualFreshnessTTL      uint64   `json:"actual_freshness_ttl_in_seconds"`
-	GracePeriod             int      `json:"grace_period_in_seconds"`
-	DesiredStateTTL         uint64   `json:"desired_state_ttl_in_seconds"`
-	DesiredFreshnessTTL     uint64   `json:"desired_freshness_ttl_in_seconds"`
-	DesiredStateBatchSize   int      `json:"desired_state_batch_size"`
-	ActualFreshnessKey      string   `json:"actual_freshness_key"`
-	DesiredFreshnessKey     string   `json:"desired_freshness_key"`
-	CCAuthMessageBusSubject string   `json:"cc_auth_message_bus_subject"`
-	CCBaseURL               string   `json:"cc_base_url"`
-	StoreURLs               []string `json:"store_urls"`
-	NATS                    struct {
+	HeartbeatTTL               uint64   `json:"heartbeat_ttl_in_seconds"`
+	ActualFreshnessTTL         uint64   `json:"actual_freshness_ttl_in_seconds"`
+	GracePeriod                int      `json:"grace_period_in_seconds"`
+	DesiredStateTTL            uint64   `json:"desired_state_ttl_in_seconds"`
+	DesiredFreshnessTTL        uint64   `json:"desired_freshness_ttl_in_seconds"`
+	DesiredStateBatchSize      int      `json:"desired_state_batch_size"`
+	ActualFreshnessKey         string   `json:"actual_freshness_key"`
+	DesiredFreshnessKey        string   `json:"desired_freshness_key"`
+	CCAuthMessageBusSubject    string   `json:"cc_auth_message_bus_subject"`
+	CCBaseURL                  string   `json:"cc_base_url"`
+	StoreURLs                  []string `json:"store_urls"`
+	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`
+
+	NATS struct {
 		Host     string `json:"host"`
 		Port     int    `json:"port"`
 		User     string `json:"user"`

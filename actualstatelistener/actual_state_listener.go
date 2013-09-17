@@ -52,18 +52,22 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
-		for _, instance := range heartbeat.InstanceHeartbeats {
-			key := "/actual/" + instance.InstanceGuid
-			value := instance.ToJson()
-			err = listener.heartbeatStore.Set(key, value, listener.config.HeartbeatTTL)
-
-			if err != nil {
-				listener.Info("Could not put instance heartbeat in store:",
-					map[string]string{
-						"Error":     err.Error(),
-						"Heartbeat": string(value),
-					})
+		nodes := make([]store.StoreNode, len(heartbeat.InstanceHeartbeats))
+		for i, instance := range heartbeat.InstanceHeartbeats {
+			nodes[i] = store.StoreNode{
+				Key:   "/actual/" + instance.InstanceGuid,
+				Value: instance.ToJson(),
+				TTL:   listener.config.HeartbeatTTL,
 			}
+		}
+
+		err = listener.heartbeatStore.Set(nodes)
+
+		if err != nil {
+			listener.Info("Could not put instance heartbeats in store:",
+				map[string]string{
+					"Error": err.Error(),
+				})
 		}
 	})
 }

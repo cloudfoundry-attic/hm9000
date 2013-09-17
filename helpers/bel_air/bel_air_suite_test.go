@@ -2,6 +2,7 @@ package bel_air
 
 import (
 	"encoding/json"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,7 +38,8 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 	BeforeEach(func() {
 		etcdRunner.Reset()
 
-		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS())
+		conf, _ := config.DefaultConfig()
+		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
 		err := etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
@@ -75,7 +77,13 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 		Context("when the key is present", func() {
 			BeforeEach(func() {
 				freshnessTimestamp, _ := json.Marshal(models.FreshnessTimestamp{Timestamp: 100})
-				etcdStore.Set(key, freshnessTimestamp, 2)
+				etcdStore.Set([]store.StoreNode{
+					store.StoreNode{
+						Key:   key,
+						Value: freshnessTimestamp,
+						TTL:   2,
+					},
+				})
 
 				freshPrince.Bump(key, ttl, timestamp)
 			})

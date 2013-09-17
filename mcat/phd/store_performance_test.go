@@ -1,16 +1,12 @@
 package phd
 
 import (
+	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/hm9000/actualstatelistener"
-	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/bel_air"
-	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/test_helpers/app"
-	"github.com/cloudfoundry/hm9000/test_helpers/fake_logger"
 
 	"fmt"
 	"time"
@@ -19,71 +15,59 @@ import (
 var _ = Describe("StorePerformance", func() {
 	var (
 		realStore store.Store
-		listener  *actualstatelistener.ActualStateListener
 	)
 
 	BeforeEach(func() {
-		realStore = store.NewETCDStore(etcdRunner.NodeURLS())
+		realStore = store.NewETCDStore(etcdRunner.NodeURLS(), 100)
 		err := realStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
+	})
 
-		conf, err := config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccured())
-
-		listener = actualstatelistener.New(
-			conf,
-			natsRunner.MessageBus,
-			realStore,
-			bel_air.NewFreshPrince(realStore),
-			&time_provider.RealTimeProvider{},
-			fake_logger.NewFakeLogger())
-		listener.Start()
+	AfterEach(func() {
+		realStore.Disconnect()
 	})
 
 	benchmarkActualStateWrite := func(numDeas int, numAppsPerDea int) {
 		Context(fmt.Sprintf("\x1b[1m\x1b[32m%d DEAs each with %d apps (%d total)\x1b[0m", numDeas, numAppsPerDea, numDeas*numAppsPerDea), func() {
 			var (
-				instanceKeys   map[string]bool
-				heartbeatJsons [][]byte
+				heartbeats []models.Heartbeat
 			)
 
 			BeforeEach(func() {
-				instanceKeys = make(map[string]bool, 0)
-				heartbeatJsons = make([][]byte, 0)
+				heartbeats = make([]models.Heartbeat, numDeas)
 				for i := 0; i < numDeas; i++ {
-					dea := app.NewDea()
-					heartbeat := dea.Heartbeat(numAppsPerDea, time.Now().Unix())
-					heartbeatJson := heartbeat.ToJson()
-					heartbeatJsons = append(heartbeatJsons, heartbeatJson)
-					instanceKeys["/actual/"+dea.GetApp(numAppsPerDea-1).GetInstance(0).InstanceGuid] = false
+					heartbeats[i] = app.NewDea().Heartbeat(numAppsPerDea, time.Now().Unix())
 				}
 			})
 
 			AfterEach(func() {
 				values, err := realStore.List("/actual")
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(values).Should(HaveLen(numDeas * numAppsPerDea))
+				Ω(len(values)).Should(Equal(numDeas * numAppsPerDea))
 			})
 
-			Benchmark("writing to the store", func() {
-				for _, heartbeatJson := range heartbeatJsons {
-					natsRunner.MessageBus.Publish("dea.heartbeat", heartbeatJson)
-				}
-
-				Eventually(func() bool {
-					for key, value := range instanceKeys {
-						if value == false {
-							_, err := realStore.Get(key)
-							if err == nil {
-								instanceKeys[key] = true
-							} else {
-								return false
-							}
+			Benchmark("writing to the store (and reading the entire sample)", func() {
+				completions := make(chan bool, len(heartbeats))
+				for _, heartbeat := range heartbeats {
+					nodes := make([]store.StoreNode, len(heartbeat.InstanceHeartbeats))
+					for i, instance := range heartbeat.InstanceHeartbeats {
+						nodes[i] = store.StoreNode{
+							Key:   "/actual/" + instance.InstanceGuid,
+							Value: instance.ToJson(),
+							TTL:   0,
 						}
 					}
-					return true
-				}, 30.0, 0.05).Should(BeTrue(), "Didn't get all the keys")
-			}, 5, 5.0)
+					go func() {
+						err := realStore.Set(nodes)
+						Ω(err).ShouldNot(HaveOccured())
+						completions <- true
+					}()
+				}
+
+				Eventually(func() chan bool {
+					return completions
+				}, 60.0, 0.01).Should(HaveLen(len(heartbeats)), "Never finished writing to store")
+			}, 5, 60.0)
 		})
 	}
 
@@ -105,18 +89,24 @@ var _ = Describe("StorePerformance", func() {
 	benchmarkActualStateRead := func(numApps int) {
 		Context(fmt.Sprintf("\x1b[1m\x1b[32m%d apps\x1b[0m", numApps), func() {
 			BeforeEach(func() {
+				nodes := make([]store.StoreNode, numApps)
 				for i := 0; i < numApps; i++ {
 					instance := app.NewApp().GetInstance(0)
-					value := instance.Heartbeat(0).ToJson()
-					realStore.Set("/actual/"+instance.InstanceGuid, value, 30)
+					nodes[i] = store.StoreNode{
+						Key:   "/actual/" + instance.InstanceGuid,
+						Value: instance.Heartbeat(0).ToJson(),
+						TTL:   0,
+					}
 				}
+				err := realStore.Set(nodes)
+				Ω(err).ShouldNot(HaveOccured())
 			})
 
 			Benchmark("reading from the store", func() {
 				values, err := realStore.List("/actual")
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(values).Should(HaveLen(numApps))
-			}, 3, 3.0)
+			}, 3, 10.0)
 		})
 	}
 

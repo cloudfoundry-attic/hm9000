@@ -30,6 +30,10 @@ var _ = Describe("Actual state listener", func() {
 	)
 
 	BeforeEach(func() {
+		var err error
+		conf, err = config.DefaultConfig()
+		Ω(err).ShouldNot(HaveOccured())
+
 		timeProvider = &fake_time_provider.FakeTimeProvider{
 			TimeToProvide: time.Now(),
 		}
@@ -37,16 +41,13 @@ var _ = Describe("Actual state listener", func() {
 		app = NewApp()
 		anotherApp = NewApp()
 
-		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS())
-		err := etcdStore.Connect()
+		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
 
 		freshPrince = &fake_bel_air.FakeFreshPrince{}
-
-		conf, err = config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccured())
 
 		listener = New(conf, messageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
 		listener.Start()

@@ -123,12 +123,20 @@ func (fetcher *desiredStateFetcher) bulkURL(batchSize int, bulkToken string) str
 }
 
 func (fetcher *desiredStateFetcher) pushToStore(desiredState desiredStateServerResponse) error {
+	nodes := make([]store.StoreNode, len(desiredState.Results))
+	i := 0
 	for _, desiredAppState := range desiredState.Results {
-		key := "/desired/" + desiredAppState.AppGuid + "-" + desiredAppState.AppVersion
-		err := fetcher.store.Set(key, desiredAppState.ToJson(), fetcher.config.DesiredStateTTL)
-		if err != nil {
-			return err
+		nodes[i] = store.StoreNode{
+			Key:   "/desired/" + desiredAppState.AppGuid + "-" + desiredAppState.AppVersion,
+			Value: desiredAppState.ToJson(),
+			TTL:   fetcher.config.DesiredStateTTL,
 		}
+		i++
+	}
+
+	err := fetcher.store.Set(nodes)
+	if err != nil {
+		return err
 	}
 
 	return nil

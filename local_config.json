@@ -7,8 +7,8 @@
     "desired_state_batch_size": 500,
     "actual_freshness_key": "/actual-fresh",
     "desired_freshness_key": "/desired-fresh",
-    "cc_auth_message_bus_subject": "cloudcontroller.bulk.credentials.default",
-    "cc_base_url": "http://127.0.0.1:6001",
+    "cc_auth_message_bus_subject": "cloudcontroller.bulk.credentials.ng",
+    "cc_base_url": "http://127.0.0.1:8181",
     "store_urls": ["http://127.0.0.1:4001"],
     "store_max_concurrent_requests": 100,
     "nats": {

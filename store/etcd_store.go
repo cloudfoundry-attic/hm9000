@@ -1,17 +1,20 @@
 package store
 
 import (
+	"github.com/cloudfoundry/hm9000/helpers/worker_pool"
 	"github.com/coreos/go-etcd/etcd"
 )
 
 type ETCDStore struct {
-	urls   []string
-	client *etcd.Client
+	urls       []string
+	client     *etcd.Client
+	workerPool *worker_pool.WorkerPool
 }
 
-func NewETCDStore(urls []string) *ETCDStore {
+func NewETCDStore(urls []string, maxConcurrentRequests int) *ETCDStore {
 	return &ETCDStore{
-		urls: urls,
+		urls:       urls,
+		workerPool: worker_pool.NewWorkerPool(maxConcurrentRequests),
 	}
 }
 
@@ -22,12 +25,37 @@ func (store *ETCDStore) Connect() error {
 	return nil
 }
 
+func (store *ETCDStore) Disconnect() error {
+	store.workerPool.StopWorkers()
+
+	return nil
+}
+
 func (store *ETCDStore) isTimeoutError(err error) bool {
 	return err != nil && err.Error() == "Cannot reach servers"
 }
 
-func (store *ETCDStore) Set(key string, value []byte, ttl uint64) error {
-	_, err := store.client.Set(key, string(value), ttl)
+func (store *ETCDStore) Set(nodes []StoreNode) error {
+	results := make(chan error, len(nodes))
+
+	for _, node := range nodes {
+		node := node
+		store.workerPool.ScheduleWork(func() {
+			_, err := store.client.Set(node.Key, string(node.Value), node.TTL)
+			results <- err
+		})
+	}
+
+	var err error
+	numReceived := 0
+	for numReceived < len(nodes) {
+		result := <-results
+		numReceived++
+		if err == nil {
+			err = result
+		}
+	}
+
 	if store.isTimeoutError(err) {
 		return ETCDError{reason: ETCDErrorTimeout}
 	}

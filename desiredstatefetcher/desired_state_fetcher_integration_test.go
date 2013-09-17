@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/http_client"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/test_helpers/app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,6 +16,7 @@ import (
 var _ = Describe("Fetching from CC and storing the result in the Store", func() {
 	var (
 		conf           config.Config
+		etcdStore      store.Store
 		fetcher        *desiredStateFetcher
 		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
 		a1             app.App
@@ -38,6 +40,10 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 
 		var err error
 		conf, err = config.DefaultConfig()
+		Ω(err).ShouldNot(HaveOccured())
+
+		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		fetcher = New(conf, fakeMessageBus, etcdStore, http_client.NewHttpClient(), bel_air.NewFreshPrince(etcdStore), &time_provider.RealTimeProvider{})

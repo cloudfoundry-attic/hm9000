@@ -13,4 +13,4 @@ install:
   - mv ./etcd $HOME/gopath/bin
   - popd
 
-script: PATH=$HOME/gopath/bin:$PATH ginkgo -r --randomizeAllSpecs --failOnPending --skipBenchmarks
+script: PATH=$HOME/gopath/bin:$PATH ginkgo -r  -i -race --randomizeAllSpecs --failOnPending --skipBenchmarks

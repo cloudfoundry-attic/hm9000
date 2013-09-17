@@ -8,9 +8,13 @@ import (
 var _ = Describe("ETCD Store", func() {
 	var store Store
 	BeforeEach(func() {
-		store = NewETCDStore(runner.NodeURLS())
+		store = NewETCDStore(runner.NodeURLS(), 100)
 		err := store.Connect()
 		Ω(err).ShouldNot(HaveOccured())
+	})
+
+	AfterEach(func() {
+		store.Disconnect()
 	})
 
 	Context("With something in the store", func() {
@@ -26,12 +30,12 @@ var _ = Describe("ETCD Store", func() {
 			value = []byte("my_stuff")
 
 			key = "/foo/bar"
-			err := store.Set(key, value, 0)
+			err := store.Set([]StoreNode{StoreNode{Key: key, Value: value, TTL: 0}})
 			Ω(err).ShouldNot(HaveOccured())
 
 			dir_key = "/foo/baz"
 			dir_entry_key = "/bar"
-			err = store.Set(dir_key+dir_entry_key, value, 0)
+			err = store.Set([]StoreNode{StoreNode{Key: dir_key + dir_entry_key, Value: value, TTL: 0}})
 			Ω(err).ShouldNot(HaveOccured())
 
 			expectedLeafNode = StoreNode{
@@ -88,7 +92,7 @@ var _ = Describe("ETCD Store", func() {
 
 		Context("when listing an empty directory", func() {
 			It("should return an empty list of nodes and no error", func() {
-				store.Set("/menu/waffles", []byte("tasty"), 0)
+				store.Set([]StoreNode{StoreNode{Key: "/menu/waffles", Value: []byte("tasty"), TTL: 0}})
 				store.Delete("/menu/waffles")
 				results, err := store.List("/menu")
 				Ω(results).Should(BeEmpty())
@@ -115,7 +119,7 @@ var _ = Describe("ETCD Store", func() {
 
 		Context("when we set", func() {
 			It("should return a timeout error", func() {
-				err := store.Set("/foo/bar", []byte("baz"), 0)
+				err := store.Set([]StoreNode{StoreNode{Key: "/foo/bar", Value: []byte("baz"), TTL: 0}})
 				Ω(IsTimeoutError(err)).Should(BeTrue())
 			})
 		})
@@ -145,7 +149,7 @@ var _ = Describe("ETCD Store", func() {
 
 	Context("When setting a key with a non-zero TTL", func() {
 		It("should stay in the store for its TTL and then disappear", func() {
-			err := store.Set("/floop", []byte("bar"), 1)
+			err := store.Set([]StoreNode{StoreNode{Key: "/floop", Value: []byte("bar"), TTL: 1}})
 			Ω(err).ShouldNot(HaveOccured())
 
 			_, err = store.Get("/floop")

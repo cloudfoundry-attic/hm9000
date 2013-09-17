@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/test_helpers/app"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_bel_air"
 
@@ -36,10 +37,20 @@ var _ = Describe("DesiredStateFetcher", func() {
 		httpClient     *fake_http_client.FakeHttpClient
 		timeProvider   *fake_time_provider.FakeTimeProvider
 		freshPrince    *fake_bel_air.FakeFreshPrince
+		etcdStore      store.Store
 		resultChan     chan DesiredStateFetcherResult
 	)
 
 	BeforeEach(func() {
+		var err error
+		conf, err = config.DefaultConfig()
+
+		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = etcdStore.Connect()
+		Ω(err).ShouldNot(HaveOccured())
+
+		Ω(err).ShouldNot(HaveOccured())
+
 		resultChan = make(chan DesiredStateFetcherResult, 1)
 		timeProvider = &fake_time_provider.FakeTimeProvider{
 			TimeToProvide: time.Now(),
@@ -48,10 +59,6 @@ var _ = Describe("DesiredStateFetcher", func() {
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
 		httpClient = fake_http_client.NewFakeHttpClient()
 		freshPrince = &fake_bel_air.FakeFreshPrince{}
-
-		var err error
-		conf, err = config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccured())
 
 		fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
 		fetcher.Fetch(resultChan)
@@ -315,7 +322,12 @@ var _ = Describe("DesiredStateFetcher", func() {
 		Context("when it fails to write to the store", func() {
 			BeforeEach(func() {
 				a := app.NewApp()
-				etcdStore.Set("/desired/"+a.AppGuid+"-"+a.AppVersion+"/foo", []byte("mwahahaha"), 10)
+				node := store.StoreNode{
+					Key:   "/desired/" + a.AppGuid + "-" + a.AppVersion + "/foo",
+					Value: []byte("mwahahaha"),
+					TTL:   0,
+				}
+				etcdStore.Set([]store.StoreNode{node})
 
 				response = desiredStateServerResponse{
 					Results: map[string]models.DesiredAppState{
