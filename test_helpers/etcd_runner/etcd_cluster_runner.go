@@ -76,6 +76,14 @@ func (etcd *ETCDClusterRunner) Reset() {
 	etcd.deleteDir(client, "/")
 }
 
+func (etcd *ETCDClusterRunner) DiskUsage() (bytes int64, err error) {
+	fi, err := os.Stat(etcd.tmpPathTo("log", 0))
+	if err != nil {
+		return 0, err
+	}
+	return fi.Size(), nil
+}
+
 func (etcd *ETCDClusterRunner) deleteDir(client *etcdclient.Client, dir string) {
 	responses, err := client.Get(dir)
 	Ω(err).ShouldNot(HaveOccured())

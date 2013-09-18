@@ -9,8 +9,19 @@ import (
 	"github.com/cloudfoundry/hm9000/test_helpers/etcd_runner"
 
 	"fmt"
+	"strings"
 	"time"
 )
+
+type Report struct {
+	NumStoreNodes int
+	NumApps       int
+	Subject       string
+}
+
+func (r Report) String() string {
+	return fmt.Sprintf("%s: %d ETCD node(s), %d apps", strings.Title(r.Subject), r.NumStoreNodes, r.NumApps)
+}
 
 var _ = Describe("ETCD Store Performance", func() {
 	for nodes := 1; nodes <= 7; nodes += 2 {
@@ -33,57 +44,40 @@ var _ = Describe("ETCD Store Performance", func() {
 				etcdRunner = nil
 			})
 
-			generateNodes := func(numApps int) []store.StoreNode {
-				nodes := make([]store.StoreNode, numApps)
+			for _, numApps := range []int{100, 1000, 3000, 10000, 30000} {
+				numApps := numApps
 
-				heartbeat := app.NewDea().Heartbeat(numApps, time.Now().Unix())
-				for i, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
-					nodes[i] = store.StoreNode{
-						Key:   "/actual/" + instanceHeartbeat.InstanceGuid,
-						Value: instanceHeartbeat.ToJson(),
-						TTL:   0,
+				Measure(fmt.Sprintf("Read/Write Performance With %d Apps", numApps), func(b Benchmarker) {
+					data := make([]store.StoreNode, numApps)
+
+					heartbeat := app.NewDea().Heartbeat(numApps, time.Now().Unix())
+					for i, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
+						data[i] = store.StoreNode{
+							Key:   "/actual/" + instanceHeartbeat.InstanceGuid,
+							Value: instanceHeartbeat.ToJson(),
+							TTL:   0,
+						}
 					}
-				}
 
-				return nodes
-			}
-
-			for _, numApps := range []int{100, 1000, 3000, 10000, 30000} {
-				numApps := numApps
-				Context("writing to the store", func() {
-					var nodes []store.StoreNode
-
-					BeforeEach(func() {
-						nodes = generateNodes(numApps)
-					})
-
-					Benchmark(fmt.Sprintf("\x1b[1m\x1b[32m%d instance heartbeats\x1b[0m", numApps), func() {
-						err := realStore.Set(nodes)
+					writeTime := b.Time("writing to the store", func() {
+						err := realStore.Set(data)
 						Ω(err).ShouldNot(HaveOccured())
-					}, 5, 60.0)
+					}, Report{NumStoreNodes: nodes, NumApps: numApps, Subject: "write performance"})
 
-					AfterEach(func() {
+					Ω(writeTime.Seconds()).Should(BeNumerically("<=", 30))
+
+					readTime := b.Time("reading from the store", func() {
 						values, err := realStore.List("/actual")
 						Ω(err).ShouldNot(HaveOccured())
-						Ω(len(values)).Should(Equal(numApps))
-					})
-				})
-			}
+						Ω(len(values)).Should(Equal(numApps), "Didn't find the correct number of entries in the store")
+					}, Report{NumStoreNodes: nodes, NumApps: numApps, Subject: "read performance"})
 
-			for _, numApps := range []int{100, 1000, 3000, 10000, 30000} {
-				numApps := numApps
-				Context("reading from the store", func() {
-					BeforeEach(func() {
-						err := realStore.Set(generateNodes(numApps))
-						Ω(err).ShouldNot(HaveOccured())
-					})
+					Ω(readTime.Seconds()).Should(BeNumerically("<=", 3))
 
-					Benchmark(fmt.Sprintf("\x1b[1m\x1b[32m%d instance heartbeats\x1b[0m", numApps), func() {
-						values, err := realStore.List("/actual")
-						Ω(err).ShouldNot(HaveOccured())
-						Ω(len(values)).Should(Equal(numApps))
-					}, 5, 10.0)
-				})
+					usage, err := etcdRunner.DiskUsage()
+					Ω(err).ShouldNot(HaveOccured())
+					b.RecordValue("disk usage in MB", float64(usage)/1024.0/1024.0, Report{NumStoreNodes: nodes, NumApps: numApps, Subject: "disk usage"})
+				}, 5)
 			}
 		})
 	}
