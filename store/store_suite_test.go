@@ -12,25 +12,46 @@ import (
 	"testing"
 )
 
-var runner *storerunner.ETCDClusterRunner
-var etcdPort int
+var etcdRunner *storerunner.ETCDClusterRunner
+var zookeeperRunner *storerunner.ZookeeperClusterRunner
 
 func TestStore(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
-	etcdPort = 5000 + config.GinkgoConfig.ParallelNode*10
-	runner = storerunner.NewETCDClusterRunner("etcd", etcdPort, 5)
-	runner.Start()
+	etcdPort := 5000 + (config.GinkgoConfig.ParallelNode-1)*10
+	etcdRunner = storerunner.NewETCDClusterRunner(etcdPort, 5)
+
+	zookeeperPort := 2181 + (config.GinkgoConfig.ParallelNode-1)*10
+	zookeeperRunner = storerunner.NewZookeeperClusterRunner(zookeeperPort, 1)
+
+	etcdRunner.Start()
+	zookeeperRunner.Start()
 
 	RunSpecs(t, "Store Suite")
 
-	runner.Stop()
+	stopStores()
 }
 
 var _ = BeforeEach(func() {
-	runner.Reset()
+	if etcdRunner != nil {
+		etcdRunner.Reset()
+	}
+
+	if zookeeperRunner != nil {
+		zookeeperRunner.Reset()
+	}
 })
+
+func stopStores() {
+	if etcdRunner != nil {
+		etcdRunner.Stop()
+	}
+
+	if zookeeperRunner != nil {
+		zookeeperRunner.Stop()
+	}
+}
 
 func registerSignalHandler() {
 	go func() {
@@ -39,7 +60,7 @@ func registerSignalHandler() {
 
 		select {
 		case <-c:
-			runner.Stop()
+			stopStores()
 			os.Exit(0)
 		}
 	}()

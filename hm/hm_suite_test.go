@@ -14,7 +14,7 @@ var etcdRunner *storerunner.ETCDClusterRunner
 func TestHM9000(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	etcdRunner = storerunner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner = storerunner.NewETCDClusterRunner(5001, 1)
 	etcdRunner.Start()
 
 	RunSpecs(t, "HM9000 CLI Suite")

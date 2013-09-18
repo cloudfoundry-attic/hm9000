@@ -31,7 +31,7 @@ func TestDesiredStateFetcher(t *testing.T) {
 	stateServer = desiredstateserver.NewDesiredStateServer(fakeMessageBus)
 	go stateServer.SpinUp(6001)
 
-	etcdRunner = storerunner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner = storerunner.NewETCDClusterRunner(5001, 1)
 	etcdRunner.Start()
 
 	RunSpecs(t, "Desired State Fetcher Suite")

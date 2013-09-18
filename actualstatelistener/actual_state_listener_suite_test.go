@@ -14,7 +14,7 @@ var etcdRunner *storerunner.ETCDClusterRunner
 func TestActualStateListener(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	etcdRunner = storerunner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner = storerunner.NewETCDClusterRunner(5001, 1)
 	etcdRunner.Start()
 
 	RunSpecs(t, "Actual State Listener Suite")

@@ -30,7 +30,7 @@ var _ = Describe("ETCD Store Performance", func() {
 			var realStore store.Store
 
 			BeforeEach(func() {
-				etcdRunner = storerunner.NewETCDClusterRunner("etcd", 5001, nodes)
+				etcdRunner = storerunner.NewETCDClusterRunner(5001, nodes)
 				etcdRunner.Start()
 
 				realStore = store.NewETCDStore(etcdRunner.NodeURLS(), 100)

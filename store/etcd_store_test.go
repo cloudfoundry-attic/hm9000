@@ -8,7 +8,7 @@ import (
 var _ = Describe("ETCD Store", func() {
 	var store Store
 	BeforeEach(func() {
-		store = NewETCDStore(runner.NodeURLS(), 100)
+		store = NewETCDStore(etcdRunner.NodeURLS(), 100)
 		err := store.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 	})
@@ -103,11 +103,11 @@ var _ = Describe("ETCD Store", func() {
 
 	Context("when the store is down", func() {
 		BeforeEach(func() {
-			runner.Stop()
+			etcdRunner.Stop()
 		})
 
 		AfterEach(func() {
-			runner.Start()
+			etcdRunner.Start()
 		})
 
 		Context("when we get", func() {

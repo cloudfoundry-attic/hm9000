@@ -12,15 +12,13 @@ import (
 )
 
 type ETCDClusterRunner struct {
-	pathToEtcd   string
 	startingPort int
 	numNodes     int
 	etcdCommands []*exec.Cmd
 }
 
-func NewETCDClusterRunner(pathToEtcd string, startingPort int, numNodes int) *ETCDClusterRunner {
+func NewETCDClusterRunner(startingPort int, numNodes int) *ETCDClusterRunner {
 	return &ETCDClusterRunner{
-		pathToEtcd:   pathToEtcd,
 		startingPort: startingPort,
 		numNodes:     numNodes,
 	}
@@ -30,20 +28,21 @@ func (etcd *ETCDClusterRunner) Start() {
 	etcd.etcdCommands = make([]*exec.Cmd, etcd.numNodes)
 
 	for i := 0; i < etcd.numNodes; i++ {
+		etcd.nukeArtifacts(i)
 		os.MkdirAll(etcd.tmpPath(i), 0700)
 		args := []string{"-d", etcd.tmpPath(i), "-c", etcd.clientUrl(i), "-s", etcd.serverUrl(i), "-n", etcd.nodeName(i)}
 		if i != 0 {
 			args = append(args, "-C", etcd.serverUrl(0))
 		}
 
-		etcd.etcdCommands[i] = exec.Command(etcd.pathToEtcd, args...)
+		etcd.etcdCommands[i] = exec.Command("etcd", args...)
 
 		err := etcd.etcdCommands[i].Start()
 		Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
 
 		Eventually(func() interface{} {
 			return etcd.exists(i)
-		}, 3, 0.05).Should(BeTrue(), "Expected ETCD")
+		}, 3, 0.05).Should(BeTrue(), "Expected ETCD to be up and running")
 	}
 }
 
@@ -52,10 +51,7 @@ func (etcd *ETCDClusterRunner) Stop() {
 		for i := 0; i < etcd.numNodes; i++ {
 			etcd.etcdCommands[i].Process.Signal(syscall.SIGINT)
 			etcd.etcdCommands[i].Process.Wait()
-			os.Remove(etcd.tmpPathTo("log", i))
-			os.Remove(etcd.tmpPathTo("info", i))
-			os.Remove(etcd.tmpPathTo("snapshot", i))
-			os.Remove(etcd.tmpPathTo("conf", i))
+			etcd.nukeArtifacts(i)
 		}
 		etcd.etcdCommands = nil
 	}
@@ -69,19 +65,19 @@ func (etcd *ETCDClusterRunner) NodeURLS() []string {
 	return urls
 }
 
-func (etcd *ETCDClusterRunner) Reset() {
-	client := etcdclient.NewClient()
-	client.SetCluster(etcd.NodeURLS())
-
-	etcd.deleteDir(client, "/")
-}
-
 func (etcd *ETCDClusterRunner) DiskUsage() (bytes int64, err error) {
 	fi, err := os.Stat(etcd.tmpPathTo("log", 0))
 	if err != nil {
 		return 0, err
 	}
 	return fi.Size(), nil
+}
+
+func (etcd *ETCDClusterRunner) Reset() {
+	client := etcdclient.NewClient()
+	client.SetCluster(etcd.NodeURLS())
+
+	etcd.deleteDir(client, "/")
 }
 
 func (etcd *ETCDClusterRunner) deleteDir(client *etcdclient.Client, dir string) {
@@ -121,6 +117,10 @@ func (etcd *ETCDClusterRunner) tmpPath(index int) string {
 
 func (etcd *ETCDClusterRunner) tmpPathTo(subdir string, index int) string {
 	return fmt.Sprintf("/%s/%s", etcd.tmpPath(index), subdir)
+}
+
+func (etcd *ETCDClusterRunner) nukeArtifacts(index int) {
+	os.RemoveAll(etcd.tmpPath(index))
 }
 
 func (etcd *ETCDClusterRunner) exists(index int) bool {

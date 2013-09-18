@@ -17,7 +17,7 @@ import (
 var etcdRunner *storerunner.ETCDClusterRunner
 
 func TestFreshnessManager(t *testing.T) {
-	etcdRunner = storerunner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner = storerunner.NewETCDClusterRunner(5001, 1)
 	etcdRunner.Start()
 
 	RegisterFailHandler(Fail)
