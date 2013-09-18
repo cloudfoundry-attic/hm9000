@@ -1,4 +1,4 @@
-package etcdrunner
+package storerunner
 
 import (
 	"fmt"

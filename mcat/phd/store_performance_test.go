@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
-	"github.com/cloudfoundry/hm9000/testhelpers/etcdrunner"
+	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
 
 	"fmt"
 	"strings"
@@ -30,7 +30,7 @@ var _ = Describe("ETCD Store Performance", func() {
 			var realStore store.Store
 
 			BeforeEach(func() {
-				etcdRunner = etcdrunner.NewETCDClusterRunner("etcd", 5001, nodes)
+				etcdRunner = storerunner.NewETCDClusterRunner("etcd", 5001, nodes)
 				etcdRunner.Start()
 
 				realStore = store.NewETCDStore(etcdRunner.NodeURLS(), 100)

@@ -4,14 +4,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/hm9000/testhelpers/etcdrunner"
+	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
 
 	"os"
 	"os/signal"
 	"testing"
 )
 
-var etcdRunner *etcdrunner.ETCDClusterRunner
+var etcdRunner *storerunner.ETCDClusterRunner
 
 func TestPhd(t *testing.T) {
 	registerSignalHandler()

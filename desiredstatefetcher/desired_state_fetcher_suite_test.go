@@ -3,7 +3,7 @@ package desiredstatefetcher
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
-	"github.com/cloudfoundry/hm9000/testhelpers/etcdrunner"
+	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -16,7 +16,7 @@ const desiredStateServerBaseUrl = "http://127.0.0.1:6001"
 
 var (
 	stateServer *desiredstateserver.DesiredStateServer
-	etcdRunner  *etcdrunner.ETCDClusterRunner
+	etcdRunner  *storerunner.ETCDClusterRunner
 )
 
 var _ = BeforeEach(func() {
@@ -31,7 +31,7 @@ func TestDesiredStateFetcher(t *testing.T) {
 	stateServer = desiredstateserver.NewDesiredStateServer(fakeMessageBus)
 	go stateServer.SpinUp(6001)
 
-	etcdRunner = etcdrunner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner = storerunner.NewETCDClusterRunner("etcd", 5001, 1)
 	etcdRunner.Start()
 
 	RunSpecs(t, "Desired State Fetcher Suite")

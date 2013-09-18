@@ -256,7 +256,7 @@ Brings up an in-process http server that mimics the CC's bulk endpoints (includi
 
 Brings up and manages the lifecycle of a live NATS server.  After bringing the server up it provides a fully configured cfmessagebus object that you can pass to your test subjects.
 
-#### `etcdrunner`
+#### `storerunner`
 
 Brings up and manages the lifecycle of a live ETCD server cluster.
 
