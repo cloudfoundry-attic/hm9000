@@ -1,7 +1,6 @@
 package phd
 
 import (
-	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -18,19 +17,12 @@ func TestBootstrap(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
-	nodes := 5
-	etcdRunner = etcd_runner.NewETCDClusterRunner("etcd", 5001, nodes)
-	etcdRunner.Start()
+	RunSpecs(t, "Phd Performance Suite")
 
-	RunSpecs(t, fmt.Sprintf("Phd Suite With %d ETCD nodes", nodes))
-
-	etcdRunner.Stop()
+	if etcdRunner != nil {
+		etcdRunner.Stop()
+	}
 }
-
-var _ = BeforeEach(func() {
-	etcdRunner.Stop()
-	etcdRunner.Start()
-})
 
 func registerSignalHandler() {
 	go func() {
@@ -39,7 +31,9 @@ func registerSignalHandler() {
 
 		select {
 		case <-c:
-			etcdRunner.Stop()
+			if etcdRunner != nil {
+				etcdRunner.Stop()
+			}
 			os.Exit(0)
 		}
 	}()
