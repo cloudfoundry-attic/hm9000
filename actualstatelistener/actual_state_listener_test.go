@@ -12,21 +12,21 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/cloudfoundry/hm9000/test_helpers/fake_bel_air"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_logger"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
+	"github.com/cloudfoundry/hm9000/test_helpers/fakefreshnessmanager"
 )
 
 var _ = Describe("Actual state listener", func() {
 	var (
-		app          App
-		anotherApp   App
-		etcdStore    store.Store
-		listener     *ActualStateListener
-		timeProvider *fake_time_provider.FakeTimeProvider
-		freshPrince  *fake_bel_air.FakeFreshPrince
-		messageBus   *fake_cfmessagebus.FakeMessageBus
-		conf         config.Config
+		app              App
+		anotherApp       App
+		etcdStore        store.Store
+		listener         *ActualStateListener
+		timeProvider     *fake_time_provider.FakeTimeProvider
+		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
+		messageBus       *fake_cfmessagebus.FakeMessageBus
+		conf             config.Config
 	)
 
 	BeforeEach(func() {
@@ -47,9 +47,9 @@ var _ = Describe("Actual state listener", func() {
 
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
 
-		freshPrince = &fake_bel_air.FakeFreshPrince{}
+		freshnessManager = &fakefreshnessmanager.FakeFreshnessManager{}
 
-		listener = New(conf, messageBus, etcdStore, freshPrince, timeProvider, fake_logger.NewFakeLogger())
+		listener = New(conf, messageBus, etcdStore, freshnessManager, timeProvider, fake_logger.NewFakeLogger())
 		listener.Start()
 	})
 
@@ -115,11 +115,11 @@ var _ = Describe("Actual state listener", func() {
 
 			It("should instruct the prince to bump the freshness", func() {
 				Eventually(func() interface{} {
-					return freshPrince.Key
+					return freshnessManager.Key
 				}, 0.1, 0.01).Should(Equal(conf.ActualFreshnessKey))
 
-				Ω(freshPrince.Timestamp).Should(Equal(timeProvider.Time()))
-				Ω(freshPrince.TTL).Should(BeNumerically("==", conf.ActualFreshnessTTL))
+				Ω(freshnessManager.Timestamp).Should(Equal(timeProvider.Time()))
+				Ω(freshnessManager.TTL).Should(BeNumerically("==", conf.ActualFreshnessTTL))
 			})
 		})
 	})

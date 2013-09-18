@@ -1,4 +1,4 @@
-package bel_air
+package freshnessmanager
 
 import (
 	"encoding/json"
@@ -16,23 +16,23 @@ import (
 
 var etcdRunner *etcd_runner.ETCDClusterRunner
 
-func TestBootstrap(t *testing.T) {
+func TestFreshnessManager(t *testing.T) {
 	etcdRunner = etcd_runner.NewETCDClusterRunner("etcd", 5001, 1)
 	etcdRunner.Start()
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Bel Air Suite")
+	RunSpecs(t, "Freshness Manager Suite")
 
 	etcdRunner.Stop()
 }
 
-var _ = Describe("The Fresh Prince of Bel Air", func() {
+var _ = Describe("Freshness Manager", func() {
 	var (
-		etcdStore   store.Store
-		freshPrince FreshPrince
-		key         string
-		ttl         uint64
-		timestamp   time.Time
+		etcdStore store.Store
+		manager   FreshnessManager
+		key       string
+		ttl       uint64
+		timestamp time.Time
 	)
 
 	BeforeEach(func() {
@@ -47,7 +47,7 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 		ttl = 20
 		timestamp = time.Now()
 
-		freshPrince = NewFreshPrince(etcdStore)
+		manager = NewFreshnessManager(etcdStore)
 	})
 
 	Describe("Bumping the freshness for a key", func() {
@@ -57,7 +57,7 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 				_, err := etcdStore.Get(key)
 				Ω(store.IsKeyNotFoundError(err)).Should(BeTrue())
 
-				freshPrince.Bump(key, ttl, timestamp)
+				manager.Bump(key, ttl, timestamp)
 			})
 
 			It("should create the key with the current timestamp and a TTL", func() {
@@ -85,7 +85,7 @@ var _ = Describe("The Fresh Prince of Bel Air", func() {
 					},
 				})
 
-				freshPrince.Bump(key, ttl, timestamp)
+				manager.Bump(key, ttl, timestamp)
 			})
 
 			It("should bump the key's TTL but not change the timestamp", func() {

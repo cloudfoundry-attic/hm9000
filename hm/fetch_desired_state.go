@@ -2,7 +2,7 @@ package hm
 
 import (
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
-	"github.com/cloudfoundry/hm9000/helpers/bel_air"
+	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/http_client"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
@@ -22,7 +22,7 @@ func FetchDesiredState(l logger.Logger, c *cli.Context) {
 		messageBus,
 		etcdStore,
 		http_client.NewHttpClient(),
-		bel_air.NewFreshPrince(etcdStore),
+		freshnessmanager.NewFreshnessManager(etcdStore),
 		time_provider.NewTimeProvider(),
 	)
 

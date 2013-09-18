@@ -24,8 +24,8 @@ var _ = Describe("BasicAuthInfo", func() {
 
 	Describe("basic auth encoding", func() {
 		It("should encode the user and password in basic auth form", func() {
-            info, _ := NewBasicAuthInfoFromJSON([]byte(`{"user":"mcat","password":"testing"}`))
-            Ω(info.Encode()).Should(Equal("Basic bWNhdDp0ZXN0aW5n"))
+			info, _ := NewBasicAuthInfoFromJSON([]byte(`{"user":"mcat","password":"testing"}`))
+			Ω(info.Encode()).Should(Equal("Basic bWNhdDp0ZXN0aW5n"))
 		})
 	})
 })

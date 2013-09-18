@@ -3,7 +3,7 @@ package desiredstatefetcher
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/bel_air"
+	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/http_client"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/models"
@@ -46,7 +46,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		err = etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		fetcher = New(conf, fakeMessageBus, etcdStore, http_client.NewHttpClient(), bel_air.NewFreshPrince(etcdStore), &time_provider.RealTimeProvider{})
+		fetcher = New(conf, fakeMessageBus, etcdStore, http_client.NewHttpClient(), freshnessmanager.NewFreshnessManager(etcdStore), &time_provider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
 		fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 	})

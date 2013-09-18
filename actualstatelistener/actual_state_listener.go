@@ -2,7 +2,7 @@ package actualstatelistener
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/bel_air"
+	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/models"
@@ -12,28 +12,28 @@ import (
 )
 
 type ActualStateListener struct {
-	logger.Logger
-	config         config.Config
-	messageBus     cfmessagebus.MessageBus
-	heartbeatStore store.Store
-	freshPrince    bel_air.FreshPrince
-	timeProvider   time_provider.TimeProvider
+	logger           logger.Logger
+	config           config.Config
+	messageBus       cfmessagebus.MessageBus
+	heartbeatStore   store.Store
+	freshnessManager freshnessmanager.FreshnessManager
+	timeProvider     time_provider.TimeProvider
 }
 
 func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
 	heartbeatStore store.Store,
-	freshPrince bel_air.FreshPrince,
+	freshnessManager freshnessmanager.FreshnessManager,
 	timeProvider time_provider.TimeProvider,
 	logger logger.Logger) *ActualStateListener {
 
 	return &ActualStateListener{
-		Logger:         logger,
-		config:         config,
-		messageBus:     messageBus,
-		heartbeatStore: heartbeatStore,
-		freshPrince:    freshPrince,
-		timeProvider:   timeProvider,
+		logger:           logger,
+		config:           config,
+		messageBus:       messageBus,
+		heartbeatStore:   heartbeatStore,
+		freshnessManager: freshnessManager,
+		timeProvider:     timeProvider,
 	}
 }
 
@@ -44,7 +44,7 @@ func (listener *ActualStateListener) Start() {
 		heartbeat, err := models.NewHeartbeatFromJSON(messageBody)
 
 		if err != nil {
-			listener.Info("Could not unmarshal heartbeat",
+			listener.logger.Info("Could not unmarshal heartbeat",
 				map[string]string{
 					"Error":       err.Error(),
 					"MessageBody": string(messageBody),
@@ -64,7 +64,7 @@ func (listener *ActualStateListener) Start() {
 		err = listener.heartbeatStore.Set(nodes)
 
 		if err != nil {
-			listener.Info("Could not put instance heartbeats in store:",
+			listener.logger.Info("Could not put instance heartbeats in store:",
 				map[string]string{
 					"Error": err.Error(),
 				})
@@ -73,10 +73,10 @@ func (listener *ActualStateListener) Start() {
 }
 
 func (listener *ActualStateListener) bumpFreshness() {
-	err := listener.freshPrince.Bump(listener.config.ActualFreshnessKey, listener.config.ActualFreshnessTTL, listener.timeProvider.Time())
+	err := listener.freshnessManager.Bump(listener.config.ActualFreshnessKey, listener.config.ActualFreshnessTTL, listener.timeProvider.Time())
 
 	if err != nil {
-		listener.Info("Could not update actual freshness",
+		listener.logger.Info("Could not update actual freshness",
 			map[string]string{
 				"Error": err.Error(),
 			})

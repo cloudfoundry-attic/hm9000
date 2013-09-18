@@ -1,4 +1,4 @@
-package bel_air
+package freshnessmanager
 
 import (
 	"encoding/json"
@@ -7,21 +7,21 @@ import (
 	"time"
 )
 
-type FreshPrince interface {
+type FreshnessManager interface {
 	Bump(key string, ttl uint64, timestamp time.Time) error
 }
 
-type RealFreshPrince struct {
+type RealFreshnessManager struct {
 	store store.Store
 }
 
-func NewFreshPrince(store store.Store) FreshPrince {
-	return &RealFreshPrince{
+func NewFreshnessManager(store store.Store) FreshnessManager {
+	return &RealFreshnessManager{
 		store: store,
 	}
 }
 
-func (dj *RealFreshPrince) Bump(key string, ttl uint64, timestamp time.Time) error {
+func (dj *RealFreshnessManager) Bump(key string, ttl uint64, timestamp time.Time) error {
 	var jsonTimestamp []byte
 	oldTimestamp, err := dj.store.Get(key)
 

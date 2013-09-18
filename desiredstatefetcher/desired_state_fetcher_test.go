@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/test_helpers/app"
-	"github.com/cloudfoundry/hm9000/test_helpers/fake_bel_air"
+	"github.com/cloudfoundry/hm9000/test_helpers/fakefreshnessmanager"
 
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_http_client"
 	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
@@ -31,14 +31,14 @@ func (b *brokenReader) Close() error {
 
 var _ = Describe("DesiredStateFetcher", func() {
 	var (
-		conf           config.Config
-		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
-		fetcher        *desiredStateFetcher
-		httpClient     *fake_http_client.FakeHttpClient
-		timeProvider   *fake_time_provider.FakeTimeProvider
-		freshPrince    *fake_bel_air.FakeFreshPrince
-		etcdStore      store.Store
-		resultChan     chan DesiredStateFetcherResult
+		conf             config.Config
+		fakeMessageBus   *fake_cfmessagebus.FakeMessageBus
+		fetcher          *desiredStateFetcher
+		httpClient       *fake_http_client.FakeHttpClient
+		timeProvider     *fake_time_provider.FakeTimeProvider
+		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
+		etcdStore        store.Store
+		resultChan       chan DesiredStateFetcherResult
 	)
 
 	BeforeEach(func() {
@@ -58,9 +58,9 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
 		httpClient = fake_http_client.NewFakeHttpClient()
-		freshPrince = &fake_bel_air.FakeFreshPrince{}
+		freshnessManager = &fakefreshnessmanager.FakeFreshnessManager{}
 
-		fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
+		fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshnessManager, timeProvider)
 		fetcher.Fetch(resultChan)
 	})
 
@@ -141,7 +141,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 	Describe("Fetching with an invalid URL", func() {
 		BeforeEach(func() {
 			conf.CCBaseURL = "http://example.com/#%ZZ"
-			fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshPrince, timeProvider)
+			fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshnessManager, timeProvider)
 			fetcher.Fetch(resultChan)
 
 			fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][1].Callback([]byte(`{"user":"mcat","password":"testing"}`))
@@ -214,7 +214,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should not bump the freshness yet", func() {
-				Ω(freshPrince.Key).Should(BeZero())
+				Ω(freshnessManager.Key).Should(BeZero())
 			})
 
 			It("should not send a result down the resultChan yet", func() {
@@ -239,9 +239,9 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should bump the freshness", func() {
-				Ω(freshPrince.Key).Should(Equal(conf.DesiredFreshnessKey))
-				Ω(freshPrince.Timestamp).Should(Equal(timeProvider.Time()))
-				Ω(freshPrince.TTL).Should(BeNumerically("==", conf.DesiredFreshnessTTL))
+				Ω(freshnessManager.Key).Should(Equal(conf.DesiredFreshnessKey))
+				Ω(freshnessManager.Timestamp).Should(Equal(timeProvider.Time()))
+				Ω(freshnessManager.TTL).Should(BeNumerically("==", conf.DesiredFreshnessTTL))
 			})
 
 			It("should send a succesful result down the result channel", func(done Done) {
@@ -259,7 +259,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should not bump the freshness", func() {
-				Ω(freshPrince.Key).Should(BeZero())
+				Ω(freshnessManager.Key).Should(BeZero())
 			})
 
 			It("should send an error down the result channel", func(done Done) {

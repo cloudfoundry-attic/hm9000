@@ -2,7 +2,7 @@ package hm
 
 import (
 	"github.com/cloudfoundry/hm9000/actualstatelistener"
-	"github.com/cloudfoundry/hm9000/helpers/bel_air"
+	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/codegangsta/cli"
@@ -16,7 +16,7 @@ func StartListeningForActual(l logger.Logger, c *cli.Context) {
 	listener := actualstatelistener.New(conf,
 		messageBus,
 		etcdStore,
-		bel_air.NewFreshPrince(etcdStore),
+		freshnessmanager.NewFreshnessManager(etcdStore),
 		time_provider.NewTimeProvider(),
 		l)
 

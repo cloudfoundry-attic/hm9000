@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/bel_air"
+	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/http_client"
 	"github.com/cloudfoundry/hm9000/helpers/time_provider"
 	"github.com/cloudfoundry/hm9000/models"
@@ -22,28 +22,28 @@ type DesiredStateFetcherResult struct {
 const initialBulkToken = "{}"
 
 type desiredStateFetcher struct {
-	config       config.Config
-	messageBus   cfmessagebus.MessageBus
-	httpClient   http_client.HttpClient
-	store        store.Store
-	freshPrince  bel_air.FreshPrince
-	timeProvider time_provider.TimeProvider
+	config           config.Config
+	messageBus       cfmessagebus.MessageBus
+	httpClient       http_client.HttpClient
+	store            store.Store
+	freshnessManager freshnessmanager.FreshnessManager
+	timeProvider     time_provider.TimeProvider
 }
 
 func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
 	store store.Store,
 	httpClient http_client.HttpClient,
-	freshPrince bel_air.FreshPrince,
+	freshnessManager freshnessmanager.FreshnessManager,
 	timeProvider time_provider.TimeProvider) *desiredStateFetcher {
 
 	return &desiredStateFetcher{
-		config:       config,
-		messageBus:   messageBus,
-		httpClient:   httpClient,
-		store:        store,
-		freshPrince:  freshPrince,
-		timeProvider: timeProvider,
+		config:           config,
+		messageBus:       messageBus,
+		httpClient:       httpClient,
+		store:            store,
+		freshnessManager: freshnessManager,
+		timeProvider:     timeProvider,
 	}
 }
 
@@ -104,7 +104,7 @@ func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token strin
 			return
 		}
 		if len(desiredState.Results) == 0 {
-			fetcher.freshPrince.Bump(fetcher.config.DesiredFreshnessKey, fetcher.config.DesiredFreshnessTTL, fetcher.timeProvider.Time())
+			fetcher.freshnessManager.Bump(fetcher.config.DesiredFreshnessKey, fetcher.config.DesiredFreshnessTTL, fetcher.timeProvider.Time())
 			resultChan <- DesiredStateFetcherResult{Success: true, NumResults: numResults}
 			return
 		}
