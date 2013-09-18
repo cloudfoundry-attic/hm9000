@@ -2,8 +2,8 @@ package desiredstatefetcher
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
-	"github.com/cloudfoundry/hm9000/test_helpers/desired_state_server"
-	"github.com/cloudfoundry/hm9000/test_helpers/etcd_runner"
+	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
+	"github.com/cloudfoundry/hm9000/testhelpers/etcdrunner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -15,26 +15,26 @@ import (
 const desiredStateServerBaseUrl = "http://127.0.0.1:6001"
 
 var (
-	stateServer *desired_state_server.DesiredStateServer
-	etcdRunner  *etcd_runner.ETCDClusterRunner
+	stateServer *desiredstateserver.DesiredStateServer
+	etcdRunner  *etcdrunner.ETCDClusterRunner
 )
 
 var _ = BeforeEach(func() {
 	etcdRunner.Reset()
 })
 
-func TestBootstrap(t *testing.T) {
+func TestDesiredStateFetcher(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
 	fakeMessageBus := fake_cfmessagebus.NewFakeMessageBus()
-	stateServer = desired_state_server.NewDesiredStateServer(fakeMessageBus)
+	stateServer = desiredstateserver.NewDesiredStateServer(fakeMessageBus)
 	go stateServer.SpinUp(6001)
 
-	etcdRunner = etcd_runner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner = etcdrunner.NewETCDClusterRunner("etcd", 5001, 1)
 	etcdRunner.Start()
 
-	RunSpecs(t, "Desired State Fetcher")
+	RunSpecs(t, "Desired State Fetcher Suite")
 
 	etcdRunner.Stop()
 }

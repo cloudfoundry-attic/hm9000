@@ -1,4 +1,4 @@
-package config
+package workerpool
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestConfig(t *testing.T) {
+func TestWorkerPool(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Config Suite")
+	RunSpecs(t, "Worker Pool Suite")
 }

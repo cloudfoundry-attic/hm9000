@@ -3,9 +3,9 @@ package hm
 import (
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
-	"github.com/cloudfoundry/hm9000/helpers/http_client"
+	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/time_provider"
+	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/codegangsta/cli"
 
 	"os"
@@ -21,9 +21,9 @@ func FetchDesiredState(l logger.Logger, c *cli.Context) {
 	fetcher := desiredstatefetcher.New(conf,
 		messageBus,
 		etcdStore,
-		http_client.NewHttpClient(),
+		httpclient.NewHttpClient(),
 		freshnessmanager.NewFreshnessManager(etcdStore),
-		time_provider.NewTimeProvider(),
+		timeprovider.NewTimeProvider(),
 	)
 
 	resultChan := make(chan desiredstatefetcher.DesiredStateFetcherResult, 1)

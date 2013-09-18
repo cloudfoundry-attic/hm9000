@@ -4,7 +4,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/time_provider"
+	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 
@@ -17,14 +17,14 @@ type ActualStateListener struct {
 	messageBus       cfmessagebus.MessageBus
 	heartbeatStore   store.Store
 	freshnessManager freshnessmanager.FreshnessManager
-	timeProvider     time_provider.TimeProvider
+	timeProvider     timeprovider.TimeProvider
 }
 
 func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
 	heartbeatStore store.Store,
 	freshnessManager freshnessmanager.FreshnessManager,
-	timeProvider time_provider.TimeProvider,
+	timeProvider timeprovider.TimeProvider,
 	logger logger.Logger) *ActualStateListener {
 
 	return &ActualStateListener{

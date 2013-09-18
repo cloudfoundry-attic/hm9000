@@ -5,8 +5,8 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
-	"github.com/cloudfoundry/hm9000/helpers/http_client"
-	"github.com/cloudfoundry/hm9000/helpers/time_provider"
+	"github.com/cloudfoundry/hm9000/helpers/httpclient"
+	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"net/http"
@@ -24,18 +24,18 @@ const initialBulkToken = "{}"
 type desiredStateFetcher struct {
 	config           config.Config
 	messageBus       cfmessagebus.MessageBus
-	httpClient       http_client.HttpClient
+	httpClient       httpclient.HttpClient
 	store            store.Store
 	freshnessManager freshnessmanager.FreshnessManager
-	timeProvider     time_provider.TimeProvider
+	timeProvider     timeprovider.TimeProvider
 }
 
 func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
 	store store.Store,
-	httpClient http_client.HttpClient,
+	httpClient httpclient.HttpClient,
 	freshnessManager freshnessmanager.FreshnessManager,
-	timeProvider time_provider.TimeProvider) *desiredStateFetcher {
+	timeProvider timeprovider.TimeProvider) *desiredStateFetcher {
 
 	return &desiredStateFetcher{
 		config:           config,

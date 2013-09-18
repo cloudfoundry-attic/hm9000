@@ -4,11 +4,11 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
-	"github.com/cloudfoundry/hm9000/helpers/http_client"
-	"github.com/cloudfoundry/hm9000/helpers/time_provider"
+	"github.com/cloudfoundry/hm9000/helpers/httpclient"
+	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/cloudfoundry/hm9000/test_helpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -46,7 +46,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		err = etcdStore.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		fetcher = New(conf, fakeMessageBus, etcdStore, http_client.NewHttpClient(), freshnessmanager.NewFreshnessManager(etcdStore), &time_provider.RealTimeProvider{})
+		fetcher = New(conf, fakeMessageBus, etcdStore, httpclient.NewHttpClient(), freshnessmanager.NewFreshnessManager(etcdStore), &timeprovider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
 		fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 	})

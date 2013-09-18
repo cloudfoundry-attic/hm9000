@@ -7,11 +7,11 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/cloudfoundry/hm9000/test_helpers/app"
-	"github.com/cloudfoundry/hm9000/test_helpers/fakefreshnessmanager"
+	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakefreshnessmanager"
 
-	"github.com/cloudfoundry/hm9000/test_helpers/fake_http_client"
-	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakehttpclient"
+	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -34,8 +34,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 		conf             config.Config
 		fakeMessageBus   *fake_cfmessagebus.FakeMessageBus
 		fetcher          *desiredStateFetcher
-		httpClient       *fake_http_client.FakeHttpClient
-		timeProvider     *fake_time_provider.FakeTimeProvider
+		httpClient       *fakehttpclient.FakeHttpClient
+		timeProvider     *faketimeprovider.FakeTimeProvider
 		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
 		etcdStore        store.Store
 		resultChan       chan DesiredStateFetcherResult
@@ -52,12 +52,12 @@ var _ = Describe("DesiredStateFetcher", func() {
 		Ω(err).ShouldNot(HaveOccured())
 
 		resultChan = make(chan DesiredStateFetcherResult, 1)
-		timeProvider = &fake_time_provider.FakeTimeProvider{
+		timeProvider = &faketimeprovider.FakeTimeProvider{
 			TimeToProvide: time.Now(),
 		}
 
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
-		httpClient = fake_http_client.NewFakeHttpClient()
+		httpClient = fakehttpclient.NewFakeHttpClient()
 		freshnessManager = &fakefreshnessmanager.FakeFreshnessManager{}
 
 		fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshnessManager, timeProvider)
@@ -72,7 +72,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 		})
 
 		Context("when we've received the authentication information", func() {
-			var request *fake_http_client.Request
+			var request *fakehttpclient.Request
 
 			BeforeEach(func() {
 				fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))

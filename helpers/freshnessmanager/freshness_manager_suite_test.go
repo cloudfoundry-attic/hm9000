@@ -9,15 +9,15 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/cloudfoundry/hm9000/test_helpers/etcd_runner"
+	"github.com/cloudfoundry/hm9000/testhelpers/etcdrunner"
 
 	"testing"
 )
 
-var etcdRunner *etcd_runner.ETCDClusterRunner
+var etcdRunner *etcdrunner.ETCDClusterRunner
 
 func TestFreshnessManager(t *testing.T) {
-	etcdRunner = etcd_runner.NewETCDClusterRunner("etcd", 5001, 1)
+	etcdRunner = etcdrunner.NewETCDClusterRunner("etcd", 5001, 1)
 	etcdRunner.Start()
 
 	RegisterFailHandler(Fail)

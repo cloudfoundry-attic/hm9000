@@ -150,7 +150,7 @@ WIP: The `api` is a simple HTTP server that provides access to information about
 
 The `freshnessmanager` manages writing and reading/interpreting freshness keys in the store.
 
-#### `http_client`
+#### `httpclient`
 
 A trivial wrapper around `net/http` that improves testability of http requests.
 
@@ -158,11 +158,11 @@ A trivial wrapper around `net/http` that improves testability of http requests.
 
 Provides a (sys)logger.  Eventually this will use steno to perform logging.
 
-#### `time_provider`
+#### `timeprovider`
 
 Provides a `TimeProvider`.  Useful for injecting time dependencies in tests.
 
-#### `worker_pool`
+#### `workerpool`
 
 Provides a worker pool with a configurable pool size.  Work scheduled on the pool will run concurrently, but no more `poolSize` workers can be running at any given moment.
 
@@ -178,9 +178,9 @@ WIP: `outboux` is a library used by the analyzer and scheduler to add/remove mes
 
 The `store` is an generalized client for connecting to a Zookeeper/ETCD-like high availability store.  Components that must read or write to the high availability store use this library.  Writes are performed concurrently for optimal performance.
 
-## Test Support Packages (under test_helpers)
+## Test Support Packages (under testhelpers)
 
-`test_helpers` contains a (large) number of test support packages.  These range from simple fakes to comprehensive libraries used for faking out other CloudFoundry components (e.g. heartbeating DEAs) in integration tests.
+`testhelpers` contains a (large) number of test support packages.  These range from simple fakes to comprehensive libraries used for faking out other CloudFoundry components (e.g. heartbeating DEAs) in integration tests.
 
 ### Fakes
 
@@ -188,17 +188,17 @@ The `store` is an generalized client for connecting to a Zookeeper/ETCD-like hig
 
 Provides a fake implementation of the `helpers/freshnessmanager` interface
 
-#### `fake_logger`
+#### `fakelogger`
 
 Provides a fake implementation of the `helpers/logger` interface
 
-#### `fake_time_provider`
+#### `faketimeprovider`
 
-Provides a fake implementation of the `helpers/time_provider` interface.  Useful for injecting time dependency in test.
+Provides a fake implementation of the `helpers/timeprovider` interface.  Useful for injecting time dependency in test.
 
-#### `fake_http_client`
+#### `fakehttpclient`
 
-Provdes a fake implementation of the `helpers/http_client` interface that allows tests to have fine-grained control over the http request/response lifecycle.
+Provdes a fake implementation of the `helpers/httpclient` interface that allows tests to have fine-grained control over the http request/response lifecycle.
 
 ### Fixtures
 
@@ -240,23 +240,23 @@ app.Heartbeat(2, TIMESTAMP)
 
 ### Infrastructure Helpers
 
-#### `message_publisher`
+#### `messagepublisher`
 
 Provides a simple mechanism to publish actual state related messages to the NATS bus.  Handles JSON encoding.
 
-#### `start_stop_listener`
+#### `startstoplistener`
 
 Listens on the NATS bus for `health.start` and `health.stop` messages.  It parses these messages and makes them available via a simple interface.  Useful for testing that messages are sent by the health manager appropriately.
 
-#### `desired_state_server`
+#### `desiredstateserver`
 
 Brings up an in-process http server that mimics the CC's bulk endpoints (including authentication via NATS and pagination).
 
-#### `nats_runner`
+#### `natsrunner`
 
 Brings up and manages the lifecycle of a live NATS server.  After bringing the server up it provides a fully configured cfmessagebus object that you can pass to your test subjects.
 
-#### `etcd_runner`
+#### `etcdrunner`
 
 Brings up and manages the lifecycle of a live ETCD server cluster.
 

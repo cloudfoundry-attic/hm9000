@@ -1,4 +1,4 @@
-package hm
+package actualstatelistener
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -11,13 +11,13 @@ import (
 
 var etcdRunner *etcdrunner.ETCDClusterRunner
 
-func TestHM9000(t *testing.T) {
+func TestActualStateListener(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	etcdRunner = etcdrunner.NewETCDClusterRunner("etcd", 5001, 1)
 	etcdRunner.Start()
 
-	RunSpecs(t, "HM9000 CLI Suite")
+	RunSpecs(t, "Actual State Listener Suite")
 
 	etcdRunner.Stop()
 }

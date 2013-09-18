@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/test_helpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

@@ -1,7 +1,8 @@
-package phd
+package store
 
 import (
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/hm9000/testhelpers/etcdrunner"
@@ -11,18 +12,25 @@ import (
 	"testing"
 )
 
-var etcdRunner *etcdrunner.ETCDClusterRunner
+var runner *etcdrunner.ETCDClusterRunner
+var etcdPort int
 
-func TestPhd(t *testing.T) {
+func TestStore(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Phd Performance Suite")
+	etcdPort = 5000 + config.GinkgoConfig.ParallelNode*10
+	runner = etcdrunner.NewETCDClusterRunner("etcd", etcdPort, 5)
+	runner.Start()
 
-	if etcdRunner != nil {
-		etcdRunner.Stop()
-	}
+	RunSpecs(t, "Store Suite")
+
+	runner.Stop()
 }
+
+var _ = BeforeEach(func() {
+	runner.Reset()
+})
 
 func registerSignalHandler() {
 	go func() {
@@ -31,9 +39,7 @@ func registerSignalHandler() {
 
 		select {
 		case <-c:
-			if etcdRunner != nil {
-				etcdRunner.Stop()
-			}
+			runner.Stop()
 			os.Exit(0)
 		}
 	}()

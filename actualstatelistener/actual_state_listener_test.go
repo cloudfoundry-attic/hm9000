@@ -7,14 +7,14 @@ import (
 	"time"
 
 	. "github.com/cloudfoundry/hm9000/models"
-	. "github.com/cloudfoundry/hm9000/test_helpers/app"
+	. "github.com/cloudfoundry/hm9000/testhelpers/app"
 
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/cloudfoundry/hm9000/test_helpers/fake_logger"
-	"github.com/cloudfoundry/hm9000/test_helpers/fake_time_provider"
-	"github.com/cloudfoundry/hm9000/test_helpers/fakefreshnessmanager"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakefreshnessmanager"
 )
 
 var _ = Describe("Actual state listener", func() {
@@ -23,7 +23,7 @@ var _ = Describe("Actual state listener", func() {
 		anotherApp       App
 		etcdStore        store.Store
 		listener         *ActualStateListener
-		timeProvider     *fake_time_provider.FakeTimeProvider
+		timeProvider     *faketimeprovider.FakeTimeProvider
 		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
 		messageBus       *fake_cfmessagebus.FakeMessageBus
 		conf             config.Config
@@ -34,7 +34,7 @@ var _ = Describe("Actual state listener", func() {
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
 
-		timeProvider = &fake_time_provider.FakeTimeProvider{
+		timeProvider = &faketimeprovider.FakeTimeProvider{
 			TimeToProvide: time.Now(),
 		}
 
@@ -49,7 +49,7 @@ var _ = Describe("Actual state listener", func() {
 
 		freshnessManager = &fakefreshnessmanager.FakeFreshnessManager{}
 
-		listener = New(conf, messageBus, etcdStore, freshnessManager, timeProvider, fake_logger.NewFakeLogger())
+		listener = New(conf, messageBus, etcdStore, freshnessManager, timeProvider, fakelogger.NewFakeLogger())
 		listener.Start()
 	})
 

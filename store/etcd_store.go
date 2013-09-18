@@ -1,20 +1,20 @@
 package store
 
 import (
-	"github.com/cloudfoundry/hm9000/helpers/worker_pool"
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/coreos/go-etcd/etcd"
 )
 
 type ETCDStore struct {
 	urls       []string
 	client     *etcd.Client
-	workerPool *worker_pool.WorkerPool
+	workerPool *workerpool.WorkerPool
 }
 
 func NewETCDStore(urls []string, maxConcurrentRequests int) *ETCDStore {
 	return &ETCDStore{
 		urls:       urls,
-		workerPool: worker_pool.NewWorkerPool(maxConcurrentRequests),
+		workerPool: workerpool.NewWorkerPool(maxConcurrentRequests),
 	}
 }
 
