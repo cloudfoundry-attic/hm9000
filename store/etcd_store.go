@@ -94,6 +94,10 @@ func (store *ETCDStore) List(key string) ([]StoreNode, error) {
 	}
 
 	if err != nil {
+		etcdError, ok := err.(etcd.EtcdError)
+		if ok && etcdError.ErrorCode == 100 { //yup.  100.
+			return []StoreNode{}, ETCDError{reason: ETCDErrorKeyNotFound}
+		}
 		return []StoreNode{}, err
 	}
 

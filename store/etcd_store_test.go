@@ -99,6 +99,14 @@ var _ = Describe("ETCD Store", func() {
 				Ω(err).ShouldNot(HaveOccured())
 			})
 		})
+
+		Context("when listing a non-existent directory", func() {
+			It("should return a key not found error", func() {
+				results, err := store.List("/gobbledygook")
+				Ω(results).Should(BeEmpty())
+				Ω(IsKeyNotFoundError(err)).Should(BeTrue())
+			})
+		})
 	})
 
 	Context("when the store is down", func() {
