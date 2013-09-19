@@ -6,34 +6,34 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 
 	"github.com/cloudfoundry/go_cfmessagebus"
 )
 
 type ActualStateListener struct {
-	logger           logger.Logger
-	config           config.Config
-	messageBus       cfmessagebus.MessageBus
-	heartbeatStore   store.Store
-	freshnessManager freshnessmanager.FreshnessManager
-	timeProvider     timeprovider.TimeProvider
+	logger                logger.Logger
+	config                config.Config
+	messageBus            cfmessagebus.MessageBus
+	heartbeatStoreAdapter storeadapter.StoreAdapter
+	freshnessManager      freshnessmanager.FreshnessManager
+	timeProvider          timeprovider.TimeProvider
 }
 
 func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
-	heartbeatStore store.Store,
+	heartbeatStoreAdapter storeadapter.StoreAdapter,
 	freshnessManager freshnessmanager.FreshnessManager,
 	timeProvider timeprovider.TimeProvider,
 	logger logger.Logger) *ActualStateListener {
 
 	return &ActualStateListener{
-		logger:           logger,
-		config:           config,
-		messageBus:       messageBus,
-		heartbeatStore:   heartbeatStore,
-		freshnessManager: freshnessManager,
-		timeProvider:     timeProvider,
+		logger:                logger,
+		config:                config,
+		messageBus:            messageBus,
+		heartbeatStoreAdapter: heartbeatStoreAdapter,
+		freshnessManager:      freshnessManager,
+		timeProvider:          timeProvider,
 	}
 }
 
@@ -52,16 +52,16 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
-		nodes := make([]store.StoreNode, len(heartbeat.InstanceHeartbeats))
+		nodes := make([]storeadapter.StoreNode, len(heartbeat.InstanceHeartbeats))
 		for i, instance := range heartbeat.InstanceHeartbeats {
-			nodes[i] = store.StoreNode{
+			nodes[i] = storeadapter.StoreNode{
 				Key:   "/actual/" + instance.StoreKey(),
 				Value: instance.ToJson(),
 				TTL:   listener.config.HeartbeatTTL,
 			}
 		}
 
-		err = listener.heartbeatStore.Set(nodes)
+		err = listener.heartbeatStoreAdapter.Set(nodes)
 
 		if err != nil {
 			listener.logger.Info("Could not put instance heartbeats in store:",

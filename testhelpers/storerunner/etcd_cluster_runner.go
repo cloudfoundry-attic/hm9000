@@ -15,6 +15,7 @@ type ETCDClusterRunner struct {
 	startingPort int
 	numNodes     int
 	etcdCommands []*exec.Cmd
+	running      bool
 }
 
 func NewETCDClusterRunner(startingPort int, numNodes int) *ETCDClusterRunner {
@@ -44,16 +45,19 @@ func (etcd *ETCDClusterRunner) Start() {
 			return etcd.exists(i)
 		}, 3, 0.05).Should(BeTrue(), "Expected ETCD to be up and running")
 	}
+
+	etcd.running = true
 }
 
 func (etcd *ETCDClusterRunner) Stop() {
-	if etcd.etcdCommands != nil {
+	if etcd.running {
 		for i := 0; i < etcd.numNodes; i++ {
 			etcd.etcdCommands[i].Process.Signal(syscall.SIGINT)
 			etcd.etcdCommands[i].Process.Wait()
 			etcd.nukeArtifacts(i)
 		}
 		etcd.etcdCommands = nil
+		etcd.running = false
 	}
 }
 
@@ -74,10 +78,12 @@ func (etcd *ETCDClusterRunner) DiskUsage() (bytes int64, err error) {
 }
 
 func (etcd *ETCDClusterRunner) Reset() {
-	client := etcdclient.NewClient()
-	client.SetCluster(etcd.NodeURLS())
+	if etcd.running {
+		client := etcdclient.NewClient()
+		client.SetCluster(etcd.NodeURLS())
 
-	etcd.deleteDir(client, "/")
+		etcd.deleteDir(client, "/")
+	}
 }
 
 func (etcd *ETCDClusterRunner) deleteDir(client *etcdclient.Client, dir string) {

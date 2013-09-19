@@ -4,20 +4,20 @@ package analyzer
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 )
 
 type Analyzer struct {
-	storeClient   store.Store
+	storeAdapter  storeadapter.StoreAdapter
 	desiredStates []models.DesiredAppState
 	actualStates  []models.InstanceHeartbeat
 	runningByApp  map[string]int
 	desiredByApp  map[string]bool
 }
 
-func New(storeClient store.Store) *Analyzer {
+func New(storeAdapter storeadapter.StoreAdapter) *Analyzer {
 	return &Analyzer{
-		storeClient: storeClient,
+		storeAdapter: storeAdapter,
 	}
 }
 
@@ -107,13 +107,13 @@ func (analyzer *Analyzer) populateActualState() error {
 	return nil
 }
 
-func (analyzer *Analyzer) fetchNodesUnderDir(dir string) ([]store.StoreNode, error) {
-	nodes, err := analyzer.storeClient.List(dir)
+func (analyzer *Analyzer) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
+	nodes, err := analyzer.storeAdapter.List(dir)
 	if err != nil {
-		if store.IsKeyNotFoundError(err) {
-			return []store.StoreNode{}, nil
+		if storeadapter.IsKeyNotFoundError(err) {
+			return []storeadapter.StoreNode{}, nil
 		}
-		return []store.StoreNode{}, err
+		return []storeadapter.StoreNode{}, err
 	}
 	return nodes, nil
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakefreshnessmanager"
 
@@ -37,7 +37,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 		httpClient       *fakehttpclient.FakeHttpClient
 		timeProvider     *faketimeprovider.FakeTimeProvider
 		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
-		etcdStore        store.Store
+		etcdStoreAdapter storeadapter.StoreAdapter
 		resultChan       chan DesiredStateFetcherResult
 	)
 
@@ -45,8 +45,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 
-		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdStore.Connect()
+		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = etcdStoreAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		Ω(err).ShouldNot(HaveOccured())
@@ -60,7 +60,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 		httpClient = fakehttpclient.NewFakeHttpClient()
 		freshnessManager = &fakefreshnessmanager.FakeFreshnessManager{}
 
-		fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshnessManager, timeProvider)
+		fetcher = New(conf, fakeMessageBus, etcdStoreAdapter, httpClient, freshnessManager, timeProvider)
 		fetcher.Fetch(resultChan)
 	})
 
@@ -141,7 +141,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 	Describe("Fetching with an invalid URL", func() {
 		BeforeEach(func() {
 			conf.CCBaseURL = "http://example.com/#%ZZ"
-			fetcher = New(conf, fakeMessageBus, etcdStore, httpClient, freshnessManager, timeProvider)
+			fetcher = New(conf, fakeMessageBus, etcdStoreAdapter, httpClient, freshnessManager, timeProvider)
 			fetcher.Fetch(resultChan)
 
 			fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][1].Callback([]byte(`{"user":"mcat","password":"testing"}`))
@@ -193,14 +193,14 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should store the desired states", func() {
-				node, err := etcdStore.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
+				node, err := etcdStoreAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
 				Ω(err).ShouldNot(HaveOccured())
 
 				Ω(node.TTL).Should(BeNumerically("==", conf.DesiredStateTTL-1))
 
 				Ω(node.Value).Should(Equal(a1.DesiredState(0).ToJson()))
 
-				node, err = etcdStore.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
+				node, err = etcdStoreAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
 				Ω(err).ShouldNot(HaveOccured())
 
 				Ω(node.TTL).Should(BeNumerically("==", conf.DesiredStateTTL-1))
@@ -322,12 +322,12 @@ var _ = Describe("DesiredStateFetcher", func() {
 		Context("when it fails to write to the store", func() {
 			BeforeEach(func() {
 				a := app.NewApp()
-				node := store.StoreNode{
+				node := storeadapter.StoreNode{
 					Key:   "/desired/" + a.AppGuid + "-" + a.AppVersion + "/foo",
 					Value: []byte("mwahahaha"),
 					TTL:   0,
 				}
-				etcdStore.Set([]store.StoreNode{node})
+				etcdStoreAdapter.Set([]storeadapter.StoreNode{node})
 
 				response = desiredStateServerResponse{
 					Results: map[string]models.DesiredAppState{

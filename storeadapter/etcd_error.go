@@ -1,4 +1,4 @@
-package store
+package storeadapter
 
 type ETCDErrorReason string
 

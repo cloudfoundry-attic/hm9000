@@ -1,4 +1,4 @@
-package store
+package storeadapter
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -15,7 +15,7 @@ import (
 var etcdRunner *storerunner.ETCDClusterRunner
 var zookeeperRunner *storerunner.ZookeeperClusterRunner
 
-func TestStore(t *testing.T) {
+func TestStoreAdapter(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
@@ -28,29 +28,19 @@ func TestStore(t *testing.T) {
 	etcdRunner.Start()
 	zookeeperRunner.Start()
 
-	RunSpecs(t, "Store Suite")
+	RunSpecs(t, "Store Adapter Suite")
 
 	stopStores()
 }
 
 var _ = BeforeEach(func() {
-	if etcdRunner != nil {
-		etcdRunner.Reset()
-	}
-
-	if zookeeperRunner != nil {
-		zookeeperRunner.Reset()
-	}
+	etcdRunner.Reset()
+	zookeeperRunner.Reset()
 })
 
 func stopStores() {
-	if etcdRunner != nil {
-		etcdRunner.Stop()
-	}
-
-	if zookeeperRunner != nil {
-		zookeeperRunner.Stop()
-	}
+	etcdRunner.Stop()
+	zookeeperRunner.Stop()
 }
 
 func registerSignalHandler() {

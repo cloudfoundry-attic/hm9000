@@ -16,13 +16,13 @@ import (
 func FetchDesiredState(l logger.Logger, c *cli.Context) {
 	conf := loadConfig(l, c)
 	messageBus := connectToMessageBus(l, conf)
-	etcdStore := connectToETCDStore(l, conf)
+	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 
 	fetcher := desiredstatefetcher.New(conf,
 		messageBus,
-		etcdStore,
+		etcdStoreAdapter,
 		httpclient.NewHttpClient(),
-		freshnessmanager.NewFreshnessManager(etcdStore),
+		freshnessmanager.NewFreshnessManager(etcdStoreAdapter),
 		timeprovider.NewTimeProvider(),
 	)
 

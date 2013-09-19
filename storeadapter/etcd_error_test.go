@@ -1,4 +1,4 @@
-package store
+package storeadapter
 
 import (
 	. "github.com/onsi/ginkgo"

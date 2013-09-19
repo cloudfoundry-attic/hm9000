@@ -1,6 +1,6 @@
-package store
+package storeadapter
 
-type Store interface {
+type StoreAdapter interface {
 	Connect() error
 	Set(nodes []StoreNode) error
 	Get(key string) (StoreNode, error)

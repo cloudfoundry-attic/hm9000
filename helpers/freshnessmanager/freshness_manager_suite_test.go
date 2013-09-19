@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"time"
 
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
 
 	"testing"
@@ -28,40 +28,40 @@ func TestFreshnessManager(t *testing.T) {
 
 var _ = Describe("Freshness Manager", func() {
 	var (
-		etcdStore store.Store
-		manager   FreshnessManager
-		key       string
-		ttl       uint64
-		timestamp time.Time
+		etcdStoreAdapter storeadapter.StoreAdapter
+		manager          FreshnessManager
+		key              string
+		ttl              uint64
+		timestamp        time.Time
 	)
 
 	BeforeEach(func() {
 		etcdRunner.Reset()
 
 		conf, _ := config.DefaultConfig()
-		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err := etcdStore.Connect()
+		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err := etcdStoreAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		key = "/freshness-key"
 		ttl = 20
 		timestamp = time.Now()
 
-		manager = NewFreshnessManager(etcdStore)
+		manager = NewFreshnessManager(etcdStoreAdapter)
 	})
 
 	Describe("Bumping the freshness for a key", func() {
 
 		Context("when the key is missing", func() {
 			BeforeEach(func() {
-				_, err := etcdStore.Get(key)
-				Ω(store.IsKeyNotFoundError(err)).Should(BeTrue())
+				_, err := etcdStoreAdapter.Get(key)
+				Ω(storeadapter.IsKeyNotFoundError(err)).Should(BeTrue())
 
 				manager.Bump(key, ttl, timestamp)
 			})
 
 			It("should create the key with the current timestamp and a TTL", func() {
-				value, err := etcdStore.Get(key)
+				value, err := etcdStoreAdapter.Get(key)
 
 				Ω(err).ShouldNot(HaveOccured())
 
@@ -77,8 +77,8 @@ var _ = Describe("Freshness Manager", func() {
 		Context("when the key is present", func() {
 			BeforeEach(func() {
 				freshnessTimestamp, _ := json.Marshal(models.FreshnessTimestamp{Timestamp: 100})
-				etcdStore.Set([]store.StoreNode{
-					store.StoreNode{
+				etcdStoreAdapter.Set([]storeadapter.StoreNode{
+					storeadapter.StoreNode{
 						Key:   key,
 						Value: freshnessTimestamp,
 						TTL:   2,
@@ -89,7 +89,7 @@ var _ = Describe("Freshness Manager", func() {
 			})
 
 			It("should bump the key's TTL but not change the timestamp", func() {
-				value, _ := etcdStore.Get(key)
+				value, _ := etcdStoreAdapter.Get(key)
 
 				Ω(value.TTL).Should(BeNumerically("==", ttl-1))
 

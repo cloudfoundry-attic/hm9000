@@ -11,12 +11,12 @@ import (
 func StartListeningForActual(l logger.Logger, c *cli.Context) {
 	conf := loadConfig(l, c)
 	messageBus := connectToMessageBus(l, conf)
-	etcdStore := connectToETCDStore(l, conf)
+	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 
 	listener := actualstatelistener.New(conf,
 		messageBus,
-		etcdStore,
-		freshnessmanager.NewFreshnessManager(etcdStore),
+		etcdStoreAdapter,
+		freshnessmanager.NewFreshnessManager(etcdStoreAdapter),
 		timeprovider.NewTimeProvider(),
 		l)
 

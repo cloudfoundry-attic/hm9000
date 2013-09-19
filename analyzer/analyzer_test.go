@@ -8,17 +8,17 @@ import (
 
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
 )
 
 var _ = Describe("Analyzer", func() {
 	var (
-		analyzer  *Analyzer
-		etcdStore store.Store
-		conf      config.Config
-		a1        app.App
-		a2        app.App
+		analyzer         *Analyzer
+		etcdStoreAdapter storeadapter.StoreAdapter
+		conf             config.Config
+		a1               app.App
+		a2               app.App
 	)
 
 	BeforeEach(func() {
@@ -26,37 +26,37 @@ var _ = Describe("Analyzer", func() {
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
 
-		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdStore.Connect()
+		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = etcdStoreAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		a1 = app.NewApp()
 		a2 = app.NewApp()
 
-		analyzer = New(etcdStore)
+		analyzer = New(etcdStoreAdapter)
 	})
 
 	insertDesiredIntoStore := func(desired models.DesiredAppState) {
 		key := "/desired/" + desired.StoreKey()
 		value := desired.ToJson()
 
-		node := store.StoreNode{
+		node := storeadapter.StoreNode{
 			Key:   key,
 			Value: value,
 		}
 
-		etcdStore.Set([]store.StoreNode{node})
+		etcdStoreAdapter.Set([]storeadapter.StoreNode{node})
 	}
 
 	insertActualIntoStore := func(heartbeat models.InstanceHeartbeat) {
 		key := "/actual/" + heartbeat.StoreKey()
 		value := heartbeat.ToJson()
 
-		node := store.StoreNode{
+		node := storeadapter.StoreNode{
 			Key:   key,
 			Value: value,
 		}
-		etcdStore.Set([]store.StoreNode{node})
+		etcdStoreAdapter.Set([]storeadapter.StoreNode{node})
 	}
 
 	Context("When /desired and /actual are missing", func() {
@@ -76,8 +76,8 @@ var _ = Describe("Analyzer", func() {
 			insertDesiredIntoStore(desired)
 			insertActualIntoStore(actual)
 
-			etcdStore.Delete("/desired/" + desired.StoreKey())
-			etcdStore.Delete("/actual/" + actual.StoreKey())
+			etcdStoreAdapter.Delete("/desired/" + desired.StoreKey())
+			etcdStoreAdapter.Delete("/actual/" + actual.StoreKey())
 		})
 
 		It("Should not send any start or stop messages", func() {

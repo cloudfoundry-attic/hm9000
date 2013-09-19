@@ -1,47 +1,47 @@
-package store
+package storeadapter
 
 import (
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/coreos/go-etcd/etcd"
 )
 
-type ETCDStore struct {
+type ETCDStoreAdapter struct {
 	urls       []string
 	client     *etcd.Client
 	workerPool *workerpool.WorkerPool
 }
 
-func NewETCDStore(urls []string, maxConcurrentRequests int) *ETCDStore {
-	return &ETCDStore{
+func NewETCDStoreAdapter(urls []string, maxConcurrentRequests int) *ETCDStoreAdapter {
+	return &ETCDStoreAdapter{
 		urls:       urls,
 		workerPool: workerpool.NewWorkerPool(maxConcurrentRequests),
 	}
 }
 
-func (store *ETCDStore) Connect() error {
-	store.client = etcd.NewClient()
-	store.client.SetCluster(store.urls)
+func (adapter *ETCDStoreAdapter) Connect() error {
+	adapter.client = etcd.NewClient()
+	adapter.client.SetCluster(adapter.urls)
 
 	return nil
 }
 
-func (store *ETCDStore) Disconnect() error {
-	store.workerPool.StopWorkers()
+func (adapter *ETCDStoreAdapter) Disconnect() error {
+	adapter.workerPool.StopWorkers()
 
 	return nil
 }
 
-func (store *ETCDStore) isTimeoutError(err error) bool {
+func (adapter *ETCDStoreAdapter) isTimeoutError(err error) bool {
 	return err != nil && err.Error() == "Cannot reach servers"
 }
 
-func (store *ETCDStore) Set(nodes []StoreNode) error {
+func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 	results := make(chan error, len(nodes))
 
 	for _, node := range nodes {
 		node := node
-		store.workerPool.ScheduleWork(func() {
-			_, err := store.client.Set(node.Key, string(node.Value), node.TTL)
+		adapter.workerPool.ScheduleWork(func() {
+			_, err := adapter.client.Set(node.Key, string(node.Value), node.TTL)
 			results <- err
 		})
 	}
@@ -56,16 +56,16 @@ func (store *ETCDStore) Set(nodes []StoreNode) error {
 		}
 	}
 
-	if store.isTimeoutError(err) {
+	if adapter.isTimeoutError(err) {
 		return ETCDError{reason: ETCDErrorTimeout}
 	}
 
 	return err
 }
 
-func (store *ETCDStore) Get(key string) (StoreNode, error) {
-	responses, err := store.client.Get(key)
-	if store.isTimeoutError(err) {
+func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
+	responses, err := adapter.client.Get(key)
+	if adapter.isTimeoutError(err) {
 		return StoreNode{}, ETCDError{reason: ETCDErrorTimeout}
 	}
 
@@ -87,9 +87,9 @@ func (store *ETCDStore) Get(key string) (StoreNode, error) {
 	}, nil
 }
 
-func (store *ETCDStore) List(key string) ([]StoreNode, error) {
-	responses, err := store.client.Get(key)
-	if store.isTimeoutError(err) {
+func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
+	responses, err := adapter.client.Get(key)
+	if adapter.isTimeoutError(err) {
 		return []StoreNode{}, ETCDError{reason: ETCDErrorTimeout}
 	}
 
@@ -123,9 +123,9 @@ func (store *ETCDStore) List(key string) ([]StoreNode, error) {
 	return values, nil
 }
 
-func (store *ETCDStore) Delete(key string) error {
-	_, err := store.client.Delete(key)
-	if store.isTimeoutError(err) {
+func (adapter *ETCDStoreAdapter) Delete(key string) error {
+	_, err := adapter.client.Delete(key)
+	if adapter.isTimeoutError(err) {
 		return ETCDError{reason: ETCDErrorTimeout}
 	}
 

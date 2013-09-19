@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 	"net/http"
 )
 
@@ -25,14 +25,14 @@ type desiredStateFetcher struct {
 	config           config.Config
 	messageBus       cfmessagebus.MessageBus
 	httpClient       httpclient.HttpClient
-	store            store.Store
+	storeAdapter     storeadapter.StoreAdapter
 	freshnessManager freshnessmanager.FreshnessManager
 	timeProvider     timeprovider.TimeProvider
 }
 
 func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
-	store store.Store,
+	storeAdapter storeadapter.StoreAdapter,
 	httpClient httpclient.HttpClient,
 	freshnessManager freshnessmanager.FreshnessManager,
 	timeProvider timeprovider.TimeProvider) *desiredStateFetcher {
@@ -41,7 +41,7 @@ func New(config config.Config,
 		config:           config,
 		messageBus:       messageBus,
 		httpClient:       httpClient,
-		store:            store,
+		storeAdapter:     storeAdapter,
 		freshnessManager: freshnessManager,
 		timeProvider:     timeProvider,
 	}
@@ -123,10 +123,10 @@ func (fetcher *desiredStateFetcher) bulkURL(batchSize int, bulkToken string) str
 }
 
 func (fetcher *desiredStateFetcher) pushToStore(desiredState desiredStateServerResponse) error {
-	nodes := make([]store.StoreNode, len(desiredState.Results))
+	nodes := make([]storeadapter.StoreNode, len(desiredState.Results))
 	i := 0
 	for _, desiredAppState := range desiredState.Results {
-		nodes[i] = store.StoreNode{
+		nodes[i] = storeadapter.StoreNode{
 			Key:   "/desired/" + desiredAppState.StoreKey(),
 			Value: desiredAppState.ToJson(),
 			TTL:   fetcher.config.DesiredStateTTL,
@@ -134,7 +134,7 @@ func (fetcher *desiredStateFetcher) pushToStore(desiredState desiredStateServerR
 		i++
 	}
 
-	err := fetcher.store.Set(nodes)
+	err := fetcher.storeAdapter.Set(nodes)
 	if err != nil {
 		return err
 	}

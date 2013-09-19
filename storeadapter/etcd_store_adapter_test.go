@@ -1,23 +1,23 @@
-package store
+package storeadapter
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ETCD Store", func() {
-	var store Store
+var _ = Describe("ETCD Store Adapter", func() {
+	var adapter StoreAdapter
 	BeforeEach(func() {
-		store = NewETCDStore(etcdRunner.NodeURLS(), 100)
-		err := store.Connect()
+		adapter = NewETCDStoreAdapter(etcdRunner.NodeURLS(), 100)
+		err := adapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 	})
 
 	AfterEach(func() {
-		store.Disconnect()
+		adapter.Disconnect()
 	})
 
-	Context("With something in the store", func() {
+	Context("With something in the adapter", func() {
 		var key string
 		var value []byte
 		var dir_key string
@@ -30,12 +30,12 @@ var _ = Describe("ETCD Store", func() {
 			value = []byte("my_stuff")
 
 			key = "/foo/bar"
-			err := store.Set([]StoreNode{StoreNode{Key: key, Value: value, TTL: 0}})
+			err := adapter.Set([]StoreNode{StoreNode{Key: key, Value: value, TTL: 0}})
 			Ω(err).ShouldNot(HaveOccured())
 
 			dir_key = "/foo/baz"
 			dir_entry_key = "/bar"
-			err = store.Set([]StoreNode{StoreNode{Key: dir_key + dir_entry_key, Value: value, TTL: 0}})
+			err = adapter.Set([]StoreNode{StoreNode{Key: dir_key + dir_entry_key, Value: value, TTL: 0}})
 			Ω(err).ShouldNot(HaveOccured())
 
 			expectedLeafNode = StoreNode{
@@ -53,30 +53,30 @@ var _ = Describe("ETCD Store", func() {
 			}
 		})
 
-		It("should be able to set and get things from the store", func() {
-			value, err := store.Get("/foo/bar")
+		It("should be able to set and get things from the adapter", func() {
+			value, err := adapter.Get("/foo/bar")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(value).Should(Equal(expectedLeafNode))
 		})
 
 		It("Should list directory contents", func() {
-			value, err := store.List("/foo")
+			value, err := adapter.List("/foo")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(value).Should(HaveLen(2))
 			Ω(value).Should(ContainElement(expectedLeafNode))
 			Ω(value).Should(ContainElement(expectedDirNode))
 		})
 
-		It("should be able to delete things from the store", func() {
-			err := store.Delete("/foo/bar")
-			_, err = store.Get("/foo/bar")
+		It("should be able to delete things from the adapter", func() {
+			err := adapter.Delete("/foo/bar")
+			_, err = adapter.Get("/foo/bar")
 			Ω(err).Should(HaveOccured())
 			Ω(IsKeyNotFoundError(err)).Should(BeTrue())
 		})
 
 		Context("when we call List on an entry", func() {
 			It("should return an error", func() {
-				_, err := store.List(key)
+				_, err := adapter.List(key)
 				Ω(err).Should(HaveOccured())
 				Ω(IsNotDirectoryError(err)).Should(BeTrue())
 			})
@@ -84,7 +84,7 @@ var _ = Describe("ETCD Store", func() {
 
 		Context("when we call Get on a directory", func() {
 			It("should return an error", func() {
-				_, err := store.Get(dir_key)
+				_, err := adapter.Get(dir_key)
 				Ω(err).Should(HaveOccured())
 				Ω(IsDirectoryError(err)).Should(BeTrue())
 			})
@@ -92,9 +92,9 @@ var _ = Describe("ETCD Store", func() {
 
 		Context("when listing an empty directory", func() {
 			It("should return an empty list of nodes and no error", func() {
-				store.Set([]StoreNode{StoreNode{Key: "/menu/waffles", Value: []byte("tasty"), TTL: 0}})
-				store.Delete("/menu/waffles")
-				results, err := store.List("/menu")
+				adapter.Set([]StoreNode{StoreNode{Key: "/menu/waffles", Value: []byte("tasty"), TTL: 0}})
+				adapter.Delete("/menu/waffles")
+				results, err := adapter.List("/menu")
 				Ω(results).Should(BeEmpty())
 				Ω(err).ShouldNot(HaveOccured())
 			})
@@ -102,14 +102,14 @@ var _ = Describe("ETCD Store", func() {
 
 		Context("when listing a non-existent directory", func() {
 			It("should return a key not found error", func() {
-				results, err := store.List("/gobbledygook")
+				results, err := adapter.List("/gobbledygook")
 				Ω(results).Should(BeEmpty())
 				Ω(IsKeyNotFoundError(err)).Should(BeTrue())
 			})
 		})
 	})
 
-	Context("when the store is down", func() {
+	Context("when the adapter is down", func() {
 		BeforeEach(func() {
 			etcdRunner.Stop()
 		})
@@ -120,28 +120,28 @@ var _ = Describe("ETCD Store", func() {
 
 		Context("when we get", func() {
 			It("should return a timeout error", func() {
-				_, err := store.Get("/foo/bar")
+				_, err := adapter.Get("/foo/bar")
 				Ω(IsTimeoutError(err)).Should(BeTrue())
 			})
 		})
 
 		Context("when we set", func() {
 			It("should return a timeout error", func() {
-				err := store.Set([]StoreNode{StoreNode{Key: "/foo/bar", Value: []byte("baz"), TTL: 0}})
+				err := adapter.Set([]StoreNode{StoreNode{Key: "/foo/bar", Value: []byte("baz"), TTL: 0}})
 				Ω(IsTimeoutError(err)).Should(BeTrue())
 			})
 		})
 
 		Context("when we list", func() {
 			It("should return a timeout error", func() {
-				_, err := store.List("/foo/bar")
+				_, err := adapter.List("/foo/bar")
 				Ω(IsTimeoutError(err)).Should(BeTrue())
 			})
 		})
 
 		Context("when we delete", func() {
 			It("should return a timeout error", func() {
-				err := store.Delete("/foo/bar")
+				err := adapter.Delete("/foo/bar")
 				Ω(IsTimeoutError(err)).Should(BeTrue())
 			})
 		})
@@ -149,22 +149,22 @@ var _ = Describe("ETCD Store", func() {
 
 	Context("When fetching a non-existent key", func() {
 		It("should return an error", func() {
-			_, err := store.Get("/not_a_key")
+			_, err := adapter.Get("/not_a_key")
 			Ω(err).Should(HaveOccured())
 			Ω(IsKeyNotFoundError(err)).Should(BeTrue())
 		})
 	})
 
 	Context("When setting a key with a non-zero TTL", func() {
-		It("should stay in the store for its TTL and then disappear", func() {
-			err := store.Set([]StoreNode{StoreNode{Key: "/floop", Value: []byte("bar"), TTL: 1}})
+		It("should stay in the adapter for its TTL and then disappear", func() {
+			err := adapter.Set([]StoreNode{StoreNode{Key: "/floop", Value: []byte("bar"), TTL: 1}})
 			Ω(err).ShouldNot(HaveOccured())
 
-			_, err = store.Get("/floop")
+			_, err = adapter.Get("/floop")
 			Ω(err).ShouldNot(HaveOccured())
 
 			Eventually(func() interface{} {
-				_, err = store.Get("/floop")
+				_, err = adapter.Get("/floop")
 				return err
 			}, 1.05, 0.01).Should(HaveOccured())
 		})

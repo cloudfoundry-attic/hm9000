@@ -11,17 +11,17 @@ import (
 
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakefreshnessmanager"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakefreshnessmanager"
 )
 
 var _ = Describe("Actual state listener", func() {
 	var (
 		app              App
 		anotherApp       App
-		etcdStore        store.Store
+		etcdStoreAdapter storeadapter.StoreAdapter
 		listener         *ActualStateListener
 		timeProvider     *faketimeprovider.FakeTimeProvider
 		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
@@ -41,25 +41,25 @@ var _ = Describe("Actual state listener", func() {
 		app = NewApp()
 		anotherApp = NewApp()
 
-		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdStore.Connect()
+		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = etcdStoreAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
 
 		freshnessManager = &fakefreshnessmanager.FakeFreshnessManager{}
 
-		listener = New(conf, messageBus, etcdStore, freshnessManager, timeProvider, fakelogger.NewFakeLogger())
+		listener = New(conf, messageBus, etcdStoreAdapter, freshnessManager, timeProvider, fakelogger.NewFakeLogger())
 		listener.Start()
 	})
 
 	verifyHeartbeatInStore := func(hb InstanceHeartbeat) {
 		storeKey := "/actual/" + hb.InstanceGuid
-		var value store.StoreNode
+		var value storeadapter.StoreNode
 		var err error
 
 		Eventually(func() interface{} {
-			value, err = etcdStore.Get(storeKey)
+			value, err = etcdStoreAdapter.Get(storeKey)
 			return err
 		}, 0.1, 0.01).ShouldNot(HaveOccured())
 

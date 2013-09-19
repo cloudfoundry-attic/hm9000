@@ -1,9 +1,11 @@
 package storerunner
 
 import (
-	"fmt"
 	. "github.com/onsi/gomega"
+	"time"
 
+	"fmt"
+	zkClient "github.com/samuel/go-zookeeper/zk"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -63,7 +65,7 @@ func (zk *ZookeeperClusterRunner) Stop() {
 func (zk *ZookeeperClusterRunner) NodeURLS() []string {
 	urls := make([]string, zk.numNodes)
 	for i := 0; i < zk.numNodes; i++ {
-		urls[i] = "http://" + zk.clientUrl(i)
+		urls[i] = zk.clientUrl(i)
 	}
 	return urls
 }
@@ -77,26 +79,35 @@ func (zk *ZookeeperClusterRunner) DiskUsage() (bytes int64, err error) {
 }
 
 func (zk *ZookeeperClusterRunner) Reset() {
-	// client := zkclient.NewClient()
-	// client.SetCluster(zk.NodeURLS())
+	client, _, err := zkClient.Connect(zk.NodeURLS(), time.Second)
+	Ω(err).ShouldNot(HaveOccured(), "Failed to connect")
 
-	// zk.deleteDir(client, "/")
+	zk.deleteRecursively(client, "/")
+	client.Close()
 }
 
-// func (zk *ZookeeperClusterRunner) deleteDir(client *zkclient.Client, dir string) {
-// responses, err := client.Get(dir)
-// Ω(err).ShouldNot(HaveOccured())
-// for _, response := range responses {
-// 	if response.Key != "/_zk" {
-// 		if response.Dir == true {
-// 			zk.deleteDir(client, response.Key)
-// 		} else {
-// 			_, err := client.Delete(response.Key)
-// 			Ω(err).ShouldNot(HaveOccured())
-// 		}
-// 	}
-// }
-// }
+func (zk *ZookeeperClusterRunner) deleteRecursively(client *zkClient.Conn, key string) {
+	if key != "/zookeeper" {
+		children, _, err := client.Children(key)
+		Ω(err).ShouldNot(HaveOccured(), "Failed to fetch children for '%s'", key)
+
+		for _, child := range children {
+			childPath := key + "/" + child
+			if key == "/" {
+				childPath = key + child
+			}
+			zk.deleteRecursively(client, childPath)
+		}
+
+		if key != "/" {
+			err = client.Delete(key, -1)
+		}
+
+		Ω(err).ShouldNot(HaveOccured(), "Failed to delete key '%s'", key)
+	}
+
+	return
+}
 
 func (zk *ZookeeperClusterRunner) writeConfig(index int) {
 	config := "tickTime=2000\n"

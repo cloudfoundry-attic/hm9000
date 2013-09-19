@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
 	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
 
@@ -27,19 +27,19 @@ var _ = Describe("ETCD Store Performance", func() {
 	for nodes := 1; nodes <= 7; nodes += 2 {
 		nodes := nodes
 		Context(fmt.Sprintf("With %d ETCD nodes", nodes), func() {
-			var realStore store.Store
+			var storeAdapter storeadapter.StoreAdapter
 
 			BeforeEach(func() {
 				etcdRunner = storerunner.NewETCDClusterRunner(5001, nodes)
 				etcdRunner.Start()
 
-				realStore = store.NewETCDStore(etcdRunner.NodeURLS(), 100)
-				err := realStore.Connect()
+				storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), 100)
+				err := storeAdapter.Connect()
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
 			AfterEach(func() {
-				realStore.Disconnect()
+				storeAdapter.Disconnect()
 				etcdRunner.Stop()
 				etcdRunner = nil
 			})
@@ -48,11 +48,11 @@ var _ = Describe("ETCD Store Performance", func() {
 				numApps := numApps
 
 				Measure(fmt.Sprintf("Read/Write Performance With %d Apps", numApps), func(b Benchmarker) {
-					data := make([]store.StoreNode, numApps)
+					data := make([]storeadapter.StoreNode, numApps)
 
 					heartbeat := app.NewDea().Heartbeat(numApps, time.Now().Unix())
 					for i, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
-						data[i] = store.StoreNode{
+						data[i] = storeadapter.StoreNode{
 							Key:   "/actual/" + instanceHeartbeat.InstanceGuid,
 							Value: instanceHeartbeat.ToJson(),
 							TTL:   0,
@@ -60,14 +60,14 @@ var _ = Describe("ETCD Store Performance", func() {
 					}
 
 					writeTime := b.Time("writing to the store", func() {
-						err := realStore.Set(data)
+						err := storeAdapter.Set(data)
 						Ω(err).ShouldNot(HaveOccured())
 					}, Report{NumStoreNodes: nodes, NumApps: numApps, Subject: "write performance"})
 
 					Ω(writeTime.Seconds()).Should(BeNumerically("<=", 30))
 
 					readTime := b.Time("reading from the store", func() {
-						values, err := realStore.List("/actual")
+						values, err := storeAdapter.List("/actual")
 						Ω(err).ShouldNot(HaveOccured())
 						Ω(len(values)).Should(Equal(numApps), "Didn't find the correct number of entries in the store")
 					}, Report{NumStoreNodes: nodes, NumApps: numApps, Subject: "read performance"})

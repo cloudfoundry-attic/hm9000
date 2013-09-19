@@ -2,33 +2,33 @@ package hm
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Walk", func() {
-	var etcdStore store.Store
+	var etcdStoreAdapter storeadapter.StoreAdapter
 	BeforeEach(func() {
 		conf, _ := config.DefaultConfig()
-		etcdStore = store.NewETCDStore(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err := etcdStore.Connect()
+		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err := etcdStoreAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		etcdStore.Set([]store.StoreNode{
-			store.StoreNode{Key: "/desired-fresh", Value: []byte("123"), TTL: 0},
-			store.StoreNode{Key: "/actual-fresh", Value: []byte("456"), TTL: 0},
-			store.StoreNode{Key: "/desired/guid1", Value: []byte("guid1"), TTL: 0},
-			store.StoreNode{Key: "/desired/guid2", Value: []byte("guid2"), TTL: 0},
-			store.StoreNode{Key: "/menu/oj", Value: []byte("sweet"), TTL: 0},
-			store.StoreNode{Key: "/menu/breakfast/pancakes", Value: []byte("tasty"), TTL: 0},
-			store.StoreNode{Key: "/menu/breakfast/waffles", Value: []byte("delish"), TTL: 0},
+		etcdStoreAdapter.Set([]storeadapter.StoreNode{
+			storeadapter.StoreNode{Key: "/desired-fresh", Value: []byte("123"), TTL: 0},
+			storeadapter.StoreNode{Key: "/actual-fresh", Value: []byte("456"), TTL: 0},
+			storeadapter.StoreNode{Key: "/desired/guid1", Value: []byte("guid1"), TTL: 0},
+			storeadapter.StoreNode{Key: "/desired/guid2", Value: []byte("guid2"), TTL: 0},
+			storeadapter.StoreNode{Key: "/menu/oj", Value: []byte("sweet"), TTL: 0},
+			storeadapter.StoreNode{Key: "/menu/breakfast/pancakes", Value: []byte("tasty"), TTL: 0},
+			storeadapter.StoreNode{Key: "/menu/breakfast/waffles", Value: []byte("delish"), TTL: 0},
 		})
 	})
 
 	It("can recurse through keys in the store", func() {
 		visited := make(map[string]string)
-		walk(etcdStore, "/", func(node store.StoreNode) {
+		walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
 			visited[node.Key] = string(node.Value)
 		})
 
@@ -45,7 +45,7 @@ var _ = Describe("Walk", func() {
 
 	It("can recurse through keys in the store at an arbitrary level", func() {
 		visited := make(map[string]string)
-		walk(etcdStore, "/menu", func(node store.StoreNode) {
+		walk(etcdStoreAdapter, "/menu", func(node storeadapter.StoreNode) {
 			visited[node.Key] = string(node.Value)
 		})
 
@@ -58,7 +58,7 @@ var _ = Describe("Walk", func() {
 
 	It("doesn't call the callback when passed a non-directory", func() {
 		called := false
-		walk(etcdStore, "/desired-fresh", func(node store.StoreNode) {
+		walk(etcdStoreAdapter, "/desired-fresh", func(node storeadapter.StoreNode) {
 			called = true
 		})
 
