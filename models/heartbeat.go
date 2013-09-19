@@ -55,3 +55,7 @@ func (instance InstanceHeartbeat) ToJson() []byte {
 	encoded, _ := json.Marshal(instance)
 	return encoded
 }
+
+func (instance InstanceHeartbeat) StoreKey() string {
+	return instance.InstanceGuid
+}

@@ -5,25 +5,81 @@ import (
 	. "github.com/onsi/gomega"
 
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
 var _ = Describe("DesiredAppState", func() {
-	It("outputs to JSON", func() {
-		appState := DesiredAppState{
-			AppGuid:           "myAppId",
-			AppVersion:        "123",
-			NumberOfInstances: 1,
-			Memory:            1024,
-			State:             AppStateStarted,
-			PackageState:      AppPackageStatePending,
-			UpdatedAt:         time.Unix(0, 0),
-		}
 
-		var decoded DesiredAppState
-		err := json.Unmarshal(appState.ToJson(), &decoded)
-		Ω(err).ShouldNot(HaveOccured())
-		Ω(decoded).Should(EqualDesiredState(appState))
+	Describe("JSON", func() {
+		var desiredAppState DesiredAppState
+
+		BeforeEach(func() {
+			desiredAppState = DesiredAppState{
+				AppGuid:           "app_guid_abc",
+				AppVersion:        "app_version_123",
+				NumberOfInstances: 3,
+				Memory:            1024,
+				State:             AppStateStopped,
+				PackageState:      AppPackageStateStaged,
+				UpdatedAt:         time.Unix(0, 0),
+			}
+		})
+
+		Describe("loading JSON", func() {
+			Context("When all is well", func() {
+				It("should, like, totally build from JSON", func() {
+					timeAsJson, _ := desiredAppState.UpdatedAt.MarshalJSON()
+					json := fmt.Sprintf(`{
+	                    "id":"app_guid_abc",
+	                    "version":"app_version_123",
+	                    "instances":3,
+	                    "memory":1024,
+	                    "state":"STOPPED",
+	                    "package_state":"STAGED",
+	                    "updated_at":%s
+	                }`, timeAsJson)
+					jsonDesired, err := NewDesiredAppStateFromJSON([]byte(json))
+
+					Ω(err).ShouldNot(HaveOccured())
+
+					Ω(jsonDesired).Should(EqualDesiredState(desiredAppState))
+				})
+			})
+
+			Context("When the JSON is invalid", func() {
+				It("returns a zero desired state and an error", func() {
+					desired, err := NewDesiredAppStateFromJSON([]byte(`{`))
+
+					Ω(desired).Should(BeZero())
+					Ω(err).Should(HaveOccured())
+				})
+			})
+		})
+
+		Describe("writing JSON", func() {
+			It("outputs to JSON", func() {
+				var decoded DesiredAppState
+				err := json.Unmarshal(desiredAppState.ToJson(), &decoded)
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(decoded).Should(EqualDesiredState(desiredAppState))
+			})
+		})
+	})
+
+	Describe("StoreKey", func() {
+		var appstate DesiredAppState
+
+		BeforeEach(func() {
+			appstate = DesiredAppState{
+				AppGuid:    "XYZ-ABC",
+				AppVersion: "DEF-123",
+			}
+		})
+
+		It("returns the key for the store", func() {
+			Ω(appstate.StoreKey()).Should(Equal("XYZ-ABC-DEF-123"))
+		})
 	})
 
 	Describe("Equality", func() {

@@ -33,6 +33,15 @@ type DesiredAppState struct {
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
+func NewDesiredAppStateFromJSON(encoded []byte) (DesiredAppState, error) {
+	var desired DesiredAppState
+	err := json.Unmarshal(encoded, &desired)
+	if err != nil {
+		return DesiredAppState{}, err
+	}
+	return desired, nil
+}
+
 func (state DesiredAppState) ToJson() []byte {
 	result, _ := json.Marshal(state)
 	return result
@@ -46,4 +55,8 @@ func (state DesiredAppState) Equal(other DesiredAppState) bool {
 		state.State == other.State &&
 		state.PackageState == other.PackageState &&
 		state.UpdatedAt.Equal(other.UpdatedAt)
+}
+
+func (state DesiredAppState) StoreKey() string {
+	return state.AppGuid + "-" + state.AppVersion
 }

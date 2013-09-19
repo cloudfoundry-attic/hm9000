@@ -55,7 +55,7 @@ func (listener *ActualStateListener) Start() {
 		nodes := make([]store.StoreNode, len(heartbeat.InstanceHeartbeats))
 		for i, instance := range heartbeat.InstanceHeartbeats {
 			nodes[i] = store.StoreNode{
-				Key:   "/actual/" + instance.InstanceGuid,
+				Key:   "/actual/" + instance.StoreKey(),
 				Value: instance.ToJson(),
 				TTL:   listener.config.HeartbeatTTL,
 			}

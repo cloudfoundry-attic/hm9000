@@ -127,7 +127,7 @@ func (fetcher *desiredStateFetcher) pushToStore(desiredState desiredStateServerR
 	i := 0
 	for _, desiredAppState := range desiredState.Results {
 		nodes[i] = store.StoreNode{
-			Key:   "/desired/" + desiredAppState.AppGuid + "-" + desiredAppState.AppVersion,
+			Key:   "/desired/" + desiredAppState.StoreKey(),
 			Value: desiredAppState.ToJson(),
 			TTL:   fetcher.config.DesiredStateTTL,
 		}

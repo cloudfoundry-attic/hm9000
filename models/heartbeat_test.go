@@ -121,4 +121,10 @@ var _ = Describe("InstanceHeartbeat", func() {
 			Ω(jsonInstance).Should(Equal(instance))
 		})
 	})
+
+	Describe("StoreKey", func() {
+		It("returns the key for the store", func() {
+			Ω(instance.StoreKey()).Should(Equal("def"))
+		})
+	})
 })
