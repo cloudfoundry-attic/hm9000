@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
-	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -33,7 +33,7 @@ var _ = Describe("Desired State Server Response JSON", func() {
 
 	It("can parse from JSON", func() {
 		Ω(response.Results).Should(HaveLen(1))
-		Ω(response.Results[a.AppGuid]).Should(models.EqualDesiredState(a.DesiredState(0)))
+		Ω(response.Results[a.AppGuid]).Should(EqualDesiredState(a.DesiredState(0)))
 		Ω(response.BulkToken.Id).Should(Equal(17))
 	})
 

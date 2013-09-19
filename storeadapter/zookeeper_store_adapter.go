@@ -71,7 +71,7 @@ func (adapter *ZookeeperStoreAdapter) Set(nodes []StoreNode) error {
 	}
 
 	// if adapter.isTimeoutError(err) {
-	// 	return ETCDError{reason: ETCDErrorTimeout}
+	// 	return StoreError{reason: StoreErrorTimeout}
 	// }
 
 	return err

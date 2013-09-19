@@ -1,6 +1,7 @@
 package desiredstateserver_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	. "github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

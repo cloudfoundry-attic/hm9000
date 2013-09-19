@@ -108,6 +108,13 @@ var _ = Describe("ETCD Store Adapter", func() {
 				Ω(IsKeyNotFoundError(err)).Should(BeTrue())
 			})
 		})
+
+		Context("when deleting a nonexistent key", func() {
+			It("should return a key not found error", func() {
+				err := adapter.Delete("/gobbledygook")
+				Ω(IsKeyNotFoundError(err)).Should(BeTrue())
+			})
+		})
 	})
 
 	Context("when the adapter is down", func() {

@@ -35,6 +35,16 @@ func (adapter *ETCDStoreAdapter) isTimeoutError(err error) bool {
 	return err != nil && err.Error() == "Cannot reach servers"
 }
 
+func (adapter *ETCDStoreAdapter) isMissingKeyError(err error) bool {
+	if err != nil {
+		etcdError, ok := err.(etcd.EtcdError)
+		if ok && etcdError.ErrorCode == 100 { //yup.  100.
+			return true
+		}
+	}
+	return false
+}
+
 func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 	results := make(chan error, len(nodes))
 
@@ -57,7 +67,7 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 	}
 
 	if adapter.isTimeoutError(err) {
-		return NewETCDError(ETCDErrorTimeout)
+		return NewStoreError(StoreErrorTimeout)
 	}
 
 	return err
@@ -66,17 +76,17 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 	responses, err := adapter.client.Get(key)
 	if adapter.isTimeoutError(err) {
-		return StoreNode{}, NewETCDError(ETCDErrorTimeout)
+		return StoreNode{}, NewStoreError(StoreErrorTimeout)
 	}
 
 	if len(responses) == 0 {
-		return StoreNode{}, NewETCDError(ETCDErrorKeyNotFound)
+		return StoreNode{}, NewStoreError(StoreErrorKeyNotFound)
 	}
 	if err != nil {
 		return StoreNode{}, err
 	}
 	if len(responses) > 1 || responses[0].Key != key {
-		return StoreNode{}, NewETCDError(ETCDErrorIsDirectory)
+		return StoreNode{}, NewStoreError(StoreErrorIsDirectory)
 	}
 
 	return StoreNode{
@@ -90,14 +100,14 @@ func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 	responses, err := adapter.client.Get(key)
 	if adapter.isTimeoutError(err) {
-		return []StoreNode{}, NewETCDError(ETCDErrorTimeout)
+		return []StoreNode{}, NewStoreError(StoreErrorTimeout)
+	}
+
+	if adapter.isMissingKeyError(err) {
+		return []StoreNode{}, NewStoreError(StoreErrorKeyNotFound)
 	}
 
 	if err != nil {
-		etcdError, ok := err.(etcd.EtcdError)
-		if ok && etcdError.ErrorCode == 100 { //yup.  100.
-			return []StoreNode{}, NewETCDError(ETCDErrorKeyNotFound)
-		}
 		return []StoreNode{}, err
 	}
 
@@ -106,7 +116,7 @@ func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 	}
 
 	if responses[0].Key == key {
-		return []StoreNode{}, NewETCDError(ETCDErrorIsNotDirectory)
+		return []StoreNode{}, NewStoreError(StoreErrorIsNotDirectory)
 	}
 
 	values := make([]StoreNode, len(responses))
@@ -126,7 +136,11 @@ func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 func (adapter *ETCDStoreAdapter) Delete(key string) error {
 	_, err := adapter.client.Delete(key)
 	if adapter.isTimeoutError(err) {
-		return NewETCDError(ETCDErrorTimeout)
+		return NewStoreError(StoreErrorTimeout)
+	}
+
+	if adapter.isMissingKeyError(err) {
+		return NewStoreError(StoreErrorKeyNotFound)
 	}
 
 	return err
