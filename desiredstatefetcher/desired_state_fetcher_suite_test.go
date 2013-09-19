@@ -1,4 +1,4 @@
-package desiredstatefetcher
+package desiredstatefetcher_test
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"

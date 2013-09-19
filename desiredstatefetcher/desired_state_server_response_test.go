@@ -1,8 +1,9 @@
-package desiredstatefetcher
+package desiredstatefetcher_test
 
 import (
 	"encoding/json"
 	"fmt"
+	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/onsi/ginkgo"
@@ -12,7 +13,7 @@ import (
 var _ = Describe("Desired State Server Response JSON", func() {
 	var (
 		a        app.App
-		response desiredStateServerResponse
+		response DesiredStateServerResponse
 	)
 	BeforeEach(func() {
 		a = app.NewApp()

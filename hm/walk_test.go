@@ -1,7 +1,8 @@
-package hm
+package hm_test
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
+	. "github.com/cloudfoundry/hm9000/hm"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,7 +29,7 @@ var _ = Describe("Walk", func() {
 
 	It("can recurse through keys in the store", func() {
 		visited := make(map[string]string)
-		walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
+		Walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
 			visited[node.Key] = string(node.Value)
 		})
 
@@ -45,7 +46,7 @@ var _ = Describe("Walk", func() {
 
 	It("can recurse through keys in the store at an arbitrary level", func() {
 		visited := make(map[string]string)
-		walk(etcdStoreAdapter, "/menu", func(node storeadapter.StoreNode) {
+		Walk(etcdStoreAdapter, "/menu", func(node storeadapter.StoreNode) {
 			visited[node.Key] = string(node.Value)
 		})
 
@@ -58,7 +59,7 @@ var _ = Describe("Walk", func() {
 
 	It("doesn't call the callback when passed a non-directory", func() {
 		called := false
-		walk(etcdStoreAdapter, "/desired-fresh", func(node storeadapter.StoreNode) {
+		Walk(etcdStoreAdapter, "/desired-fresh", func(node storeadapter.StoreNode) {
 			called = true
 		})
 

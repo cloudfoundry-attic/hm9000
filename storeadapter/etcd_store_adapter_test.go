@@ -1,6 +1,7 @@
-package storeadapter
+package storeadapter_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/storeadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

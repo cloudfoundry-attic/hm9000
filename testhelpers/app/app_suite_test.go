@@ -1,13 +1,13 @@
-package app
+package app_test
 
 import (
-    . "github.com/onsi/ginkgo"
-    . "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
-    "testing"
+	"testing"
 )
 
 func TestApp(t *testing.T) {
-    RegisterFailHandler(Fail)
-    RunSpecs(t, "App Suite")
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "App Suite")
 }

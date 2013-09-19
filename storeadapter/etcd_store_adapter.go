@@ -57,7 +57,7 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 	}
 
 	if adapter.isTimeoutError(err) {
-		return ETCDError{reason: ETCDErrorTimeout}
+		return NewETCDError(ETCDErrorTimeout)
 	}
 
 	return err
@@ -66,17 +66,17 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 	responses, err := adapter.client.Get(key)
 	if adapter.isTimeoutError(err) {
-		return StoreNode{}, ETCDError{reason: ETCDErrorTimeout}
+		return StoreNode{}, NewETCDError(ETCDErrorTimeout)
 	}
 
 	if len(responses) == 0 {
-		return StoreNode{}, ETCDError{reason: ETCDErrorKeyNotFound}
+		return StoreNode{}, NewETCDError(ETCDErrorKeyNotFound)
 	}
 	if err != nil {
 		return StoreNode{}, err
 	}
 	if len(responses) > 1 || responses[0].Key != key {
-		return StoreNode{}, ETCDError{reason: ETCDErrorIsDirectory}
+		return StoreNode{}, NewETCDError(ETCDErrorIsDirectory)
 	}
 
 	return StoreNode{
@@ -90,13 +90,13 @@ func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 	responses, err := adapter.client.Get(key)
 	if adapter.isTimeoutError(err) {
-		return []StoreNode{}, ETCDError{reason: ETCDErrorTimeout}
+		return []StoreNode{}, NewETCDError(ETCDErrorTimeout)
 	}
 
 	if err != nil {
 		etcdError, ok := err.(etcd.EtcdError)
 		if ok && etcdError.ErrorCode == 100 { //yup.  100.
-			return []StoreNode{}, ETCDError{reason: ETCDErrorKeyNotFound}
+			return []StoreNode{}, NewETCDError(ETCDErrorKeyNotFound)
 		}
 		return []StoreNode{}, err
 	}
@@ -106,7 +106,7 @@ func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 	}
 
 	if responses[0].Key == key {
-		return []StoreNode{}, ETCDError{reason: ETCDErrorIsNotDirectory}
+		return []StoreNode{}, NewETCDError(ETCDErrorIsNotDirectory)
 	}
 
 	values := make([]StoreNode, len(responses))
@@ -126,7 +126,7 @@ func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 func (adapter *ETCDStoreAdapter) Delete(key string) error {
 	_, err := adapter.client.Delete(key)
 	if adapter.isTimeoutError(err) {
-		return ETCDError{reason: ETCDErrorTimeout}
+		return NewETCDError(ETCDErrorTimeout)
 	}
 
 	return err

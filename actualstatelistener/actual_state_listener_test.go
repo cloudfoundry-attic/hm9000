@@ -1,6 +1,7 @@
-package actualstatelistener
+package actualstatelistener_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/actualstatelistener"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

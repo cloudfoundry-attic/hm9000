@@ -1,8 +1,9 @@
-package freshnessmanager
+package freshnessmanager_test
 
 import (
 	"encoding/json"
 	"github.com/cloudfoundry/hm9000/config"
+	. "github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

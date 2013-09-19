@@ -12,7 +12,7 @@ func Dump(l logger.Logger, c *cli.Context) {
 	conf := loadConfig(l, c)
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 
-	walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
+	Walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
 		ttl := fmt.Sprintf("[TTL:%ds]", node.TTL)
 		if node.TTL == 0 {
 			ttl = "[TTL: ∞]"
@@ -21,7 +21,7 @@ func Dump(l logger.Logger, c *cli.Context) {
 	})
 }
 
-func walk(store storeadapter.StoreAdapter, dirKey string, callback func(storeadapter.StoreNode)) {
+func Walk(store storeadapter.StoreAdapter, dirKey string, callback func(storeadapter.StoreNode)) {
 	nodes, err := store.List(dirKey)
 	if err != nil {
 		return
@@ -32,7 +32,7 @@ func walk(store storeadapter.StoreAdapter, dirKey string, callback func(storeada
 			continue
 		}
 		if node.Dir {
-			walk(store, node.Key, callback)
+			Walk(store, node.Key, callback)
 		} else {
 			callback(node)
 		}

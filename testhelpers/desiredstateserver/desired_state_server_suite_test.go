@@ -1,6 +1,7 @@
-package desiredstateserver
+package desiredstateserver_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -121,14 +122,14 @@ var _ = Describe("making requests", func() {
 
 		Context("with correct authorization", func() {
 			var (
-				response desiredStateServerResponse
+				response DesiredStateServerResponse
 				app1     DesiredAppState
 				app2     DesiredAppState
 				app3     DesiredAppState
 			)
 
 			BeforeEach(func() {
-				response = desiredStateServerResponse{}
+				response = DesiredStateServerResponse{}
 				app1 = DesiredAppState{
 					AppGuid:           "abc",
 					AppVersion:        "123",

@@ -1,8 +1,9 @@
-package analyzer
+package analyzer_test
 
 // very much WIP
 
 import (
+	. "github.com/cloudfoundry/hm9000/analyzer"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

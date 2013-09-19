@@ -1,4 +1,4 @@
-package analyzer
+package analyzer_test
 
 import (
 	. "github.com/onsi/ginkgo"

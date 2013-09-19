@@ -1,6 +1,7 @@
-package startstoplistener
+package startstoplistener_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/testhelpers/startstoplistener"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

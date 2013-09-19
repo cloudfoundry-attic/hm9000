@@ -1,10 +1,11 @@
-package desiredstatefetcher
+package desiredstatefetcher_test
 
 import (
 	"errors"
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
+	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
@@ -33,7 +34,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 	var (
 		conf             config.Config
 		fakeMessageBus   *fake_cfmessagebus.FakeMessageBus
-		fetcher          *desiredStateFetcher
+		fetcher          *DesiredStateFetcher
 		httpClient       *fakehttpclient.FakeHttpClient
 		timeProvider     *faketimeprovider.FakeTimeProvider
 		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
@@ -157,7 +158,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 	})
 
 	Describe("Fetching batches", func() {
-		var response desiredStateServerResponse
+		var response DesiredStateServerResponse
 
 		BeforeEach(func() {
 			fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
@@ -179,12 +180,12 @@ var _ = Describe("DesiredStateFetcher", func() {
 				a1 = app.NewApp()
 				a2 = app.NewApp()
 
-				response = desiredStateServerResponse{
+				response = DesiredStateServerResponse{
 					Results: map[string]models.DesiredAppState{
 						a1.AppGuid: a1.DesiredState(0),
 						a2.AppGuid: a2.DesiredState(0),
 					},
-					BulkToken: bulkToken{
+					BulkToken: BulkToken{
 						Id: 5,
 					},
 				}
@@ -224,9 +225,9 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		Context("when an empty response is received", func() {
 			BeforeEach(func() {
-				response = desiredStateServerResponse{
+				response = DesiredStateServerResponse{
 					Results: map[string]models.DesiredAppState{},
-					BulkToken: bulkToken{
+					BulkToken: BulkToken{
 						Id: 17,
 					},
 				}
@@ -329,11 +330,11 @@ var _ = Describe("DesiredStateFetcher", func() {
 				}
 				etcdStoreAdapter.Set([]storeadapter.StoreNode{node})
 
-				response = desiredStateServerResponse{
+				response = DesiredStateServerResponse{
 					Results: map[string]models.DesiredAppState{
 						a.AppGuid: a.DesiredState(0),
 					},
-					BulkToken: bulkToken{
+					BulkToken: BulkToken{
 						Id: 5,
 					},
 				}

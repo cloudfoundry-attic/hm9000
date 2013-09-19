@@ -1,6 +1,7 @@
-package app
+package app_test
 
 import (
+    . "github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/cloudfoundry/hm9000/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

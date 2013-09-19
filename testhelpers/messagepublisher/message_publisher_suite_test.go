@@ -1,6 +1,7 @@
-package messagepublisher
+package messagepublisher_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/testhelpers/messagepublisher"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

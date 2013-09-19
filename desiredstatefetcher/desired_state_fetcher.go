@@ -21,7 +21,7 @@ type DesiredStateFetcherResult struct {
 
 const initialBulkToken = "{}"
 
-type desiredStateFetcher struct {
+type DesiredStateFetcher struct {
 	config           config.Config
 	messageBus       cfmessagebus.MessageBus
 	httpClient       httpclient.HttpClient
@@ -35,9 +35,9 @@ func New(config config.Config,
 	storeAdapter storeadapter.StoreAdapter,
 	httpClient httpclient.HttpClient,
 	freshnessManager freshnessmanager.FreshnessManager,
-	timeProvider timeprovider.TimeProvider) *desiredStateFetcher {
+	timeProvider timeprovider.TimeProvider) *DesiredStateFetcher {
 
-	return &desiredStateFetcher{
+	return &DesiredStateFetcher{
 		config:           config,
 		messageBus:       messageBus,
 		httpClient:       httpClient,
@@ -47,7 +47,7 @@ func New(config config.Config,
 	}
 }
 
-func (fetcher *desiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult) {
+func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult) {
 	err := fetcher.messageBus.Request(fetcher.config.CCAuthMessageBusSubject, []byte{}, func(response []byte) {
 		authInfo, err := models.NewBasicAuthInfoFromJSON(response)
 		if err != nil {
@@ -62,7 +62,7 @@ func (fetcher *desiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherRes
 	}
 }
 
-func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult) {
+func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult) {
 	req, err := http.NewRequest("GET", fetcher.bulkURL(fetcher.config.DesiredStateBatchSize, token), nil)
 
 	if err != nil {
@@ -118,11 +118,11 @@ func (fetcher *desiredStateFetcher) fetchBatch(authorization string, token strin
 	})
 }
 
-func (fetcher *desiredStateFetcher) bulkURL(batchSize int, bulkToken string) string {
+func (fetcher *DesiredStateFetcher) bulkURL(batchSize int, bulkToken string) string {
 	return fmt.Sprintf("%s/bulk/apps?batch_size=%d&bulk_token=%s", fetcher.config.CCBaseURL, batchSize, bulkToken)
 }
 
-func (fetcher *desiredStateFetcher) pushToStore(desiredState desiredStateServerResponse) error {
+func (fetcher *DesiredStateFetcher) pushToStore(desiredState DesiredStateServerResponse) error {
 	nodes := make([]storeadapter.StoreNode, len(desiredState.Results))
 	i := 0
 	for _, desiredAppState := range desiredState.Results {

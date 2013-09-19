@@ -1,4 +1,4 @@
-package storeadapter
+package storeadapter_test
 
 import (
 	. "github.com/onsi/ginkgo"

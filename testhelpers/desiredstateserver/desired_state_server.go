@@ -20,7 +20,7 @@ type DesiredStateServer struct {
 	NumberOfCompleteFetches int
 }
 
-type desiredStateServerResponse struct {
+type DesiredStateServerResponse struct {
 	Results   map[string]DesiredAppState `json:"results"`
 	BulkToken struct {
 		Id int `json:"id"`
@@ -94,7 +94,7 @@ func (server *DesiredStateServer) handleApps(w http.ResponseWriter, r *http.Requ
 		server.NumberOfCompleteFetches += 1
 	}
 
-	response := desiredStateServerResponse{
+	response := DesiredStateServerResponse{
 		Results: results,
 	}
 	response.BulkToken.Id = endIndex

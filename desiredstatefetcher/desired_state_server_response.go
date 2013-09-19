@@ -5,27 +5,27 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 )
 
-type desiredStateServerResponse struct {
+type DesiredStateServerResponse struct {
 	Results   map[string]models.DesiredAppState `json:"results"`
-	BulkToken bulkToken                         `json:"bulk_token"`
+	BulkToken BulkToken                         `json:"bulk_token"`
 }
 
-type bulkToken struct {
+type BulkToken struct {
 	Id int `json:"id"`
 }
 
-func NewDesiredStateServerResponse(jsonMessage []byte) (desiredStateServerResponse, error) {
-	response := desiredStateServerResponse{}
+func NewDesiredStateServerResponse(jsonMessage []byte) (DesiredStateServerResponse, error) {
+	response := DesiredStateServerResponse{}
 	err := json.Unmarshal(jsonMessage, &response)
 	return response, err
 }
 
-func (response desiredStateServerResponse) BulkTokenRepresentation() string {
+func (response DesiredStateServerResponse) BulkTokenRepresentation() string {
 	bulkTokenRepresentation, _ := json.Marshal(response.BulkToken)
 	return string(bulkTokenRepresentation)
 }
 
-func (response desiredStateServerResponse) ToJson() []byte {
+func (response DesiredStateServerResponse) ToJson() []byte {
 	encoded, _ := json.Marshal(response)
 	return encoded
 }

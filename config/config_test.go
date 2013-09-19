@@ -1,6 +1,7 @@
-package config
+package config_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"

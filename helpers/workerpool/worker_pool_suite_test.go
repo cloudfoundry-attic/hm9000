@@ -1,4 +1,4 @@
-package workerpool
+package workerpool_test
 
 import (
 	. "github.com/onsi/ginkgo"

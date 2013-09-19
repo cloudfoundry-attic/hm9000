@@ -1,6 +1,7 @@
-package workerpool
+package workerpool_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/helpers/workerpool"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"runtime"

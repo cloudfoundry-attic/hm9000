@@ -14,6 +14,10 @@ type ETCDError struct {
 	reason ETCDErrorReason
 }
 
+func NewETCDError(reason ETCDErrorReason) ETCDError {
+	return ETCDError{reason: reason}
+}
+
 func (err ETCDError) Error() string {
 	return string(err.reason)
 }

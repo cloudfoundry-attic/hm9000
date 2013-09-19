@@ -1,6 +1,8 @@
-package desiredstatefetcher
+package desiredstatefetcher_test
 
 import (
+	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
+
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
@@ -17,7 +19,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 	var (
 		conf             config.Config
 		etcdStoreAdapter storeadapter.StoreAdapter
-		fetcher          *desiredStateFetcher
+		fetcher          *DesiredStateFetcher
 		fakeMessageBus   *fake_cfmessagebus.FakeMessageBus
 		a1               app.App
 		a2               app.App

@@ -1,4 +1,4 @@
-package hm
+package hm_test
 
 import (
 	. "github.com/onsi/ginkgo"
