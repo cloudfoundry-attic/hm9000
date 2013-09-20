@@ -1,6 +1,8 @@
 package analyzer
 
 // very much WIP
+// needs to handle many actually doing the diff
+// needs to use store instead of storeadapter
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
