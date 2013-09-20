@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/codegangsta/cli"
 
@@ -52,4 +53,9 @@ func connectToETCDStoreAdapter(l logger.Logger, conf config.Config) storeadapter
 	}
 
 	return etcdStoreAdapter
+}
+
+func connectToStore(l logger.Logger, conf config.Config) store.Store {
+	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
+	return store.NewStore(conf, etcdStoreAdapter)
 }

@@ -12,22 +12,20 @@ import (
 
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakefreshnessmanager"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 )
 
 var _ = Describe("Actual state listener", func() {
 	var (
-		app              App
-		anotherApp       App
-		etcdStoreAdapter storeadapter.StoreAdapter
-		listener         *ActualStateListener
-		timeProvider     *faketimeprovider.FakeTimeProvider
-		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
-		messageBus       *fake_cfmessagebus.FakeMessageBus
-		conf             config.Config
+		app          App
+		anotherApp   App
+		store        *fakestore.FakeStore
+		listener     *ActualStateListener
+		timeProvider *faketimeprovider.FakeTimeProvider
+		messageBus   *fake_cfmessagebus.FakeMessageBus
+		conf         config.Config
 	)
 
 	BeforeEach(func() {
@@ -42,35 +40,12 @@ var _ = Describe("Actual state listener", func() {
 		app = NewApp()
 		anotherApp = NewApp()
 
-		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdStoreAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccured())
-
+		store = fakestore.NewFakeStore()
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
 
-		freshnessManager = &fakefreshnessmanager.FakeFreshnessManager{}
-
-		listener = New(conf, messageBus, etcdStoreAdapter, freshnessManager, timeProvider, fakelogger.NewFakeLogger())
+		listener = New(conf, messageBus, store, timeProvider, fakelogger.NewFakeLogger())
 		listener.Start()
 	})
-
-	verifyHeartbeatInStore := func(hb InstanceHeartbeat) {
-		storeKey := "/actual/" + hb.InstanceGuid
-		var value storeadapter.StoreNode
-		var err error
-
-		Eventually(func() interface{} {
-			value, err = etcdStoreAdapter.Get(storeKey)
-			return err
-		}, 0.1, 0.01).ShouldNot(HaveOccured())
-
-		Ω(value.TTL).Should(BeNumerically("==", conf.HeartbeatTTL-1), "TTL starts decrementing immediately")
-		Ω(value.Key).Should(Equal(storeKey))
-
-		instanceHeartbeat, err := NewInstanceHeartbeatFromJSON(value.Value)
-		Ω(err).ShouldNot(HaveOccured())
-		Ω(instanceHeartbeat).Should(Equal(hb))
-	}
 
 	It("should subscribe to the dea.heartbeat subject", func() {
 		Ω(messageBus.Subscriptions).Should(HaveKey("dea.heartbeat"))
@@ -83,7 +58,8 @@ var _ = Describe("Actual state listener", func() {
 		})
 
 		It("Stores it in the store", func() {
-			verifyHeartbeatInStore(app.GetInstance(0).Heartbeat(17))
+			actual, _ := store.GetActualState()
+			Ω(actual).Should(ContainElement(app.GetInstance(0).Heartbeat(17)))
 		})
 	})
 
@@ -102,25 +78,23 @@ var _ = Describe("Actual state listener", func() {
 		})
 
 		It("Stores it in the store", func() {
-			verifyHeartbeatInStore(app.GetInstance(0).Heartbeat(17))
-			verifyHeartbeatInStore(app.GetInstance(1).Heartbeat(22))
-			verifyHeartbeatInStore(anotherApp.GetInstance(0).Heartbeat(11))
+			actual, _ := store.GetActualState()
+			Ω(actual).Should(ContainElement(app.GetInstance(0).Heartbeat(17)))
+			Ω(actual).Should(ContainElement(app.GetInstance(1).Heartbeat(22)))
+			Ω(actual).Should(ContainElement(anotherApp.GetInstance(0).Heartbeat(11)))
 		})
 	})
 
 	Describe("freshness", func() {
 		Context("when a heartbeat arrives", func() {
 			BeforeEach(func() {
+				Ω(store.ActualIsFresh).Should(BeFalse())
 				messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJson())
 			})
 
-			It("should instruct the prince to bump the freshness", func() {
-				Eventually(func() interface{} {
-					return freshnessManager.Key
-				}, 0.1, 0.01).Should(Equal(conf.ActualFreshnessKey))
-
-				Ω(freshnessManager.Timestamp).Should(Equal(timeProvider.Time()))
-				Ω(freshnessManager.TTL).Should(BeNumerically("==", conf.ActualFreshnessTTL))
+			It("should instruct the store to bump the freshness", func() {
+				Ω(store.ActualIsFresh).Should(BeTrue())
+				Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
 			})
 		})
 	})

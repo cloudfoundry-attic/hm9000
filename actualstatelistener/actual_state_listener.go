@@ -2,47 +2,40 @@ package actualstatelistener
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/store"
 
 	"github.com/cloudfoundry/go_cfmessagebus"
 )
 
 type ActualStateListener struct {
-	logger                logger.Logger
-	config                config.Config
-	messageBus            cfmessagebus.MessageBus
-	heartbeatStoreAdapter storeadapter.StoreAdapter
-	freshnessManager      freshnessmanager.FreshnessManager
-	timeProvider          timeprovider.TimeProvider
+	logger       logger.Logger
+	config       config.Config
+	messageBus   cfmessagebus.MessageBus
+	store        store.Store
+	timeProvider timeprovider.TimeProvider
 }
 
 func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
-	heartbeatStoreAdapter storeadapter.StoreAdapter,
-	freshnessManager freshnessmanager.FreshnessManager,
+	store store.Store,
 	timeProvider timeprovider.TimeProvider,
 	logger logger.Logger) *ActualStateListener {
 
 	return &ActualStateListener{
-		logger:                logger,
-		config:                config,
-		messageBus:            messageBus,
-		heartbeatStoreAdapter: heartbeatStoreAdapter,
-		freshnessManager:      freshnessManager,
-		timeProvider:          timeProvider,
+		logger:       logger,
+		config:       config,
+		messageBus:   messageBus,
+		store:        store,
+		timeProvider: timeProvider,
 	}
 }
 
 func (listener *ActualStateListener) Start() {
 	listener.messageBus.Subscribe("dea.heartbeat", func(messageBody []byte) {
-		listener.bumpFreshness()
-
 		heartbeat, err := models.NewHeartbeatFromJSON(messageBody)
-
 		if err != nil {
 			listener.logger.Info("Could not unmarshal heartbeat",
 				map[string]string{
@@ -52,17 +45,15 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
-		nodes := make([]storeadapter.StoreNode, len(heartbeat.InstanceHeartbeats))
-		for i, instance := range heartbeat.InstanceHeartbeats {
-			nodes[i] = storeadapter.StoreNode{
-				Key:   "/actual/" + instance.StoreKey(),
-				Value: instance.ToJson(),
-				TTL:   listener.config.HeartbeatTTL,
-			}
+		err = listener.store.BumpActualFreshness(listener.timeProvider.Time())
+		if err != nil {
+			listener.logger.Info("Could not update actual freshness",
+				map[string]string{
+					"Error": err.Error(),
+				})
 		}
 
-		err = listener.heartbeatStoreAdapter.Set(nodes)
-
+		err = listener.store.SaveActualState(heartbeat.InstanceHeartbeats)
 		if err != nil {
 			listener.logger.Info("Could not put instance heartbeats in store:",
 				map[string]string{
@@ -70,15 +61,4 @@ func (listener *ActualStateListener) Start() {
 				})
 		}
 	})
-}
-
-func (listener *ActualStateListener) bumpFreshness() {
-	err := listener.freshnessManager.Bump(listener.config.ActualFreshnessKey, listener.config.ActualFreshnessTTL, listener.timeProvider.Time())
-
-	if err != nil {
-		listener.logger.Info("Could not update actual freshness",
-			map[string]string{
-				"Error": err.Error(),
-			})
-	}
 }
