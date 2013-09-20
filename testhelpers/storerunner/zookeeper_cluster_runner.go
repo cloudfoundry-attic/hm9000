@@ -38,7 +38,7 @@ func (zk *ZookeeperClusterRunner) Start() {
 
 		out, err := cmd.Output()
 		Ω(err).ShouldNot(HaveOccured(), "Make sure zookeeper is compiled and on your $PATH.")
-		Ω(out).Should(ContainSubstring("STARTED"))
+		Ω(string(out)).Should(ContainSubstring("STARTED"))
 
 		Eventually(func() interface{} {
 			return zk.exists(i)
@@ -54,7 +54,7 @@ func (zk *ZookeeperClusterRunner) Stop() {
 			out, err := cmd.Output()
 
 			Ω(err).ShouldNot(HaveOccured(), "Zookeeper failed to stop!")
-			Ω(out).Should(ContainSubstring("STOPPED"))
+			Ω(string(out)).Should(ContainSubstring("STOPPED"))
 
 			zk.nukeArtifacts(i)
 		}

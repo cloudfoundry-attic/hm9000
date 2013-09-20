@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/samuel/go-zookeeper/zk"
 
+	"path"
 	"time"
 )
 
@@ -53,7 +54,7 @@ func (adapter *ZookeeperStoreAdapter) Set(nodes []StoreNode) error {
 			if exists {
 				_, err = adapter.client.Set(node.Key, node.Value, -1)
 			} else {
-				_, err = adapter.client.Create(node.Key, node.Value, 0, acl)
+				err = adapter.createNode(node, acl)
 			}
 
 			results <- err
@@ -70,9 +71,9 @@ func (adapter *ZookeeperStoreAdapter) Set(nodes []StoreNode) error {
 		}
 	}
 
-	// if adapter.isTimeoutError(err) {
-	// 	return StoreError{reason: StoreErrorTimeout}
-	// }
+	if adapter.isTimeoutError(err) {
+		return StoreError{reason: StoreErrorTimeout}
+	}
 
 	return err
 }
@@ -87,4 +88,32 @@ func (adapter *ZookeeperStoreAdapter) List(key string) ([]StoreNode, error) {
 
 func (adapter *ZookeeperStoreAdapter) Delete(key string) error {
 	return nil
+}
+
+func (adapter *ZookeeperStoreAdapter) isTimeoutError(err error) bool {
+	return err == zk.ErrConnectionClosed
+}
+
+func (adapter *ZookeeperStoreAdapter) createNode(node StoreNode, acl []zk.ACL) error {
+	root := path.Dir(node.Key)
+	var err error
+	exists, _, err := adapter.client.Exists(root)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		err = adapter.createNode(StoreNode{
+			Key:   root,
+			Value: []byte{},
+			TTL:   0,
+		}, acl)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = adapter.client.Create(node.Key, node.Value, 0, acl)
+
+	return err
 }
