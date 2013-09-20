@@ -45,18 +45,18 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
-		err = listener.store.BumpActualFreshness(listener.timeProvider.Time())
+		err = listener.store.SaveActualState(heartbeat.InstanceHeartbeats)
 		if err != nil {
-			listener.logger.Info("Could not update actual freshness",
+			listener.logger.Info("Could not put instance heartbeats in store:",
 				map[string]string{
 					"Error": err.Error(),
 				})
 			return
 		}
 
-		err = listener.store.SaveActualState(heartbeat.InstanceHeartbeats)
+		err = listener.store.BumpActualFreshness(listener.timeProvider.Time())
 		if err != nil {
-			listener.logger.Info("Could not put instance heartbeats in store:",
+			listener.logger.Info("Could not update actual freshness",
 				map[string]string{
 					"Error": err.Error(),
 				})

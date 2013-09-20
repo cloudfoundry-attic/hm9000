@@ -26,6 +26,7 @@ var _ = Describe("Actual state listener", func() {
 		listener     *ActualStateListener
 		timeProvider *faketimeprovider.FakeTimeProvider
 		messageBus   *fake_cfmessagebus.FakeMessageBus
+		logger       *fakelogger.FakeLogger
 		conf         config.Config
 	)
 
@@ -43,8 +44,9 @@ var _ = Describe("Actual state listener", func() {
 
 		store = fakestore.NewFakeStore()
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
+		logger = fakelogger.NewFakeLogger()
 
-		listener = New(conf, messageBus, store, timeProvider, fakelogger.NewFakeLogger())
+		listener = New(conf, messageBus, store, timeProvider, logger)
 		listener.Start()
 	})
 
@@ -65,7 +67,9 @@ var _ = Describe("Actual state listener", func() {
 	})
 
 	Context("When it receives a complex heartbeat with multiple apps and instances", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
+			Ω(store.ActualIsFresh).Should(BeFalse())
+
 			heartbeat := Heartbeat{
 				DeaGuid: Guid(),
 				InstanceHeartbeats: []InstanceHeartbeat{
@@ -84,6 +88,38 @@ var _ = Describe("Actual state listener", func() {
 			Ω(actual).Should(ContainElement(app.GetInstance(1).Heartbeat(22)))
 			Ω(actual).Should(ContainElement(anotherApp.GetInstance(0).Heartbeat(11)))
 		})
+
+		Context("when the save succeeds", func() {
+			It("bumps the freshness", func() {
+				Ω(store.ActualIsFresh).Should(BeTrue())
+				Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
+				Ω(logger.LoggedSubjects).Should(BeEmpty())
+			})
+
+			Context("when the freshness bump fails", func() {
+				BeforeEach(func() {
+					store.BumpActualFreshnessError = errors.New("oops")
+				})
+
+				It("logs about the failed freshness bump", func() {
+					Ω(logger.LoggedSubjects).Should(ContainElement("Could not update actual freshness"))
+				})
+			})
+		})
+
+		Context("when the save fails", func() {
+			BeforeEach(func() {
+				store.SaveActualStateError = errors.New("oops")
+			})
+
+			It("does not bump the freshness", func() {
+				Ω(store.ActualIsFresh).Should(BeFalse())
+			})
+
+			It("logs about the failed save", func() {
+				Ω(logger.LoggedSubjects).Should(ContainElement(ContainSubstring("Could not put instance heartbeats in store")))
+			})
+		})
 	})
 
 	Context("When it fails to parse the heartbeat message", func() {
@@ -95,32 +131,13 @@ var _ = Describe("Actual state listener", func() {
 			actual, _ := store.GetActualState()
 			Ω(actual).Should(BeEmpty())
 		})
-	})
 
-	Describe("freshness", func() {
-		JustBeforeEach(func() {
+		It("does not bump the freshness", func() {
 			Ω(store.ActualIsFresh).Should(BeFalse())
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJson())
 		})
 
-		Context("when a heartbeat arrives", func() {
-			It("should instruct the store to bump the freshness", func() {
-				Ω(store.ActualIsFresh).Should(BeTrue())
-				Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
-				actual, _ := store.GetActualState()
-				Ω(actual).Should(ContainElement(app.GetInstance(0).Heartbeat(17)))
-			})
-
-			Context("when the store fails to save the heartbeat", func() {
-				BeforeEach(func() {
-					store.BumpActualFreshnessError = errors.New("oops")
-				})
-
-				It("should not store the heartbeat", func() {
-					actual, _ := store.GetActualState()
-					Ω(actual).Should(BeEmpty())
-				})
-			})
+		It("logs about the failed parse", func() {
+			Ω(logger.LoggedSubjects).Should(ContainElement("Could not unmarshal heartbeat"))
 		})
 	})
 })
