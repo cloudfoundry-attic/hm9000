@@ -7,9 +7,9 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakefreshnessmanager"
+	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 
 	"github.com/cloudfoundry/hm9000/testhelpers/fakehttpclient"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
@@ -32,24 +32,18 @@ func (b *brokenReader) Close() error {
 
 var _ = Describe("DesiredStateFetcher", func() {
 	var (
-		conf             config.Config
-		fakeMessageBus   *fake_cfmessagebus.FakeMessageBus
-		fetcher          *DesiredStateFetcher
-		httpClient       *fakehttpclient.FakeHttpClient
-		timeProvider     *faketimeprovider.FakeTimeProvider
-		freshnessManager *fakefreshnessmanager.FakeFreshnessManager
-		etcdStoreAdapter storeadapter.StoreAdapter
-		resultChan       chan DesiredStateFetcherResult
+		conf           config.Config
+		fakeMessageBus *fake_cfmessagebus.FakeMessageBus
+		fetcher        *DesiredStateFetcher
+		httpClient     *fakehttpclient.FakeHttpClient
+		timeProvider   *faketimeprovider.FakeTimeProvider
+		store          *fakestore.FakeStore
+		resultChan     chan DesiredStateFetcherResult
 	)
 
 	BeforeEach(func() {
 		var err error
 		conf, err = config.DefaultConfig()
-
-		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdStoreAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccured())
-
 		Ω(err).ShouldNot(HaveOccured())
 
 		resultChan = make(chan DesiredStateFetcherResult, 1)
@@ -59,9 +53,9 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
 		httpClient = fakehttpclient.NewFakeHttpClient()
-		freshnessManager = &fakefreshnessmanager.FakeFreshnessManager{}
+		store = fakestore.NewFakeStore()
 
-		fetcher = New(conf, fakeMessageBus, etcdStoreAdapter, httpClient, freshnessManager, timeProvider)
+		fetcher = New(conf, fakeMessageBus, store, httpClient, timeProvider)
 		fetcher.Fetch(resultChan)
 	})
 
@@ -83,7 +77,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			It("should make the correct request", func() {
 				Ω(httpClient.Requests).Should(HaveLen(1))
 
-				Ω(request.URL.String()).Should(ContainSubstring(desiredStateServerBaseUrl))
+				Ω(request.URL.String()).Should(ContainSubstring(conf.CCBaseURL))
 				Ω(request.URL.Path).Should(ContainSubstring("/bulk/apps"))
 
 				expectedAuth := models.BasicAuthInfo{
@@ -142,7 +136,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 	Describe("Fetching with an invalid URL", func() {
 		BeforeEach(func() {
 			conf.CCBaseURL = "http://example.com/#%ZZ"
-			fetcher = New(conf, fakeMessageBus, etcdStoreAdapter, httpClient, freshnessManager, timeProvider)
+			fetcher = New(conf, fakeMessageBus, store, httpClient, timeProvider)
 			fetcher.Fetch(resultChan)
 
 			fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][1].Callback([]byte(`{"user":"mcat","password":"testing"}`))
@@ -194,19 +188,10 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should store the desired states", func() {
-				node, err := etcdStoreAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
-				Ω(err).ShouldNot(HaveOccured())
-
-				Ω(node.TTL).Should(BeNumerically("==", conf.DesiredStateTTL-1))
-
-				Ω(node.Value).Should(Equal(a1.DesiredState(0).ToJson()))
-
-				node, err = etcdStoreAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
-				Ω(err).ShouldNot(HaveOccured())
-
-				Ω(node.TTL).Should(BeNumerically("==", conf.DesiredStateTTL-1))
-
-				Ω(node.Value).Should(Equal(a2.DesiredState(0).ToJson()))
+				desired, _ := store.GetDesiredState()
+				Ω(desired).Should(HaveLen(2))
+				Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState(0))))
+				Ω(desired).Should(ContainElement(EqualDesiredState(a2.DesiredState(0))))
 			})
 
 			It("should request the next batch", func() {
@@ -215,7 +200,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should not bump the freshness yet", func() {
-				Ω(freshnessManager.Key).Should(BeZero())
+				Ω(store.DesiredIsFresh).Should(BeFalse())
 			})
 
 			It("should not send a result down the resultChan yet", func() {
@@ -240,9 +225,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should bump the freshness", func() {
-				Ω(freshnessManager.Key).Should(Equal(conf.DesiredFreshnessKey))
-				Ω(freshnessManager.Timestamp).Should(Equal(timeProvider.Time()))
-				Ω(freshnessManager.TTL).Should(BeNumerically("==", conf.DesiredFreshnessTTL))
+				Ω(store.DesiredIsFresh).Should(BeTrue())
+				Ω(store.DesiredFreshnessTimestamp).Should(Equal(timeProvider.Time()))
 			})
 
 			It("should send a succesful result down the result channel", func(done Done) {
@@ -260,7 +244,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should not bump the freshness", func() {
-				Ω(freshnessManager.Key).Should(BeZero())
+				Ω(store.DesiredIsFresh).Should(BeFalse())
 			})
 
 			It("should send an error down the result channel", func(done Done) {
@@ -322,14 +306,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		Context("when it fails to write to the store", func() {
 			BeforeEach(func() {
+				store.SaveDesiredStateError = errors.New("oops!")
 				a := app.NewApp()
-				node := storeadapter.StoreNode{
-					Key:   "/desired/" + a.AppGuid + "-" + a.AppVersion + "/foo",
-					Value: []byte("mwahahaha"),
-					TTL:   0,
-				}
-				etcdStoreAdapter.Set([]storeadapter.StoreNode{node})
-
 				response = DesiredStateServerResponse{
 					Results: map[string]models.DesiredAppState{
 						a.AppGuid: a.DesiredState(0),

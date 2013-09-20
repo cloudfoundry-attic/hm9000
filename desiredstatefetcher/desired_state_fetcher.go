@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/store"
 	"net/http"
 )
 
@@ -22,28 +21,25 @@ type DesiredStateFetcherResult struct {
 const initialBulkToken = "{}"
 
 type DesiredStateFetcher struct {
-	config           config.Config
-	messageBus       cfmessagebus.MessageBus
-	httpClient       httpclient.HttpClient
-	storeAdapter     storeadapter.StoreAdapter
-	freshnessManager freshnessmanager.FreshnessManager
-	timeProvider     timeprovider.TimeProvider
+	config       config.Config
+	messageBus   cfmessagebus.MessageBus
+	httpClient   httpclient.HttpClient
+	store        store.Store
+	timeProvider timeprovider.TimeProvider
 }
 
 func New(config config.Config,
 	messageBus cfmessagebus.MessageBus,
-	storeAdapter storeadapter.StoreAdapter,
+	store store.Store,
 	httpClient httpclient.HttpClient,
-	freshnessManager freshnessmanager.FreshnessManager,
 	timeProvider timeprovider.TimeProvider) *DesiredStateFetcher {
 
 	return &DesiredStateFetcher{
-		config:           config,
-		messageBus:       messageBus,
-		httpClient:       httpClient,
-		storeAdapter:     storeAdapter,
-		freshnessManager: freshnessManager,
-		timeProvider:     timeProvider,
+		config:       config,
+		messageBus:   messageBus,
+		httpClient:   httpClient,
+		store:        store,
+		timeProvider: timeProvider,
 	}
 }
 
@@ -98,23 +94,23 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 			return
 		}
 
-		desiredState, err := NewDesiredStateServerResponse(body)
+		response, err := NewDesiredStateServerResponse(body)
 		if err != nil {
 			resultChan <- DesiredStateFetcherResult{Message: "Failed to parse HTTP response body JSON", Error: err}
 			return
 		}
-		if len(desiredState.Results) == 0 {
-			fetcher.freshnessManager.Bump(fetcher.config.DesiredFreshnessKey, fetcher.config.DesiredFreshnessTTL, fetcher.timeProvider.Time())
+		if len(response.Results) == 0 {
+			fetcher.store.BumpDesiredFreshness(fetcher.timeProvider.Time())
 			resultChan <- DesiredStateFetcherResult{Success: true, NumResults: numResults}
 			return
 		}
 
-		err = fetcher.pushToStore(desiredState)
+		err = fetcher.saveToStore(response)
 		if err != nil {
 			resultChan <- DesiredStateFetcherResult{Message: "Failed to store desired state in store", Error: err}
 			return
 		}
-		fetcher.fetchBatch(authorization, desiredState.BulkTokenRepresentation(), numResults+len(desiredState.Results), resultChan)
+		fetcher.fetchBatch(authorization, response.BulkTokenRepresentation(), numResults+len(response.Results), resultChan)
 	})
 }
 
@@ -122,22 +118,12 @@ func (fetcher *DesiredStateFetcher) bulkURL(batchSize int, bulkToken string) str
 	return fmt.Sprintf("%s/bulk/apps?batch_size=%d&bulk_token=%s", fetcher.config.CCBaseURL, batchSize, bulkToken)
 }
 
-func (fetcher *DesiredStateFetcher) pushToStore(desiredState DesiredStateServerResponse) error {
-	nodes := make([]storeadapter.StoreNode, len(desiredState.Results))
+func (fetcher *DesiredStateFetcher) saveToStore(response DesiredStateServerResponse) error {
+	desiredStates := make([]models.DesiredAppState, len(response.Results))
 	i := 0
-	for _, desiredAppState := range desiredState.Results {
-		nodes[i] = storeadapter.StoreNode{
-			Key:   "/desired/" + desiredAppState.StoreKey(),
-			Value: desiredAppState.ToJson(),
-			TTL:   fetcher.config.DesiredStateTTL,
-		}
+	for _, desiredState := range response.Results {
+		desiredStates[i] = desiredState
 		i++
 	}
-
-	err := fetcher.storeAdapter.Set(nodes)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return fetcher.store.SaveDesiredState(desiredStates)
 }

@@ -1,14 +1,13 @@
-package desiredstatefetcher_test
+package md_test
 
 import (
 	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
 
-	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/freshnessmanager"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/onsi/ginkgo"
@@ -20,7 +19,6 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		conf             config.Config
 		etcdStoreAdapter storeadapter.StoreAdapter
 		fetcher          *DesiredStateFetcher
-		fakeMessageBus   *fake_cfmessagebus.FakeMessageBus
 		a1               app.App
 		a2               app.App
 		a3               app.App
@@ -38,7 +36,6 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			a2.DesiredState(0),
 			a3.DesiredState(0),
 		})
-		fakeMessageBus = fake_cfmessagebus.NewFakeMessageBus()
 
 		var err error
 		conf, err = config.DefaultConfig()
@@ -48,14 +45,17 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		err = etcdStoreAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		fetcher = New(conf, fakeMessageBus, etcdStoreAdapter, httpclient.NewHttpClient(), freshnessmanager.NewFreshnessManager(etcdStoreAdapter), &timeprovider.RealTimeProvider{})
+		fetcher = New(conf, natsRunner.MessageBus, store.NewStore(conf, etcdStoreAdapter), httpclient.NewHttpClient(), &timeprovider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
-		fakeMessageBus.Requests[conf.CCAuthMessageBusSubject][0].Callback([]byte(`{"user":"mcat","password":"testing"}`))
 	})
 
 	It("requests for the first set of data from the CC and stores the response", func() {
-		node, err := etcdStoreAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
-		Ω(err).ShouldNot(HaveOccured())
+		var node storeadapter.StoreNode
+		var err error
+		Eventually(func() error {
+			node, err = etcdStoreAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
+			return err
+		}, 1, 0.1).ShouldNot(HaveOccured())
 
 		Ω(node.TTL).Should(BeNumerically("==", 10*60-1))
 
@@ -77,8 +77,10 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 	})
 
 	It("bumps the freshness", func() {
-		_, err := etcdStoreAdapter.Get(conf.DesiredFreshnessKey)
-		Ω(err).ShouldNot(HaveOccured())
+		Eventually(func() error {
+			_, err := etcdStoreAdapter.Get(conf.DesiredFreshnessKey)
+			return err
+		}, 1, 0.1).ShouldNot(HaveOccured())
 	})
 
 	It("reports success to the channel", func() {
