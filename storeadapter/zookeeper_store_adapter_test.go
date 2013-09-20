@@ -20,6 +20,7 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 		client       *zk.Conn
 		nodeArr      []StoreNode
 		timeProvider *faketimeprovider.FakeTimeProvider
+		creationTime time.Time
 	)
 
 	BeforeEach(func() {
@@ -33,7 +34,14 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 		err = adapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
+		creationTime = time.Now()
+		timeProvider.TimeToProvide = creationTime
+
 		nodeArr = make([]StoreNode, 1)
+	})
+
+	AfterEach(func() {
+		adapter.Disconnect()
 	})
 
 	Describe("Set", func() {
@@ -178,13 +186,6 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 	})
 
 	Describe("Get", func() {
-		var creationTime time.Time
-
-		BeforeEach(func() {
-			creationTime = time.Now()
-			timeProvider.TimeToProvide = creationTime
-		})
-
 		Context("when the node exists", func() {
 			BeforeEach(func() {
 				nodeArr[0] = StoreNode{
@@ -224,7 +225,8 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 					It("returns the node with the correct TTL", func() {
 						node, err := adapter.Get("/restaurant/menu/breakfast")
 						Ω(err).ShouldNot(HaveOccured())
-						Ω(int(node.TTL)).Should(Equal(1))
+						Ω(int(node.TTL)).Should(BeNumerically(">", 0))
+						Ω(int(node.TTL)).Should(BeNumerically("<=", 2))
 					})
 				})
 
@@ -309,6 +311,186 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 		})
 	})
 
-	Describe("List", func() {})
-	Describe("Delete", func() {})
+	Describe("List", func() {
+		BeforeEach(func() {
+			nodeArr = make([]StoreNode, 3)
+			nodeArr[0] = StoreNode{
+				Key:   "/restaurant/menu/breakfast",
+				Value: []byte("waffle"),
+				TTL:   10,
+			}
+			nodeArr[1] = StoreNode{
+				Key:   "/restaurant/menu/lunch",
+				Value: []byte("fried chicken"),
+				TTL:   12,
+			}
+			nodeArr[2] = StoreNode{
+				Key:   "/restaurant/menu/dinner/first_course",
+				Value: []byte("snap peas"),
+				TTL:   8,
+			}
+
+			err := adapter.Set(nodeArr)
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		Context("when the node exists, and is a directory", func() {
+			It("should return the nodes in the directory", func() {
+				nodes, err := adapter.List("/restaurant/menu")
+				Ω(err).ShouldNot(HaveOccured())
+
+				Ω(nodes).Should(HaveLen(3))
+				Ω(nodes).Should(ContainElement(StoreNode{
+					Key:   "/restaurant/menu/breakfast",
+					Value: []byte("waffle"),
+					TTL:   10,
+					Dir:   false,
+				}))
+				Ω(nodes).Should(ContainElement(StoreNode{
+					Key:   "/restaurant/menu/lunch",
+					Value: []byte("fried chicken"),
+					TTL:   12,
+					Dir:   false,
+				}))
+				Ω(nodes).Should(ContainElement(StoreNode{
+					Key:   "/restaurant/menu/dinner",
+					Value: []byte{},
+					TTL:   0,
+					Dir:   true,
+				}))
+			})
+
+			Context("when entries in the node have expired TTLs", func() {
+				var nodes []StoreNode
+
+				BeforeEach(func() {
+					timeProvider.TimeToProvide = creationTime.Add(11 * time.Second)
+					var err error
+					nodes, err = adapter.List("/restaurant/menu")
+					Ω(err).ShouldNot(HaveOccured())
+				})
+
+				It("does not return those entries in the result set", func() {
+					Ω(nodes).Should(HaveLen(2))
+					Ω(nodes).Should(ContainElement(StoreNode{
+						Key:   "/restaurant/menu/lunch",
+						Value: []byte("fried chicken"),
+						TTL:   1,
+						Dir:   false,
+					}))
+					Ω(nodes).Should(ContainElement(StoreNode{
+						Key:   "/restaurant/menu/dinner",
+						Value: []byte{},
+						TTL:   0,
+						Dir:   true,
+					}))
+				})
+
+				It("deletes the expired entries", func() {
+					_, _, err := client.Get("/restauraunt/menu/breakfast")
+					Ω(err).Should(HaveOccured())
+				})
+			})
+
+			Context("when the node is empty", func() {
+				BeforeEach(func() {
+					err := client.Delete("/restaurant/menu/dinner/first_course", -1)
+					Ω(err).ShouldNot(HaveOccured())
+				})
+
+				It("should return an empty list without erroring", func() {
+					nodes, err := adapter.List("/restaurant/menu/dinner")
+					Ω(nodes).Should(HaveLen(0))
+					Ω(err).ShouldNot(HaveOccured())
+				})
+			})
+		})
+
+		Context("when the node exists, but is not a directory", func() {
+			It("should return an error", func() {
+				nodes, err := adapter.List("/restaurant/menu/breakfast")
+				Ω(nodes).Should(BeEmpty())
+				Ω(err).Should(Equal(ErrorNodeIsNotDirectory))
+			})
+		})
+
+		Context("when the node does not exist", func() {
+			It("should return an error", func() {
+				nodes, err := adapter.List("/not/a/real/node")
+				Ω(nodes).Should(BeEmpty())
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+			})
+		})
+	})
+
+	Describe("Delete", func() {
+		BeforeEach(func() {
+			nodeArr[0] = StoreNode{
+				Key:   "/restaurant/menu/breakfast",
+				Value: []byte("waffle"),
+				TTL:   10,
+			}
+
+			err := adapter.Set(nodeArr)
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		Context("when the key exists", func() {
+			It("should delete the key", func() {
+				err := adapter.Delete("/restaurant/menu/breakfast")
+				Ω(err).ShouldNot(HaveOccured())
+				_, err = adapter.Get("/restaurant/menu/breakfast")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+			})
+		})
+
+		Context("when the key is a directory", func() {
+			It("should not delete the key and should return an is directory error", func() {
+				err := adapter.Delete("/restaurant/menu")
+				Ω(err).Should(Equal(ErrorNodeIsDirectory))
+				_, err = adapter.Get("/restaurant/menu/breakfast")
+				Ω(err).ShouldNot(HaveOccured())
+			})
+		})
+
+		Context("when the key is an *empty* directory", func() {
+			It("should delete the key", func() {
+				err := adapter.Delete("/restaurant/menu/breakfast")
+				Ω(err).ShouldNot(HaveOccured())
+				err = adapter.Delete("/restaurant/menu")
+				Ω(err).ShouldNot(HaveOccured())
+				nodes, err := adapter.List("/restaurant")
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(nodes).Should(BeEmpty())
+			})
+		})
+
+		Context("when the key does not exist", func() {
+			It("should return the missing key error", func() {
+				err := adapter.Delete("/not/a/real/key")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+			})
+		})
+	})
+
+	Describe("Empty nodes that aren't directories", func() {
+		BeforeEach(func() {
+			nodeArr[0] = StoreNode{Key: "/placeholder", Value: []byte{}}
+			err := adapter.Set(nodeArr)
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		It("should allow the node to be retreived", func() {
+			node, err := adapter.Get("/placeholder")
+			Ω(node).Should(Equal(StoreNode{Key: "/placeholder", Value: []byte{}}))
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		It("should not allow listing the node", func() {
+			nodes, err := adapter.List("/placeholder")
+			Ω(nodes).Should(BeEmpty())
+			Ω(err).Should(Equal(ErrorNodeIsNotDirectory))
+		})
+	})
+
 })
