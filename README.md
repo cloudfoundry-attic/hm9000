@@ -4,6 +4,10 @@ HM 9000 is a rewrite of CloudFoundry's Health Manager.  HM 9000 is written in Go
 
 As a result there are several Go Packages in this repository, each with a comprehensive set of unit tests.  What follows is a detailed breakdown:
 
+## Relocation Warning
+
+cloudfoundry/hm9000 will eventually be promoted and move to cloudfoundry/health_manager.  This is the temporary home while it is under development.
+
 ## Installing HM9000
 
 Assuming you have `go` v1.1.* installed:
