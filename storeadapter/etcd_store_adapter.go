@@ -67,7 +67,7 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 	}
 
 	if adapter.isTimeoutError(err) {
-		return NewStoreError(StoreErrorTimeout)
+		return ErrorTimeout
 	}
 
 	return err
@@ -76,17 +76,17 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 	responses, err := adapter.client.Get(key)
 	if adapter.isTimeoutError(err) {
-		return StoreNode{}, NewStoreError(StoreErrorTimeout)
+		return StoreNode{}, ErrorTimeout
 	}
 
 	if len(responses) == 0 {
-		return StoreNode{}, NewStoreError(StoreErrorKeyNotFound)
+		return StoreNode{}, ErrorKeyNotFound
 	}
 	if err != nil {
 		return StoreNode{}, err
 	}
 	if len(responses) > 1 || responses[0].Key != key {
-		return StoreNode{}, NewStoreError(StoreErrorIsDirectory)
+		return StoreNode{}, ErrorNodeIsDirectory
 	}
 
 	return StoreNode{
@@ -100,11 +100,11 @@ func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 	responses, err := adapter.client.Get(key)
 	if adapter.isTimeoutError(err) {
-		return []StoreNode{}, NewStoreError(StoreErrorTimeout)
+		return []StoreNode{}, ErrorTimeout
 	}
 
 	if adapter.isMissingKeyError(err) {
-		return []StoreNode{}, NewStoreError(StoreErrorKeyNotFound)
+		return []StoreNode{}, ErrorKeyNotFound
 	}
 
 	if err != nil {
@@ -116,7 +116,7 @@ func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 	}
 
 	if responses[0].Key == key {
-		return []StoreNode{}, NewStoreError(StoreErrorIsNotDirectory)
+		return []StoreNode{}, ErrorNodeIsNotDirectory
 	}
 
 	values := make([]StoreNode, len(responses))
@@ -136,11 +136,11 @@ func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
 func (adapter *ETCDStoreAdapter) Delete(key string) error {
 	_, err := adapter.client.Delete(key)
 	if adapter.isTimeoutError(err) {
-		return NewStoreError(StoreErrorTimeout)
+		return ErrorTimeout
 	}
 
 	if adapter.isMissingKeyError(err) {
-		return NewStoreError(StoreErrorKeyNotFound)
+		return ErrorKeyNotFound
 	}
 
 	return err

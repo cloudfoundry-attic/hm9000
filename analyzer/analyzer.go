@@ -112,7 +112,7 @@ func (analyzer *Analyzer) populateActualState() error {
 func (analyzer *Analyzer) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
 	nodes, err := analyzer.storeAdapter.List(dir)
 	if err != nil {
-		if storeadapter.IsKeyNotFoundError(err) {
+		if err == storeadapter.ErrorKeyNotFound {
 			return []storeadapter.StoreNode{}, nil
 		}
 		return []storeadapter.StoreNode{}, err

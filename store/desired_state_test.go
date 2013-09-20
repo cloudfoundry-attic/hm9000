@@ -106,7 +106,7 @@ var _ = Describe("Desired State", func() {
 		Context("When the desired state key is missing", func() {
 			BeforeEach(func() {
 				_, err := etcdAdapter.List("/desired")
-				Ω(storeadapter.IsKeyNotFoundError(err)).Should(BeTrue(), "Expected /desired to be missing -- make sure you fully reset the DB before this test.")
+				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 
 			It("returns an empty array and no error", func() {
@@ -151,7 +151,7 @@ var _ = Describe("Desired State", func() {
 					models.DesiredAppState{AppGuid: app2.AppGuid, AppVersion: app2.AppVersion},
 				}
 				err := store.DeleteDesiredState(toDelete)
-				Ω(storeadapter.IsKeyNotFoundError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 				desired, err := store.GetDesiredState()
 				Ω(err).ShouldNot(HaveOccured())

@@ -105,7 +105,7 @@ var _ = Describe("Actual State", func() {
 		Context("When the actual state key is missing", func() {
 			BeforeEach(func() {
 				_, err := etcdAdapter.List("/actual")
-				Ω(storeadapter.IsKeyNotFoundError(err)).Should(BeTrue(), "Expected /actual to be missing -- make sure you fully reset the DB before this test.")
+				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 
 			It("returns an empty array and no error", func() {
@@ -150,7 +150,7 @@ var _ = Describe("Actual State", func() {
 					models.InstanceHeartbeat{InstanceGuid: heartbeat3.InstanceGuid},
 				}
 				err := store.DeleteActualState(toDelete)
-				Ω(storeadapter.IsKeyNotFoundError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 				actual, err := store.GetActualState()
 				Ω(err).ShouldNot(HaveOccured())

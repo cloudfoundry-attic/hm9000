@@ -27,11 +27,11 @@ var _ = Describe("FakeStore", func() {
 	It("should start off empty", func() {
 		desired, err := store.GetDesiredState()
 		Ω(desired).Should(BeEmpty())
-		Ω(err).Should(BeNil())
+		Ω(err).ShouldNot(HaveOccured())
 
 		actual, err := store.GetActualState()
 		Ω(actual).Should(BeEmpty())
-		Ω(err).Should(BeNil())
+		Ω(err).ShouldNot(HaveOccured())
 
 		Ω(store.DesiredIsFresh).Should(BeFalse())
 		Ω(store.ActualIsFresh).Should(BeFalse())
@@ -112,13 +112,13 @@ var _ = Describe("FakeStore", func() {
 
 			err = store.DeleteDesiredState([]models.DesiredAppState{desired2})
 			Ω(err).Should(HaveOccured())
-			Ω(storeadapter.IsKeyNotFoundError(err)).Should(BeTrue())
+			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 			store.Reset()
 
 			desired, err = store.GetDesiredState()
 			Ω(desired).Should(BeEmpty())
-			Ω(err).Should(BeNil())
+			Ω(err).ShouldNot(HaveOccured())
 		})
 
 		It("should support returning errors", func() {
@@ -180,13 +180,13 @@ var _ = Describe("FakeStore", func() {
 
 			err = store.DeleteActualState([]models.InstanceHeartbeat{heartbeat2})
 			Ω(err).Should(HaveOccured())
-			Ω(storeadapter.IsKeyNotFoundError(err)).Should(BeTrue())
+			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 			store.Reset()
 
 			actual, err = store.GetActualState()
 			Ω(actual).Should(BeEmpty())
-			Ω(err).Should(BeNil())
+			Ω(err).ShouldNot(HaveOccured())
 		})
 
 		It("should support returning errors", func() {

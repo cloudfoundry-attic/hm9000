@@ -72,14 +72,14 @@ var _ = Describe("ETCD Store Adapter", func() {
 			err := adapter.Delete("/foo/bar")
 			_, err = adapter.Get("/foo/bar")
 			Ω(err).Should(HaveOccured())
-			Ω(IsKeyNotFoundError(err)).Should(BeTrue())
+			Ω(err).Should(Equal(ErrorKeyNotFound))
 		})
 
 		Context("when we call List on an entry", func() {
 			It("should return an error", func() {
 				_, err := adapter.List(key)
 				Ω(err).Should(HaveOccured())
-				Ω(IsNotDirectoryError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(ErrorNodeIsNotDirectory))
 			})
 		})
 
@@ -87,7 +87,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 			It("should return an error", func() {
 				_, err := adapter.Get(dir_key)
 				Ω(err).Should(HaveOccured())
-				Ω(IsDirectoryError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(ErrorNodeIsDirectory))
 			})
 		})
 
@@ -105,14 +105,14 @@ var _ = Describe("ETCD Store Adapter", func() {
 			It("should return a key not found error", func() {
 				results, err := adapter.List("/gobbledygook")
 				Ω(results).Should(BeEmpty())
-				Ω(IsKeyNotFoundError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(ErrorKeyNotFound))
 			})
 		})
 
 		Context("when deleting a nonexistent key", func() {
 			It("should return a key not found error", func() {
 				err := adapter.Delete("/gobbledygook")
-				Ω(IsKeyNotFoundError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(ErrorKeyNotFound))
 			})
 		})
 	})
@@ -129,28 +129,28 @@ var _ = Describe("ETCD Store Adapter", func() {
 		Context("when we get", func() {
 			It("should return a timeout error", func() {
 				_, err := adapter.Get("/foo/bar")
-				Ω(IsTimeoutError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(ErrorTimeout))
 			})
 		})
 
 		Context("when we set", func() {
 			It("should return a timeout error", func() {
 				err := adapter.Set([]StoreNode{StoreNode{Key: "/foo/bar", Value: []byte("baz"), TTL: 0}})
-				Ω(IsTimeoutError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(ErrorTimeout))
 			})
 		})
 
 		Context("when we list", func() {
 			It("should return a timeout error", func() {
 				_, err := adapter.List("/foo/bar")
-				Ω(IsTimeoutError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(ErrorTimeout))
 			})
 		})
 
 		Context("when we delete", func() {
 			It("should return a timeout error", func() {
 				err := adapter.Delete("/foo/bar")
-				Ω(IsTimeoutError(err)).Should(BeTrue())
+				Ω(err).Should(Equal(ErrorTimeout))
 			})
 		})
 	})
@@ -159,7 +159,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 		It("should return an error", func() {
 			_, err := adapter.Get("/not_a_key")
 			Ω(err).Should(HaveOccured())
-			Ω(IsKeyNotFoundError(err)).Should(BeTrue())
+			Ω(err).Should(Equal(ErrorKeyNotFound))
 		})
 	})
 

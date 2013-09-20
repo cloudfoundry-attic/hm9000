@@ -40,7 +40,7 @@ var _ = Describe("Freshness", func() {
 			Context("when the key is missing", func() {
 				BeforeEach(func() {
 					_, err := etcdAdapter.Get(key)
-					Ω(storeadapter.IsKeyNotFoundError(err)).Should(BeTrue())
+					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 					err = bump(store, timestamp)
 					Ω(err).ShouldNot(HaveOccured())

@@ -85,7 +85,7 @@ func (store *FakeStore) DeleteDesiredState(desiredStates []models.DesiredAppStat
 	for _, state := range desiredStates {
 		_, present := store.desiredState[state.StoreKey()]
 		if !present {
-			return storeadapter.NewStoreError(storeadapter.StoreErrorKeyNotFound)
+			return storeadapter.ErrorKeyNotFound
 		}
 		delete(store.desiredState, state.StoreKey())
 	}
@@ -119,7 +119,7 @@ func (store *FakeStore) DeleteActualState(actualStates []models.InstanceHeartbea
 	for _, state := range actualStates {
 		_, present := store.actualState[state.StoreKey()]
 		if !present {
-			return storeadapter.NewStoreError(storeadapter.StoreErrorKeyNotFound)
+			return storeadapter.ErrorKeyNotFound
 		}
 		delete(store.actualState, state.StoreKey())
 	}

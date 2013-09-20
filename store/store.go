@@ -122,7 +122,7 @@ func (store *RealStore) DeleteActualState(actualStates []models.InstanceHeartbea
 func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
 	nodes, err := store.adapter.List(dir)
 	if err != nil {
-		if storeadapter.IsKeyNotFoundError(err) {
+		if err == storeadapter.ErrorKeyNotFound {
 			return []storeadapter.StoreNode{}, nil
 		}
 		return []storeadapter.StoreNode{}, err
