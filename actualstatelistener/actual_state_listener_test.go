@@ -1,6 +1,7 @@
 package actualstatelistener_test
 
 import (
+	"errors"
 	. "github.com/cloudfoundry/hm9000/actualstatelistener"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -85,16 +86,40 @@ var _ = Describe("Actual state listener", func() {
 		})
 	})
 
-	Describe("freshness", func() {
-		Context("when a heartbeat arrives", func() {
-			BeforeEach(func() {
-				Ω(store.ActualIsFresh).Should(BeFalse())
-				messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJson())
-			})
+	Context("When it fails to parse the heartbeat message", func() {
+		BeforeEach(func() {
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback([]byte("ß"))
+		})
 
+		It("Stores nothing in the store", func() {
+			actual, _ := store.GetActualState()
+			Ω(actual).Should(BeEmpty())
+		})
+	})
+
+	Describe("freshness", func() {
+		JustBeforeEach(func() {
+			Ω(store.ActualIsFresh).Should(BeFalse())
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJson())
+		})
+
+		Context("when a heartbeat arrives", func() {
 			It("should instruct the store to bump the freshness", func() {
 				Ω(store.ActualIsFresh).Should(BeTrue())
 				Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
+				actual, _ := store.GetActualState()
+				Ω(actual).Should(ContainElement(app.GetInstance(0).Heartbeat(17)))
+			})
+
+			Context("when the store fails to save the heartbeat", func() {
+				BeforeEach(func() {
+					store.BumpActualFreshnessError = errors.New("oops")
+				})
+
+				It("should not store the heartbeat", func() {
+					actual, _ := store.GetActualState()
+					Ω(actual).Should(BeEmpty())
+				})
 			})
 		})
 	})

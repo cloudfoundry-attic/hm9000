@@ -51,6 +51,7 @@ func (listener *ActualStateListener) Start() {
 				map[string]string{
 					"Error": err.Error(),
 				})
+			return
 		}
 
 		err = listener.store.SaveActualState(heartbeat.InstanceHeartbeats)
