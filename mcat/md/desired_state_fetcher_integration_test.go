@@ -1,9 +1,7 @@
 package md_test
 
 import (
-	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
-
-	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
@@ -16,17 +14,15 @@ import (
 
 var _ = Describe("Fetching from CC and storing the result in the Store", func() {
 	var (
-		conf             config.Config
-		etcdStoreAdapter storeadapter.StoreAdapter
-		fetcher          *DesiredStateFetcher
-		a1               app.App
-		a2               app.App
-		a3               app.App
-		resultChan       chan DesiredStateFetcherResult
+		fetcher    *desiredstatefetcher.DesiredStateFetcher
+		a1         app.App
+		a2         app.App
+		a3         app.App
+		resultChan chan desiredstatefetcher.DesiredStateFetcherResult
 	)
 
 	BeforeEach(func() {
-		resultChan = make(chan DesiredStateFetcherResult, 1)
+		resultChan = make(chan desiredstatefetcher.DesiredStateFetcherResult, 1)
 		a1 = app.NewApp()
 		a2 = app.NewApp()
 		a3 = app.NewApp()
@@ -37,15 +33,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			a3.DesiredState(0),
 		})
 
-		var err error
-		conf, err = config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccured())
-
-		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdStoreAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccured())
-
-		fetcher = New(conf, natsRunner.MessageBus, store.NewStore(conf, etcdStoreAdapter), httpclient.NewHttpClient(), &timeprovider.RealTimeProvider{})
+		fetcher = desiredstatefetcher.New(conf, natsRunner.MessageBus, store.NewStore(conf, storeAdapter), httpclient.NewHttpClient(), &timeprovider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
 	})
 
@@ -53,32 +41,35 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		var node storeadapter.StoreNode
 		var err error
 		Eventually(func() error {
-			node, err = etcdStoreAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
+			node, err = storeAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
 			return err
 		}, 1, 0.1).ShouldNot(HaveOccured())
 
-		Ω(node.TTL).Should(BeNumerically("==", 10*60-1))
+		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
+		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
 		Ω(node.Value).Should(Equal(a1.DesiredState(0).ToJson()))
 
-		node, err = etcdStoreAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
+		node, err = storeAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
 
-		Ω(node.TTL).Should(BeNumerically("==", 10*60-1))
+		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
+		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
 		Ω(node.Value).Should(Equal(a2.DesiredState(0).ToJson()))
 
-		node, err = etcdStoreAdapter.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
+		node, err = storeAdapter.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
 
-		Ω(node.TTL).Should(BeNumerically("==", 10*60-1))
+		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
+		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
 		Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJson()))
 	})
 
 	It("bumps the freshness", func() {
 		Eventually(func() error {
-			_, err := etcdStoreAdapter.Get(conf.DesiredFreshnessKey)
+			_, err := storeAdapter.Get(conf.DesiredFreshnessKey)
 			return err
 		}, 1, 0.1).ShouldNot(HaveOccured())
 	})
