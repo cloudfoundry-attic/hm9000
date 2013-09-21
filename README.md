@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/cloudfoundry/hm9000.png)](https://travis-ci.org/cloudfoundry/hm9000)
 
-HM 9000 is a rewrite of CloudFoundry's Health Manager.  HM 9000 is written in Golang and has a more modular architecture compard to the original ruby implementation.
+HM 9000 is a rewrite of CloudFoundry's Health Manager.  HM 9000 is written in Golang and has a more modular architecture compared to the original ruby implementation.
 
 As a result there are several Go Packages in this repository, each with a comprehensive set of unit tests.  What follows is a detailed breakdown:
 
