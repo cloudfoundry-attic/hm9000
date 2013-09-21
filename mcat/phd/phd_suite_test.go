@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-var etcdRunner *storerunner.ETCDClusterRunner
+var storeRunner storerunner.StoreRunner
 
 func TestPhd(t *testing.T) {
 	registerSignalHandler()
@@ -19,8 +19,8 @@ func TestPhd(t *testing.T) {
 
 	RunSpecs(t, "Phd Performance Suite")
 
-	if etcdRunner != nil {
-		etcdRunner.Stop()
+	if storeRunner != nil {
+		storeRunner.Stop()
 	}
 }
 
@@ -31,8 +31,8 @@ func registerSignalHandler() {
 
 		select {
 		case <-c:
-			if etcdRunner != nil {
-				etcdRunner.Stop()
+			if storeRunner != nil {
+				storeRunner.Stop()
 			}
 			os.Exit(0)
 		}

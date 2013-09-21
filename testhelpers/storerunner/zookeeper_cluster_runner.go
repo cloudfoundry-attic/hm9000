@@ -71,6 +71,7 @@ func (zk *ZookeeperClusterRunner) NodeURLS() []string {
 }
 
 func (zk *ZookeeperClusterRunner) DiskUsage() (bytes int64, err error) {
+	return 0, nil
 	fi, err := os.Stat(zk.tmpPathTo("version-2/snapshot.0", 0))
 	if err != nil {
 		return 0, err
