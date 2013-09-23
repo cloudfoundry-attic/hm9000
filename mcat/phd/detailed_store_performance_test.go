@@ -12,12 +12,11 @@ import (
 	"time"
 )
 
-var maxNumRecords = 1000
-var maxMemoryInMB = 100
+var numRecords = 1024
 var storeTypes = []string{"ETCD", "Zookeeper"}
 var nodeCounts = []int{1, 3, 5, 7}
-var concurrencies = []int{1, 10, 100, 300, 1000}
-var recordSizes = []int{1, 3, 10, 30}
+var concurrencies = []int{1, 10, 100, 200}
+var recordSizes = []int{256, 512, 1024, 4096}
 
 var _ = Describe("Detailed Store Performance", func() {
 	for _, storeType := range storeTypes {
@@ -55,17 +54,13 @@ var _ = Describe("Detailed Store Performance", func() {
 
 					for _, recordSize := range recordSizes {
 						recordSize := recordSize
-						numRecords := maxMemoryInMB * 1024 / recordSize
-						if numRecords > maxNumRecords {
-							numRecords = maxNumRecords
-						}
 
-						Measure(fmt.Sprintf("Read/Write Performance With record size: %d (will generate %d records)", recordSize, numRecords), func(b Benchmarker) {
+						Measure(fmt.Sprintf("Read/Write Performance With record size: %dbytes (will generate %d records)", recordSize, numRecords), func(b Benchmarker) {
 							data := make([]storeadapter.StoreNode, numRecords)
 							for i := 0; i < numRecords; i++ {
 								data[i] = storeadapter.StoreNode{
 									Key:   fmt.Sprintf("/record/%d", i),
-									Value: make([]byte, recordSize*1024),
+									Value: make([]byte, recordSize),
 									TTL:   0,
 								}
 							}

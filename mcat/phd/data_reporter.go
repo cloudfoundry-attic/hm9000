@@ -23,7 +23,7 @@ type StorePerformanceReport struct {
 }
 
 func (r StorePerformanceReport) String() string {
-	return fmt.Sprintf("%s: %d %s node(s), %dkB size, %d records, %d concurrency", strings.Title(r.Subject), r.NumStoreNodes, r.StoreType, r.RecordSize, r.NumRecords, r.Concurrency)
+	return fmt.Sprintf("%s: %d %s node(s), %dbytes size, %d records, %d concurrency", strings.Title(r.Subject), r.NumStoreNodes, r.StoreType, r.RecordSize, r.NumRecords, r.Concurrency)
 }
 
 type DataReporter struct {
@@ -79,7 +79,7 @@ func (reporter *DataReporter) generateCSV(final bool) {
 		"Store Type",
 		"# Store Nodes",
 		"# Concurrent Requests",
-		"Record Size (kB)",
+		"Record Size (bytes)",
 		"Num Records Generated",
 		"Write Records/s",
 		"σ Write Records/s",
@@ -97,13 +97,13 @@ func (reporter *DataReporter) generateCSV(final bool) {
 
 		wRecordsPerS := float64(writeReport.NumRecords) / writeReport.Average
 		wSigmaRecordsPerS := wRecordsPerS * writeReport.StdDeviation / writeReport.Average
-		wMbPerS := wRecordsPerS * float64(writeReport.RecordSize) / 1024.0
-		wSigmaMbPerS := wSigmaRecordsPerS * float64(writeReport.RecordSize) / 1024.0
+		wMbPerS := wRecordsPerS * float64(writeReport.RecordSize) / 1024.0 / 1024.0
+		wSigmaMbPerS := wSigmaRecordsPerS * float64(writeReport.RecordSize) / 1024.0 / 1024.0
 
 		rRecordsPerS := float64(readReport.NumRecords) / readReport.Average
 		rSigmaRecordsPerS := rRecordsPerS * readReport.StdDeviation / readReport.Average
-		rMbPerS := rRecordsPerS * float64(readReport.RecordSize) / 1024.0
-		rSigmaMbPerS := wSigmaRecordsPerS * float64(readReport.RecordSize) / 1024.0
+		rMbPerS := rRecordsPerS * float64(readReport.RecordSize) / 1024.0 / 1024.0
+		rSigmaMbPerS := wSigmaRecordsPerS * float64(readReport.RecordSize) / 1024.0 / 1024.0
 
 		w.Write([]string{
 			writeReport.StoreType,
