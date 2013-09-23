@@ -23,12 +23,7 @@ func New(store store.Store) *Analyzer {
 }
 
 func (analyzer *Analyzer) Analyze() ([]models.QueueStartMessage, []models.QueueStopMessage, error) {
-	err := analyzer.populateActualState()
-	if err != nil {
-		return []models.QueueStartMessage{}, []models.QueueStopMessage{}, err
-	}
-
-	err = analyzer.populateDesiredState()
+	err := analyzer.fetchStateAndGenerateLookupTables()
 	if err != nil {
 		return []models.QueueStartMessage{}, []models.QueueStopMessage{}, err
 	}
@@ -60,8 +55,12 @@ func (analyzer *Analyzer) Analyze() ([]models.QueueStartMessage, []models.QueueS
 	return startMessages, stopMessages, nil
 }
 
-func (analyzer *Analyzer) populateDesiredState() (err error) {
+func (analyzer *Analyzer) fetchStateAndGenerateLookupTables() (err error) {
 	analyzer.desiredStates, err = analyzer.store.GetDesiredState()
+	if err != nil {
+		return
+	}
+	analyzer.actualStates, err = analyzer.store.GetActualState()
 	if err != nil {
 		return err
 	}
@@ -72,17 +71,7 @@ func (analyzer *Analyzer) populateDesiredState() (err error) {
 		analyzer.desiredByApp[key] = true
 	}
 
-	return nil
-}
-
-func (analyzer *Analyzer) populateActualState() (err error) {
-	analyzer.actualStates, err = analyzer.store.GetActualState()
-	if err != nil {
-		return err
-	}
-
 	analyzer.runningByApp = make(map[string]int, 0)
-
 	for _, actual := range analyzer.actualStates {
 		key := actual.AppGuid + "-" + actual.AppVersion
 		value, ok := analyzer.runningByApp[key]
@@ -93,7 +82,7 @@ func (analyzer *Analyzer) populateActualState() (err error) {
 		}
 	}
 
-	return nil
+	return
 }
 
 func (analyzer *Analyzer) indicesToStart(desiredNumber int) []int {
