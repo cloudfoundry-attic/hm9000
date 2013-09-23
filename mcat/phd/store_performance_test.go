@@ -13,10 +13,7 @@ import (
 	"time"
 )
 
-var storeTypes = []string{"ETCD", "Zookeeper"}
-var nodeCounts = []int{1, 3, 5, 7}
-
-var _ = Describe("Store Performance", func() {
+var _ = XDescribe("Store Performance (these are better covered in the new detailed_store_performance_test tests and will be deleted soon)", func() {
 	for _, storeType := range storeTypes {
 		storeType := storeType
 		for _, nodes := range nodeCounts {
@@ -66,7 +63,7 @@ var _ = Describe("Store Performance", func() {
 						writeTime := b.Time("writing to the store", func() {
 							err := storeAdapter.Set(data)
 							Ω(err).ShouldNot(HaveOccured())
-						}, StorePerformanceReport{StoreType: storeType, NumStoreNodes: nodes, NumApps: numApps, Subject: "write performance"})
+						})
 
 						Ω(writeTime.Seconds()).Should(BeNumerically("<=", 30))
 
@@ -74,13 +71,13 @@ var _ = Describe("Store Performance", func() {
 							values, err := storeAdapter.List("/actual")
 							Ω(err).ShouldNot(HaveOccured())
 							Ω(len(values)).Should(Equal(numApps), "Didn't find the correct number of entries in the store")
-						}, StorePerformanceReport{StoreType: storeType, NumStoreNodes: nodes, NumApps: numApps, Subject: "read performance"})
+						})
 
 						Ω(readTime.Seconds()).Should(BeNumerically("<=", 3))
 
 						usage, err := storeRunner.DiskUsage()
 						Ω(err).ShouldNot(HaveOccured())
-						b.RecordValue("disk usage in MB", float64(usage)/1024.0/1024.0, StorePerformanceReport{StoreType: storeType, NumStoreNodes: nodes, NumApps: numApps, Subject: "disk usage"})
+						b.RecordValue("disk usage in MB", float64(usage)/1024.0/1024.0)
 					}, 5)
 				}
 			})
