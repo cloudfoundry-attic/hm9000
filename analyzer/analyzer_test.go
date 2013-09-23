@@ -3,64 +3,60 @@ package analyzer_test
 // very much WIP
 
 import (
+	"errors"
 	. "github.com/cloudfoundry/hm9000/analyzer"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 )
 
 var _ = Describe("Analyzer", func() {
 	var (
-		analyzer         *Analyzer
-		etcdStoreAdapter storeadapter.StoreAdapter
-		conf             config.Config
-		a1               app.App
-		a2               app.App
+		analyzer *Analyzer
+		store    *fakestore.FakeStore
+		app1     app.App
+		app2     app.App
 	)
 
 	BeforeEach(func() {
-		var err error
-		conf, err = config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccured())
+		store = fakestore.NewFakeStore()
 
-		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdStoreAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccured())
+		app1 = app.NewApp()
+		app2 = app.NewApp()
 
-		a1 = app.NewApp()
-		a2 = app.NewApp()
-
-		analyzer = New(etcdStoreAdapter)
+		analyzer = New(store)
 	})
 
-	insertDesiredIntoStore := func(desired models.DesiredAppState) {
-		key := "/desired/" + desired.StoreKey()
-		value := desired.ToJson()
+	Context("When fetching desired state fails with an error", func() {
+		BeforeEach(func() {
+			store.GetDesiredStateError = errors.New("oops!")
+		})
 
-		node := storeadapter.StoreNode{
-			Key:   key,
-			Value: value,
-		}
+		It("Should not send any start or stop messages", func() {
+			startMessages, stopMessages, err := analyzer.Analyze()
+			Ω(err).Should(Equal(errors.New("oops!")))
+			Ω(startMessages).Should(BeEmpty())
+			Ω(stopMessages).Should(BeEmpty())
+		})
+	})
 
-		etcdStoreAdapter.Set([]storeadapter.StoreNode{node})
-	}
+	Context("When fetching actual state fails with an error", func() {
+		BeforeEach(func() {
+			store.GetActualStateError = errors.New("oops!")
+		})
 
-	insertActualIntoStore := func(heartbeat models.InstanceHeartbeat) {
-		key := "/actual/" + heartbeat.StoreKey()
-		value := heartbeat.ToJson()
+		It("Should not send any start or stop messages", func() {
+			startMessages, stopMessages, err := analyzer.Analyze()
+			Ω(err).Should(Equal(errors.New("oops!")))
+			Ω(startMessages).Should(BeEmpty())
+			Ω(stopMessages).Should(BeEmpty())
+		})
+	})
 
-		node := storeadapter.StoreNode{
-			Key:   key,
-			Value: value,
-		}
-		etcdStoreAdapter.Set([]storeadapter.StoreNode{node})
-	}
-
-	Context("When /desired and /actual are missing", func() {
+	Context("When there are no desired or running apps", func() {
 		It("Should not send any start or stop messages", func() {
 			startMessages, stopMessages, err := analyzer.Analyze()
 			Ω(err).ShouldNot(HaveOccured())
@@ -69,34 +65,16 @@ var _ = Describe("Analyzer", func() {
 		})
 	})
 
-	Context("When /desired and /actual are empty", func() {
+	Context("where thare are desired instances but no running instances", func() {
 		BeforeEach(func() {
-			desired := a1.DesiredState(42)
-			actual := a2.GetInstance(0).Heartbeat(30)
-
-			insertDesiredIntoStore(desired)
-			insertActualIntoStore(actual)
-
-			etcdStoreAdapter.Delete("/desired/" + desired.StoreKey())
-			etcdStoreAdapter.Delete("/actual/" + actual.StoreKey())
-		})
-
-		It("Should not send any start or stop messages", func() {
-			startMessages, stopMessages, err := analyzer.Analyze()
-			Ω(err).ShouldNot(HaveOccured())
-			Ω(startMessages).Should(BeEmpty())
-			Ω(stopMessages).Should(BeEmpty())
-		})
-	})
-
-	Context("where thare are desired instances and no running instances", func() {
-		BeforeEach(func() {
-			desired1 := a1.DesiredState(17)
+			desired1 := app1.DesiredState(17)
 			desired1.NumberOfInstances = 1
-			desired2 := a2.DesiredState(34)
+			desired2 := app2.DesiredState(34)
 			desired2.NumberOfInstances = 3
-			insertDesiredIntoStore(desired1)
-			insertDesiredIntoStore(desired2)
+			store.SaveDesiredState([]models.DesiredAppState{
+				desired1,
+				desired2,
+			})
 		})
 
 		It("Should return an array of start messages for the missing instances", func() {
@@ -105,23 +83,25 @@ var _ = Describe("Analyzer", func() {
 			Ω(stopMessages).Should(BeEmpty())
 			Ω(startMessages).Should(HaveLen(2))
 			Ω(startMessages).Should(ContainElement(models.QueueStartMessage{
-				AppGuid:        a1.AppGuid,
-				AppVersion:     a1.AppVersion,
+				AppGuid:        app1.AppGuid,
+				AppVersion:     app1.AppVersion,
 				IndicesToStart: []int{0},
 			}))
 			Ω(startMessages).Should(ContainElement(models.QueueStartMessage{
-				AppGuid:        a2.AppGuid,
-				AppVersion:     a2.AppVersion,
+				AppGuid:        app2.AppGuid,
+				AppVersion:     app2.AppVersion,
 				IndicesToStart: []int{0, 1, 2},
 			}))
 		})
 	})
 
-	Context("When there are actual instances and no desired instances", func() {
+	Context("When there are running instances but no desired instances", func() {
 		BeforeEach(func() {
-			insertActualIntoStore(a1.GetInstance(0).Heartbeat(12))
-			insertActualIntoStore(a2.GetInstance(0).Heartbeat(17))
-			insertActualIntoStore(a2.GetInstance(2).Heartbeat(1138))
+			store.SaveActualState([]models.InstanceHeartbeat{
+				app1.GetInstance(0).Heartbeat(12),
+				app2.GetInstance(0).Heartbeat(17),
+				app2.GetInstance(2).Heartbeat(1138),
+			})
 		})
 
 		It("Should return an array of stop messages for the extra instances", func() {
@@ -130,23 +110,27 @@ var _ = Describe("Analyzer", func() {
 			Ω(startMessages).Should(BeEmpty())
 			Ω(stopMessages).Should(HaveLen(3))
 			Ω(stopMessages).Should(ContainElement(models.QueueStopMessage{
-				InstanceGuid: a1.GetInstance(0).InstanceGuid,
+				InstanceGuid: app1.GetInstance(0).InstanceGuid,
 			}))
 			Ω(stopMessages).Should(ContainElement(models.QueueStopMessage{
-				InstanceGuid: a2.GetInstance(0).InstanceGuid,
+				InstanceGuid: app2.GetInstance(0).InstanceGuid,
 			}))
 			Ω(stopMessages).Should(ContainElement(models.QueueStopMessage{
-				InstanceGuid: a2.GetInstance(2).InstanceGuid,
+				InstanceGuid: app2.GetInstance(2).InstanceGuid,
 			}))
 		})
 	})
 
 	Context("When there is one desired instance which is running", func() {
 		BeforeEach(func() {
-			desired := a1.DesiredState(10)
+			desired := app1.DesiredState(10)
 			desired.NumberOfInstances = 1
-			insertDesiredIntoStore(desired)
-			insertActualIntoStore(a1.GetInstance(0).Heartbeat(12))
+			store.SaveDesiredState([]models.DesiredAppState{
+				desired,
+			})
+			store.SaveActualState([]models.InstanceHeartbeat{
+				app1.GetInstance(0).Heartbeat(12),
+			})
 		})
 
 		It("Should not send any start or stop messages", func() {

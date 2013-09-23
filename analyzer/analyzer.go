@@ -2,24 +2,23 @@ package analyzer
 
 // very much WIP
 // needs to handle many actually doing the diff
-// needs to use store instead of storeadapter
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/store"
 )
 
 type Analyzer struct {
-	storeAdapter  storeadapter.StoreAdapter
+	store         store.Store
 	desiredStates []models.DesiredAppState
 	actualStates  []models.InstanceHeartbeat
 	runningByApp  map[string]int
 	desiredByApp  map[string]bool
 }
 
-func New(storeAdapter storeadapter.StoreAdapter) *Analyzer {
+func New(store store.Store) *Analyzer {
 	return &Analyzer{
-		storeAdapter: storeAdapter,
+		store: store,
 	}
 }
 
@@ -61,43 +60,31 @@ func (analyzer *Analyzer) Analyze() ([]models.QueueStartMessage, []models.QueueS
 	return startMessages, stopMessages, nil
 }
 
-func (analyzer *Analyzer) populateDesiredState() error {
-	nodes, err := analyzer.fetchNodesUnderDir("/desired")
+func (analyzer *Analyzer) populateDesiredState() (err error) {
+	analyzer.desiredStates, err = analyzer.store.GetDesiredState()
 	if err != nil {
 		return err
 	}
 
 	analyzer.desiredByApp = make(map[string]bool, 0)
-
-	analyzer.desiredStates = make([]models.DesiredAppState, len(nodes))
-	for i, node := range nodes {
-		analyzer.desiredStates[i], err = models.NewDesiredAppStateFromJSON(node.Value)
-		if err != nil {
-			return err
-		}
-
-		key := analyzer.desiredStates[i].AppGuid + "-" + analyzer.desiredStates[i].AppVersion
+	for _, desired := range analyzer.desiredStates {
+		key := desired.AppGuid + "-" + desired.AppVersion
 		analyzer.desiredByApp[key] = true
 	}
 
 	return nil
 }
 
-func (analyzer *Analyzer) populateActualState() error {
-	nodes, err := analyzer.fetchNodesUnderDir("/actual")
+func (analyzer *Analyzer) populateActualState() (err error) {
+	analyzer.actualStates, err = analyzer.store.GetActualState()
 	if err != nil {
 		return err
 	}
 
 	analyzer.runningByApp = make(map[string]int, 0)
 
-	analyzer.actualStates = make([]models.InstanceHeartbeat, len(nodes))
-	for i, node := range nodes {
-		analyzer.actualStates[i], err = models.NewInstanceHeartbeatFromJSON(node.Value)
-		if err != nil {
-			return err
-		}
-		key := analyzer.actualStates[i].AppGuid + "-" + analyzer.actualStates[i].AppVersion
+	for _, actual := range analyzer.actualStates {
+		key := actual.AppGuid + "-" + actual.AppVersion
 		value, ok := analyzer.runningByApp[key]
 		if ok {
 			analyzer.runningByApp[key] = value + 1
@@ -107,17 +94,6 @@ func (analyzer *Analyzer) populateActualState() error {
 	}
 
 	return nil
-}
-
-func (analyzer *Analyzer) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
-	nodes, err := analyzer.storeAdapter.List(dir)
-	if err != nil {
-		if err == storeadapter.ErrorKeyNotFound {
-			return []storeadapter.StoreNode{}, nil
-		}
-		return []storeadapter.StoreNode{}, err
-	}
-	return nodes, nil
 }
 
 func (analyzer *Analyzer) indicesToStart(desiredNumber int) []int {
