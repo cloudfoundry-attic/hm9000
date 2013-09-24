@@ -39,6 +39,17 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "analyze",
+			Description: "Analyze the desired and actual state and enqueue start/stop messages",
+			Usage:       "hm analyze --config=/path/to/config",
+			Flags: []cli.Flag{
+				cli.StringFlag{"config", "", "Path to config file"},
+			},
+			Action: func(c *cli.Context) {
+				hm.Analyze(l, c)
+			},
+		},
+		cli.Command{
 			Name:        "dump",
 			Description: "Dumps contents of the data store",
 			Usage:       "hm dump --config=/path/to/config",

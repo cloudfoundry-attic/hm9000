@@ -1,37 +1,52 @@
 package analyzer
 
-// very much WIP
-// needs to handle many actually doing the diff
-
 import (
+	"github.com/cloudfoundry/hm9000/helpers/outbox"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 )
 
 type Analyzer struct {
-	store         store.Store
+	store  store.Store
+	outbox outbox.Outbox
+
 	desiredStates []models.DesiredAppState
 	actualStates  []models.InstanceHeartbeat
-	runningByApp  map[string][]models.InstanceHeartbeat
-	desiredByApp  map[string]models.DesiredAppState
+
+	setOfApps    map[string]bool
+	runningByApp map[string]SortableActualState
+	desiredByApp map[string]models.DesiredAppState
 }
 
-func New(store store.Store) *Analyzer {
+func New(store store.Store, outbox outbox.Outbox) *Analyzer {
 	return &Analyzer{
-		store: store,
+		store:  store,
+		outbox: outbox,
 	}
 }
 
-func (analyzer *Analyzer) Analyze() ([]models.QueueStartMessage, []models.QueueStopMessage, error) {
+func (analyzer *Analyzer) Analyze() error {
 	err := analyzer.fetchStateAndGenerateLookupTables()
 	if err != nil {
-		return []models.QueueStartMessage{}, []models.QueueStopMessage{}, err
+		return err
 	}
 
-	startMessages := analyzer.startMessagesForMissingInstances()
-	stopMessages := analyzer.stopMessagesForExtraInstances()
+	allStartMessages := []models.QueueStartMessage{}
+	allStopMessages := []models.QueueStopMessage{}
 
-	return startMessages, stopMessages, nil
+	for appVersionKey := range analyzer.setOfApps {
+		desired := analyzer.desiredByApp[appVersionKey]
+		runningInstances, hasRunning := analyzer.runningByApp[appVersionKey]
+		if !hasRunning {
+			runningInstances = SortableActualState{}
+		}
+		startMessages, stopMessages := analyzeApp(desired, runningInstances)
+		allStartMessages = append(allStartMessages, startMessages...)
+		allStopMessages = append(allStopMessages, stopMessages...)
+	}
+
+	analyzer.outbox.Enqueue(allStartMessages, allStopMessages)
+	return nil
 }
 
 func (analyzer *Analyzer) fetchStateAndGenerateLookupTables() (err error) {
@@ -41,7 +56,7 @@ func (analyzer *Analyzer) fetchStateAndGenerateLookupTables() (err error) {
 	}
 	analyzer.actualStates, err = analyzer.store.GetActualState()
 	if err != nil {
-		return err
+		return
 	}
 
 	analyzer.desiredStates = make([]models.DesiredAppState, 0)
@@ -51,75 +66,26 @@ func (analyzer *Analyzer) fetchStateAndGenerateLookupTables() (err error) {
 		}
 	}
 
+	analyzer.setOfApps = make(map[string]bool, 0)
 	analyzer.desiredByApp = make(map[string]models.DesiredAppState, 0)
+	analyzer.runningByApp = make(map[string]SortableActualState, 0)
+
 	for _, desired := range analyzer.desiredStates {
 		key := desired.AppGuid + "-" + desired.AppVersion
 		analyzer.desiredByApp[key] = desired
+		analyzer.setOfApps[key] = true
 	}
 
-	analyzer.runningByApp = make(map[string][]models.InstanceHeartbeat, 0)
 	for _, actual := range analyzer.actualStates {
 		key := actual.AppGuid + "-" + actual.AppVersion
 		value, ok := analyzer.runningByApp[key]
 		if ok {
 			analyzer.runningByApp[key] = append(value, actual)
 		} else {
-			analyzer.runningByApp[key] = []models.InstanceHeartbeat{actual}
+			analyzer.runningByApp[key] = SortableActualState{actual}
 		}
+		analyzer.setOfApps[key] = true
 	}
 
 	return
-}
-
-func (analyzer *Analyzer) startMessagesForMissingInstances() []models.QueueStartMessage {
-	startMessages := make([]models.QueueStartMessage, 0)
-	for _, desired := range analyzer.desiredStates {
-		runningInstances, ok := analyzer.runningByApp[desired.AppGuid+"-"+desired.AppVersion]
-		if !ok {
-			runningInstances = []models.InstanceHeartbeat{}
-		}
-
-		if len(runningInstances) < desired.NumberOfInstances {
-			startMessages = append(startMessages, models.QueueStartMessage{
-				AppGuid:        desired.AppGuid,
-				AppVersion:     desired.AppVersion,
-				IndicesToStart: analyzer.indicesToStart(desired.NumberOfInstances, runningInstances),
-			})
-			continue
-		}
-	}
-
-	return startMessages
-}
-
-func (analyzer *Analyzer) stopMessagesForExtraInstances() []models.QueueStopMessage {
-	stopMessages := make([]models.QueueStopMessage, 0)
-	for _, runningInstance := range analyzer.actualStates {
-		desired, ok := analyzer.desiredByApp[runningInstance.AppGuid+"-"+runningInstance.AppVersion]
-		if ok && desired.NumberOfInstances > runningInstance.InstanceIndex {
-			continue
-		}
-
-		stopMessages = append(stopMessages, models.QueueStopMessage{
-			InstanceGuid: runningInstance.InstanceGuid,
-		})
-	}
-
-	return stopMessages
-}
-
-func (analyzer *Analyzer) indicesToStart(desiredNumber int, runningInstances []models.InstanceHeartbeat) []int {
-	runningIndices := map[int]bool{}
-	for _, runningInstance := range runningInstances {
-		runningIndices[runningInstance.InstanceIndex] = true
-	}
-
-	arr := []int{}
-	for i := 0; i < desiredNumber; i++ {
-		_, ok := runningIndices[i]
-		if !ok {
-			arr = append(arr, i)
-		}
-	}
-	return arr
 }

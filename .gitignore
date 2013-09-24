@@ -1,3 +1,4 @@
 .DS_Store
 local_config.json
 mcat/phd/*.csv
+*.coverprofile
