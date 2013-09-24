@@ -83,7 +83,7 @@ You *must* specify a config file for all the `hm9000` commands.  You do this wit
 will connect to CC, fetch the desired state, put it in the store under `/desired`, then exit.
 
 
-### Listening for active state
+### Listening for actual/running state
 
     hm9000 listen --config=./local_config.json
 
@@ -96,6 +96,13 @@ will come up, listen to NATS for heartbeats, and put them in the store under `/a
     hm9000 dump --config=./local_config.json
 
 will dump the entire contents of the store to stdout.
+
+### Analyzing the desired and actual state
+
+    hm9000 analyze --config=./local_config.json
+
+will come up, compare the desired/actual state, and submit start and stop messages to the outbox.
+
 
 ## HM9000 components
 
@@ -132,9 +139,9 @@ Relevant config:
 - `nats.host`, `nats.port`, `nats.user`, `nats.password`: the various bits and pieces needed to connect to NATS
 
 
-### WIP:`analyzer`
+### analyzer`
 
-WIP: The `analyzer` runs periodically and uses the `outbox` to put `start` and `stop` messages in the queue.
+The `analyzer` comes up, analyzes the actual and desired state, and uses the `outbox` to put `start` and `stop` messages in the queue.
 
 ### WIP:`sender`
 
@@ -207,6 +214,10 @@ Provides a fake implementation of the `helpers/timeprovider` interface.  Useful 
 #### `fakehttpclient`
 
 Provdes a fake implementation of the `helpers/httpclient` interface that allows tests to have fine-grained control over the http request/response lifecycle.
+
+#### `fakeoutbox`
+
+Provides a fake implementation of the `helpers/outbox` interface that allows tests to inspect the scheduled start and stop messages.
 
 ### Fixtures
 
