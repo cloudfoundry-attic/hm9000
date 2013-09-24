@@ -12,11 +12,11 @@ import (
 	"time"
 )
 
-var numRecords = 1024
+var numRecords = 512
 var storeTypes = []string{"ETCD", "Zookeeper"}
 var nodeCounts = []int{1, 3, 5, 7}
-var concurrencies = []int{1, 10, 100, 200}
-var recordSizes = []int{256, 512, 1024, 4096}
+var concurrencies = []int{1, 10, 30, 50}
+var recordSizes = []int{256, 512, 1024, 2048}
 
 var _ = Describe("Detailed Store Performance", func() {
 	for _, storeType := range storeTypes {
