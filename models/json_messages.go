@@ -18,18 +18,6 @@ type StopMessage struct {
 	RunningInstancesByVersion map[string]int    `json:"running"`
 }
 
-// Queue Messages
-
-type QueueStartMessage struct {
-	AppGuid        string `json:"droplet"`
-	AppVersion     string `json:"version"`
-	IndicesToStart []int  `json:"indices"`
-}
-
-type QueueStopMessage struct {
-	InstanceGuid string `json:"instance"`
-}
-
 //Droplet Exited
 type DropletExitedReason string
 
