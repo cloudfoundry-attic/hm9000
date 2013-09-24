@@ -49,7 +49,7 @@ func NewQueueStartMessageFromJSON(encoded []byte) (QueueStartMessage, error) {
 	return message, nil
 }
 
-func (message QueueStartMessage) Key() string {
+func (message QueueStartMessage) StoreKey() string {
 	return message.AppGuid + "-" + message.AppVersion
 }
 
@@ -79,6 +79,6 @@ func (message QueueStopMessage) ToJSON() []byte {
 	return encoded
 }
 
-func (message QueueStopMessage) Key() string {
+func (message QueueStopMessage) StoreKey() string {
 	return message.InstanceGuid
 }

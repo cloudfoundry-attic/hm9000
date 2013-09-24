@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/hm9000/models"
+	storePackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
@@ -15,11 +16,13 @@ import (
 
 var _ = Describe("FakeStore", func() {
 	var store *FakeStore
+	var storeType storePackage.Store
 	var app1 app.App
 	var app2 app.App
 
 	BeforeEach(func() {
 		store = NewFakeStore()
+		storeType = NewFakeStore() //use compiler to verify that we satisfy the store interface
 		app1 = app.NewApp()
 		app2 = app.NewApp()
 	})
@@ -208,6 +211,142 @@ var _ = Describe("FakeStore", func() {
 			err = store.SaveActualState([]models.InstanceHeartbeat{heartbeat1})
 			Ω(err).ShouldNot(HaveOccured())
 			_, err = store.GetActualState()
+			Ω(err).ShouldNot(HaveOccured())
+		})
+	})
+
+	Describe("Setting, getting, and deleting start messages", func() {
+		It("should set, get, and delete the start messages state", func() {
+			message1 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", []int{1, 2})
+			message2 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", []int{1, 2})
+
+			err := store.SaveQueueStartMessages([]models.QueueStartMessage{message1, message1, message2})
+			Ω(err).ShouldNot(HaveOccured())
+
+			actual, err := store.GetQueueStartMessages()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(actual).Should(HaveLen(2))
+			Ω(actual).Should(ContainElement(message1))
+			Ω(actual).Should(ContainElement(message2))
+
+			message2.IndicesToStart = []int{3}
+			message3 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", []int{1, 2})
+
+			err = store.SaveQueueStartMessages([]models.QueueStartMessage{message2, message3})
+			Ω(err).ShouldNot(HaveOccured())
+
+			actual, err = store.GetQueueStartMessages()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(actual).Should(HaveLen(3))
+			Ω(actual).Should(ContainElement(message1))
+			Ω(actual).Should(ContainElement(message2))
+			Ω(actual).Should(ContainElement(message3))
+
+			err = store.DeleteQueueStartMessages([]models.QueueStartMessage{message2, message3})
+			Ω(err).ShouldNot(HaveOccured())
+			actual, err = store.GetQueueStartMessages()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(actual).Should(HaveLen(1))
+			Ω(actual).Should(ContainElement(message1))
+
+			err = store.DeleteQueueStartMessages([]models.QueueStartMessage{message2})
+			Ω(err).Should(HaveOccured())
+			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+
+			store.Reset()
+
+			actual, err = store.GetQueueStartMessages()
+			Ω(actual).Should(BeEmpty())
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		It("should support returning errors", func() {
+			message1 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", []int{1, 2})
+			store.SaveQueueStartMessages([]models.QueueStartMessage{message1})
+
+			errIn := errors.New("foo")
+
+			store.SaveStartMessagesError = errIn
+			err := store.SaveQueueStartMessages([]models.QueueStartMessage{message1})
+			Ω(err).Should(Equal(errIn))
+
+			store.GetStartMessagesError = errIn
+			desired, err := store.GetQueueStartMessages()
+			Ω(desired).Should(BeEmpty())
+			Ω(err).Should(Equal(errIn))
+
+			store.Reset()
+			err = store.SaveQueueStartMessages([]models.QueueStartMessage{message1})
+			Ω(err).ShouldNot(HaveOccured())
+			_, err = store.GetQueueStartMessages()
+			Ω(err).ShouldNot(HaveOccured())
+		})
+	})
+
+	Describe("Setting, getting, and deleting stop messages", func() {
+		It("should set, get, and delete the stop messages state", func() {
+			message1 := models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "ABC")
+			message2 := models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "DEF")
+
+			err := store.SaveQueueStopMessages([]models.QueueStopMessage{message1, message1, message2})
+			Ω(err).ShouldNot(HaveOccured())
+
+			actual, err := store.GetQueueStopMessages()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(actual).Should(HaveLen(2))
+			Ω(actual).Should(ContainElement(message1))
+			Ω(actual).Should(ContainElement(message2))
+
+			message2.SendOn = 12310
+			message3 := models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "GHI")
+
+			err = store.SaveQueueStopMessages([]models.QueueStopMessage{message2, message3})
+			Ω(err).ShouldNot(HaveOccured())
+
+			actual, err = store.GetQueueStopMessages()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(actual).Should(HaveLen(3))
+			Ω(actual).Should(ContainElement(message1))
+			Ω(actual).Should(ContainElement(message2))
+			Ω(actual).Should(ContainElement(message3))
+
+			err = store.DeleteQueueStopMessages([]models.QueueStopMessage{message2, message3})
+			Ω(err).ShouldNot(HaveOccured())
+			actual, err = store.GetQueueStopMessages()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(actual).Should(HaveLen(1))
+			Ω(actual).Should(ContainElement(message1))
+
+			err = store.DeleteQueueStopMessages([]models.QueueStopMessage{message2})
+			Ω(err).Should(HaveOccured())
+			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+
+			store.Reset()
+
+			actual, err = store.GetQueueStopMessages()
+			Ω(actual).Should(BeEmpty())
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		It("should support returning errors", func() {
+			message1 := models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "ABC")
+			store.SaveQueueStopMessages([]models.QueueStopMessage{message1})
+
+			errIn := errors.New("foo")
+
+			store.SaveStopMessagesError = errIn
+			err := store.SaveQueueStopMessages([]models.QueueStopMessage{message1})
+			Ω(err).Should(Equal(errIn))
+
+			store.GetStopMessagesError = errIn
+			desired, err := store.GetQueueStopMessages()
+			Ω(desired).Should(BeEmpty())
+			Ω(err).Should(Equal(errIn))
+
+			store.Reset()
+			err = store.SaveQueueStopMessages([]models.QueueStopMessage{message1})
+			Ω(err).ShouldNot(HaveOccured())
+			_, err = store.GetQueueStopMessages()
 			Ω(err).ShouldNot(HaveOccured())
 		})
 	})

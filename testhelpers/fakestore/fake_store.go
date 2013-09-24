@@ -19,9 +19,15 @@ type FakeStore struct {
 	GetDesiredStateError      error
 	SaveActualStateError      error
 	GetActualStateError       error
+	SaveStartMessagesError    error
+	GetStartMessagesError     error
+	SaveStopMessagesError     error
+	GetStopMessagesError      error
 
-	desiredState map[string]models.DesiredAppState
-	actualState  map[string]models.InstanceHeartbeat
+	desiredState  map[string]models.DesiredAppState
+	actualState   map[string]models.InstanceHeartbeat
+	startMessages map[string]models.QueueStartMessage
+	stopMessages  map[string]models.QueueStopMessage
 }
 
 func NewFakeStore() *FakeStore {
@@ -33,6 +39,8 @@ func NewFakeStore() *FakeStore {
 func (store *FakeStore) Reset() {
 	store.desiredState = make(map[string]models.DesiredAppState, 0)
 	store.actualState = make(map[string]models.InstanceHeartbeat, 0)
+	store.startMessages = make(map[string]models.QueueStartMessage, 0)
+	store.stopMessages = make(map[string]models.QueueStopMessage, 0)
 
 	store.ActualIsFresh = false
 	store.DesiredIsFresh = false
@@ -44,6 +52,10 @@ func (store *FakeStore) Reset() {
 	store.GetDesiredStateError = nil
 	store.SaveActualStateError = nil
 	store.GetActualStateError = nil
+	store.SaveStartMessagesError = nil
+	store.GetStartMessagesError = nil
+	store.SaveStopMessagesError = nil
+	store.GetStopMessagesError = nil
 }
 
 func (store *FakeStore) BumpDesiredFreshness(timestamp time.Time) error {
@@ -122,6 +134,74 @@ func (store *FakeStore) DeleteActualState(actualStates []models.InstanceHeartbea
 			return storeadapter.ErrorKeyNotFound
 		}
 		delete(store.actualState, state.StoreKey())
+	}
+	return nil
+}
+
+func (store *FakeStore) SaveQueueStartMessages(messages []models.QueueStartMessage) error {
+	for _, message := range messages {
+		store.startMessages[message.StoreKey()] = message
+	}
+	return store.SaveStartMessagesError
+}
+
+func (store *FakeStore) GetQueueStartMessages() ([]models.QueueStartMessage, error) {
+	if store.GetStartMessagesError != nil {
+		return []models.QueueStartMessage{}, store.GetStartMessagesError
+	}
+
+	actuals := make([]models.QueueStartMessage, len(store.startMessages))
+
+	i := 0
+	for _, actual := range store.startMessages {
+		actuals[i] = actual
+		i++
+	}
+
+	return actuals, nil
+}
+
+func (store *FakeStore) DeleteQueueStartMessages(messages []models.QueueStartMessage) error {
+	for _, message := range messages {
+		_, present := store.startMessages[message.StoreKey()]
+		if !present {
+			return storeadapter.ErrorKeyNotFound
+		}
+		delete(store.startMessages, message.StoreKey())
+	}
+	return nil
+}
+
+func (store *FakeStore) SaveQueueStopMessages(messages []models.QueueStopMessage) error {
+	for _, message := range messages {
+		store.stopMessages[message.StoreKey()] = message
+	}
+	return store.SaveStopMessagesError
+}
+
+func (store *FakeStore) GetQueueStopMessages() ([]models.QueueStopMessage, error) {
+	if store.GetStopMessagesError != nil {
+		return []models.QueueStopMessage{}, store.GetStopMessagesError
+	}
+
+	actuals := make([]models.QueueStopMessage, len(store.stopMessages))
+
+	i := 0
+	for _, actual := range store.stopMessages {
+		actuals[i] = actual
+		i++
+	}
+
+	return actuals, nil
+}
+
+func (store *FakeStore) DeleteQueueStopMessages(messages []models.QueueStopMessage) error {
+	for _, message := range messages {
+		_, present := store.stopMessages[message.StoreKey()]
+		if !present {
+			return storeadapter.ErrorKeyNotFound
+		}
+		delete(store.stopMessages, message.StoreKey())
 	}
 	return nil
 }

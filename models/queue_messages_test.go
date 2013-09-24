@@ -61,7 +61,7 @@ var _ = Describe("QueueMessages", func() {
 
 		Describe("Key", func() {
 			It("should generate the correct key", func() {
-				Ω(message.Key()).Should(Equal("app-guid-app-version"))
+				Ω(message.StoreKey()).Should(Equal("app-guid-app-version"))
 			})
 		})
 	})
@@ -114,7 +114,7 @@ var _ = Describe("QueueMessages", func() {
 
 		Describe("Key", func() {
 			It("should generate the correct key", func() {
-				Ω(message.Key()).Should(Equal("instance-guid"))
+				Ω(message.StoreKey()).Should(Equal("instance-guid"))
 			})
 		})
 	})
