@@ -48,7 +48,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a1.DesiredState(0).ToJson()))
+		Ω(node.Value).Should(Equal(a1.DesiredState(0).ToJSON()))
 
 		node, err = storeAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
@@ -56,7 +56,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a2.DesiredState(0).ToJson()))
+		Ω(node.Value).Should(Equal(a2.DesiredState(0).ToJSON()))
 
 		node, err = storeAdapter.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
@@ -64,7 +64,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJson()))
+		Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJSON()))
 	})
 
 	It("bumps the freshness", func() {

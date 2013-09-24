@@ -44,7 +44,7 @@ func (store *RealStore) SaveDesiredState(desiredStates []models.DesiredAppState)
 	for i, desiredState := range desiredStates {
 		nodes[i] = storeadapter.StoreNode{
 			Key:   "/desired/" + desiredState.StoreKey(),
-			Value: desiredState.ToJson(),
+			Value: desiredState.ToJSON(),
 			TTL:   store.config.DesiredStateTTL,
 		}
 	}
@@ -84,7 +84,7 @@ func (store *RealStore) SaveActualState(actualStates []models.InstanceHeartbeat)
 	for i, actualState := range actualStates {
 		nodes[i] = storeadapter.StoreNode{
 			Key:   "/actual/" + actualState.StoreKey(),
-			Value: actualState.ToJson(),
+			Value: actualState.ToJSON(),
 			TTL:   store.config.HeartbeatTTL,
 		}
 	}

@@ -50,7 +50,7 @@ var _ = Describe("Desired State Server Response JSON", func() {
 
 	Describe("ToJson", func() {
 		It("should return json that survives the round trip", func() {
-			resurrectedResponse, err := NewDesiredStateServerResponse(response.ToJson())
+			resurrectedResponse, err := NewDesiredStateServerResponse(response.ToJSON())
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(resurrectedResponse).Should(Equal(response))
 		})

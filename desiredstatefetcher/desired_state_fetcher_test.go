@@ -184,7 +184,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 					},
 				}
 
-				httpClient.LastRequest().Succeed(response.ToJson())
+				httpClient.LastRequest().Succeed(response.ToJSON())
 			})
 
 			It("should store the desired states", func() {
@@ -217,7 +217,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 					},
 				}
 
-				httpClient.LastRequest().Succeed(response.ToJson())
+				httpClient.LastRequest().Succeed(response.ToJSON())
 			})
 
 			It("should stop requesting batches", func() {
@@ -317,7 +317,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 					},
 				}
 
-				httpClient.LastRequest().Succeed(response.ToJson())
+				httpClient.LastRequest().Succeed(response.ToJSON())
 			})
 
 			assertFailure("Failed to store desired state in store")

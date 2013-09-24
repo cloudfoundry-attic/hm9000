@@ -57,7 +57,7 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a simple heartbeat over the message bus", func() {
 		BeforeEach(func() {
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJson())
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJSON())
 		})
 
 		It("Stores it in the store", func() {
@@ -79,7 +79,7 @@ var _ = Describe("Actual state listener", func() {
 				},
 			}
 
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(heartbeat.ToJson())
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(heartbeat.ToJSON())
 		})
 
 		It("Stores it in the store", func() {

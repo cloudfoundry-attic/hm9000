@@ -42,7 +42,7 @@ func NewDesiredAppStateFromJSON(encoded []byte) (DesiredAppState, error) {
 	return desired, nil
 }
 
-func (state DesiredAppState) ToJson() []byte {
+func (state DesiredAppState) ToJSON() []byte {
 	result, _ := json.Marshal(state)
 	return result
 }

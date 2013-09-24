@@ -37,7 +37,7 @@ func NewHeartbeatFromJSON(encoded []byte) (Heartbeat, error) {
 	return heartbeat, nil
 }
 
-func (heartbeat Heartbeat) ToJson() []byte {
+func (heartbeat Heartbeat) ToJSON() []byte {
 	encoded, _ := json.Marshal(heartbeat)
 	return encoded
 }
@@ -51,7 +51,7 @@ func NewInstanceHeartbeatFromJSON(encoded []byte) (InstanceHeartbeat, error) {
 	return instance, nil
 }
 
-func (instance InstanceHeartbeat) ToJson() []byte {
+func (instance InstanceHeartbeat) ToJSON() []byte {
 	encoded, _ := json.Marshal(instance)
 	return encoded
 }

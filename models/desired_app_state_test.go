@@ -62,7 +62,7 @@ var _ = Describe("DesiredAppState", func() {
 		Describe("writing JSON", func() {
 			It("outputs to JSON", func() {
 				var decoded DesiredAppState
-				err := json.Unmarshal(desiredAppState.ToJson(), &decoded)
+				err := json.Unmarshal(desiredAppState.ToJSON(), &decoded)
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(decoded).Should(EqualDesiredState(desiredAppState))
 			})

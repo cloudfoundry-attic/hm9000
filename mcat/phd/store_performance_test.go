@@ -55,7 +55,7 @@ var _ = XDescribe("Store Performance (these are better covered in the new detail
 						for i, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
 							data[i] = storeadapter.StoreNode{
 								Key:   "/actual/" + instanceHeartbeat.InstanceGuid,
-								Value: instanceHeartbeat.ToJson(),
+								Value: instanceHeartbeat.ToJSON(),
 								TTL:   0,
 							}
 						}
