@@ -1,14 +1,18 @@
 package analyzer
 
 import (
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/outbox"
+	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 )
 
 type Analyzer struct {
-	store  store.Store
-	outbox outbox.Outbox
+	store        store.Store
+	outbox       outbox.Outbox
+	timeProvider timeprovider.TimeProvider
+	conf         config.Config
 
 	desiredStates []models.DesiredAppState
 	actualStates  []models.InstanceHeartbeat
@@ -18,10 +22,12 @@ type Analyzer struct {
 	desiredByApp map[string]models.DesiredAppState
 }
 
-func New(store store.Store, outbox outbox.Outbox) *Analyzer {
+func New(store store.Store, outbox outbox.Outbox, timeProvider timeprovider.TimeProvider, conf config.Config) *Analyzer {
 	return &Analyzer{
-		store:  store,
-		outbox: outbox,
+		store:        store,
+		outbox:       outbox,
+		timeProvider: timeProvider,
+		conf:         conf,
 	}
 }
 
@@ -40,7 +46,7 @@ func (analyzer *Analyzer) Analyze() error {
 		if !hasRunning {
 			runningInstances = SortableActualState{}
 		}
-		startMessages, stopMessages := analyzeApp(desired, runningInstances)
+		startMessages, stopMessages := analyzer.analyzeApp(desired, runningInstances)
 		allStartMessages = append(allStartMessages, startMessages...)
 		allStopMessages = append(allStopMessages, stopMessages...)
 	}

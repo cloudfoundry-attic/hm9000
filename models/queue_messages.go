@@ -10,7 +10,7 @@ import (
 type QueueMessage struct {
 	SendOn    int64 `json:"send_on"`
 	SentOn    int64 `json:"sent_on"`
-	KeepAlive int64 `json:"keep_alive"`
+	KeepAlive int   `json:"keep_alive"`
 }
 
 type QueueStartMessage struct {
@@ -25,7 +25,7 @@ type QueueStopMessage struct {
 	InstanceGuid string `json:"instance"`
 }
 
-func newQueueMessage(now time.Time, delayInSeconds int64, keepAliveInSeconds int64) QueueMessage {
+func newQueueMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int) QueueMessage {
 	return QueueMessage{
 		SendOn:    now.Add(time.Duration(delayInSeconds) * time.Second).Unix(),
 		SentOn:    0,
@@ -41,7 +41,7 @@ func (message QueueMessage) queueLogDescription() map[string]string {
 	}
 }
 
-func NewQueueStartMessage(now time.Time, delayInSeconds int64, keepAliveInSeconds int64, appGuid string, appVersion string, indicesToStart []int) QueueStartMessage {
+func NewQueueStartMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, appGuid string, appVersion string, indicesToStart []int) QueueStartMessage {
 	return QueueStartMessage{
 		QueueMessage:   newQueueMessage(now, delayInSeconds, keepAliveInSeconds),
 		AppGuid:        appGuid,
@@ -76,7 +76,7 @@ func (message QueueStartMessage) LogDescription() map[string]string {
 	return base
 }
 
-func NewQueueStopMessage(now time.Time, delayInSeconds int64, keepAliveInSeconds int64, instanceGuid string) QueueStopMessage {
+func NewQueueStopMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, instanceGuid string) QueueStopMessage {
 	return QueueStopMessage{
 		QueueMessage: newQueueMessage(now, delayInSeconds, keepAliveInSeconds),
 		InstanceGuid: instanceGuid,

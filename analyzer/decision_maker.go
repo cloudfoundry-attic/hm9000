@@ -4,7 +4,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 )
 
-func analyzeApp(desired models.DesiredAppState, runningInstances SortableActualState) (startMessages []models.QueueStartMessage, stopMessages []models.QueueStopMessage) {
+func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInstances SortableActualState) (startMessages []models.QueueStartMessage, stopMessages []models.QueueStopMessage) {
 	hasDesired := (desired.AppGuid != "")
 	numDesired := 0
 	if hasDesired {
@@ -24,20 +24,14 @@ func analyzeApp(desired models.DesiredAppState, runningInstances SortableActualS
 	}
 
 	if len(indicesToStart) > 0 {
-		startMessages = append(startMessages, models.QueueStartMessage{
-			AppGuid:        desired.AppGuid,
-			AppVersion:     desired.AppVersion,
-			IndicesToStart: indicesToStart,
-		})
+		startMessages = append(startMessages, models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod, 0, desired.AppGuid, desired.AppVersion, indicesToStart))
 	}
 
 	if len(runningInstances) > numDesired {
 		runningInstances.SortDescendingInPlace()
 		numToStop := len(runningInstances) - numDesired
 		for i := 0; i < numToStop; i++ {
-			stopMessages = append(stopMessages, models.QueueStopMessage{
-				InstanceGuid: runningInstances[i].InstanceGuid,
-			})
+			stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod, runningInstances[i].InstanceGuid))
 		}
 	}
 
