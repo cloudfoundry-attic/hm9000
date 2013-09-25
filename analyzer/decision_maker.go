@@ -16,15 +16,10 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 		runningIndices[runningInstance.InstanceIndex] = true
 	}
 
-	indicesToStart := []int{}
 	for index := 0; index < desired.NumberOfInstances; index++ {
 		if !runningIndices[index] {
-			indicesToStart = append(indicesToStart, index)
+			startMessages = append(startMessages, models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod, 0, desired.AppGuid, desired.AppVersion, index))
 		}
-	}
-
-	if len(indicesToStart) > 0 {
-		startMessages = append(startMessages, models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod, 0, desired.AppGuid, desired.AppVersion, indicesToStart))
 	}
 
 	if len(runningInstances) > numDesired {

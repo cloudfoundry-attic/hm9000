@@ -12,7 +12,7 @@ var _ = Describe("QueueMessages", func() {
 	Describe("Start Message", func() {
 		var message QueueStartMessage
 		BeforeEach(func() {
-			message = NewQueueStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", []int{1, 2})
+			message = NewQueueStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1)
 		})
 
 		Describe("Creating new start messages programatically", func() {
@@ -22,7 +22,7 @@ var _ = Describe("QueueMessages", func() {
 				Ω(message.KeepAlive).Should(BeNumerically("==", 10))
 				Ω(message.AppGuid).Should(Equal("app-guid"))
 				Ω(message.AppVersion).Should(Equal("app-version"))
-				Ω(message.IndicesToStart).Should(Equal([]int{1, 2}))
+				Ω(message.IndexToStart).Should(Equal(1))
 			})
 		})
 
@@ -35,7 +35,7 @@ var _ = Describe("QueueMessages", func() {
                         "keep_alive": 10,
                         "droplet": "app-guid",
                         "version": "app-version",
-                        "indices": [1,2]
+                        "index": 1
                     }`))
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(parsed).Should(Equal(message))
@@ -61,19 +61,19 @@ var _ = Describe("QueueMessages", func() {
 
 		Describe("StoreKey", func() {
 			It("should generate the correct key", func() {
-				Ω(message.StoreKey()).Should(Equal("app-guid-app-version"))
+				Ω(message.StoreKey()).Should(Equal("app-guid-app-version-1"))
 			})
 		})
 
 		Describe("LogDescription", func() {
 			It("should generate an appropriate map", func() {
 				Ω(message.LogDescription()).Should(Equal(map[string]string{
-					"SendOn":         time.Unix(130, 0).String(),
-					"SentOn":         time.Unix(0, 0).String(),
-					"KeepAlive":      "10",
-					"AppGuid":        "app-guid",
-					"AppVersion":     "app-version",
-					"IndicesToStart": "[1 2]",
+					"SendOn":       time.Unix(130, 0).String(),
+					"SentOn":       time.Unix(0, 0).String(),
+					"KeepAlive":    "10",
+					"AppGuid":      "app-guid",
+					"AppVersion":   "app-version",
+					"IndexToStart": "1",
 				}))
 			})
 		})

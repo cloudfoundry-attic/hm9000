@@ -25,9 +25,9 @@ var _ = Describe("Outbox", func() {
 		store = fakestore.NewFakeStore()
 		logger = fakelogger.NewFakeLogger()
 		startMessages = []models.QueueStartMessage{
-			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", []int{1, 2}),
-			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", []int{1, 2}),
-			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", []int{1, 2}),
+			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1),
+			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1),
+			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 2),
 		}
 
 		stopMessages = []models.QueueStopMessage{
@@ -82,7 +82,7 @@ var _ = Describe("Outbox", func() {
 			var collidingStartMessage models.QueueStartMessage
 
 			BeforeEach(func() {
-				collidingStartMessage = models.NewQueueStartMessage(time.Unix(120, 0), 10, 4, "DEF", "123", []int{1, 2, 3})
+				collidingStartMessage = models.NewQueueStartMessage(time.Unix(120, 0), 10, 4, "DEF", "123", 1)
 				store.SaveQueueStartMessages([]models.QueueStartMessage{
 					collidingStartMessage,
 				})

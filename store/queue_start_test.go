@@ -28,9 +28,9 @@ var _ = Describe("Storing QueueStartMessages", func() {
 		err = etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		message1 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", []int{1, 2})
-		message2 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", []int{1, 2})
-		message3 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", []int{1, 2})
+		message1 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1)
+		message2 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1)
+		message3 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1)
 
 		store = NewStore(conf, etcdAdapter)
 	})
@@ -127,8 +127,8 @@ var _ = Describe("Storing QueueStartMessages", func() {
 		Context("When the start message is present", func() {
 			It("can delete the start message (and only cares about the relevant fields)", func() {
 				toDelete := []models.QueueStartMessage{
-					models.QueueStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion},
-					models.QueueStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion},
+					models.QueueStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
+					models.QueueStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
 				}
 				err := store.DeleteQueueStartMessages(toDelete)
 				Ω(err).ShouldNot(HaveOccured())
@@ -143,9 +143,9 @@ var _ = Describe("Storing QueueStartMessages", func() {
 		Context("When the desired message key is not present", func() {
 			It("returns an error, but does leave things in a broken state... for now...", func() {
 				toDelete := []models.QueueStartMessage{
-					models.QueueStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion},
+					models.QueueStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
 					models.QueueStartMessage{AppGuid: "floobedey", AppVersion: "abc"},
-					models.QueueStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion},
+					models.QueueStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
 				}
 				err := store.DeleteQueueStartMessages(toDelete)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))

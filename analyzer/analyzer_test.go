@@ -27,6 +27,28 @@ var _ = Describe("Analyzer", func() {
 
 	conf, _ := config.DefaultConfig()
 
+	newStartMessage := func(a app.App, indexToStart int) models.QueueStartMessage {
+		return models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod, 0, a.AppGuid, a.AppVersion, indexToStart)
+	}
+
+	newStopMessage := func(instance app.Instance) models.QueueStopMessage {
+		return models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, instance.InstanceGuid)
+	}
+
+	assertStartMessages := func(messages ...models.QueueStartMessage) {
+		Ω(outbox.StartMessages).Should(HaveLen(len(messages)))
+		for _, message := range messages {
+			Ω(outbox.StartMessages[message.StoreKey()]).Should(Equal(message))
+		}
+	}
+
+	assertStopMessages := func(messages ...models.QueueStopMessage) {
+		Ω(outbox.StopMessages).Should(HaveLen(len(messages)))
+		for _, message := range messages {
+			Ω(outbox.StopMessages[message.StoreKey()]).Should(Equal(message))
+		}
+	}
+
 	BeforeEach(func() {
 		store = fakestore.NewFakeStore()
 		outbox = fakeoutbox.NewFakeOutbox()
@@ -159,12 +181,11 @@ var _ = Describe("Analyzer", func() {
 			})
 
 			Context("and none of the instances are running", func() {
-				It("should return a start message for the missing instances", func() {
+				It("should send a start message for each of the missing instances", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(outbox.StopMessages).Should(BeEmpty())
-					Ω(outbox.StartMessages).Should(HaveLen(1))
-					Ω(outbox.StartMessages[0]).Should(Equal(models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod, 0, a.AppGuid, a.AppVersion, []int{0, 1, 2, 3})))
+					assertStartMessages(newStartMessage(a, 0), newStartMessage(a, 1), newStartMessage(a, 2), newStartMessage(a, 3))
 				})
 			})
 
@@ -180,8 +201,7 @@ var _ = Describe("Analyzer", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(outbox.StopMessages).Should(BeEmpty())
-					Ω(outbox.StartMessages).Should(HaveLen(1))
-					Ω(outbox.StartMessages[0]).Should(Equal(models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod, 0, a.AppGuid, a.AppVersion, []int{1, 3})))
+					assertStartMessages(newStartMessage(a, 1), newStartMessage(a, 3))
 				})
 			})
 		})
@@ -202,10 +222,7 @@ var _ = Describe("Analyzer", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(outbox.StartMessages).Should(BeEmpty())
-					Ω(outbox.StopMessages).Should(HaveLen(3))
-					Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(0).InstanceGuid)))
-					Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(1).InstanceGuid)))
-					Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(2).InstanceGuid)))
+					assertStopMessages(newStopMessage(a.GetInstance(0)), newStopMessage(a.GetInstance(1)), newStopMessage(a.GetInstance(2)))
 				})
 			})
 
@@ -223,10 +240,7 @@ var _ = Describe("Analyzer", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(outbox.StartMessages).Should(BeEmpty())
-					Ω(outbox.StopMessages).Should(HaveLen(3))
-					Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(0).InstanceGuid)))
-					Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(1).InstanceGuid)))
-					Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(2).InstanceGuid)))
+					assertStopMessages(newStopMessage(a.GetInstance(0)), newStopMessage(a.GetInstance(1)), newStopMessage(a.GetInstance(2)))
 				})
 			})
 
@@ -243,9 +257,7 @@ var _ = Describe("Analyzer", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(outbox.StartMessages).Should(BeEmpty())
-					Ω(outbox.StopMessages).Should(HaveLen(2))
-					Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(1).InstanceGuid)))
-					Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(2).InstanceGuid)))
+					assertStopMessages(newStopMessage(a.GetInstance(1)), newStopMessage(a.GetInstance(2)))
 				})
 			})
 
@@ -274,8 +286,7 @@ var _ = Describe("Analyzer", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(outbox.StopMessages).Should(BeEmpty())
-				Ω(outbox.StartMessages).Should(HaveLen(1))
-				Ω(outbox.StartMessages[0]).Should(Equal(models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod, 0, a.AppGuid, a.AppVersion, []int{0, 2})))
+				assertStartMessages(newStartMessage(a, 0), newStartMessage(a, 2))
 			})
 		})
 
@@ -293,11 +304,8 @@ var _ = Describe("Analyzer", func() {
 			It("should return a start message containing the missing indices and a stop message for the extra instances", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.StartMessages).Should(HaveLen(1))
-				Ω(outbox.StartMessages[0]).Should(Equal(models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod, 0, a.AppGuid, a.AppVersion, []int{0, 2})))
-				Ω(outbox.StopMessages).Should(HaveLen(2))
-				Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(5).InstanceGuid)))
-				Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(6).InstanceGuid)))
+				assertStartMessages(newStartMessage(a, 0), newStartMessage(a, 2))
+				assertStopMessages(newStopMessage(a.GetInstance(5)), newStopMessage(a.GetInstance(6)))
 			})
 		})
 
@@ -316,9 +324,7 @@ var _ = Describe("Analyzer", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(outbox.StartMessages).Should(BeEmpty())
-				Ω(outbox.StopMessages).Should(HaveLen(2))
-				Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(3).InstanceGuid)))
-				Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(4).InstanceGuid)))
+				assertStopMessages(newStopMessage(a.GetInstance(3)), newStopMessage(a.GetInstance(4)))
 			})
 		})
 
@@ -364,12 +370,8 @@ var _ = Describe("Analyzer", func() {
 		It("should analyze each app-version combination separately", func() {
 			err := analyzer.Analyze()
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(outbox.StartMessages).Should(HaveLen(2))
-			Ω(outbox.StopMessages).Should(HaveLen(2))
-			Ω(outbox.StartMessages).Should(ContainElement(models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod, 0, otherApp.AppGuid, otherApp.AppVersion, []int{1})))
-			Ω(outbox.StartMessages).Should(ContainElement(models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod, 0, yetAnotherApp.AppGuid, yetAnotherApp.AppVersion, []int{0, 1})))
-			Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, a.GetInstance(1).InstanceGuid)))
-			Ω(outbox.StopMessages).Should(ContainElement(models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, olderApp.GetInstance(0).InstanceGuid)))
+			assertStartMessages(newStartMessage(otherApp, 1), newStartMessage(yetAnotherApp, 0), newStartMessage(yetAnotherApp, 1))
+			assertStopMessages(newStopMessage(a.GetInstance(1)), newStopMessage(olderApp.GetInstance(0)))
 		})
 	})
 })

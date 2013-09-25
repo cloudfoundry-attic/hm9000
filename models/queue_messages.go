@@ -2,7 +2,6 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -15,9 +14,9 @@ type QueueMessage struct {
 
 type QueueStartMessage struct {
 	QueueMessage
-	AppGuid        string `json:"droplet"`
-	AppVersion     string `json:"version"`
-	IndicesToStart []int  `json:"indices"`
+	AppGuid      string `json:"droplet"`
+	AppVersion   string `json:"version"`
+	IndexToStart int    `json:"index"`
 }
 
 type QueueStopMessage struct {
@@ -41,12 +40,12 @@ func (message QueueMessage) queueLogDescription() map[string]string {
 	}
 }
 
-func NewQueueStartMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, appGuid string, appVersion string, indicesToStart []int) QueueStartMessage {
+func NewQueueStartMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, appGuid string, appVersion string, indexToStart int) QueueStartMessage {
 	return QueueStartMessage{
-		QueueMessage:   newQueueMessage(now, delayInSeconds, keepAliveInSeconds),
-		AppGuid:        appGuid,
-		AppVersion:     appVersion,
-		IndicesToStart: indicesToStart,
+		QueueMessage: newQueueMessage(now, delayInSeconds, keepAliveInSeconds),
+		AppGuid:      appGuid,
+		AppVersion:   appVersion,
+		IndexToStart: indexToStart,
 	}
 }
 
@@ -60,7 +59,7 @@ func NewQueueStartMessageFromJSON(encoded []byte) (QueueStartMessage, error) {
 }
 
 func (message QueueStartMessage) StoreKey() string {
-	return message.AppGuid + "-" + message.AppVersion
+	return message.AppGuid + "-" + message.AppVersion + "-" + strconv.Itoa(message.IndexToStart)
 }
 
 func (message QueueStartMessage) ToJSON() []byte {
@@ -72,7 +71,7 @@ func (message QueueStartMessage) LogDescription() map[string]string {
 	base := message.queueLogDescription()
 	base["AppGuid"] = message.AppGuid
 	base["AppVersion"] = message.AppVersion
-	base["IndicesToStart"] = fmt.Sprintf("%v", message.IndicesToStart)
+	base["IndexToStart"] = strconv.Itoa(message.IndexToStart)
 	return base
 }
 
