@@ -9,14 +9,15 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
 
 	"fmt"
+	"math/rand"
 	"time"
 )
 
 var numRecords = 512
 var storeTypes = []string{"ETCD", "Zookeeper"}
 var nodeCounts = []int{1, 3, 5, 7}
-var concurrencies = []int{1, 10, 30, 50}
-var recordSizes = []int{256, 512, 1024, 2048}
+var concurrencies = []int{1, 5, 10, 15, 20, 25, 30}
+var recordSizes = []int{128, 256, 512, 1024, 2048, 4096}
 
 var _ = Describe("Detailed Store Performance", func() {
 	for _, storeType := range storeTypes {
@@ -52,6 +53,16 @@ var _ = Describe("Detailed Store Performance", func() {
 						storeRunner = nil
 					})
 
+					randomBytes := func(sizeInBytes int) []byte {
+						seedBytes := []byte{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
+						randomBytes := make([]byte, sizeInBytes)
+						for i := 0; i < sizeInBytes; i++ {
+							randomBytes[i] = seedBytes[rand.Intn(len(seedBytes))]
+						}
+
+						return randomBytes
+					}
+
 					for _, recordSize := range recordSizes {
 						recordSize := recordSize
 
@@ -60,7 +71,7 @@ var _ = Describe("Detailed Store Performance", func() {
 							for i := 0; i < numRecords; i++ {
 								data[i] = storeadapter.StoreNode{
 									Key:   fmt.Sprintf("/record/%d", i),
-									Value: make([]byte, recordSize),
+									Value: randomBytes(recordSize),
 									TTL:   0,
 								}
 							}
