@@ -1,6 +1,8 @@
 package hm
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/storeadapter"
@@ -21,7 +23,9 @@ func Dump(l logger.Logger, c *cli.Context) {
 		if node.TTL == 0 {
 			ttl = "[TTL: ∞]"
 		}
-		entries = append(entries, fmt.Sprintf("%s %s:\n    %s", node.Key, ttl, node.Value))
+		buf := &bytes.Buffer{}
+		json.Indent(buf, []byte(node.Value), "    ", "  ")
+		entries = append(entries, fmt.Sprintf("%s %s:\n    %s", node.Key, ttl, buf.String()))
 	})
 
 	sort.Sort(entries)
