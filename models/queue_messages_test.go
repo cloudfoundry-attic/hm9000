@@ -59,9 +59,22 @@ var _ = Describe("QueueMessages", func() {
 			})
 		})
 
-		Describe("Key", func() {
+		Describe("StoreKey", func() {
 			It("should generate the correct key", func() {
 				Ω(message.StoreKey()).Should(Equal("app-guid-app-version"))
+			})
+		})
+
+		Describe("LogDescription", func() {
+			It("should generate an appropriate map", func() {
+				Ω(message.LogDescription()).Should(Equal(map[string]string{
+					"SendOn":         time.Unix(130, 0).String(),
+					"SentOn":         time.Unix(0, 0).String(),
+					"KeepAlive":      "10",
+					"AppGuid":        "app-guid",
+					"AppVersion":     "app-version",
+					"IndicesToStart": "[1 2]",
+				}))
 			})
 		})
 	})
@@ -112,9 +125,20 @@ var _ = Describe("QueueMessages", func() {
 			})
 		})
 
-		Describe("Key", func() {
+		Describe("StoreKey", func() {
 			It("should generate the correct key", func() {
 				Ω(message.StoreKey()).Should(Equal("instance-guid"))
+			})
+		})
+
+		Describe("LogDescription", func() {
+			It("should generate an appropriate map", func() {
+				Ω(message.LogDescription()).Should(Equal(map[string]string{
+					"SendOn":       time.Unix(130, 0).String(),
+					"SentOn":       time.Unix(0, 0).String(),
+					"KeepAlive":    "10",
+					"InstanceGuid": "instance-guid",
+				}))
 			})
 		})
 	})

@@ -2,6 +2,8 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -28,6 +30,14 @@ func newQueueMessage(now time.Time, delayInSeconds int64, keepAliveInSeconds int
 		SendOn:    now.Add(time.Duration(delayInSeconds) * time.Second).Unix(),
 		SentOn:    0,
 		KeepAlive: keepAliveInSeconds,
+	}
+}
+
+func (message QueueMessage) queueLogDescription() map[string]string {
+	return map[string]string{
+		"SendOn":    time.Unix(message.SendOn, 0).String(),
+		"SentOn":    time.Unix(message.SentOn, 0).String(),
+		"KeepAlive": strconv.Itoa(int(message.KeepAlive)),
 	}
 }
 
@@ -58,6 +68,14 @@ func (message QueueStartMessage) ToJSON() []byte {
 	return encoded
 }
 
+func (message QueueStartMessage) LogDescription() map[string]string {
+	base := message.queueLogDescription()
+	base["AppGuid"] = message.AppGuid
+	base["AppVersion"] = message.AppVersion
+	base["IndicesToStart"] = fmt.Sprintf("%v", message.IndicesToStart)
+	return base
+}
+
 func NewQueueStopMessage(now time.Time, delayInSeconds int64, keepAliveInSeconds int64, instanceGuid string) QueueStopMessage {
 	return QueueStopMessage{
 		QueueMessage: newQueueMessage(now, delayInSeconds, keepAliveInSeconds),
@@ -81,4 +99,10 @@ func (message QueueStopMessage) ToJSON() []byte {
 
 func (message QueueStopMessage) StoreKey() string {
 	return message.InstanceGuid
+}
+
+func (message QueueStopMessage) LogDescription() map[string]string {
+	base := message.queueLogDescription()
+	base["InstanceGuid"] = message.InstanceGuid
+	return base
 }

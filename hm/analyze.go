@@ -12,7 +12,7 @@ import (
 func Analyze(l logger.Logger, c *cli.Context) {
 	conf := loadConfig(l, c)
 	store := connectToStore(l, conf)
-	outbox := outbox.NewLoggingOutbox(l)
+	outbox := outbox.New(store, l)
 
 	l.Info("Analyzing...", nil)
 
