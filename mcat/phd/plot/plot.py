@@ -1,7 +1,6 @@
 import csv
 import pylab
-import numpy
-
+import numpy as np
 
 records = []
 
@@ -45,6 +44,7 @@ def plot(storeType, category, xitem, yitem, yerritem):
                     yerr.append(record[yerritem])
             if len(x) == 0:
                 continue
+            pylab.fill_between(x,np.array(y) + np.array(yerr), np.array(y) - np.array(yerr), color=colors[i], alpha=0.1, linewidth=0)
             pylab.plot(x, y, color=colors[i], linestyle=dashes[j], label="%in %i" %(nodes, categorySlice))
 
 
