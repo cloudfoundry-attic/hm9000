@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/hm9000/analyzer"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/outbox"
+	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"os"
 
 	"github.com/codegangsta/cli"
@@ -16,7 +17,7 @@ func Analyze(l logger.Logger, c *cli.Context) {
 
 	l.Info("Analyzing...", nil)
 
-	analyzer := analyzer.New(store, outbox)
+	analyzer := analyzer.New(store, outbox, timeprovider.NewTimeProvider(), conf)
 	err := analyzer.Analyze()
 
 	if err != nil {
