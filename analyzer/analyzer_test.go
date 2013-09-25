@@ -57,6 +57,9 @@ var _ = Describe("Analyzer", func() {
 
 		a = app.NewApp()
 
+		store.BumpActualFreshness(time.Unix(100, 0))
+		store.BumpDesiredFreshness(time.Unix(100, 0))
+
 		analyzer = New(store, outbox, timeProvider, conf)
 	})
 
@@ -87,36 +90,6 @@ var _ = Describe("Analyzer", func() {
 			})
 		})
 	})
-
-	// Describe("Handling store freshness", func() {
-	// 	BeforeEach(func() {
-	// 		desired := a.DesiredState(0)
-	// 		store.SaveDesiredState([]models.DesiredAppState{
-	// 			desired,
-	// 		})
-	// 		store.SaveActualState([]models.InstanceHeartbeat{
-	// 			app.NewApp().GetInstance(0).Heartbeat(0),
-	// 		})
-	// 	})
-
-	// 	Context("when the desired state is not fresh", func() {
-	// 		It("should not send any start or stop messages", func() {
-	// 			err := analyzer.Analyze()
-	// 			Ω(err).ShouldNot(HaveOccured())
-	// 			Ω(outbox.StartMessages).Should(BeEmpty())
-	// 			Ω(outbox.StopMessages).Should(BeEmpty())
-	// 		})
-	// 	})
-
-	// 	Context("when the actual state is not fresh", func() {
-	// 		It("should not send any start or stop messages", func() {
-	// 			err := analyzer.Analyze()
-	// 			Ω(err).ShouldNot(HaveOccured())
-	// 			Ω(outbox.StartMessages).Should(BeEmpty())
-	// 			Ω(outbox.StopMessages).Should(BeEmpty())
-	// 		})
-	// 	})
-	// })
 
 	Describe("The steady state", func() {
 		Context("When there are no desired or running apps", func() {
@@ -372,6 +345,82 @@ var _ = Describe("Analyzer", func() {
 			Ω(err).ShouldNot(HaveOccured())
 			assertStartMessages(newStartMessage(otherApp, 1), newStartMessage(yetAnotherApp, 0), newStartMessage(yetAnotherApp, 1))
 			assertStopMessages(newStopMessage(a.GetInstance(1)), newStopMessage(olderApp.GetInstance(0)))
+		})
+	})
+
+	Context("When the store is not fresh", func() {
+		BeforeEach(func() {
+			store.Reset()
+
+			desired := a.DesiredState(0)
+			//this setup would, ordinarily, trigger a start and a stop
+			store.SaveDesiredState([]models.DesiredAppState{
+				desired,
+			})
+			store.SaveActualState([]models.InstanceHeartbeat{
+				app.NewApp().GetInstance(0).Heartbeat(0),
+			})
+		})
+
+		Context("when the desired state is not fresh", func() {
+			BeforeEach(func() {
+				store.BumpActualFreshness(time.Unix(10, 0))
+			})
+
+			It("should not send any start or stop messages", func() {
+				err := analyzer.Analyze()
+				Ω(err.Error()).Should(Equal("Desired state is not fresh"))
+				Ω(outbox.StartMessages).Should(BeEmpty())
+				Ω(outbox.StopMessages).Should(BeEmpty())
+			})
+		})
+
+		Context("when the desired state fails to fetch", func() {
+			BeforeEach(func() {
+				store.BumpActualFreshness(time.Unix(10, 0))
+				store.BumpDesiredFreshness(time.Unix(10, 0))
+				store.IsDesiredStateFreshError = errors.New("foo")
+			})
+
+			It("should return the store's error and not send any start/stop messages", func() {
+				err := analyzer.Analyze()
+				Ω(err).Should(Equal(store.IsDesiredStateFreshError))
+				Ω(outbox.StartMessages).Should(BeEmpty())
+				Ω(outbox.StopMessages).Should(BeEmpty())
+			})
+		})
+
+		Context("when the actual state is not fresh", func() {
+			BeforeEach(func() {
+				store.BumpDesiredFreshness(time.Unix(10, 0))
+			})
+
+			It("should pass in the correct timestamp to the actual state", func() {
+				analyzer.Analyze()
+				Ω(store.ActualFreshnessComparisonTimestamp).Should(Equal(timeProvider.TimeToProvide))
+			})
+
+			It("should not send any start or stop messages", func() {
+				err := analyzer.Analyze()
+				Ω(err.Error()).Should(Equal("Actual state is not fresh"))
+				Ω(outbox.StartMessages).Should(BeEmpty())
+				Ω(outbox.StopMessages).Should(BeEmpty())
+			})
+		})
+
+		Context("when the actual state fails to fetch", func() {
+			BeforeEach(func() {
+				store.BumpActualFreshness(time.Unix(10, 0))
+				store.BumpDesiredFreshness(time.Unix(10, 0))
+				store.IsActualStateFreshError = errors.New("foo")
+			})
+
+			It("should return the store's error and not send any start/stop messages", func() {
+				err := analyzer.Analyze()
+				Ω(err).Should(Equal(store.IsActualStateFreshError))
+				Ω(outbox.StartMessages).Should(BeEmpty())
+				Ω(outbox.StopMessages).Should(BeEmpty())
+			})
 		})
 	})
 })

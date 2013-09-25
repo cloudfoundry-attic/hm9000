@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"errors"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/outbox"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
@@ -32,7 +33,12 @@ func New(store store.Store, outbox outbox.Outbox, timeProvider timeprovider.Time
 }
 
 func (analyzer *Analyzer) Analyze() error {
-	err := analyzer.fetchStateAndGenerateLookupTables()
+	err := analyzer.verifyFreshness()
+	if err != nil {
+		return err
+	}
+
+	err = analyzer.fetchStateAndGenerateLookupTables()
 	if err != nil {
 		return err
 	}
@@ -52,6 +58,26 @@ func (analyzer *Analyzer) Analyze() error {
 	}
 
 	analyzer.outbox.Enqueue(allStartMessages, allStopMessages)
+	return nil
+}
+
+func (analyzer *Analyzer) verifyFreshness() error {
+	fresh, err := analyzer.store.IsDesiredStateFresh()
+	if err != nil {
+		return err
+	}
+	if !fresh {
+		return errors.New("Desired state is not fresh")
+	}
+
+	fresh, err = analyzer.store.IsActualStateFresh(analyzer.timeProvider.Time())
+	if err != nil {
+		return err
+	}
+	if !fresh {
+		return errors.New("Actual state is not fresh")
+	}
+
 	return nil
 }
 
