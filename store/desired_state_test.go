@@ -147,7 +147,7 @@ var _ = Describe("Desired State", func() {
 			It("returns an error, but does leave things in a broken state... for now...", func() {
 				toDelete := []models.DesiredAppState{
 					models.DesiredAppState{AppGuid: app1.AppGuid, AppVersion: app1.AppVersion},
-					models.DesiredAppState{AppGuid: app3.AppGuid, AppVersion: app2.AppVersion}, //oops!
+					models.DesiredAppState{AppGuid: app3.AppGuid, AppVersion: app2.AppVersion}, //oops! this key is not present but we're trying to delete it
 					models.DesiredAppState{AppGuid: app2.AppGuid, AppVersion: app2.AppVersion},
 				}
 				err := store.DeleteDesiredState(toDelete)
