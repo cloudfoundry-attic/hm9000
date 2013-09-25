@@ -3,6 +3,10 @@ go:
   - 1.1.2
   - tip
 
+matrix:
+  allow_failures:
+    - go: tip
+
 install:
   - gem install nats
   - go get -v ./...
