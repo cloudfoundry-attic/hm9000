@@ -24,18 +24,17 @@ func Dump(l logger.Logger, c *cli.Context) {
 			ttl = "[TTL: ∞]"
 		}
 		buf := &bytes.Buffer{}
-		json.Indent(buf, []byte(node.Value), "    ", "  ")
-		entries = append(entries, fmt.Sprintf("%s %s:\n    %s", node.Key, ttl, buf.String()))
+		err := json.Indent(buf, node.Value, "    ", "  ")
+		value := buf.String()
+		if err != nil {
+			value = string(node.Value)
+		}
+		entries = append(entries, fmt.Sprintf("%s %s:\n    %s", node.Key, ttl, value))
 	})
 
 	sort.Sort(entries)
-	previousEntry := "/aaa"
 	for _, entry := range entries {
-		if previousEntry[0:3] < entry[0:3] {
-			fmt.Printf("\n")
-		}
 		fmt.Printf(entry + "\n")
-		previousEntry = entry
 	}
 }
 
