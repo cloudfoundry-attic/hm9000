@@ -33,3 +33,33 @@ func (store *RealStore) bumpFreshness(key string, ttl uint64, timestamp time.Tim
 		},
 	})
 }
+
+func (store *RealStore) IsDesiredStateFresh() (bool, error) {
+	_, err := store.adapter.Get(store.config.DesiredFreshnessKey)
+	if err == storeadapter.ErrorKeyNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (store *RealStore) IsActualStateFresh(currentTime time.Time) (bool, error) {
+	node, err := store.adapter.Get(store.config.ActualFreshnessKey)
+	if err == storeadapter.ErrorKeyNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	freshnessTimestamp := models.FreshnessTimestamp{}
+	err = json.Unmarshal(node.Value, &freshnessTimestamp)
+	if err != nil {
+		return false, err
+	}
+
+	isUpToDate := currentTime.Sub(time.Unix(freshnessTimestamp.Timestamp, 0)) >= time.Duration(store.config.ActualFreshnessTTL)*time.Second
+	return isUpToDate, nil
+}

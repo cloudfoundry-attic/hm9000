@@ -92,4 +92,111 @@ var _ = Describe("Freshness", func() {
 			bumpingFreshness(conf.DesiredFreshnessKey, conf.DesiredFreshnessTTL, Store.BumpDesiredFreshness)
 		})
 	})
+
+	Describe("Checking desired state freshness", func() {
+		Context("if the freshness key is not present", func() {
+			It("returns that the state is not fresh", func() {
+				fresh, err := store.IsDesiredStateFresh()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(fresh).Should(BeFalse())
+			})
+		})
+
+		Context("if the freshness key is present", func() {
+			BeforeEach(func() {
+				store.BumpDesiredFreshness(time.Unix(100, 0))
+			})
+
+			It("returns that the state is fresh", func() {
+				fresh, err := store.IsDesiredStateFresh()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(fresh).Should(BeTrue())
+			})
+		})
+
+		Context("when the store returns an error", func() {
+			BeforeEach(func() {
+				err := etcdAdapter.Set([]storeadapter.StoreNode{
+					storeadapter.StoreNode{
+						Key:   "/desired-fresh/mwahaha",
+						Value: []byte("i'm a directory...."),
+					},
+				})
+				Ω(err).ShouldNot(HaveOccured())
+			})
+
+			It("should return the store's error", func() {
+				fresh, err := store.IsDesiredStateFresh()
+				Ω(err).Should(Equal(storeadapter.ErrorNodeIsDirectory))
+				Ω(fresh).Should(BeFalse())
+			})
+		})
+	})
+
+	Describe("Checking actual state freshness", func() {
+		Context("if the freshness key is not present", func() {
+			It("returns that the state is not fresh", func() {
+				fresh, err := store.IsActualStateFresh(time.Unix(130, 0))
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(fresh).Should(BeFalse())
+			})
+		})
+
+		Context("if the freshness key is present", func() {
+			BeforeEach(func() {
+				store.BumpActualFreshness(time.Unix(100, 0))
+			})
+
+			Context("if the creation time of the key is outside the last x seconds", func() {
+				It("returns that the state is fresh", func() {
+					fresh, err := store.IsActualStateFresh(time.Unix(130, 0))
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(fresh).Should(BeTrue())
+				})
+			})
+
+			Context("if the creation time of the key is within the last x seconds", func() {
+				It("returns that the state is not fresh", func() {
+					fresh, err := store.IsActualStateFresh(time.Unix(129, 0))
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(fresh).Should(BeFalse())
+				})
+			})
+
+			Context("if the freshness key fails to parse", func() {
+				BeforeEach(func() {
+					etcdAdapter.Set([]storeadapter.StoreNode{
+						storeadapter.StoreNode{
+							Key:   "/actual-fresh",
+							Value: []byte("ß"),
+						},
+					})
+				})
+
+				It("should return an error", func() {
+					fresh, err := store.IsActualStateFresh(time.Unix(129, 0))
+					Ω(err).Should(HaveOccured())
+					Ω(fresh).Should(BeFalse())
+				})
+			})
+		})
+
+		Context("when the store returns an error", func() {
+			BeforeEach(func() {
+				err := etcdAdapter.Set([]storeadapter.StoreNode{
+					storeadapter.StoreNode{
+						Key:   "/actual-fresh/mwahaha",
+						Value: []byte("i'm a directory...."),
+					},
+				})
+				Ω(err).ShouldNot(HaveOccured())
+			})
+
+			It("should return the store's error", func() {
+				fresh, err := store.IsActualStateFresh(time.Unix(130, 0))
+				Ω(err).Should(Equal(storeadapter.ErrorNodeIsDirectory))
+				Ω(fresh).Should(BeFalse())
+			})
+		})
+	})
 })

@@ -68,7 +68,7 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a complex heartbeat with multiple apps and instances", func() {
 		JustBeforeEach(func() {
-			Ω(store.ActualIsFresh).Should(BeFalse())
+			Ω(store.ActualFreshnessTimestamp).Should(BeZero())
 
 			heartbeat := Heartbeat{
 				DeaGuid: Guid(),
@@ -91,7 +91,6 @@ var _ = Describe("Actual state listener", func() {
 
 		Context("when the save succeeds", func() {
 			It("bumps the freshness", func() {
-				Ω(store.ActualIsFresh).Should(BeTrue())
 				Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
 				Ω(logger.LoggedSubjects).Should(BeEmpty())
 			})
@@ -113,7 +112,7 @@ var _ = Describe("Actual state listener", func() {
 			})
 
 			It("does not bump the freshness", func() {
-				Ω(store.ActualIsFresh).Should(BeFalse())
+				Ω(store.ActualFreshnessTimestamp).Should(BeZero())
 			})
 
 			It("logs about the failed save", func() {
@@ -133,7 +132,7 @@ var _ = Describe("Actual state listener", func() {
 		})
 
 		It("does not bump the freshness", func() {
-			Ω(store.ActualIsFresh).Should(BeFalse())
+			Ω(store.ActualFreshnessTimestamp).Should(BeZero())
 		})
 
 		It("logs about the failed parse", func() {

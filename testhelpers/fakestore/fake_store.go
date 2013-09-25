@@ -7,22 +7,23 @@ import (
 )
 
 type FakeStore struct {
-	ActualIsFresh  bool
-	DesiredIsFresh bool
-
-	ActualFreshnessTimestamp  time.Time
-	DesiredFreshnessTimestamp time.Time
+	ActualFreshnessTimestamp           time.Time
+	DesiredFreshnessTimestamp          time.Time
+	ActualFreshnessComparisonTimestamp time.Time
 
 	BumpDesiredFreshnessError error
 	BumpActualFreshnessError  error
-	SaveDesiredStateError     error
-	GetDesiredStateError      error
-	SaveActualStateError      error
-	GetActualStateError       error
-	SaveStartMessagesError    error
-	GetStartMessagesError     error
-	SaveStopMessagesError     error
-	GetStopMessagesError      error
+	IsDesiredStateFreshError  error
+	IsActualStateFreshError   error
+
+	SaveDesiredStateError  error
+	GetDesiredStateError   error
+	SaveActualStateError   error
+	GetActualStateError    error
+	SaveStartMessagesError error
+	GetStartMessagesError  error
+	SaveStopMessagesError  error
+	GetStopMessagesError   error
 
 	desiredState  map[string]models.DesiredAppState
 	actualState   map[string]models.InstanceHeartbeat
@@ -42,12 +43,15 @@ func (store *FakeStore) Reset() {
 	store.startMessages = make(map[string]models.QueueStartMessage, 0)
 	store.stopMessages = make(map[string]models.QueueStopMessage, 0)
 
-	store.ActualIsFresh = false
-	store.DesiredIsFresh = false
 	store.ActualFreshnessTimestamp = time.Time{}
 	store.DesiredFreshnessTimestamp = time.Time{}
-	store.BumpActualFreshnessError = nil
+	store.ActualFreshnessComparisonTimestamp = time.Time{}
+
 	store.BumpDesiredFreshnessError = nil
+	store.BumpActualFreshnessError = nil
+	store.IsDesiredStateFreshError = nil
+	store.IsActualStateFreshError = nil
+
 	store.SaveDesiredStateError = nil
 	store.GetDesiredStateError = nil
 	store.SaveActualStateError = nil
@@ -59,15 +63,22 @@ func (store *FakeStore) Reset() {
 }
 
 func (store *FakeStore) BumpDesiredFreshness(timestamp time.Time) error {
-	store.DesiredIsFresh = true
 	store.DesiredFreshnessTimestamp = timestamp
 	return store.BumpDesiredFreshnessError
 }
 
 func (store *FakeStore) BumpActualFreshness(timestamp time.Time) error {
-	store.ActualIsFresh = true
 	store.ActualFreshnessTimestamp = timestamp
 	return store.BumpActualFreshnessError
+}
+
+func (store *FakeStore) IsDesiredStateFresh() (bool, error) {
+	return store.DesiredFreshnessTimestamp != time.Time{}, store.IsDesiredStateFreshError
+}
+
+func (store *FakeStore) IsActualStateFresh(timestamp time.Time) (bool, error) {
+	store.ActualFreshnessComparisonTimestamp = timestamp
+	return store.ActualFreshnessTimestamp != time.Time{}, store.IsActualStateFreshError
 }
 
 func (store *FakeStore) SaveDesiredState(desiredStates []models.DesiredAppState) error {

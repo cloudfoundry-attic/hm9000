@@ -36,27 +36,42 @@ var _ = Describe("FakeStore", func() {
 		Ω(actual).Should(BeEmpty())
 		Ω(err).ShouldNot(HaveOccured())
 
-		Ω(store.DesiredIsFresh).Should(BeFalse())
-		Ω(store.ActualIsFresh).Should(BeFalse())
+		Ω(store.ActualFreshnessTimestamp).Should(BeZero())
+		Ω(store.DesiredFreshnessTimestamp).Should(BeZero())
+		Ω(store.ActualFreshnessComparisonTimestamp).Should(BeZero())
 	})
 
-	Describe("bumping freshness", func() {
-		It("should support bumping freshness by saving a bool and the passed in timestamp", func() {
-			err := store.BumpDesiredFreshness(time.Unix(17, 0))
-			Ω(store.DesiredIsFresh).Should(BeTrue())
+	Describe("freshness", func() {
+		It("should support bumping freshness and save the passed in timestamp", func() {
+			fresh, err := store.IsDesiredStateFresh()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(fresh).Should(BeFalse())
+
+			fresh, err = store.IsActualStateFresh(time.Unix(10, 0))
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(fresh).Should(BeFalse())
+			Ω(store.ActualFreshnessComparisonTimestamp).Should(Equal(time.Unix(10, 0)))
+
+			err = store.BumpDesiredFreshness(time.Unix(17, 0))
 			Ω(store.DesiredFreshnessTimestamp.Equal(time.Unix(17, 0))).Should(BeTrue())
 			Ω(err).ShouldNot(HaveOccured())
 
+			fresh, err = store.IsDesiredStateFresh()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(fresh).Should(BeTrue())
+
 			err = store.BumpActualFreshness(time.Unix(12, 0))
-			Ω(store.ActualIsFresh).Should(BeTrue())
 			Ω(store.ActualFreshnessTimestamp.Equal(time.Unix(12, 0))).Should(BeTrue())
 			Ω(err).ShouldNot(HaveOccured())
 
+			fresh, err = store.IsActualStateFresh(time.Unix(17, 0))
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(fresh).Should(BeTrue())
+
 			store.Reset()
-			Ω(store.DesiredIsFresh).Should(BeFalse())
 			Ω(store.DesiredFreshnessTimestamp).Should(BeZero())
-			Ω(store.ActualIsFresh).Should(BeFalse())
 			Ω(store.ActualFreshnessTimestamp).Should(BeZero())
+			Ω(store.ActualFreshnessComparisonTimestamp).Should(BeZero())
 		})
 
 		It("should support returning errors", func() {
@@ -69,12 +84,26 @@ var _ = Describe("FakeStore", func() {
 			err = store.BumpActualFreshness(time.Unix(17, 0))
 			Ω(err).Should(Equal(errIn))
 
+			store.IsDesiredStateFreshError = errIn
+			_, err = store.IsDesiredStateFresh()
+			Ω(err).Should(Equal(errIn))
+
+			store.IsActualStateFreshError = errIn
+			_, err = store.IsActualStateFresh(time.Unix(17, 0))
+			Ω(err).Should(Equal(errIn))
+
 			store.Reset()
 
 			err = store.BumpDesiredFreshness(time.Unix(12, 0))
 			Ω(err).ShouldNot(HaveOccured())
 
 			err = store.BumpActualFreshness(time.Unix(12, 0))
+			Ω(err).ShouldNot(HaveOccured())
+
+			_, err = store.IsDesiredStateFresh()
+			Ω(err).ShouldNot(HaveOccured())
+
+			_, err = store.IsActualStateFresh(time.Unix(17, 0))
 			Ω(err).ShouldNot(HaveOccured())
 		})
 	})

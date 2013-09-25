@@ -200,7 +200,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should not bump the freshness yet", func() {
-				Ω(store.DesiredIsFresh).Should(BeFalse())
+				Ω(store.DesiredFreshnessTimestamp).Should(BeZero())
 			})
 
 			It("should not send a result down the resultChan yet", func() {
@@ -225,7 +225,6 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should bump the freshness", func() {
-				Ω(store.DesiredIsFresh).Should(BeTrue())
 				Ω(store.DesiredFreshnessTimestamp).Should(Equal(timeProvider.Time()))
 			})
 
@@ -244,7 +243,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should not bump the freshness", func() {
-				Ω(store.DesiredIsFresh).Should(BeFalse())
+				Ω(store.DesiredFreshnessTimestamp).Should(BeZero())
 			})
 
 			It("should send an error down the result channel", func(done Done) {

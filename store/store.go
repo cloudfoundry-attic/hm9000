@@ -17,6 +17,9 @@ type Store interface {
 	BumpDesiredFreshness(timestamp time.Time) error
 	BumpActualFreshness(timestamp time.Time) error
 
+	IsDesiredStateFresh() (bool, error)
+	IsActualStateFresh(time.Time) (bool, error)
+
 	SaveDesiredState(desiredStates []models.DesiredAppState) error
 	GetDesiredState() ([]models.DesiredAppState, error)
 	DeleteDesiredState(desiredStates []models.DesiredAppState) error
