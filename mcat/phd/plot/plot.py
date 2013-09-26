@@ -24,11 +24,7 @@ with open("data.csv") as infile:
 nodeCounts = [1,3,5,7]
 colors = [[0,0,0,1.0],[1.0,0,0,1.0],[0,0.5,0,1.0],[0,0,1.0,1.0]]
 dashes = ["-", "--", ":"]
-
-categories = {
-    "# Concurrent Requests":[1,10,30],
-    "Record Size (bytes)":[128, 512, 2048]
-}
+lw = 1
 
 def plot(storeType, category, xitem, yitem, yerritem):
     categorySlices = categories[category]
@@ -45,12 +41,82 @@ def plot(storeType, category, xitem, yitem, yerritem):
             if len(x) == 0:
                 continue
             pylab.fill_between(x,np.array(y) + np.array(yerr), np.array(y) - np.array(yerr), color=colors[i], alpha=0.1, linewidth=0)
-            pylab.plot(x, y, color=colors[i], linestyle=dashes[j], label="%in %i" %(nodes, categorySlice))
+            pylab.plot(x, y, color=colors[i], linestyle=dashes[j], label="%s %in %i" %(storeType, nodes, categorySlice), linewidth=lw)
 
+nodeCounts = [1, 5]
+categories = {
+    "# Concurrent Requests":[1, 30],
+}
+
+pylab.figure(figsize=[12,12], dpi=600)
+pylab.suptitle("Combined Performance")
+
+ax = pylab.subplot(2, 2, 1)
+ax.xaxis.set_label_position('top')
+ax.xaxis.tick_top()
+lw = 1
+plot("ETCD", "# Concurrent Requests", "Record Size (bytes)", "Write Records/s", "Sigma Write Records/s")
+lw = 2
+plot("Zookeeper", "# Concurrent Requests", "Record Size (bytes)", "Write Records/s", "Sigma Write Records/s")
+pylab.xlabel("Record Size (bytes)")
+pylab.ylabel("Number of Records Written / s")
+pylab.yscale('log')
+pylab.xscale('log')
+pylab.axis([64, 8192, 10, 3e4])
+
+ax = pylab.subplot(2, 2, 2)
+ax.xaxis.set_label_position('top')
+ax.xaxis.tick_top()
+ax.yaxis.set_label_position('right')
+ax.yaxis.tick_right()
+pylab.yscale('log')
+lw = 1
+plot("ETCD", "# Concurrent Requests", "Record Size (bytes)", "Write MB/s", "Sigma Write MB/s")
+lw = 2
+plot("Zookeeper", "# Concurrent Requests", "Record Size (bytes)", "Write MB/s", "Sigma Write MB/s")
+pylab.xlabel("Record Size (bytes)")
+pylab.ylabel("MB Written / s")
+pylab.yscale('log')
+pylab.xscale('log')
+pylab.axis([64, 8192, 1e-3, 30])
+
+
+ax = pylab.subplot(2, 2, 3)
+lw = 1
+plot("ETCD", "# Concurrent Requests", "Record Size (bytes)", "Read Records/s", "Sigma Read Records/s")
+lw = 2
+plot("Zookeeper", "# Concurrent Requests", "Record Size (bytes)", "Read Records/s", "Sigma Read Records/s")
+pylab.xlabel("Record Size (bytes)")
+pylab.ylabel("Number of Records Read / s")
+pylab.yscale('log')
+pylab.xscale('log')
+pylab.axis([64, 8192, 5e3, 1.4e5])
+
+ax = pylab.subplot(2, 2, 4)
+ax.yaxis.set_label_position('right')
+ax.yaxis.tick_right()
+lw = 1
+plot("ETCD", "# Concurrent Requests", "Record Size (bytes)", "Reads MB/s", "Sigma Reads MB/s")
+lw = 2
+plot("Zookeeper", "# Concurrent Requests", "Record Size (bytes)", "Reads MB/s", "Sigma Reads MB/s")
+pylab.xlabel("Record Size (bytes)")
+pylab.ylabel("MB Read / s")
+pylab.yscale('log')
+pylab.xscale('log')
+pylab.axis([64, 8192, 0.3, 50])
+
+pylab.savefig("combined.pdf")
+
+nodeCounts = [1,3,5,7]
+
+categories = {
+    "# Concurrent Requests":[1,10,30],
+    "Record Size (bytes)":[128, 512, 2048]
+}
 
 for store in ["ETCD", "Zookeeper"]:
     pylab.figure(figsize=[12,12], dpi=600)
-    pylab.suptitle(store + " Write Performance By Record Size")
+    pylab.suptitle(store + " Performance By Record Size")
 
     ax = pylab.subplot(2, 2, 1)
     ax.xaxis.set_label_position('top')
@@ -100,7 +166,7 @@ for store in ["ETCD", "Zookeeper"]:
 
 for store in ["ETCD", "Zookeeper"]:
     pylab.figure(figsize=[12,12], dpi=600)
-    pylab.suptitle(store + " Write Performance By Concurrency")
+    pylab.suptitle(store + " Performance By Concurrency")
 
     ax = pylab.subplot(2, 2, 1)
     ax.xaxis.set_label_position('top')
