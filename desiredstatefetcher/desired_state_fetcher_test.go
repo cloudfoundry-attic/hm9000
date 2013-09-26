@@ -164,82 +164,9 @@ var _ = Describe("DesiredStateFetcher", func() {
 			Ω(query.Get("bulk_token")).Should(Equal("{}"))
 		})
 
-		Context("when a response with desired state is received", func() {
-			var (
-				a1 app.App
-				a2 app.App
-			)
-
-			BeforeEach(func() {
-				a1 = app.NewApp()
-				a2 = app.NewApp()
-
-				response = DesiredStateServerResponse{
-					Results: map[string]models.DesiredAppState{
-						a1.AppGuid: a1.DesiredState(0),
-						a2.AppGuid: a2.DesiredState(0),
-					},
-					BulkToken: BulkToken{
-						Id: 5,
-					},
-				}
-
-				httpClient.LastRequest().Succeed(response.ToJSON())
-			})
-
-			It("should store the desired states", func() {
-				desired, _ := store.GetDesiredState()
-				Ω(desired).Should(HaveLen(2))
-				Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState(0))))
-				Ω(desired).Should(ContainElement(EqualDesiredState(a2.DesiredState(0))))
-			})
-
-			It("should request the next batch", func() {
-				Ω(httpClient.Requests).Should(HaveLen(2))
-				Ω(httpClient.LastRequest().URL.Query().Get("bulk_token")).Should(Equal(response.BulkTokenRepresentation()))
-			})
-
-			It("should not bump the freshness yet", func() {
-				Ω(store.DesiredFreshnessTimestamp).Should(BeZero())
-			})
-
-			It("should not send a result down the resultChan yet", func() {
-				Ω(resultChan).Should(HaveLen(0))
-			})
-		})
-
-		Context("when an empty response is received", func() {
-			BeforeEach(func() {
-				response = DesiredStateServerResponse{
-					Results: map[string]models.DesiredAppState{},
-					BulkToken: BulkToken{
-						Id: 17,
-					},
-				}
-
-				httpClient.LastRequest().Succeed(response.ToJSON())
-			})
-
+		assertFailure := func(expectedMessage string, numRequests int) {
 			It("should stop requesting batches", func() {
-				Ω(httpClient.Requests).Should(HaveLen(1))
-			})
-
-			It("should bump the freshness", func() {
-				Ω(store.DesiredFreshnessTimestamp).Should(Equal(timeProvider.Time()))
-			})
-
-			It("should send a succesful result down the result channel", func(done Done) {
-				result := <-resultChan
-				Ω(result.Success).Should(BeTrue())
-				Ω(result.Message).Should(BeZero())
-				Ω(result.Error).ShouldNot(HaveOccured())
-				close(done)
-			}, 0.1)
-		})
-
-		assertFailure := func(expectedMessage string) {
-			It("should stop requesting batches", func() {
-				Ω(httpClient.Requests).Should(HaveLen(1))
+				Ω(httpClient.Requests).Should(HaveLen(numRequests))
 			})
 
 			It("should not bump the freshness", func() {
@@ -255,12 +182,115 @@ var _ = Describe("DesiredStateFetcher", func() {
 			}, 1.0)
 		}
 
+		Context("when a response with desired state is received", func() {
+			var (
+				a1         app.App
+				a2         app.App
+				stoppedApp app.App
+				deletedApp app.App
+			)
+
+			BeforeEach(func() {
+				deletedApp = app.NewApp()
+				store.SaveDesiredState([]models.DesiredAppState{deletedApp.DesiredState(0)})
+
+				a1 = app.NewApp()
+				a2 = app.NewApp()
+				stoppedApp = app.NewApp()
+				stoppedDesiredState := stoppedApp.DesiredState(0)
+				stoppedDesiredState.State = models.AppStateStopped
+				response = DesiredStateServerResponse{
+					Results: map[string]models.DesiredAppState{
+						a1.AppGuid:         a1.DesiredState(0),
+						a2.AppGuid:         a2.DesiredState(0),
+						stoppedApp.AppGuid: stoppedDesiredState,
+					},
+					BulkToken: BulkToken{
+						Id: 5,
+					},
+				}
+
+				httpClient.LastRequest().Succeed(response.ToJSON())
+			})
+
+			It("should not store the desired state (yet)", func() {
+				desired, _ := store.GetDesiredState()
+				Ω(desired).Should(HaveLen(1))
+				Ω(desired[0]).Should(EqualDesiredState(deletedApp.DesiredState(0)))
+			})
+
+			It("should request the next batch", func() {
+				Ω(httpClient.Requests).Should(HaveLen(2))
+				Ω(httpClient.LastRequest().URL.Query().Get("bulk_token")).Should(Equal(response.BulkTokenRepresentation()))
+			})
+
+			It("should not bump the freshness yet", func() {
+				Ω(store.DesiredFreshnessTimestamp).Should(BeZero())
+			})
+
+			It("should not send a result down the resultChan yet", func() {
+				Ω(resultChan).Should(HaveLen(0))
+			})
+
+			Context("when an empty response is received", func() {
+				JustBeforeEach(func() {
+					response = DesiredStateServerResponse{
+						Results: map[string]models.DesiredAppState{},
+						BulkToken: BulkToken{
+							Id: 17,
+						},
+					}
+
+					httpClient.LastRequest().Succeed(response.ToJSON())
+				})
+
+				It("should stop requesting batches", func() {
+					Ω(httpClient.Requests).Should(HaveLen(2))
+				})
+
+				It("should bump the freshness", func() {
+					Ω(store.DesiredFreshnessTimestamp).Should(Equal(timeProvider.Time()))
+				})
+
+				It("should store any desired state that is in the STARTED appstate, and delete any stale data", func() {
+					desired, _ := store.GetDesiredState()
+					Ω(desired).Should(HaveLen(2))
+					Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState(0))))
+					Ω(desired).Should(ContainElement(EqualDesiredState(a2.DesiredState(0))))
+				})
+
+				It("should send a succesful result down the result channel", func(done Done) {
+					result := <-resultChan
+					Ω(result.Success).Should(BeTrue())
+					Ω(result.Message).Should(BeZero())
+					Ω(result.Error).ShouldNot(HaveOccured())
+					close(done)
+				}, 0.1)
+
+				Context("and it fails to write to the store", func() {
+					BeforeEach(func() {
+						store.SaveDesiredStateError = errors.New("oops!")
+					})
+
+					assertFailure("Failed to sync desired state to the store", 2)
+				})
+
+				Context("and it fails to read from the store", func() {
+					BeforeEach(func() {
+						store.GetDesiredStateError = errors.New("oops!")
+					})
+
+					assertFailure("Failed to sync desired state to the store", 2)
+				})
+			})
+		})
+
 		Context("when an unauthorized response is received", func() {
 			BeforeEach(func() {
 				httpClient.LastRequest().RespondWithStatus(http.StatusUnauthorized)
 			})
 
-			assertFailure("HTTP request received unauthorized response code")
+			assertFailure("HTTP request received unauthorized response code", 1)
 		})
 
 		Context("when the HTTP request returns a non-200 response", func() {
@@ -268,7 +298,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 				httpClient.LastRequest().RespondWithStatus(http.StatusNotFound)
 			})
 
-			assertFailure("HTTP request received non-200 response (404)")
+			assertFailure("HTTP request received non-200 response (404)", 1)
 		})
 
 		Context("when the HTTP request fails with an error", func() {
@@ -276,7 +306,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 				httpClient.LastRequest().RespondWithError(errors.New(":("))
 			})
 
-			assertFailure("HTTP request failed with error")
+			assertFailure("HTTP request failed with error", 1)
 		})
 
 		Context("when a broken body is received", func() {
@@ -292,7 +322,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 				httpClient.LastRequest().Callback(response, nil)
 			})
 
-			assertFailure("Failed to read HTTP response body")
+			assertFailure("Failed to read HTTP response body", 1)
 		})
 
 		Context("when a malformed response is received", func() {
@@ -300,26 +330,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 				httpClient.LastRequest().Succeed([]byte("ß"))
 			})
 
-			assertFailure("Failed to parse HTTP response body JSON")
-		})
-
-		Context("when it fails to write to the store", func() {
-			BeforeEach(func() {
-				store.SaveDesiredStateError = errors.New("oops!")
-				a := app.NewApp()
-				response = DesiredStateServerResponse{
-					Results: map[string]models.DesiredAppState{
-						a.AppGuid: a.DesiredState(0),
-					},
-					BulkToken: BulkToken{
-						Id: 5,
-					},
-				}
-
-				httpClient.LastRequest().Succeed(response.ToJSON())
-			})
-
-			assertFailure("Failed to store desired state in store")
+			assertFailure("Failed to parse HTTP response body JSON", 1)
 		})
 	})
 })

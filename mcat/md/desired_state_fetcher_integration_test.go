@@ -65,6 +65,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
 		Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJSON()))
+
 	})
 
 	It("bumps the freshness", func() {
@@ -80,5 +81,39 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		Ω(result.NumResults).Should(Equal(3))
 		Ω(result.Message).Should(BeZero())
 		Ω(result.Error).ShouldNot(HaveOccured())
+	})
+
+	Context("when fetching again, and apps have been stopped and/or deleted", func() {
+		BeforeEach(func() {
+			<-resultChan
+
+			desired1 := a1.DesiredState(0)
+			desired1.State = models.AppStateStopped
+
+			stateServer.SetDesiredState([]models.DesiredAppState{
+				desired1,
+				a3.DesiredState(0),
+			})
+
+			fetcher.Fetch(resultChan)
+		})
+
+		It("should remove those apps from the store", func() {
+			<-resultChan
+
+			_, err := storeAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
+			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+
+			_, err = storeAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
+			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+
+			node, err := storeAdapter.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
+			Ω(err).ShouldNot(HaveOccured())
+
+			Ω(node.TTL).Should(BeNumerically("<=", 10*60))
+			Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
+
+			Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJSON()))
+		})
 	})
 })

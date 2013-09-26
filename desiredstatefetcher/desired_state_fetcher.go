@@ -26,6 +26,7 @@ type DesiredStateFetcher struct {
 	httpClient   httpclient.HttpClient
 	store        store.Store
 	timeProvider timeprovider.TimeProvider
+	cache        map[string]models.DesiredAppState
 }
 
 func New(config config.Config,
@@ -40,10 +41,12 @@ func New(config config.Config,
 		httpClient:   httpClient,
 		store:        store,
 		timeProvider: timeProvider,
+		cache:        map[string]models.DesiredAppState{},
 	}
 }
 
 func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult) {
+	fetcher.cache = map[string]models.DesiredAppState{}
 	err := fetcher.messageBus.Request(fetcher.config.CCAuthMessageBusSubject, []byte{}, func(response []byte) {
 		authInfo, err := models.NewBasicAuthInfoFromJSON(response)
 		if err != nil {
@@ -99,17 +102,20 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 			resultChan <- DesiredStateFetcherResult{Message: "Failed to parse HTTP response body JSON", Error: err}
 			return
 		}
+
 		if len(response.Results) == 0 {
+			err = fetcher.syncStore()
+			if err != nil {
+				resultChan <- DesiredStateFetcherResult{Message: "Failed to sync desired state to the store", Error: err}
+				return
+			}
+
 			fetcher.store.BumpDesiredFreshness(fetcher.timeProvider.Time())
 			resultChan <- DesiredStateFetcherResult{Success: true, NumResults: numResults}
 			return
 		}
 
-		err = fetcher.saveToStore(response)
-		if err != nil {
-			resultChan <- DesiredStateFetcherResult{Message: "Failed to store desired state in store", Error: err}
-			return
-		}
+		fetcher.cacheResponse(response)
 		fetcher.fetchBatch(authorization, response.BulkTokenRepresentation(), numResults+len(response.Results), resultChan)
 	})
 }
@@ -118,12 +124,38 @@ func (fetcher *DesiredStateFetcher) bulkURL(batchSize int, bulkToken string) str
 	return fmt.Sprintf("%s/bulk/apps?batch_size=%d&bulk_token=%s", fetcher.config.CCBaseURL, batchSize, bulkToken)
 }
 
-func (fetcher *DesiredStateFetcher) saveToStore(response DesiredStateServerResponse) error {
-	desiredStates := make([]models.DesiredAppState, len(response.Results))
+func (fetcher *DesiredStateFetcher) syncStore() error {
+	desiredStates := make([]models.DesiredAppState, len(fetcher.cache))
 	i := 0
-	for _, desiredState := range response.Results {
+	for _, desiredState := range fetcher.cache {
 		desiredStates[i] = desiredState
 		i++
 	}
-	return fetcher.store.SaveDesiredState(desiredStates)
+	err := fetcher.store.SaveDesiredState(desiredStates)
+	if err != nil {
+		return err
+	}
+
+	storedDesiredState, err := fetcher.store.GetDesiredState()
+	if err != nil {
+		return err
+	}
+
+	statesToDelete := make([]models.DesiredAppState, 0)
+	for _, desiredState := range storedDesiredState {
+		_, present := fetcher.cache[desiredState.AppGuid]
+		if !present {
+			statesToDelete = append(statesToDelete, desiredState)
+		}
+	}
+
+	return fetcher.store.DeleteDesiredState(statesToDelete)
+}
+
+func (fetcher *DesiredStateFetcher) cacheResponse(response DesiredStateServerResponse) {
+	for applicationGuid, desiredState := range response.Results {
+		if desiredState.State == models.AppStateStarted {
+			fetcher.cache[applicationGuid] = desiredState
+		}
+	}
 }
