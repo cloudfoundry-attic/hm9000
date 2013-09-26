@@ -82,20 +82,14 @@ func (analyzer *Analyzer) verifyFreshness() error {
 }
 
 func (analyzer *Analyzer) fetchStateAndGenerateLookupTables() (err error) {
-	desiredStates, err := analyzer.store.GetDesiredState()
-	if err != nil {
-		return
-	}
-	analyzer.actualStates, err = analyzer.store.GetActualState()
+	analyzer.desiredStates, err = analyzer.store.GetDesiredState()
 	if err != nil {
 		return
 	}
 
-	analyzer.desiredStates = make([]models.DesiredAppState, 0)
-	for _, desired := range desiredStates {
-		if desired.State == models.AppStateStarted {
-			analyzer.desiredStates = append(analyzer.desiredStates, desired)
-		}
+	analyzer.actualStates, err = analyzer.store.GetActualState()
+	if err != nil {
+		return
 	}
 
 	analyzer.setOfApps = make(map[string]bool, 0)

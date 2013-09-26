@@ -123,24 +123,6 @@ var _ = Describe("Analyzer", func() {
 				Ω(outbox.StopMessages).Should(BeEmpty())
 			})
 		})
-
-		Context("When there are stopped apps and no running instances for that app", func() {
-			BeforeEach(func() {
-				desired := a.DesiredState(10)
-				desired.State = models.AppStateStopped
-				desired.NumberOfInstances = 3
-				store.SaveDesiredState([]models.DesiredAppState{
-					desired,
-				})
-			})
-
-			It("should not send any start or stop messages", func() {
-				err := analyzer.Analyze()
-				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.StartMessages).Should(BeEmpty())
-				Ω(outbox.StopMessages).Should(BeEmpty())
-			})
-		})
 	})
 
 	Describe("Starting missing instances", func() {
@@ -191,24 +173,6 @@ var _ = Describe("Analyzer", func() {
 			})
 
 			Context("but no desired instances", func() {
-				It("should return an array of stop messages for the extra instances", func() {
-					err := analyzer.Analyze()
-					Ω(err).ShouldNot(HaveOccured())
-					Ω(outbox.StartMessages).Should(BeEmpty())
-					assertStopMessages(newStopMessage(a.GetInstance(0)), newStopMessage(a.GetInstance(1)), newStopMessage(a.GetInstance(2)))
-				})
-			})
-
-			Context("and the desired app is in the STOPPED state", func() {
-				BeforeEach(func() {
-					desired := a.DesiredState(0)
-					desired.NumberOfInstances = 3
-					desired.State = models.AppStateStopped
-					store.SaveDesiredState([]models.DesiredAppState{
-						desired,
-					})
-				})
-
 				It("should return an array of stop messages for the extra instances", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
@@ -386,17 +350,14 @@ var _ = Describe("Analyzer", func() {
 		var (
 			otherApp      app.App
 			yetAnotherApp app.App
-			olderApp      app.App
+			undesiredApp  app.App
 		)
 
 		BeforeEach(func() {
 			otherApp = app.NewApp()
-			olderApp = app.NewApp()
+			undesiredApp = app.NewApp()
 			yetAnotherApp = app.NewApp()
-			olderApp.AppGuid = a.AppGuid
-
-			olderDesired := olderApp.DesiredState(0)
-			olderDesired.State = models.AppStateStopped
+			undesiredApp.AppGuid = a.AppGuid
 
 			otherDesired := otherApp.DesiredState(0)
 			otherDesired.NumberOfInstances = 3
@@ -407,13 +368,12 @@ var _ = Describe("Analyzer", func() {
 			store.SaveDesiredState([]models.DesiredAppState{
 				a.DesiredState(0),
 				otherDesired,
-				olderDesired,
 				yetAnotherDesired,
 			})
 			store.SaveActualState([]models.InstanceHeartbeat{
 				a.GetInstance(0).Heartbeat(0),
 				a.GetInstance(1).Heartbeat(0),
-				olderApp.GetInstance(0).Heartbeat(0),
+				undesiredApp.GetInstance(0).Heartbeat(0),
 				otherApp.GetInstance(0).Heartbeat(0),
 				otherApp.GetInstance(2).Heartbeat(0),
 			})
@@ -423,7 +383,7 @@ var _ = Describe("Analyzer", func() {
 			err := analyzer.Analyze()
 			Ω(err).ShouldNot(HaveOccured())
 			assertStartMessages(newStartMessage(otherApp, 1), newStartMessage(yetAnotherApp, 0), newStartMessage(yetAnotherApp, 1))
-			assertStopMessages(newStopMessage(a.GetInstance(1)), newStopMessage(olderApp.GetInstance(0)))
+			assertStopMessages(newStopMessage(a.GetInstance(1)), newStopMessage(undesiredApp.GetInstance(0)))
 		})
 	})
 
