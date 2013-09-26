@@ -237,7 +237,7 @@ var _ = Describe("Analyzer", func() {
 		})
 	})
 
-	Describe("Interesting edge cases involving index-mismatches", func() {
+	Describe("Interesting edge cases involving extra instances (instances at indices >= numdesired)", func() {
 		BeforeEach(func() {
 			desired := a.DesiredState(0)
 			desired.NumberOfInstances = 3
@@ -245,25 +245,7 @@ var _ = Describe("Analyzer", func() {
 				desired,
 			})
 		})
-
-		Context("when *enough* apps are running, but there are an indices missing", func() {
-			BeforeEach(func() {
-				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(1).Heartbeat(0),
-					a.GetInstance(3).Heartbeat(0),
-					a.GetInstance(4).Heartbeat(0),
-				})
-			})
-
-			It("should return a start message containing the missing indices and *no* stop message", func() {
-				err := analyzer.Analyze()
-				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.StopMessages).Should(BeEmpty())
-				assertStartMessages(newStartMessage(a, 0), newStartMessage(a, 2))
-			})
-		})
-
-		Context("when more than *enough* apps are running, but there are indices missing", func() {
+		Context("when there are indices missing", func() {
 			BeforeEach(func() {
 				store.SaveActualState([]models.InstanceHeartbeat{
 					a.GetInstance(1).Heartbeat(0),
@@ -274,15 +256,15 @@ var _ = Describe("Analyzer", func() {
 				})
 			})
 
-			It("should return a start message containing the missing indices and a stop message for the extra instances", func() {
+			It("should return a start message containing the missing indices and no stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
 				assertStartMessages(newStartMessage(a, 0), newStartMessage(a, 2))
-				assertStopMessages(newStopMessage(a.GetInstance(5)), newStopMessage(a.GetInstance(6)))
+				Ω(outbox.StopMessages).Should(BeEmpty())
 			})
 		})
 
-		Context("when the missing indices start", func() {
+		Context("when all desired indices are present", func() {
 			BeforeEach(func() {
 				store.SaveActualState([]models.InstanceHeartbeat{
 					a.GetInstance(0).Heartbeat(0),
@@ -300,7 +282,103 @@ var _ = Describe("Analyzer", func() {
 				assertStopMessages(newStopMessage(a.GetInstance(3)), newStopMessage(a.GetInstance(4)))
 			})
 		})
+	})
 
+	Context("When multiple instances report on the same index", func() {
+		var (
+			duplicateInstance1 app.Instance
+			duplicateInstance2 app.Instance
+			duplicateInstance3 app.Instance
+		)
+
+		BeforeEach(func() {
+			desired := a.DesiredState(0)
+			desired.NumberOfInstances = 3
+			store.SaveDesiredState([]models.DesiredAppState{
+				desired,
+			})
+
+			duplicateInstance1 = a.GetInstance(2)
+			duplicateInstance1.InstanceGuid = app.Guid()
+			duplicateInstance2 = a.GetInstance(2)
+			duplicateInstance2.InstanceGuid = app.Guid()
+			duplicateInstance3 = a.GetInstance(2)
+			duplicateInstance3.InstanceGuid = app.Guid()
+		})
+
+		Context("When there are missing instances on other indices", func() {
+			It("should not schedule any stops and start the missing indices", func() {
+				//[-,-,2|2|2|2]
+				store.SaveActualState([]models.InstanceHeartbeat{
+					a.GetInstance(2).Heartbeat(0),
+					duplicateInstance1.Heartbeat(0),
+					duplicateInstance2.Heartbeat(0),
+					duplicateInstance3.Heartbeat(0),
+				})
+
+				err := analyzer.Analyze()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(outbox.StopMessages).Should(BeEmpty())
+				assertStartMessages(newStartMessage(a, 0), newStartMessage(a, 1))
+			})
+		})
+
+		Context("When all the other indices has instances", func() {
+			It("should schedule a stop for every instance at the duplicated index with increasing delays", func() {
+				//[0,1,2|2|2] < stop 2,2,2 with increasing delays etc...
+				store.SaveActualState([]models.InstanceHeartbeat{
+					a.GetInstance(0).Heartbeat(0),
+					a.GetInstance(1).Heartbeat(0),
+					a.GetInstance(2).Heartbeat(0),
+					duplicateInstance1.Heartbeat(0),
+					duplicateInstance2.Heartbeat(0),
+				})
+
+				err := analyzer.Analyze()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(outbox.StartMessages).Should(BeEmpty())
+				stop0 := newStopMessage(a.GetInstance(2))
+				stop1 := newStopMessage(duplicateInstance1)
+				stop1.SendOn = stop1.SendOn + int64(conf.GracePeriod)
+				stop2 := newStopMessage(duplicateInstance2)
+				stop2.SendOn = stop2.SendOn + int64(conf.GracePeriod*2)
+				assertStopMessages(stop0, stop1, stop2)
+			})
+		})
+
+		Context("When the duplicated index is also an unwanted index", func() {
+			var (
+				duplicateExtraInstance1 app.Instance
+				duplicateExtraInstance2 app.Instance
+			)
+
+			BeforeEach(func() {
+				duplicateExtraInstance1 = a.GetInstance(3)
+				duplicateExtraInstance1.InstanceGuid = app.Guid()
+				duplicateExtraInstance2 = a.GetInstance(3)
+				duplicateExtraInstance2.InstanceGuid = app.Guid()
+			})
+
+			It("should terminate the extra indices with extreme prejudice", func() {
+				//[0,1,2,3,3,3] < stop 3,3,3
+				store.SaveActualState([]models.InstanceHeartbeat{
+					a.GetInstance(0).Heartbeat(0),
+					a.GetInstance(1).Heartbeat(0),
+					a.GetInstance(2).Heartbeat(0),
+					a.GetInstance(3).Heartbeat(0),
+					duplicateExtraInstance1.Heartbeat(0),
+					duplicateExtraInstance2.Heartbeat(0),
+				})
+
+				err := analyzer.Analyze()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(outbox.StartMessages).Should(BeEmpty())
+				stop0 := newStopMessage(a.GetInstance(3))
+				stop1 := newStopMessage(duplicateExtraInstance1)
+				stop2 := newStopMessage(duplicateExtraInstance2)
+				assertStopMessages(stop0, stop1, stop2)
+			})
+		})
 	})
 
 	Describe("Processing multiple apps", func() {

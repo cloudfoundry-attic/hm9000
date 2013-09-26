@@ -19,7 +19,7 @@ type Analyzer struct {
 	actualStates  []models.InstanceHeartbeat
 
 	setOfApps    map[string]bool
-	runningByApp map[string]SortableActualState
+	runningByApp map[string][]models.InstanceHeartbeat
 	desiredByApp map[string]models.DesiredAppState
 }
 
@@ -50,7 +50,7 @@ func (analyzer *Analyzer) Analyze() error {
 		desired := analyzer.desiredByApp[appVersionKey]
 		runningInstances, hasRunning := analyzer.runningByApp[appVersionKey]
 		if !hasRunning {
-			runningInstances = SortableActualState{}
+			runningInstances = []models.InstanceHeartbeat{}
 		}
 		startMessages, stopMessages := analyzer.analyzeApp(desired, runningInstances)
 		allStartMessages = append(allStartMessages, startMessages...)
@@ -100,7 +100,7 @@ func (analyzer *Analyzer) fetchStateAndGenerateLookupTables() (err error) {
 
 	analyzer.setOfApps = make(map[string]bool, 0)
 	analyzer.desiredByApp = make(map[string]models.DesiredAppState, 0)
-	analyzer.runningByApp = make(map[string]SortableActualState, 0)
+	analyzer.runningByApp = make(map[string][]models.InstanceHeartbeat, 0)
 
 	for _, desired := range analyzer.desiredStates {
 		key := desired.AppGuid + "-" + desired.AppVersion
@@ -114,7 +114,7 @@ func (analyzer *Analyzer) fetchStateAndGenerateLookupTables() (err error) {
 		if ok {
 			analyzer.runningByApp[key] = append(value, actual)
 		} else {
-			analyzer.runningByApp[key] = SortableActualState{actual}
+			analyzer.runningByApp[key] = []models.InstanceHeartbeat{actual}
 		}
 		analyzer.setOfApps[key] = true
 	}

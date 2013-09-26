@@ -4,30 +4,56 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 )
 
-func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInstances SortableActualState) (startMessages []models.QueueStartMessage, stopMessages []models.QueueStopMessage) {
+func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInstances []models.InstanceHeartbeat) (startMessages []models.QueueStartMessage, stopMessages []models.QueueStopMessage) {
 	hasDesired := (desired.AppGuid != "")
 	numDesired := 0
 	if hasDesired {
 		numDesired = desired.NumberOfInstances
 	}
 
-	runningIndices := map[int]bool{}
+	runningByIndex := map[int][]models.InstanceHeartbeat{}
 	for _, runningInstance := range runningInstances {
-		runningIndices[runningInstance.InstanceIndex] = true
+		index := runningInstance.InstanceIndex
+		value, ok := runningByIndex[index]
+		if ok {
+			runningByIndex[index] = append(value, runningInstance)
+		} else {
+			runningByIndex[index] = []models.InstanceHeartbeat{runningInstance}
+		}
 	}
 
+	//start missing instances
 	for index := 0; index < desired.NumberOfInstances; index++ {
-		if !runningIndices[index] {
+		if len(runningByIndex[index]) == 0 {
 			startMessages = append(startMessages, models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod, 0, desired.AppGuid, desired.AppVersion, index))
 		}
 	}
 
-	if len(runningInstances) > numDesired {
-		runningInstances.SortDescendingInPlace()
-		numToStop := len(runningInstances) - numDesired
-		for i := 0; i < numToStop; i++ {
-			stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod, runningInstances[i].InstanceGuid))
+	if len(startMessages) > 0 {
+		return
+	}
+
+	//stop extra instances at indices >= numDesired
+	for _, runningInstance := range runningInstances {
+		if runningInstance.InstanceIndex >= numDesired {
+			stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod, runningInstance.InstanceGuid))
 		}
+	}
+
+	//stop duplicate instances at indices < numDesired
+	for index := 0; index < desired.NumberOfInstances; index++ {
+		if len(runningByIndex[index]) > 1 {
+			duplicateStops := analyzer.stopMessagesForDuplicateInstances(runningByIndex[index])
+			stopMessages = append(stopMessages, duplicateStops...)
+		}
+	}
+
+	return
+}
+
+func (analyzer *Analyzer) stopMessagesForDuplicateInstances(runningInstances []models.InstanceHeartbeat) (stopMessages []models.QueueStopMessage) {
+	for i, instance := range runningInstances {
+		stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), i*analyzer.conf.GracePeriod, analyzer.conf.GracePeriod, instance.InstanceGuid))
 	}
 
 	return
