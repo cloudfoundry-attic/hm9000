@@ -53,7 +53,7 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 
 func (analyzer *Analyzer) stopMessagesForDuplicateInstances(runningInstances []models.InstanceHeartbeat) (stopMessages []models.QueueStopMessage) {
 	for i, instance := range runningInstances {
-		stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), i*analyzer.conf.GracePeriod, analyzer.conf.GracePeriod, instance.InstanceGuid))
+		stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), (i+1)*analyzer.conf.GracePeriod, analyzer.conf.GracePeriod, instance.InstanceGuid))
 	}
 
 	return
