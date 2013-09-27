@@ -3,12 +3,12 @@ package startstoplistener
 import (
 	"encoding/json"
 	"github.com/cloudfoundry/go_cfmessagebus"
-	. "github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/models"
 )
 
 type StartStopListener struct {
-	Starts     []StartMessage
-	Stops      []StopMessage
+	Starts     []models.StartMessage
+	Stops      []models.StopMessage
 	messageBus cfmessagebus.MessageBus
 }
 
@@ -18,14 +18,13 @@ func NewStartStopListener(messageBus cfmessagebus.MessageBus) *StartStopListener
 	}
 
 	messageBus.Subscribe("health.start", func(payload []byte) {
-		startMessage := StartMessage{}
+		startMessage := models.StartMessage{}
 		json.Unmarshal(payload, &startMessage)
-
 		listener.Starts = append(listener.Starts, startMessage)
 	})
 
 	messageBus.Subscribe("health.stop", func(payload []byte) {
-		stopMessage := StopMessage{}
+		stopMessage := models.StopMessage{}
 		json.Unmarshal(payload, &stopMessage)
 		listener.Stops = append(listener.Stops, stopMessage)
 	})
@@ -34,6 +33,6 @@ func NewStartStopListener(messageBus cfmessagebus.MessageBus) *StartStopListener
 }
 
 func (listener *StartStopListener) Reset() {
-	listener.Starts = make([]StartMessage, 0)
-	listener.Stops = make([]StopMessage, 0)
+	listener.Starts = make([]models.StartMessage, 0)
+	listener.Stops = make([]models.StopMessage, 0)
 }

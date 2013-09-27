@@ -24,19 +24,17 @@ var _ = Describe("StartStopListener", func() {
 
 	jsonStartMessage := `{
 	            "droplet":"abc",
-	            "last_updated":1377816348,
 	            "version":"123",
-	            "indices":[1,2],
-	            "running":{"123":2},
-	            "flapping":false
+	            "instance_index":1,
+	            "running_indices":[{"index":0, "running":1},{"index":1, "running":0}]
 	        }`
 
 	jsonStopMessage := `{
 	            "droplet":"abc",
-	            "last_updated":1377816348,
 	            "version":"123",
-	            "instances":{"xyz":"123", "uvw":"123"},
-	            "running":{"123":2}
+	            "instance_guid":"xyz",
+	            "instance_index":2,
+	            "running_indices":[{"index":0, "running":1},{"index":1, "running":1},{"index":2, "running":2},{"index":3, "running":1}]
 	        }`
 
 	BeforeEach(func() {
@@ -47,12 +45,13 @@ var _ = Describe("StartStopListener", func() {
 	Describe("when a start message arrives", func() {
 		It("adds a start message to its list", func() {
 			expectedStart := StartMessage{
-				AppGuid:                   "abc",
-				LastUpdated:               1377816348,
-				AppVersion:                "123",
-				IndicesToStart:            []int{1, 2},
-				RunningInstancesByVersion: map[string]int{"123": 2},
-				Flapping:                  false,
+				AppGuid:       "abc",
+				AppVersion:    "123",
+				InstanceIndex: 1,
+				RunningIndices: []RunningIndex{
+					RunningIndex{0, 1},
+					RunningIndex{1, 0},
+				},
 			}
 
 			fakeMessageBus.PublishSync("health.start", []byte(jsonStartMessage))
@@ -65,11 +64,16 @@ var _ = Describe("StartStopListener", func() {
 	Describe("when a stop message arrives", func() {
 		It("adds a stop message to its list", func() {
 			expectedStop := StopMessage{
-				AppGuid:                   "abc",
-				LastUpdated:               1377816348,
-				AppVersion:                "123",
-				InstancesToVersion:        map[string]string{"xyz": "123", "uvw": "123"},
-				RunningInstancesByVersion: map[string]int{"123": 2},
+				AppGuid:       "abc",
+				AppVersion:    "123",
+				InstanceGuid:  "xyz",
+				InstanceIndex: 2,
+				RunningIndices: []RunningIndex{
+					RunningIndex{0, 1},
+					RunningIndex{1, 1},
+					RunningIndex{2, 2},
+					RunningIndex{3, 1},
+				},
 			}
 
 			fakeMessageBus.PublishSync("health.stop", []byte(jsonStopMessage))
