@@ -41,6 +41,9 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 	}
 
 	//stop duplicate instances at indices < numDesired
+	//this works by scheduling stops for *all* duplicate instances at increasing delays
+	//the sender will process the stops one at a time and only send stops that don't put
+	//the system in an invalid state
 	for index := 0; index < desired.NumberOfInstances; index++ {
 		if len(runningByIndex[index]) > 1 {
 			duplicateStops := analyzer.stopMessagesForDuplicateInstances(runningByIndex[index])

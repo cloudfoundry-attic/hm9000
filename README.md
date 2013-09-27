@@ -87,7 +87,7 @@ will connect to CC, fetch the desired state, put it in the store under `/desired
 
     hm9000 listen --config=./local_config.json
 
-will come up, listen to NATS for heartbeats, and put them in the store under `/actual`, then exit.
+will come up, listen to NATS for heartbeats, and put them in the store under `/actual`.
 
 ### Dumping the contents of the store
 
