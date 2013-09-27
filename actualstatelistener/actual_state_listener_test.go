@@ -55,6 +55,23 @@ var _ = Describe("Actual state listener", func() {
 		Ω(messageBus.Subscriptions["dea.heartbeat"]).Should(HaveLen(1))
 	})
 
+	It("should subscribe to the dea.advertise subject", func() {
+		Ω(messageBus.Subscriptions).Should(HaveKey("dea.advertise"))
+		Ω(messageBus.Subscriptions["dea.advertise"]).Should(HaveLen(1))
+	})
+
+	Context("When it receives a dea advertisement over the message bus", func() {
+		BeforeEach(func() {
+			Ω(store.ActualFreshnessTimestamp).Should(BeZero())
+			messageBus.Subscriptions["dea.advertise"][0].Callback([]byte("doesn't matter"))
+		})
+
+		It("Bumps the actual state freshness", func() {
+			Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
+			Ω(logger.LoggedSubjects).Should(BeEmpty())
+		})
+	})
+
 	Context("When it receives a simple heartbeat over the message bus", func() {
 		BeforeEach(func() {
 			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJSON())

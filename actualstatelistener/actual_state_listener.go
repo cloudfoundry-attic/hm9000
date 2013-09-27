@@ -34,6 +34,10 @@ func New(config config.Config,
 }
 
 func (listener *ActualStateListener) Start() {
+	listener.messageBus.Subscribe("dea.advertise", func(messageBody []byte) {
+		listener.bumpFreshness()
+	})
+
 	listener.messageBus.Subscribe("dea.heartbeat", func(messageBody []byte) {
 		heartbeat, err := models.NewHeartbeatFromJSON(messageBody)
 		if err != nil {
@@ -54,12 +58,16 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
-		err = listener.store.BumpActualFreshness(listener.timeProvider.Time())
-		if err != nil {
-			listener.logger.Info("Could not update actual freshness",
-				map[string]string{
-					"Error": err.Error(),
-				})
-		}
+		listener.bumpFreshness()
 	})
+}
+
+func (listener *ActualStateListener) bumpFreshness() {
+	err := listener.store.BumpActualFreshness(listener.timeProvider.Time())
+	if err != nil {
+		listener.logger.Info("Could not update actual freshness",
+			map[string]string{
+				"Error": err.Error(),
+			})
+	}
 }
