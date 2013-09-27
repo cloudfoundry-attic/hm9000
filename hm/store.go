@@ -4,16 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"sort"
 	"time"
-
-	"github.com/codegangsta/cli"
 )
 
-func Dump(l logger.Logger, c *cli.Context) {
-	conf := loadConfig(l, c)
+func Dump(l logger.Logger, conf config.Config) {
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 	fmt.Printf("Dump - Current timestamp %d\n", time.Now().Unix())
 
@@ -36,6 +34,15 @@ func Dump(l logger.Logger, c *cli.Context) {
 	for _, entry := range entries {
 		fmt.Printf(entry + "\n")
 	}
+}
+
+func Clear(l logger.Logger, conf config.Config) {
+	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
+	l.Info(fmt.Sprintf("Clear - Current timestamp %d\n", time.Now().Unix()), nil)
+
+	Walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
+		etcdStoreAdapter.Delete(node.Key)
+	})
 }
 
 func Walk(store storeadapter.StoreAdapter, dirKey string, callback func(storeadapter.StoreNode)) {

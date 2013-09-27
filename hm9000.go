@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/hm"
 	"github.com/codegangsta/cli"
@@ -24,7 +25,7 @@ func main() {
 				cli.StringFlag{"config", "", "Path to config file"},
 			},
 			Action: func(c *cli.Context) {
-				hm.FetchDesiredState(l, c)
+				hm.FetchDesiredState(l, loadConfig(l, c))
 			},
 		},
 		cli.Command{
@@ -35,7 +36,7 @@ func main() {
 				cli.StringFlag{"config", "", "Path to config file"},
 			},
 			Action: func(c *cli.Context) {
-				hm.StartListeningForActual(l, c)
+				hm.StartListeningForActual(l, loadConfig(l, c))
 			},
 		},
 		cli.Command{
@@ -46,7 +47,7 @@ func main() {
 				cli.StringFlag{"config", "", "Path to config file"},
 			},
 			Action: func(c *cli.Context) {
-				hm.Analyze(l, c)
+				hm.Analyze(l, loadConfig(l, c))
 			},
 		},
 		cli.Command{
@@ -57,10 +58,37 @@ func main() {
 				cli.StringFlag{"config", "", "Path to config file"},
 			},
 			Action: func(c *cli.Context) {
-				hm.Dump(l, c)
+				hm.Dump(l, loadConfig(l, c))
+			},
+		},
+		cli.Command{
+			Name:        "clear_store",
+			Description: "Clears contents of the data store",
+			Usage:       "hm clear_store --config=/path/to/config",
+			Flags: []cli.Flag{
+				cli.StringFlag{"config", "", "Path to config file"},
+			},
+			Action: func(c *cli.Context) {
+				hm.Clear(l, loadConfig(l, c))
 			},
 		},
 	}
 
 	app.Run(os.Args)
+}
+
+func loadConfig(l logger.Logger, c *cli.Context) config.Config {
+	configPath := c.String("config")
+	if configPath == "" {
+		l.Info("Config path required", nil)
+		os.Exit(1)
+	}
+
+	conf, err := config.FromFile(configPath)
+	if err != nil {
+		l.Info("Failed to load config", map[string]string{"Error": err.Error()})
+		os.Exit(1)
+	}
+
+	return conf
 }

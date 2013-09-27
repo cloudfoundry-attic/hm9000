@@ -2,16 +2,14 @@ package hm
 
 import (
 	"github.com/cloudfoundry/hm9000/analyzer"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/outbox"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"os"
-
-	"github.com/codegangsta/cli"
 )
 
-func Analyze(l logger.Logger, c *cli.Context) {
-	conf := loadConfig(l, c)
+func Analyze(l logger.Logger, conf config.Config) {
 	store := connectToStore(l, conf)
 	outbox := outbox.New(store, l)
 

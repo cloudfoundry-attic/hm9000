@@ -6,26 +6,9 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/codegangsta/cli"
 
 	"os"
 )
-
-func loadConfig(l logger.Logger, c *cli.Context) config.Config {
-	configPath := c.String("config")
-	if configPath == "" {
-		l.Info("Config path required", nil)
-		os.Exit(1)
-	}
-
-	conf, err := config.FromFile(configPath)
-	if err != nil {
-		l.Info("Failed to load config", map[string]string{"Error": err.Error()})
-		os.Exit(1)
-	}
-
-	return conf
-}
 
 func connectToMessageBus(l logger.Logger, conf config.Config) cfmessagebus.MessageBus {
 	messageBus, err := cfmessagebus.NewMessageBus("NATS")
