@@ -2,19 +2,18 @@ package sender
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 )
 
 type Sender struct {
-	store        store.Store
+	store      store.Store
+	storecache *storecache.StoreCache
+
 	messageBus   cfmessagebus.MessageBus
 	timeProvider timeprovider.TimeProvider
-
-	actualStates      []models.InstanceHeartbeat
-	runningByApp      map[string][]models.InstanceHeartbeat
-	runningByInstance map[string]models.InstanceHeartbeat
 }
 
 func New(store store.Store, messageBus cfmessagebus.MessageBus, timeProvider timeprovider.TimeProvider) *Sender {
@@ -22,6 +21,7 @@ func New(store store.Store, messageBus cfmessagebus.MessageBus, timeProvider tim
 		store:        store,
 		messageBus:   messageBus,
 		timeProvider: timeProvider,
+		storecache:   storecache.New(store),
 	}
 }
 
@@ -35,7 +35,8 @@ func (sender *Sender) Send() error {
 	if err != nil {
 		return err
 	}
-	err = sender.fetchStateAndGenerateLookupTables()
+
+	err = sender.storecache.Load()
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 		if stopMessage.IsExpired(sender.timeProvider.Time()) {
 			stopMessagesToDelete = append(stopMessagesToDelete, stopMessage)
 		} else if stopMessage.IsTimeToSend(sender.timeProvider.Time()) {
-			actual := sender.runningByInstance[stopMessage.InstanceGuid]
+			actual := sender.storecache.RunningByInstance[stopMessage.InstanceGuid]
 			messageToSend := models.StopMessage{
 				AppGuid:        actual.AppGuid,
 				AppVersion:     actual.AppVersion,
@@ -134,7 +135,7 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 }
 
 func (sender *Sender) runningIndicesForApp(appGuid string, appVersion string) models.RunningIndices {
-	runningInstances := sender.runningByApp[appGuid+"-"+appVersion]
+	runningInstances := sender.storecache.RunningByApp[sender.storecache.Key(appGuid, appVersion)]
 	runningIndices := models.RunningIndices{}
 
 	for _, instance := range runningInstances {
@@ -142,26 +143,4 @@ func (sender *Sender) runningIndicesForApp(appGuid string, appVersion string) mo
 	}
 
 	return runningIndices
-}
-
-func (sender *Sender) fetchStateAndGenerateLookupTables() (err error) {
-	sender.actualStates, err = sender.store.GetActualState()
-	if err != nil {
-		return
-	}
-	sender.runningByApp = make(map[string][]models.InstanceHeartbeat, 0)
-	sender.runningByInstance = make(map[string]models.InstanceHeartbeat, 0)
-
-	for _, actual := range sender.actualStates {
-		sender.runningByInstance[actual.InstanceGuid] = actual
-
-		key := actual.AppGuid + "-" + actual.AppVersion
-		value, ok := sender.runningByApp[key]
-		if ok {
-			sender.runningByApp[key] = append(value, actual)
-		} else {
-			sender.runningByApp[key] = []models.InstanceHeartbeat{actual}
-		}
-	}
-	return nil
 }
