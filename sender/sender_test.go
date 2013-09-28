@@ -100,6 +100,12 @@ var _ = Describe("Sender", func() {
 			err = sender.Send()
 		})
 
+		BeforeEach(func() {
+			keepAliveTime = 0
+			sentOn = 0
+			err = nil
+		})
+
 		Context("and it is not time to send the message yet", func() {
 			BeforeEach(func() {
 				timeProvider.TimeToProvide = time.Unix(129, 0)
@@ -243,6 +249,12 @@ var _ = Describe("Sender", func() {
 			})
 
 			err = sender.Send()
+		})
+
+		BeforeEach(func() {
+			keepAliveTime = 0
+			sentOn = 0
+			err = nil
 		})
 
 		Context("and it is not time to send the message yet", func() {
