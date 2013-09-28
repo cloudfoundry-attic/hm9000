@@ -40,6 +40,18 @@ func (message QueueMessage) queueLogDescription() map[string]string {
 	}
 }
 
+func (message QueueMessage) HasBeenSent() bool {
+	return message.SentOn != 0
+}
+
+func (message QueueMessage) IsTimeToSend(currentTime time.Time) bool {
+	return !message.HasBeenSent() && message.SendOn <= currentTime.Unix()
+}
+
+func (message QueueMessage) IsExpired(currentTime time.Time) bool {
+	return message.HasBeenSent() && message.SentOn+int64(message.KeepAlive) <= currentTime.Unix()
+}
+
 func NewQueueStartMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, appGuid string, appVersion string, indexToStart int) QueueStartMessage {
 	return QueueStartMessage{
 		QueueMessage: newQueueMessage(now, delayInSeconds, keepAliveInSeconds),

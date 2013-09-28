@@ -16,14 +16,16 @@ type FakeStore struct {
 	IsDesiredStateFreshError  error
 	IsActualStateFreshError   error
 
-	SaveDesiredStateError  error
-	GetDesiredStateError   error
-	SaveActualStateError   error
-	GetActualStateError    error
-	SaveStartMessagesError error
-	GetStartMessagesError  error
-	SaveStopMessagesError  error
-	GetStopMessagesError   error
+	SaveDesiredStateError    error
+	GetDesiredStateError     error
+	SaveActualStateError     error
+	GetActualStateError      error
+	SaveStartMessagesError   error
+	GetStartMessagesError    error
+	DeleteStartMessagesError error
+	SaveStopMessagesError    error
+	GetStopMessagesError     error
+	DeleteStopMessagesError  error
 
 	desiredState  map[string]models.DesiredAppState
 	actualState   map[string]models.InstanceHeartbeat
@@ -58,8 +60,10 @@ func (store *FakeStore) Reset() {
 	store.GetActualStateError = nil
 	store.SaveStartMessagesError = nil
 	store.GetStartMessagesError = nil
+	store.DeleteStartMessagesError = nil
 	store.SaveStopMessagesError = nil
 	store.GetStopMessagesError = nil
+	store.DeleteStopMessagesError = nil
 }
 
 func (store *FakeStore) BumpDesiredFreshness(timestamp time.Time) error {
@@ -180,7 +184,7 @@ func (store *FakeStore) DeleteQueueStartMessages(messages []models.QueueStartMes
 		}
 		delete(store.startMessages, message.StoreKey())
 	}
-	return nil
+	return store.DeleteStartMessagesError
 }
 
 func (store *FakeStore) SaveQueueStopMessages(messages []models.QueueStopMessage) error {
@@ -214,5 +218,5 @@ func (store *FakeStore) DeleteQueueStopMessages(messages []models.QueueStopMessa
 		}
 		delete(store.stopMessages, message.StoreKey())
 	}
-	return nil
+	return store.DeleteStopMessagesError
 }

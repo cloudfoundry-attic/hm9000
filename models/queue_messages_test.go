@@ -9,6 +9,68 @@ import (
 )
 
 var _ = Describe("QueueMessages", func() {
+	Describe("Queue Message", func() {
+		var message QueueMessage
+		BeforeEach(func() {
+			message = QueueMessage{}
+		})
+
+		Context("when it was sent", func() {
+			BeforeEach(func() {
+				message.SentOn = 130
+			})
+
+			It("should be sent", func() {
+				Ω(message.HasBeenSent()).Should(BeTrue())
+			})
+			Context("when keep alive time passed", func() {
+				BeforeEach(func() {
+					message.KeepAlive = 10
+				})
+				It("should be expired", func() {
+					Ω(message.IsExpired(time.Unix(140, 0))).Should(BeTrue())
+				})
+			})
+			Context("when keep alive time has not passed", func() {
+				BeforeEach(func() {
+					message.KeepAlive = 10
+				})
+				It("should not be expired", func() {
+					Ω(message.IsExpired(time.Unix(139, 0))).Should(BeFalse())
+				})
+			})
+
+			It("should not be ready to send", func() {
+				Ω(message.IsTimeToSend(time.Unix(131, 0))).Should(BeFalse())
+			})
+		})
+
+		Context("when it was not yet sent", func() {
+			It("should not be sent", func() {
+				Ω(message.HasBeenSent()).Should(BeFalse())
+			})
+			It("should not be expired", func() {
+				Ω(message.IsExpired(time.Unix(129, 0))).Should(BeFalse())
+			})
+			Context("when send on time has passed", func() {
+				BeforeEach(func() {
+					message.SendOn = 130
+				})
+				It("should be ready to send", func() {
+					Ω(message.IsTimeToSend(time.Unix(130, 0))).Should(BeTrue())
+				})
+			})
+			Context("when send on time has not passed", func() {
+				BeforeEach(func() {
+					message.SendOn = 131
+				})
+				It("should not be ready to send", func() {
+					Ω(message.IsTimeToSend(time.Unix(130, 0))).Should(BeFalse())
+				})
+			})
+		})
+	})
+
 	Describe("Start Message", func() {
 		var message QueueStartMessage
 		BeforeEach(func() {
