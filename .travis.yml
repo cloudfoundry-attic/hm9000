@@ -23,4 +23,4 @@ install:
   - chmod a+x $HOME/bin/zookeeper/bin/zkServer.sh
   - popd
 
-script: PATH=$HOME/bin/zookeeper/bin:$HOME/gopath/bin:$PATH ginkgo -r  -i --randomizeAllSpecs --failOnPending --skipMeasurements
+script: PATH=$HOME/bin/zookeeper/bin:$HOME/gopath/bin:$PATH ginkgo -r -v -i --randomizeAllSpecs --failOnPending --skipMeasurements
