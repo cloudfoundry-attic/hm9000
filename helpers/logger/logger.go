@@ -8,7 +8,8 @@ import (
 )
 
 type Logger interface {
-	Info(subject string, message map[string]string)
+	Info(subject string, messages ...map[string]string)
+	Error(subject string, err error, messages ...map[string]string)
 }
 
 type RealLogger struct {
@@ -26,14 +27,25 @@ func NewRealLogger() *RealLogger {
 	}
 }
 
-func (logger *RealLogger) Info(subject string, message map[string]string) {
-	messageString := ""
+func (logger *RealLogger) Info(subject string, messages ...map[string]string) {
+	logger.print(subject, logger.parseMessages(messages))
+}
 
-	if message != nil {
+func (logger *RealLogger) Error(subject string, err error, messages ...map[string]string) {
+	logger.print(subject, " - Error: "+err.Error()+logger.parseMessages(messages))
+}
+
+func (logger *RealLogger) parseMessages(messages []map[string]string) string {
+	messageString := ""
+	for _, message := range messages {
 		messageBytes, _ := json.Marshal(message)
-		messageString = " - " + string(messageBytes)
+		messageString += " - " + string(messageBytes)
 	}
 
-	logger.logger.Printf("%s%s", subject, messageString)
-	logger.infoSysLogger.Printf("%s%s", subject, messageString)
+	return messageString
+}
+
+func (logger *RealLogger) print(subject string, message string) {
+	logger.logger.Printf("%s%s", subject, message)
+	logger.infoSysLogger.Printf("%s%s", subject, message)
 }

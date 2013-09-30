@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 )
 
@@ -45,6 +46,18 @@ func NewDesiredAppStateFromJSON(encoded []byte) (DesiredAppState, error) {
 func (state DesiredAppState) ToJSON() []byte {
 	result, _ := json.Marshal(state)
 	return result
+}
+
+func (state DesiredAppState) LogDescription() map[string]string {
+	return map[string]string{
+		"AppGuid":           state.AppGuid,
+		"AppVersion":        state.AppVersion,
+		"NumberOfInstances": strconv.Itoa(state.NumberOfInstances),
+		"Memory":            strconv.Itoa(state.Memory),
+		"State":             string(state.State),
+		"PackageState":      string(state.PackageState),
+		"UpdatedAt":         strconv.Itoa(int(state.UpdatedAt.Unix())),
+	}
 }
 
 func (state DesiredAppState) Equal(other DesiredAppState) bool {

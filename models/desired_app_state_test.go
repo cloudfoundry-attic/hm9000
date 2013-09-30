@@ -142,4 +142,32 @@ var _ = Describe("DesiredAppState", func() {
 			Ω(actual.Equal(other)).Should(BeFalse())
 		})
 	})
+
+	Describe("LogDescription", func() {
+		var desiredAppState DesiredAppState
+
+		BeforeEach(func() {
+			desiredAppState = DesiredAppState{
+				AppGuid:           "app_guid_abc",
+				AppVersion:        "app_version_123",
+				NumberOfInstances: 3,
+				Memory:            1024,
+				State:             AppStateStopped,
+				PackageState:      AppPackageStateStaged,
+				UpdatedAt:         time.Unix(10, 0),
+			}
+		})
+
+		It("should return correct message", func() {
+			Ω(desiredAppState.LogDescription()).Should(Equal(map[string]string{
+				"AppGuid":           "app_guid_abc",
+				"AppVersion":        "app_version_123",
+				"NumberOfInstances": "3",
+				"Memory":            "1024",
+				"State":             "STOPPED",
+				"PackageState":      "STAGED",
+				"UpdatedAt":         "10",
+			}))
+		})
+	})
 })

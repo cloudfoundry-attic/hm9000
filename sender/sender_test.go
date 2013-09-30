@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	. "github.com/onsi/ginkgo"
@@ -28,7 +29,7 @@ var _ = Describe("Sender", func() {
 		timeProvider = &faketimeprovider.FakeTimeProvider{}
 		app1 = app.NewApp()
 
-		sender = New(store, messageBus, timeProvider)
+		sender = New(store, messageBus, timeProvider, fakelogger.NewFakeLogger())
 	})
 
 	Context("when the sender fails to pull messages out of the start queue", func() {

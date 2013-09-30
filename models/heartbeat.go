@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"strconv"
 )
 
 type InstanceState string
@@ -13,11 +14,6 @@ const (
 	InstanceStateCrashed  InstanceState = "CRASHED"
 )
 
-type Heartbeat struct {
-	DeaGuid            string              `json:"dea"`
-	InstanceHeartbeats []InstanceHeartbeat `json:"droplets"`
-}
-
 type InstanceHeartbeat struct {
 	CCPartition    string        `json:"cc_partition"`
 	AppGuid        string        `json:"droplet"`
@@ -26,20 +22,6 @@ type InstanceHeartbeat struct {
 	InstanceIndex  int           `json:"index"`
 	State          InstanceState `json:"state"`
 	StateTimestamp float64       `json:"state_timestamp"`
-}
-
-func NewHeartbeatFromJSON(encoded []byte) (Heartbeat, error) {
-	var heartbeat Heartbeat
-	err := json.Unmarshal(encoded, &heartbeat)
-	if err != nil {
-		return Heartbeat{}, err
-	}
-	return heartbeat, nil
-}
-
-func (heartbeat Heartbeat) ToJSON() []byte {
-	encoded, _ := json.Marshal(heartbeat)
-	return encoded
 }
 
 func NewInstanceHeartbeatFromJSON(encoded []byte) (InstanceHeartbeat, error) {
@@ -58,4 +40,34 @@ func (instance InstanceHeartbeat) ToJSON() []byte {
 
 func (instance InstanceHeartbeat) StoreKey() string {
 	return instance.InstanceGuid
+}
+
+func (instance InstanceHeartbeat) LogDescription() map[string]string {
+	return map[string]string{
+		"AppGuid":        instance.AppGuid,
+		"AppVersion":     instance.AppVersion,
+		"InstanceGuid":   instance.InstanceGuid,
+		"InstanceIndex":  strconv.Itoa(instance.InstanceIndex),
+		"State":          string(instance.State),
+		"StateTimestamp": strconv.Itoa(int(instance.StateTimestamp)),
+	}
+}
+
+type Heartbeat struct {
+	DeaGuid            string              `json:"dea"`
+	InstanceHeartbeats []InstanceHeartbeat `json:"droplets"`
+}
+
+func NewHeartbeatFromJSON(encoded []byte) (Heartbeat, error) {
+	var heartbeat Heartbeat
+	err := json.Unmarshal(encoded, &heartbeat)
+	if err != nil {
+		return Heartbeat{}, err
+	}
+	return heartbeat, nil
+}
+
+func (heartbeat Heartbeat) ToJSON() []byte {
+	encoded, _ := json.Marshal(heartbeat)
+	return encoded
 }

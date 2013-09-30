@@ -69,11 +69,11 @@ var _ = Describe("Outbox", func() {
 				Ω(logger.LoggedSubjects).Should(HaveLen(6))
 				for i := 0; i < 3; i++ {
 					Ω(logger.LoggedSubjects[i]).Should(Equal("Enqueuing Start Message"))
-					Ω(logger.LoggedMessages[i]).Should(Equal(startMessages[i].LogDescription()))
+					Ω(logger.LoggedMessages[i][0]).Should(Equal(startMessages[i].LogDescription()))
 				}
 				for i := 0; i < 3; i++ {
 					Ω(logger.LoggedSubjects[i+3]).Should(Equal("Enqueuing Stop Message"))
-					Ω(logger.LoggedMessages[i+3]).Should(Equal(stopMessages[i].LogDescription()))
+					Ω(logger.LoggedMessages[i+3][0]).Should(Equal(stopMessages[i].LogDescription()))
 				}
 			})
 		})
@@ -111,7 +111,7 @@ var _ = Describe("Outbox", func() {
 			It("should note that it did not enqueue the colliding message", func() {
 				Ω(logger.LoggedSubjects).Should(HaveLen(6))
 				Ω(logger.LoggedSubjects[1]).Should(Equal("Skipping Already Enqueued Start Message"))
-				Ω(logger.LoggedMessages[1]).Should(Equal(startMessages[1].LogDescription()))
+				Ω(logger.LoggedMessages[1][0]).Should(Equal(startMessages[1].LogDescription()))
 			})
 		})
 
@@ -148,7 +148,7 @@ var _ = Describe("Outbox", func() {
 			It("should note that it did not enqueue the colliding message", func() {
 				Ω(logger.LoggedSubjects).Should(HaveLen(6))
 				Ω(logger.LoggedSubjects[4]).Should(Equal("Skipping Already Enqueued Stop Message"))
-				Ω(logger.LoggedMessages[4]).Should(Equal(stopMessages[1].LogDescription()))
+				Ω(logger.LoggedMessages[4][0]).Should(Equal(stopMessages[1].LogDescription()))
 			})
 		})
 

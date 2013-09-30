@@ -15,7 +15,7 @@ func Analyze(l logger.Logger, conf config.Config) {
 
 	l.Info("Analyzing...", nil)
 
-	analyzer := analyzer.New(store, outbox, timeprovider.NewTimeProvider(), conf)
+	analyzer := analyzer.New(store, outbox, timeprovider.NewTimeProvider(), l, conf)
 	err := analyzer.Analyze()
 
 	if err != nil {

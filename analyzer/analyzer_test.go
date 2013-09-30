@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakeoutbox"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
@@ -60,7 +61,7 @@ var _ = Describe("Analyzer", func() {
 		store.BumpActualFreshness(time.Unix(100, 0))
 		store.BumpDesiredFreshness(time.Unix(100, 0))
 
-		analyzer = New(store, outbox, timeProvider, conf)
+		analyzer = New(store, outbox, timeProvider, fakelogger.NewFakeLogger(), conf)
 	})
 
 	Describe("Handling store errors", func() {

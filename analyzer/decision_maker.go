@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
+	"strconv"
 )
 
 func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInstances []models.InstanceHeartbeat) (startMessages []models.QueueStartMessage, stopMessages []models.QueueStopMessage) {
@@ -25,6 +26,12 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 	//start missing instances
 	for index := 0; index < desired.NumberOfInstances; index++ {
 		if len(runningByIndex[index]) == 0 {
+			analyzer.logger.Info("Identified missing instance", map[string]string{
+				"AppGuid":                desired.AppGuid,
+				"AppVersion":             desired.AppVersion,
+				"InstanceIndex":          strconv.Itoa(index),
+				"Desired # of Instances": strconv.Itoa(desired.NumberOfInstances),
+			})
 			startMessages = append(startMessages, models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod, 0, desired.AppGuid, desired.AppVersion, index))
 		}
 	}
@@ -36,6 +43,14 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 	//stop extra instances at indices >= numDesired
 	for _, runningInstance := range runningInstances {
 		if runningInstance.InstanceIndex >= numDesired {
+			analyzer.logger.Info("Identified extra running instance", map[string]string{
+				"AppGuid":                desired.AppGuid,
+				"AppVersion":             desired.AppVersion,
+				"InstanceGuid":           runningInstance.InstanceGuid,
+				"InstanceIndex":          strconv.Itoa(runningInstance.InstanceIndex),
+				"Desired # of Instances": strconv.Itoa(desired.NumberOfInstances),
+			})
+
 			stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod, runningInstance.InstanceGuid))
 		}
 	}
@@ -56,6 +71,13 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 
 func (analyzer *Analyzer) stopMessagesForDuplicateInstances(runningInstances []models.InstanceHeartbeat) (stopMessages []models.QueueStopMessage) {
 	for i, instance := range runningInstances {
+		analyzer.logger.Info("Identified duplicate running instance", map[string]string{
+			"AppGuid":       instance.AppGuid,
+			"AppVersion":    instance.AppVersion,
+			"InstanceGuid":  instance.InstanceGuid,
+			"InstanceIndex": strconv.Itoa(instance.InstanceIndex),
+		})
+
 		stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), (i+1)*analyzer.conf.GracePeriod, analyzer.conf.GracePeriod, instance.InstanceGuid))
 	}
 

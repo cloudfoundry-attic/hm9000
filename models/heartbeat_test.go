@@ -114,6 +114,21 @@ var _ = Describe("InstanceHeartbeat", func() {
 		})
 	})
 
+	Describe("LogDescription", func() {
+		It("should return correct message", func() {
+			logDescription := instance.LogDescription()
+
+			Ω(logDescription).Should(Equal(map[string]string{
+				"AppGuid":        "abc",
+				"AppVersion":     "xyz-123",
+				"InstanceGuid":   "def",
+				"InstanceIndex":  "3",
+				"State":          "RUNNING",
+				"StateTimestamp": "1123",
+			}))
+		})
+	})
+
 	Describe("ToJson", func() {
 		It("should, like, totally encode JSON", func() {
 			jsonInstance, err := NewInstanceHeartbeatFromJSON(instance.ToJSON())
