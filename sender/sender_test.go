@@ -30,6 +30,8 @@ var _ = Describe("Sender", func() {
 		app1 = app.NewApp()
 
 		sender = New(store, messageBus, timeProvider, fakelogger.NewFakeLogger())
+		store.BumpActualFreshness(time.Unix(10, 0))
+		store.BumpDesiredFreshness(time.Unix(10, 0))
 	})
 
 	Context("when the sender fails to pull messages out of the start queue", func() {

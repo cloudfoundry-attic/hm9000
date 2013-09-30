@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("Storecache", func() {
@@ -43,8 +44,9 @@ var _ = Describe("Storecache", func() {
 		}
 
 		store.SaveActualState(actualState)
-
 		store.SaveDesiredState(desiredState)
+		store.BumpActualFreshness(time.Unix(10, 0))
+		store.BumpDesiredFreshness(time.Unix(10, 0))
 	})
 
 	Describe("Key", func() {
@@ -55,12 +57,12 @@ var _ = Describe("Storecache", func() {
 
 	Describe("Load", func() {
 		It("should not return an error", func() {
-			err := cache.Load()
+			err := cache.Load(time.Unix(30, 0))
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
 		It("loads", func() {
-			cache.Load()
+			cache.Load(time.Unix(30, 0))
 			Ω(cache.ActualStates).Should(Equal(actualState))
 			Ω(cache.DesiredStates).Should(Equal(desiredState))
 
@@ -99,7 +101,7 @@ var _ = Describe("Storecache", func() {
 		Context("when there is an error getting desired state", func() {
 			It("should return an error", func() {
 				store.GetDesiredStateError = errors.New("oops")
-				err := cache.Load()
+				err := cache.Load(time.Unix(30, 0))
 				Ω(err).Should(Equal(errors.New("oops")))
 			})
 		})
@@ -107,8 +109,41 @@ var _ = Describe("Storecache", func() {
 		Context("when there is an error getting actual state", func() {
 			It("should return an error", func() {
 				store.GetActualStateError = errors.New("oops")
-				err := cache.Load()
+				err := cache.Load(time.Unix(30, 0))
 				Ω(err).Should(Equal(errors.New("oops")))
+			})
+		})
+
+		Context("when the desired state is not fresh", func() {
+			BeforeEach(func() {
+				store.DesiredFreshnessTimestamp = time.Time{}
+				store.BumpActualFreshness(time.Unix(10, 0))
+			})
+
+			It("should return an error", func() {
+				err := cache.Load(time.Unix(30, 0))
+				Ω(err.Error()).Should(Equal("Desired state is not fresh"))
+				Ω(cache.ActualStates).Should(BeEmpty())
+				Ω(cache.DesiredStates).Should(BeEmpty())
+			})
+		})
+
+		Context("when the actual state is not fresh", func() {
+			BeforeEach(func() {
+				store.ActualFreshnessTimestamp = time.Time{}
+				store.BumpDesiredFreshness(time.Unix(10, 0))
+			})
+
+			It("should pass in the correct timestamp to the actual state", func() {
+				cache.Load(time.Unix(30, 0))
+				Ω(store.ActualFreshnessComparisonTimestamp).Should(Equal(time.Unix(30, 0)))
+			})
+
+			It("should not send any start or stop messages", func() {
+				err := cache.Load(time.Unix(30, 0))
+				Ω(err.Error()).Should(Equal("Actual state is not fresh"))
+				Ω(cache.ActualStates).Should(BeEmpty())
+				Ω(cache.DesiredStates).Should(BeEmpty())
 			})
 		})
 	})

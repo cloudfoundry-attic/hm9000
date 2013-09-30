@@ -41,7 +41,7 @@ func (sender *Sender) Send() error {
 		return err
 	}
 
-	err = sender.storecache.Load()
+	err = sender.storecache.Load(sender.timeProvider.Time())
 	if err != nil {
 		sender.logger.Error("Failed to load desired and actual states", err)
 		return err

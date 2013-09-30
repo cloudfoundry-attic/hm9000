@@ -1,8 +1,10 @@
 package storecache
 
 import (
+	"errors"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"time"
 )
 
 type StoreCache struct {
@@ -29,7 +31,12 @@ func New(store store.Store) (storecache *StoreCache) {
 	}
 }
 
-func (storecache *StoreCache) Load() (err error) {
+func (storecache *StoreCache) Load(time time.Time) (err error) {
+	err = storecache.verifyFreshness(time)
+	if err != nil {
+		return err
+	}
+
 	storecache.DesiredStates, err = storecache.store.GetDesiredState()
 	if err != nil {
 		return err
@@ -70,4 +77,24 @@ func (storecache *StoreCache) Load() (err error) {
 
 func (storecache *StoreCache) Key(appGuid string, appVersion string) string {
 	return appGuid + "-" + appVersion
+}
+
+func (storecache *StoreCache) verifyFreshness(time time.Time) error {
+	fresh, err := storecache.store.IsDesiredStateFresh()
+	if err != nil {
+		return err
+	}
+	if !fresh {
+		return errors.New("Desired state is not fresh")
+	}
+
+	fresh, err = storecache.store.IsActualStateFresh(time)
+	if err != nil {
+		return err
+	}
+	if !fresh {
+		return errors.New("Actual state is not fresh")
+	}
+
+	return nil
 }
