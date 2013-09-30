@@ -41,9 +41,12 @@ func (etcd *ETCDClusterRunner) Start() {
 		err := etcd.etcdCommands[i].Start()
 		Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
 
-		Eventually(func() interface{} {
-			return etcd.exists(i)
-		}, 3, 0.05).Should(BeTrue(), "Expected ETCD to be up and running")
+		Eventually(func() error {
+			client := etcdclient.NewClient()
+			client.SetCluster(etcd.NodeURLS())
+			_, err := client.Get("/")
+			return err
+		}, 3, 0.05).ShouldNot(HaveOccured(), "Expected ETCD to be up and running")
 	}
 
 	etcd.running = true
@@ -127,9 +130,4 @@ func (etcd *ETCDClusterRunner) tmpPathTo(subdir string, index int) string {
 
 func (etcd *ETCDClusterRunner) nukeArtifacts(index int) {
 	os.RemoveAll(etcd.tmpPath(index))
-}
-
-func (etcd *ETCDClusterRunner) exists(index int) bool {
-	_, err := os.Stat(etcd.tmpPathTo("info", index))
-	return err == nil
 }

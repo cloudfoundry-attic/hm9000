@@ -2,6 +2,7 @@ package store_test
 
 import (
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
@@ -17,7 +18,7 @@ func TestStore(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
-	etcdRunner = storerunner.NewETCDClusterRunner(5001, 1)
+	etcdRunner = storerunner.NewETCDClusterRunner(5001+config.GinkgoConfig.ParallelNode, 1)
 
 	RunSpecs(t, "Store Suite")
 
