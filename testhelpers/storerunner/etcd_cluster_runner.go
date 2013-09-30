@@ -43,7 +43,7 @@ func (etcd *ETCDClusterRunner) Start() {
 
 		Eventually(func() error {
 			client := etcdclient.NewClient()
-			client.SetCluster(etcd.NodeURLS())
+			client.SetCluster([]string{"http://" + etcd.clientUrl(i)})
 			_, err := client.Get("/")
 			return err
 		}, 3, 0.05).ShouldNot(HaveOccured(), "Expected ETCD to be up and running")
