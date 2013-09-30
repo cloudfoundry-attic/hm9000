@@ -62,21 +62,25 @@ func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage
 		if startMessage.IsExpired(sender.timeProvider.Time()) {
 			startMessagesToDelete = append(startMessagesToDelete, startMessage)
 		} else if startMessage.IsTimeToSend(sender.timeProvider.Time()) {
-			messageToSend := models.StartMessage{
-				AppGuid:        startMessage.AppGuid,
-				AppVersion:     startMessage.AppVersion,
-				InstanceIndex:  startMessage.IndexToStart,
-				RunningIndices: sender.runningIndicesForApp(startMessage.AppGuid, startMessage.AppVersion),
-			}
-			err := sender.messageBus.Publish("hm9000.start", messageToSend.ToJSON())
-			if err != nil {
-				return err
-			}
-			if startMessage.KeepAlive == 0 {
-				startMessagesToDelete = append(startMessagesToDelete, startMessage)
+			if sender.verifyStartMessageShouldBeSent(startMessage) {
+				messageToSend := models.StartMessage{
+					AppGuid:        startMessage.AppGuid,
+					AppVersion:     startMessage.AppVersion,
+					InstanceIndex:  startMessage.IndexToStart,
+					RunningIndices: sender.runningIndicesForApp(startMessage.AppGuid, startMessage.AppVersion),
+				}
+				err := sender.messageBus.Publish("hm9000.start", messageToSend.ToJSON())
+				if err != nil {
+					return err
+				}
+				if startMessage.KeepAlive == 0 {
+					startMessagesToDelete = append(startMessagesToDelete, startMessage)
+				} else {
+					startMessage.SentOn = sender.timeProvider.Time().Unix()
+					startMessagesToSave = append(startMessagesToSave, startMessage)
+				}
 			} else {
-				startMessage.SentOn = sender.timeProvider.Time().Unix()
-				startMessagesToSave = append(startMessagesToSave, startMessage)
+				startMessagesToDelete = append(startMessagesToDelete, startMessage)
 			}
 		}
 	}
@@ -132,6 +136,27 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 	}
 
 	return nil
+}
+
+func (sender *Sender) verifyStartMessageShouldBeSent(message models.QueueStartMessage) bool {
+	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
+	desired, ok := sender.storecache.DesiredByApp[appKey]
+	if !ok {
+		return false
+	}
+	if desired.NumberOfInstances <= message.IndexToStart {
+		return false
+	}
+	actual, ok := sender.storecache.RunningByApp[appKey]
+	if !ok {
+		return true
+	}
+	for _, heartbeat := range actual {
+		if heartbeat.InstanceIndex == message.IndexToStart {
+			return false
+		}
+	}
+	return true
 }
 
 func (sender *Sender) runningIndicesForApp(appGuid string, appVersion string) models.RunningIndices {

@@ -388,5 +388,102 @@ var _ = Describe("Sender", func() {
 		})
 	})
 
-	//More tests for more cases (especially for running indices)
+	Describe("Verifying that start messages should be sent", func() {
+		var err error
+		var indexToStart int
+
+		JustBeforeEach(func() {
+			timeProvider.TimeToProvide = time.Unix(130, 0)
+			message := models.NewQueueStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart)
+			message.SentOn = 0
+			store.SaveQueueStartMessages([]models.QueueStartMessage{
+				message,
+			})
+
+			err = sender.Send()
+		})
+
+		BeforeEach(func() {
+			err = nil
+			indexToStart = 0
+		})
+
+		assertMessageWasNotSent := func() {
+			It("should ignore the keep-alive and delete the start message from queue", func() {
+				messages, _ := store.GetQueueStartMessages()
+				Ω(messages).Should(HaveLen(0))
+			})
+
+			It("should not send the start message", func() {
+				Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
+			})
+		}
+
+		assertMessageWasSent := func(expectedRunningIndices models.RunningIndices) {
+			It("should honor the keep alive of the start message", func() {
+				messages, _ := store.GetQueueStartMessages()
+				Ω(messages).Should(HaveLen(1))
+				Ω(messages[0].SentOn).Should(BeNumerically("==", 130))
+			})
+
+			It("should send the start message", func() {
+				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
+				message, _ := models.NewStartMessageFromJSON(messageBus.PublishedMessages["hm9000.start"][0])
+				Ω(message).Should(Equal(models.StartMessage{
+					AppGuid:        app1.AppGuid,
+					AppVersion:     app1.AppVersion,
+					InstanceIndex:  0,
+					RunningIndices: expectedRunningIndices,
+				}))
+			})
+		}
+
+		Context("When the app is still desired", func() {
+			BeforeEach(func() {
+				store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState(0)})
+			})
+
+			Context("when the index-to-start is within the # of desired instances", func() {
+				BeforeEach(func() {
+					indexToStart = 0
+				})
+
+				Context("when there are no running instances at all for that app", func() {
+					assertMessageWasSent(models.RunningIndices{})
+				})
+
+				Context("when there is no running instance reporting at that index", func() {
+					BeforeEach(func() {
+						store.SaveActualState([]models.InstanceHeartbeat{
+							app1.GetInstance(1).Heartbeat(0),
+							app1.GetInstance(2).Heartbeat(0),
+						})
+					})
+					assertMessageWasSent(models.RunningIndices{"1": 1, "2": 1})
+				})
+
+				Context("when there *is* a running instance reporting at that index", func() {
+					BeforeEach(func() {
+						store.SaveActualState([]models.InstanceHeartbeat{
+							app1.GetInstance(0).Heartbeat(0),
+						})
+					})
+
+					assertMessageWasNotSent()
+				})
+			})
+
+			Context("when the index-to-start is beyond the # of desired instances", func() {
+				BeforeEach(func() {
+					indexToStart = 1
+				})
+
+				assertMessageWasNotSent()
+			})
+		})
+
+		Context("When the app is no longer desired", func() {
+			assertMessageWasNotSent()
+		})
+	})
 })
