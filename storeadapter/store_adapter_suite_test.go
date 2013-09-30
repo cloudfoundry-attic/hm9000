@@ -20,7 +20,7 @@ func TestStoreAdapter(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	etcdPort := 5000 + (config.GinkgoConfig.ParallelNode-1)*10
-	etcdRunner = storerunner.NewETCDClusterRunner(etcdPort, 5)
+	etcdRunner = storerunner.NewETCDClusterRunner(etcdPort, 1)
 
 	zookeeperPort := 2181 + (config.GinkgoConfig.ParallelNode-1)*10
 	zookeeperRunner = storerunner.NewZookeeperClusterRunner(zookeeperPort, 1)
