@@ -105,23 +105,27 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 		if stopMessage.IsExpired(sender.timeProvider.Time()) {
 			stopMessagesToDelete = append(stopMessagesToDelete, stopMessage)
 		} else if stopMessage.IsTimeToSend(sender.timeProvider.Time()) {
-			actual := sender.storecache.RunningByInstance[stopMessage.InstanceGuid]
-			messageToSend := models.StopMessage{
-				AppGuid:        actual.AppGuid,
-				AppVersion:     actual.AppVersion,
-				InstanceIndex:  actual.InstanceIndex,
-				InstanceGuid:   stopMessage.InstanceGuid,
-				RunningIndices: sender.runningIndicesForApp(actual.AppGuid, actual.AppVersion),
-			}
-			err := sender.messageBus.Publish("hm9000.stop", messageToSend.ToJSON())
-			if err != nil {
-				return err
-			}
-			if stopMessage.KeepAlive == 0 {
-				stopMessagesToDelete = append(stopMessagesToDelete, stopMessage)
+			if sender.verifyStopMessageShouldBeSent(stopMessage) {
+				actual := sender.storecache.RunningByInstance[stopMessage.InstanceGuid]
+				messageToSend := models.StopMessage{
+					AppGuid:        actual.AppGuid,
+					AppVersion:     actual.AppVersion,
+					InstanceIndex:  actual.InstanceIndex,
+					InstanceGuid:   stopMessage.InstanceGuid,
+					RunningIndices: sender.runningIndicesForApp(actual.AppGuid, actual.AppVersion),
+				}
+				err := sender.messageBus.Publish("hm9000.stop", messageToSend.ToJSON())
+				if err != nil {
+					return err
+				}
+				if stopMessage.KeepAlive == 0 {
+					stopMessagesToDelete = append(stopMessagesToDelete, stopMessage)
+				} else {
+					stopMessage.SentOn = sender.timeProvider.Time().Unix()
+					stopMessagesToSave = append(stopMessagesToSave, stopMessage)
+				}
 			} else {
-				stopMessage.SentOn = sender.timeProvider.Time().Unix()
-				stopMessagesToSave = append(stopMessagesToSave, stopMessage)
+				stopMessagesToDelete = append(stopMessagesToDelete, stopMessage)
 			}
 		}
 	}
@@ -142,21 +146,58 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.QueueStartMe
 	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
 	desired, ok := sender.storecache.DesiredByApp[appKey]
 	if !ok {
+		//app is no longer desired, don't start the instance
 		return false
 	}
 	if desired.NumberOfInstances <= message.IndexToStart {
+		//instance index is beyond the desired # of instances, don't start the instance
 		return false
 	}
-	actual, ok := sender.storecache.RunningByApp[appKey]
+	allRunningInstances, ok := sender.storecache.RunningByApp[appKey]
 	if !ok {
+		//there are no running instances, start the instance
 		return true
 	}
-	for _, heartbeat := range actual {
+	for _, heartbeat := range allRunningInstances {
 		if heartbeat.InstanceIndex == message.IndexToStart {
+			//there is already an instance running at that index, don't start another
 			return false
 		}
 	}
+
+	//there was no instance running at that index, start the instance
 	return true
+}
+
+func (sender *Sender) verifyStopMessageShouldBeSent(message models.QueueStopMessage) bool {
+	instanceToStop, ok := sender.storecache.RunningByInstance[message.InstanceGuid]
+	if !ok {
+		//there was no running instance found with that guid, don't send a stop message
+		return false
+	}
+	appKey := sender.storecache.Key(instanceToStop.AppGuid, instanceToStop.AppVersion)
+	desired, ok := sender.storecache.DesiredByApp[appKey]
+	if !ok {
+		//there is no desired app for this instance, send the stop message
+		return true
+	}
+	if desired.NumberOfInstances <= instanceToStop.InstanceIndex {
+		//the instance index is beyond the desired # of instances, stop the app
+		return true
+	}
+	allRunningInstances, _ := sender.storecache.RunningByApp[appKey]
+	for _, heartbeat := range allRunningInstances {
+		if heartbeat.InstanceIndex == instanceToStop.InstanceIndex && heartbeat.InstanceGuid != instanceToStop.InstanceGuid {
+			// there is *another* instance reporting at this index,
+			// so the instance-to-stop is an extra instance reporting on a desired index, stop it
+			return true
+		}
+	}
+
+	//the instance index is within the desired # of instances
+	//there are no other instances running on this index
+	//don't stop the instance
+	return false
 }
 
 func (sender *Sender) runningIndicesForApp(appGuid string, appVersion string) models.RunningIndices {
