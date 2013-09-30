@@ -43,10 +43,7 @@ func (analyzer *Analyzer) Analyze() error {
 
 	for appVersionKey := range analyzer.storecache.SetOfApps {
 		desired := analyzer.storecache.DesiredByApp[appVersionKey]
-		runningInstances, hasRunning := analyzer.storecache.RunningByApp[appVersionKey]
-		if !hasRunning {
-			runningInstances = []models.InstanceHeartbeat{}
-		}
+		runningInstances := analyzer.storecache.RunningByApp[appVersionKey]
 		startMessages, stopMessages := analyzer.analyzeApp(desired, runningInstances)
 		allStartMessages = append(allStartMessages, startMessages...)
 		allStopMessages = append(allStopMessages, stopMessages...)

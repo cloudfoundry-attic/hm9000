@@ -15,12 +15,7 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 	runningByIndex := map[int][]models.InstanceHeartbeat{}
 	for _, runningInstance := range runningInstances {
 		index := runningInstance.InstanceIndex
-		value, ok := runningByIndex[index]
-		if ok {
-			runningByIndex[index] = append(value, runningInstance)
-		} else {
-			runningByIndex[index] = []models.InstanceHeartbeat{runningInstance}
-		}
+		runningByIndex[index] = append(runningByIndex[index], runningInstance)
 	}
 
 	//start missing instances

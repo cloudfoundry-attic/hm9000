@@ -62,13 +62,7 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 		appKey := storecache.Key(actual.AppGuid, actual.AppVersion)
 
 		storecache.RunningByInstance[actual.InstanceGuid] = actual
-
-		value, ok := storecache.RunningByApp[appKey]
-		if ok {
-			storecache.RunningByApp[appKey] = append(value, actual)
-		} else {
-			storecache.RunningByApp[appKey] = []models.InstanceHeartbeat{actual}
-		}
+		storecache.RunningByApp[appKey] = append(storecache.RunningByApp[appKey], actual)
 		storecache.SetOfApps[appKey] = true
 	}
 
