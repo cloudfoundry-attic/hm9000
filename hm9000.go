@@ -53,6 +53,18 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "send",
+			Description: "Send the enqueued start/stop messages",
+			Usage:       "hm send --config=/path/to/config --pollEvery=duration",
+			Flags: []cli.Flag{
+				cli.StringFlag{"config", "", "Path to config file"},
+				cli.IntFlag{"pollEvery", 0, "Polling interval in seconds (leave blank to run just once)"},
+			},
+			Action: func(c *cli.Context) {
+				hm.Send(l, loadConfig(l, c), c.Int("pollEvery"))
+			},
+		},
+		cli.Command{
 			Name:        "dump",
 			Description: "Dumps contents of the data store",
 			Usage:       "hm dump --config=/path/to/config",

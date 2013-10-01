@@ -55,7 +55,7 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
-		listener.logger.Info("Received dea.heartbea, bumping freshness.")
+		listener.logger.Info("Received dea.heartbeat, bumping freshness.")
 		listener.bumpFreshness()
 	})
 }
