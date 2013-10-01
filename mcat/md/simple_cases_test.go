@@ -138,9 +138,6 @@ var _ = Describe("Simple Cases Test", func() {
 		Context("when the instance is no longer running", func() {
 			BeforeEach(func() {
 				timestamp = sendHeartbeats(timestamp, []models.Heartbeat{app1.Heartbeat(1, 0), app2.Heartbeat(1, 0)}, 1, 10)
-				// TTL expired
-				err := storeAdapter.Delete("/actual/" + app2.GetInstance(1).InstanceGuid)
-				Ω(err).ShouldNot(HaveOccured())
 				cliRunner.Run("send", timestamp)
 			})
 
@@ -185,16 +182,3 @@ var _ = Describe("Simple Cases Test", func() {
 		})
 	})
 })
-
-func sendHeartbeats(timestamp int, heartbeats []models.Heartbeat, times int, deltaT int) int {
-	for i := 0; i < times; i++ {
-		cliRunner.StartListener(timestamp)
-		for _, heartbeat := range heartbeats {
-			publisher.PublishHeartbeat(heartbeat)
-		}
-		cliRunner.WaitForHeartbeats(len(heartbeats))
-		cliRunner.StopListener()
-		timestamp += deltaT
-	}
-	return timestamp
-}
