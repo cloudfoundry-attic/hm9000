@@ -20,12 +20,13 @@ func main() {
 		cli.Command{
 			Name:        "fetch_desired",
 			Description: "Fetches desired state",
-			Usage:       "hm fetch_desired --config=/path/to/config",
+			Usage:       "hm fetch_desired --config=/path/to/config --pollEvery=duration",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
+				cli.IntFlag{"pollEvery", 0, "Polling interval in seconds (leave blank to run just once)"},
 			},
 			Action: func(c *cli.Context) {
-				hm.FetchDesiredState(l, loadConfig(l, c))
+				hm.FetchDesiredState(l, loadConfig(l, c), c.Int("pollEvery"))
 			},
 		},
 		cli.Command{
