@@ -18,7 +18,9 @@ func Daemonize(callback func() error, period time.Duration, timeout time.Duratio
 		}()
 		select {
 		case err := <-errorChan:
-			l.Error("Daemon returned an error. Continuining...", err)
+			if err != nil {
+				l.Error("Daemon returned an error. Continuining...", err)
+			}
 		case <-timeoutChan:
 			return errors.New("Daemon timed out. Aborting!")
 		}
