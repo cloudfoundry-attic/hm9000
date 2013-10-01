@@ -40,7 +40,7 @@ func send(l logger.Logger, conf config.Config, messageBus cfmessagebus.MessageBu
 	store := store.NewStore(conf, etcdStoreAdapter)
 	l.Info("Sending...")
 
-	sender := sender.New(store, messageBus, timeprovider.NewTimeProvider(), l)
+	sender := sender.New(store, conf, messageBus, timeprovider.NewTimeProvider(), l)
 	err := sender.Send()
 
 	if err != nil {

@@ -11,6 +11,8 @@
     "cc_base_url": "http://127.0.0.1:6001",
     "store_urls": ["http://127.0.0.1:4001"],
     "store_max_concurrent_requests": 100,
+    "sender_nats_start_subject": "hm9000.start",
+    "sender_nats_stop_subject": "hm9000.stop",
     "nats": {
         "host": "127.0.0.1",
         "port": 4222,

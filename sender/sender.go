@@ -2,6 +2,7 @@ package sender
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
@@ -11,6 +12,7 @@ import (
 
 type Sender struct {
 	store      store.Store
+	conf       config.Config
 	storecache *storecache.StoreCache
 	logger     logger.Logger
 
@@ -18,9 +20,10 @@ type Sender struct {
 	timeProvider timeprovider.TimeProvider
 }
 
-func New(store store.Store, messageBus cfmessagebus.MessageBus, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
+func New(store store.Store, conf config.Config, messageBus cfmessagebus.MessageBus, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
 	return &Sender{
 		store:        store,
+		conf:         conf,
 		logger:       logger,
 		messageBus:   messageBus,
 		timeProvider: timeProvider,
@@ -76,7 +79,7 @@ func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage
 					InstanceIndex:  startMessage.IndexToStart,
 					RunningIndices: sender.runningIndicesForApp(startMessage.AppGuid, startMessage.AppVersion),
 				}
-				err := sender.messageBus.Publish("hm9000.start", messageToSend.ToJSON())
+				err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, messageToSend.ToJSON())
 				if err != nil {
 					sender.logger.Error("Failed to send start message", err, startMessage.LogDescription())
 					return err
@@ -127,7 +130,7 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 					InstanceGuid:   stopMessage.InstanceGuid,
 					RunningIndices: sender.runningIndicesForApp(actual.AppGuid, actual.AppVersion),
 				}
-				err := sender.messageBus.Publish("hm9000.stop", messageToSend.ToJSON())
+				err := sender.messageBus.Publish(sender.conf.SenderNatsStopSubject, messageToSend.ToJSON())
 				if err != nil {
 					sender.logger.Error("Failed to send stop message", err, stopMessage.LogDescription())
 					return err

@@ -3,6 +3,7 @@ package sender_test
 import (
 	"errors"
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
@@ -28,8 +29,9 @@ var _ = Describe("Sender", func() {
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
 		timeProvider = &faketimeprovider.FakeTimeProvider{}
 		app1 = app.NewApp()
+		conf, _ := config.DefaultConfig()
 
-		sender = New(store, messageBus, timeProvider, fakelogger.NewFakeLogger())
+		sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
 	})

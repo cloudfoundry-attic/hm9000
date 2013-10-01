@@ -20,6 +20,8 @@ type Config struct {
 	CCBaseURL                  string   `json:"cc_base_url"`
 	StoreURLs                  []string `json:"store_urls"`
 	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`
+	SenderNatsStartSubject     string   `json:"sender_nats_start_subject"`
+	SenderNatsStopSubject      string   `json:"sender_nats_stop_subject"`
 
 	NATS struct {
 		Host     string `json:"host"`
