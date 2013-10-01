@@ -6,7 +6,6 @@ import (
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"os"
@@ -45,7 +44,7 @@ func fetchDesiredState(l logger.Logger, conf config.Config, messageBus cfmessage
 		messageBus,
 		store,
 		httpclient.NewHttpClient(),
-		timeprovider.NewTimeProvider(),
+		buildTimeProvider(l),
 	)
 
 	resultChan := make(chan desiredstatefetcher.DesiredStateFetcherResult, 1)

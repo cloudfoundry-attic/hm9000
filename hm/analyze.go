@@ -5,7 +5,6 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/outbox"
-	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 
@@ -41,7 +40,7 @@ func analyze(l logger.Logger, conf config.Config, etcdStoreAdapter storeadapter.
 
 	l.Info("Analyzing...")
 
-	analyzer := analyzer.New(store, outbox, timeprovider.NewTimeProvider(), l, conf)
+	analyzer := analyzer.New(store, outbox, buildTimeProvider(l), l, conf)
 	err := analyzer.Analyze()
 
 	if err != nil {

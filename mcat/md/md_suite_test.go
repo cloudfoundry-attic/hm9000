@@ -2,12 +2,15 @@ package md_test
 
 import (
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
+	"github.com/cloudfoundry/hm9000/testhelpers/messagepublisher"
+	"github.com/cloudfoundry/hm9000/testhelpers/startstoplistener"
 	. "github.com/onsi/ginkgo"
 	ginkgoConfig "github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
+	. "github.com/cloudfoundry/hm9000/mcat/md"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	"github.com/cloudfoundry/hm9000/testhelpers/natsrunner"
@@ -18,20 +21,24 @@ import (
 )
 
 const desiredStateServerBaseUrl = "http://127.0.0.1:6001"
+const natsPort = 4223
 
 var (
-	stateServer  *desiredstateserver.DesiredStateServer
-	storeRunner  storerunner.StoreRunner
-	storeAdapter storeadapter.StoreAdapter
-	natsRunner   *natsrunner.NATSRunner
-	conf         config.Config
+	stateServer       *desiredstateserver.DesiredStateServer
+	storeRunner       storerunner.StoreRunner
+	storeAdapter      storeadapter.StoreAdapter
+	natsRunner        *natsrunner.NATSRunner
+	conf              config.Config
+	cliRunner         *CLIRunner
+	publisher         *messagepublisher.MessagePublisher
+	startStopListener *startstoplistener.StartStopListener
 )
 
 func TestMd(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
-	natsRunner = natsrunner.NewNATSRunner(4223)
+	natsRunner = natsrunner.NewNATSRunner(natsPort)
 	natsRunner.Start()
 
 	stateServer = desiredstateserver.NewDesiredStateServer(natsRunner.MessageBus)
@@ -43,24 +50,35 @@ func TestMd(t *testing.T) {
 
 	//for now, run the suite for ETCD...
 	startEtcd()
+	publisher = messagepublisher.NewMessagePublisher(natsRunner.MessageBus)
+	startStopListener = startstoplistener.NewStartStopListener(natsRunner.MessageBus, conf)
+
+	cliRunner = NewCLIRunner(storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, ginkgoConfig.DefaultReporterConfig.Verbose)
 
 	RunSpecs(t, "Md Suite (ETCD)")
 
 	storeAdapter.Disconnect()
-	storeRunner.Stop()
+	stopAllExternalProcesses()
 
 	//...and then for zookeeper
-	startZookeeper()
+	// startZookeeper()
 
-	RunSpecs(t, "Md Suite (Zookeeper)")
+	// RunSpecs(t, "Md Suite (Zookeeper)")
 
-	storeAdapter.Disconnect()
-	storeRunner.Stop()
+	// storeAdapter.Disconnect()
+	// storeRunner.Stop()
 }
 
 var _ = BeforeEach(func() {
 	storeRunner.Reset()
+	startStopListener.Reset()
 })
+
+func stopAllExternalProcesses() {
+	storeRunner.Stop()
+	natsRunner.Stop()
+	cliRunner.Cleanup()
+}
 
 func startEtcd() {
 	etcdPort := 5000 + (ginkgoConfig.GinkgoConfig.ParallelNode-1)*10
@@ -89,7 +107,7 @@ func registerSignalHandler() {
 
 		select {
 		case <-c:
-			storeRunner.Stop()
+			stopAllExternalProcesses()
 			os.Exit(0)
 		}
 	}()

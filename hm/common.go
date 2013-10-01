@@ -4,11 +4,30 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
+	"strconv"
+	"time"
 
 	"os"
 )
+
+func buildTimeProvider(l logger.Logger) timeprovider.TimeProvider {
+	if os.Getenv("HM9000_FAKE_TIME") == "" {
+		return timeprovider.NewTimeProvider()
+	} else {
+		timestamp, err := strconv.Atoi(os.Getenv("HM9000_FAKE_TIME"))
+		if err != nil {
+			l.Error("Failed to load timestamp", err)
+			os.Exit(1)
+		}
+		return &faketimeprovider.FakeTimeProvider{
+			TimeToProvide: time.Unix(int64(timestamp), 0),
+		}
+	}
+}
 
 func connectToMessageBus(l logger.Logger, conf config.Config) cfmessagebus.MessageBus {
 	messageBus, err := cfmessagebus.NewMessageBus("NATS")

@@ -1,6 +1,7 @@
 package startstoplistener_test
 
 import (
+	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/testhelpers/startstoplistener"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,6 +19,7 @@ func TestStartStopListener(t *testing.T) {
 
 var _ = Describe("StartStopListener", func() {
 	var (
+		conf           config.Config
 		listener       *StartStopListener
 		fakeMessageBus *mock_cfmessagebus.MockMessageBus
 	)
@@ -38,8 +40,9 @@ var _ = Describe("StartStopListener", func() {
 	        }`
 
 	BeforeEach(func() {
+		conf, _ = config.DefaultConfig()
 		fakeMessageBus = mock_cfmessagebus.NewMockMessageBus()
-		listener = NewStartStopListener(fakeMessageBus)
+		listener = NewStartStopListener(fakeMessageBus, conf)
 	})
 
 	Describe("when a start message arrives", func() {
@@ -51,7 +54,7 @@ var _ = Describe("StartStopListener", func() {
 				RunningIndices: RunningIndices{"0": 1, "1": 0},
 			}
 
-			fakeMessageBus.PublishSync("health.start", []byte(jsonStartMessage))
+			fakeMessageBus.PublishSync(conf.SenderNatsStartSubject, []byte(jsonStartMessage))
 
 			Ω(listener.Starts).Should(HaveLen(1))
 			Ω(listener.Starts[0]).Should(Equal(expectedStart))
@@ -68,7 +71,7 @@ var _ = Describe("StartStopListener", func() {
 				RunningIndices: RunningIndices{"0": 1, "1": 1, "2": 2, "3": 1},
 			}
 
-			fakeMessageBus.PublishSync("health.stop", []byte(jsonStopMessage))
+			fakeMessageBus.PublishSync(conf.SenderNatsStopSubject, []byte(jsonStopMessage))
 
 			Ω(listener.Stops).Should(HaveLen(1))
 			Ω(listener.Stops[0]).Should(Equal(expectedStop))
@@ -77,11 +80,11 @@ var _ = Describe("StartStopListener", func() {
 
 	Describe("reset", func() {
 		It("clears out the lists", func() {
-			fakeMessageBus.PublishSync("health.start", []byte(jsonStartMessage))
-			fakeMessageBus.PublishSync("health.start", []byte(jsonStartMessage))
+			fakeMessageBus.PublishSync(conf.SenderNatsStartSubject, []byte(jsonStartMessage))
+			fakeMessageBus.PublishSync(conf.SenderNatsStartSubject, []byte(jsonStartMessage))
 
-			fakeMessageBus.PublishSync("health.stop", []byte(jsonStopMessage))
-			fakeMessageBus.PublishSync("health.stop", []byte(jsonStopMessage))
+			fakeMessageBus.PublishSync(conf.SenderNatsStopSubject, []byte(jsonStopMessage))
+			fakeMessageBus.PublishSync(conf.SenderNatsStopSubject, []byte(jsonStopMessage))
 
 			Ω(listener.Starts).Should(HaveLen(2))
 			Ω(listener.Stops).Should(HaveLen(2))

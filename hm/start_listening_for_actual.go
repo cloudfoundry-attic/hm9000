@@ -4,7 +4,6 @@ import (
 	"github.com/cloudfoundry/hm9000/actualstatelistener"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 )
 
 func StartListeningForActual(l logger.Logger, conf config.Config) {
@@ -14,7 +13,7 @@ func StartListeningForActual(l logger.Logger, conf config.Config) {
 	listener := actualstatelistener.New(conf,
 		messageBus,
 		store,
-		timeprovider.NewTimeProvider(),
+		buildTimeProvider(l),
 		l)
 
 	listener.Start()
