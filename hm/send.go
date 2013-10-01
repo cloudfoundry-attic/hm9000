@@ -2,6 +2,7 @@ package hm
 
 import (
 	"github.com/cloudfoundry/go_cfmessagebus"
+	"github.com/cloudfoundry/go_cfmessagebus/logging_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
@@ -13,8 +14,13 @@ import (
 	"time"
 )
 
-func Send(l logger.Logger, conf config.Config, pollingInterval int) {
-	messageBus := connectToMessageBus(l, conf)
+func Send(l logger.Logger, conf config.Config, pollingInterval int, noop bool) {
+	var messageBus cfmessagebus.MessageBus
+	if noop {
+		messageBus = &logging_cfmessagebus.LoggingMessageBus{}
+	} else {
+		messageBus = connectToMessageBus(l, conf)
+	}
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 
 	if pollingInterval == 0 {

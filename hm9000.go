@@ -55,13 +55,14 @@ func main() {
 		cli.Command{
 			Name:        "send",
 			Description: "Send the enqueued start/stop messages",
-			Usage:       "hm send --config=/path/to/config --pollEvery=duration",
+			Usage:       "hm send --config=/path/to/config --pollEvery=duration --noop",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
 				cli.IntFlag{"pollEvery", 0, "Polling interval in seconds (leave blank to run just once)"},
+				cli.BoolFlag{"noop", "Enable noop mode to prevent sending messages over nats (messages will simply be logged, instead)"},
 			},
 			Action: func(c *cli.Context) {
-				hm.Send(l, loadConfig(l, c), c.Int("pollEvery"))
+				hm.Send(l, loadConfig(l, c), c.Int("pollEvery"), c.Bool("noop"))
 			},
 		},
 		cli.Command{
