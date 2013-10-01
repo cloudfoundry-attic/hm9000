@@ -41,12 +41,10 @@ func (etcd *ETCDClusterRunner) Start() {
 		err := etcd.etcdCommands[i].Start()
 		Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
 
-		Eventually(func() error {
+		Eventually(func() bool {
 			client := etcdclient.NewClient()
-			client.SetCluster([]string{"http://" + etcd.clientUrl(i)})
-			_, err := client.Get("/")
-			return err
-		}, 3, 0.05).ShouldNot(HaveOccured(), "Expected ETCD to be up and running")
+			return client.SetCluster([]string{"http://" + etcd.clientUrl(i)})
+		}, 3, 0.05).Should(BeTrue(), "Expected ETCD to be up and running")
 	}
 
 	etcd.running = true
