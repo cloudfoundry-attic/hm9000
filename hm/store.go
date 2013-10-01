@@ -38,7 +38,7 @@ func Dump(l logger.Logger, conf config.Config) {
 
 func Clear(l logger.Logger, conf config.Config) {
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
-	l.Info(fmt.Sprintf("Clear - Current timestamp %d\n", time.Now().Unix()), nil)
+	l.Info(fmt.Sprintf("Clear - Current timestamp %d\n", time.Now().Unix()))
 
 	Walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
 		etcdStoreAdapter.Delete(node.Key)

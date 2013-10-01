@@ -29,7 +29,7 @@ func FetchDesiredState(l logger.Logger, conf config.Config, pollingInterval int)
 		l.Info("Starting Desired State Daemon...")
 		err := Daemonize(func() error {
 			return fetchDesiredState(l, conf, messageBus, etcdStoreAdapter)
-		}, time.Duration(pollingInterval)*time.Second, 600*time.Second)
+		}, time.Duration(pollingInterval)*time.Second, 600*time.Second, l)
 		if err != nil {
 			l.Error("Desired State Daemon Errored", err)
 		}

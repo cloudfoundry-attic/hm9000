@@ -35,6 +35,7 @@ func New(config config.Config,
 
 func (listener *ActualStateListener) Start() {
 	listener.messageBus.Subscribe("dea.advertise", func(messageBody []byte) {
+		listener.logger.Info("Received dea.advertise, bumping freshness.")
 		listener.bumpFreshness()
 	})
 
@@ -54,6 +55,7 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
+		listener.logger.Info("Received dea.heartbea, bumping freshness.")
 		listener.bumpFreshness()
 	})
 }

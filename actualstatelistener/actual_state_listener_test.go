@@ -68,7 +68,6 @@ var _ = Describe("Actual state listener", func() {
 
 		It("Bumps the actual state freshness", func() {
 			Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
-			Ω(logger.LoggedSubjects).Should(BeEmpty())
 		})
 	})
 
@@ -109,7 +108,6 @@ var _ = Describe("Actual state listener", func() {
 		Context("when the save succeeds", func() {
 			It("bumps the freshness", func() {
 				Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
-				Ω(logger.LoggedSubjects).Should(BeEmpty())
 			})
 
 			Context("when the freshness bump fails", func() {

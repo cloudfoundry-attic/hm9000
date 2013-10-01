@@ -2,10 +2,13 @@ package hm
 
 import (
 	"errors"
+	"fmt"
+	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"time"
 )
 
-func Daemonize(callback func() error, period time.Duration, timeout time.Duration) error {
+func Daemonize(callback func() error, period time.Duration, timeout time.Duration, l logger.Logger) error {
+	l.Info(fmt.Sprintf("Running Daemon every %d seconds with a timeout of %d", int(period.Seconds()), int(timeout.Seconds())))
 	for true {
 		afterChan := time.After(period)
 		timeoutChan := time.After(timeout)
@@ -15,11 +18,9 @@ func Daemonize(callback func() error, period time.Duration, timeout time.Duratio
 		}()
 		select {
 		case err := <-errorChan:
-			if err != nil {
-				return err
-			}
+			l.Error("Daemon returned an error. Continuining...", err)
 		case <-timeoutChan:
-			return errors.New("Daemon timed out")
+			return errors.New("Daemon timed out. Aborting!")
 		}
 		<-afterChan
 	}
