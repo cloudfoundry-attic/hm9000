@@ -23,11 +23,12 @@ var _ = Describe("Simple Cases Test", func() {
 
 			timestamp = 100
 
-			heartbeats := []models.Heartbeat{app1.Heartbeat(1, 0), app2.Heartbeat(1, 0)}
+			for i := 0; i < 3; i++ {
+				sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+				timestamp += 10
+			}
 
-			timestamp = sendHeartbeats(timestamp, heartbeats, 3, 10)
 			cliRunner.Run("fetch_desired", timestamp)
-
 			cliRunner.Run("analyze", timestamp)
 			cliRunner.Run("send", timestamp)
 		})
@@ -53,28 +54,33 @@ var _ = Describe("Simple Cases Test", func() {
 				desired,
 			})
 
-			heartbeats := []models.Heartbeat{app1.Heartbeat(1, 0), app2.Heartbeat(1, 0)}
+			for i := 0; i < 3; i++ {
+				sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+				timestamp += 10
+			}
 
-			timestamp = sendHeartbeats(timestamp, heartbeats, 3, 10)
 			cliRunner.Run("fetch_desired", timestamp)
 
 			cliRunner.Run("analyze", timestamp)
 
-			timestamp = sendHeartbeats(timestamp, heartbeats, 1, 10)
-			cliRunner.Run("send", timestamp)
-			timestamp = sendHeartbeats(timestamp, heartbeats, 1, 10)
+			sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+			timestamp += 10
 			cliRunner.Run("send", timestamp)
 			Ω(startStopListener.Starts).Should(BeEmpty())
 
-			timestamp = sendHeartbeats(timestamp, heartbeats, 1, 10)
+			sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+			timestamp += 10
+			cliRunner.Run("send", timestamp)
+			Ω(startStopListener.Starts).Should(BeEmpty())
 
+			sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+			timestamp += 10
 			cliRunner.Run("fetch_desired", timestamp)
-
 		})
 
 		Context("when the app recovers on its own", func() {
 			BeforeEach(func() {
-				timestamp = sendHeartbeats(timestamp, []models.Heartbeat{app1.Heartbeat(1, 0), app2.Heartbeat(2, 0)}, 1, 10)
+				sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(2, 0))
 				cliRunner.Run("send", timestamp)
 			})
 
@@ -127,17 +133,18 @@ var _ = Describe("Simple Cases Test", func() {
 
 			timestamp = 100
 
-			heartbeats := []models.Heartbeat{app1.Heartbeat(1, 0), app2.Heartbeat(2, 0)}
+			for i := 0; i < 3; i++ {
+				sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(2, 0))
+				timestamp += 10
+			}
 
-			timestamp = sendHeartbeats(timestamp, heartbeats, 3, 10)
 			cliRunner.Run("fetch_desired", timestamp)
-
 			cliRunner.Run("analyze", timestamp)
 		})
 
 		Context("when the instance is no longer running", func() {
 			BeforeEach(func() {
-				timestamp = sendHeartbeats(timestamp, []models.Heartbeat{app1.Heartbeat(1, 0), app2.Heartbeat(1, 0)}, 1, 10)
+				expireHeartbeat(app2.GetInstance(1).Heartbeat(0))
 				cliRunner.Run("send", timestamp)
 			})
 

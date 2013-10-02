@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
-	. "github.com/cloudfoundry/hm9000/mcat/md"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	"github.com/cloudfoundry/hm9000/testhelpers/natsrunner"
@@ -101,26 +100,18 @@ func startZookeeper() {
 	Ω(err).ShouldNot(HaveOccured())
 }
 
-func sendHeartbeats(timestamp int, heartbeats []models.Heartbeat, times int, deltaT int) int {
-	nodes, err := storeAdapter.List("/actual")
-	if err != storeadapter.ErrorKeyNotFound {
-		Ω(err).ShouldNot(HaveOccured())
-		for _, node := range nodes {
-			err := storeAdapter.Delete(node.Key)
-			Ω(err).ShouldNot(HaveOccured())
-		}
-	}
+func expireHeartbeat(heartbeat models.InstanceHeartbeat) {
+	err := storeAdapter.Delete("/actual/" + heartbeat.InstanceGuid)
+	Ω(err).ShouldNot(HaveOccured())
+}
 
-	for i := 0; i < times; i++ {
-		cliRunner.StartListener(timestamp)
-		for _, heartbeat := range heartbeats {
-			publisher.PublishHeartbeat(heartbeat)
-		}
-		cliRunner.WaitForHeartbeats(len(heartbeats))
-		cliRunner.StopListener()
-		timestamp += deltaT
+func sendHeartbeats(timestamp int, heartbeats ...models.Heartbeat) {
+	cliRunner.StartListener(timestamp)
+	for _, heartbeat := range heartbeats {
+		publisher.PublishHeartbeat(heartbeat)
 	}
-	return timestamp
+	cliRunner.WaitForHeartbeats(len(heartbeats))
+	cliRunner.StopListener()
 }
 
 func registerSignalHandler() {
