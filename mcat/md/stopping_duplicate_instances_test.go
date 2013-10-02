@@ -64,7 +64,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 					Ω(stop.AppGuid).Should(Equal(a.AppGuid))
 					Ω(stop.AppVersion).Should(Equal(a.AppVersion))
 					Ω(stop.InstanceIndex).Should(Equal(1))
-					Ω(stop.RunningIndices).Should(Equal(models.RunningIndices{"0": 1, "1": 2}))
+					Ω(stop.IsDuplicate).Should(BeTrue())
 					Ω([]string{instance1.InstanceGuid, duplicateInstance1.InstanceGuid}).Should(ContainElement(stop.InstanceGuid))
 				})
 

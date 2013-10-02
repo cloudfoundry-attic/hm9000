@@ -27,8 +27,7 @@ var _ = Describe("StartStopListener", func() {
 	jsonStartMessage := `{
 	            "droplet":"abc",
 	            "version":"123",
-	            "instance_index":1,
-	            "running_indices":{"0":1, "1":0}
+	            "instance_index":1
 	        }`
 
 	jsonStopMessage := `{
@@ -36,7 +35,7 @@ var _ = Describe("StartStopListener", func() {
 	            "version":"123",
 	            "instance_guid":"xyz",
 	            "instance_index":2,
-	            "running_indices":{"0":1, "1":1, "2":2, "3":1}
+	            "is_duplicate":true
 	        }`
 
 	BeforeEach(func() {
@@ -48,10 +47,9 @@ var _ = Describe("StartStopListener", func() {
 	Describe("when a start message arrives", func() {
 		It("adds a start message to its list", func() {
 			expectedStart := StartMessage{
-				AppGuid:        "abc",
-				AppVersion:     "123",
-				InstanceIndex:  1,
-				RunningIndices: RunningIndices{"0": 1, "1": 0},
+				AppGuid:       "abc",
+				AppVersion:    "123",
+				InstanceIndex: 1,
 			}
 
 			fakeMessageBus.PublishSync(conf.SenderNatsStartSubject, []byte(jsonStartMessage))
@@ -64,11 +62,11 @@ var _ = Describe("StartStopListener", func() {
 	Describe("when a stop message arrives", func() {
 		It("adds a stop message to its list", func() {
 			expectedStop := StopMessage{
-				AppGuid:        "abc",
-				AppVersion:     "123",
-				InstanceGuid:   "xyz",
-				InstanceIndex:  2,
-				RunningIndices: RunningIndices{"0": 1, "1": 1, "2": 2, "3": 1},
+				AppGuid:       "abc",
+				AppVersion:    "123",
+				InstanceGuid:  "xyz",
+				InstanceIndex: 2,
+				IsDuplicate:   true,
 			}
 
 			fakeMessageBus.PublishSync(conf.SenderNatsStopSubject, []byte(jsonStopMessage))

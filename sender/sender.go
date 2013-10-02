@@ -74,10 +74,9 @@ func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage
 		} else if startMessage.IsTimeToSend(sender.timeProvider.Time()) {
 			if sender.verifyStartMessageShouldBeSent(startMessage) {
 				messageToSend := models.StartMessage{
-					AppGuid:        startMessage.AppGuid,
-					AppVersion:     startMessage.AppVersion,
-					InstanceIndex:  startMessage.IndexToStart,
-					RunningIndices: sender.runningIndicesForApp(startMessage.AppGuid, startMessage.AppVersion),
+					AppGuid:       startMessage.AppGuid,
+					AppVersion:    startMessage.AppVersion,
+					InstanceIndex: startMessage.IndexToStart,
 				}
 				err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, messageToSend.ToJSON())
 				if err != nil {
@@ -121,14 +120,15 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 			sender.logger.Info("Deleting expired stop message", stopMessage.LogDescription())
 			stopMessagesToDelete = append(stopMessagesToDelete, stopMessage)
 		} else if stopMessage.IsTimeToSend(sender.timeProvider.Time()) {
-			if sender.verifyStopMessageShouldBeSent(stopMessage) {
+			shouldSend, isDuplicate := sender.verifyStopMessageShouldBeSent(stopMessage)
+			if shouldSend {
 				actual := sender.storecache.RunningByInstance[stopMessage.InstanceGuid]
 				messageToSend := models.StopMessage{
-					AppGuid:        actual.AppGuid,
-					AppVersion:     actual.AppVersion,
-					InstanceIndex:  actual.InstanceIndex,
-					InstanceGuid:   stopMessage.InstanceGuid,
-					RunningIndices: sender.runningIndicesForApp(actual.AppGuid, actual.AppVersion),
+					AppGuid:       actual.AppGuid,
+					AppVersion:    actual.AppVersion,
+					InstanceIndex: actual.InstanceIndex,
+					InstanceGuid:  stopMessage.InstanceGuid,
+					IsDuplicate:   isDuplicate,
 				}
 				err := sender.messageBus.Publish(sender.conf.SenderNatsStopSubject, messageToSend.ToJSON())
 				if err != nil {
@@ -199,12 +199,12 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.QueueStartMe
 	return true
 }
 
-func (sender *Sender) verifyStopMessageShouldBeSent(message models.QueueStopMessage) bool {
+func (sender *Sender) verifyStopMessageShouldBeSent(message models.QueueStopMessage) (bool, isDuplicate bool) {
 	instanceToStop, ok := sender.storecache.RunningByInstance[message.InstanceGuid]
 	if !ok {
 		//there was no running instance found with that guid, don't send a stop message
 		sender.logger.Info("Skipping sending stop message: instance is no longer running", message.LogDescription())
-		return false
+		return false, false
 	}
 	appKey := sender.storecache.Key(instanceToStop.AppGuid, instanceToStop.AppVersion)
 	desired, ok := sender.storecache.DesiredByApp[appKey]
@@ -213,7 +213,7 @@ func (sender *Sender) verifyStopMessageShouldBeSent(message models.QueueStopMess
 		sender.logger.Info("Sending stop message: instance is running, app is no longer desired",
 			message.LogDescription(),
 			instanceToStop.LogDescription())
-		return true
+		return true, false
 	}
 	if desired.NumberOfInstances <= instanceToStop.InstanceIndex {
 		//the instance index is beyond the desired # of instances, stop the app
@@ -221,7 +221,7 @@ func (sender *Sender) verifyStopMessageShouldBeSent(message models.QueueStopMess
 			message.LogDescription(),
 			instanceToStop.LogDescription(),
 			desired.LogDescription())
-		return true
+		return true, false
 	}
 	allRunningInstances, _ := sender.storecache.RunningByApp[appKey]
 	for _, heartbeat := range allRunningInstances {
@@ -232,7 +232,7 @@ func (sender *Sender) verifyStopMessageShouldBeSent(message models.QueueStopMess
 				message.LogDescription(),
 				instanceToStop.LogDescription(),
 				desired.LogDescription())
-			return true
+			return true, true
 		}
 	}
 
@@ -243,16 +243,5 @@ func (sender *Sender) verifyStopMessageShouldBeSent(message models.QueueStopMess
 		message.LogDescription(),
 		instanceToStop.LogDescription(),
 		desired.LogDescription())
-	return false
-}
-
-func (sender *Sender) runningIndicesForApp(appGuid string, appVersion string) models.RunningIndices {
-	runningInstances := sender.storecache.RunningByApp[sender.storecache.Key(appGuid, appVersion)]
-	runningIndices := models.RunningIndices{}
-
-	for _, instance := range runningInstances {
-		runningIndices.IncrementIndex(instance.InstanceIndex)
-	}
-
-	return runningIndices
+	return false, false
 }

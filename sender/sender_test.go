@@ -139,10 +139,9 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
 				message, _ := models.NewStartMessageFromJSON(messageBus.PublishedMessages["hm9000.start"][0])
 				Ω(message).Should(Equal(models.StartMessage{
-					AppGuid:        app1.AppGuid,
-					AppVersion:     app1.AppVersion,
-					InstanceIndex:  0,
-					RunningIndices: models.RunningIndices{},
+					AppGuid:       app1.AppGuid,
+					AppVersion:    app1.AppVersion,
+					InstanceIndex: 0,
 				}))
 			})
 
@@ -294,11 +293,11 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(1))
 				message, _ := models.NewStopMessageFromJSON(messageBus.PublishedMessages["hm9000.stop"][0])
 				Ω(message).Should(Equal(models.StopMessage{
-					AppGuid:        app1.AppGuid,
-					AppVersion:     app1.AppVersion,
-					InstanceIndex:  0,
-					InstanceGuid:   app1.GetInstance(0).InstanceGuid,
-					RunningIndices: models.RunningIndices{"0": 1, "1": 1},
+					AppGuid:       app1.AppGuid,
+					AppVersion:    app1.AppVersion,
+					InstanceIndex: 0,
+					InstanceGuid:  app1.GetInstance(0).InstanceGuid,
+					IsDuplicate:   false,
 				}))
 			})
 
@@ -424,7 +423,7 @@ var _ = Describe("Sender", func() {
 			})
 		}
 
-		assertMessageWasSent := func(expectedRunningIndices models.RunningIndices) {
+		assertMessageWasSent := func() {
 			It("should honor the keep alive of the start message", func() {
 				messages, _ := store.GetQueueStartMessages()
 				Ω(messages).Should(HaveLen(1))
@@ -435,10 +434,9 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
 				message, _ := models.NewStartMessageFromJSON(messageBus.PublishedMessages["hm9000.start"][0])
 				Ω(message).Should(Equal(models.StartMessage{
-					AppGuid:        app1.AppGuid,
-					AppVersion:     app1.AppVersion,
-					InstanceIndex:  0,
-					RunningIndices: expectedRunningIndices,
+					AppGuid:       app1.AppGuid,
+					AppVersion:    app1.AppVersion,
+					InstanceIndex: 0,
 				}))
 			})
 		}
@@ -454,7 +452,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				Context("when there are no running instances at all for that app", func() {
-					assertMessageWasSent(models.RunningIndices{})
+					assertMessageWasSent()
 				})
 
 				Context("when there is no running instance reporting at that index", func() {
@@ -464,7 +462,7 @@ var _ = Describe("Sender", func() {
 							app1.GetInstance(2).Heartbeat(0),
 						})
 					})
-					assertMessageWasSent(models.RunningIndices{"1": 1, "2": 1})
+					assertMessageWasSent()
 				})
 
 				Context("when there *is* a running instance reporting at that index", func() {
@@ -522,7 +520,7 @@ var _ = Describe("Sender", func() {
 			})
 		}
 
-		assertMessageWasSent := func(indexToStop int, expectedRunningIndices models.RunningIndices) {
+		assertMessageWasSent := func(indexToStop int, isDuplicate bool) {
 			It("should honor the keep alive of the stop message", func() {
 				messages, _ := store.GetQueueStopMessages()
 				Ω(messages).Should(HaveLen(1))
@@ -533,11 +531,11 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(1))
 				message, _ := models.NewStopMessageFromJSON(messageBus.PublishedMessages["hm9000.stop"][0])
 				Ω(message).Should(Equal(models.StopMessage{
-					AppGuid:        app1.AppGuid,
-					AppVersion:     app1.AppVersion,
-					InstanceIndex:  indexToStop,
-					InstanceGuid:   app1.GetInstance(indexToStop).InstanceGuid,
-					RunningIndices: expectedRunningIndices,
+					AppGuid:       app1.AppGuid,
+					AppVersion:    app1.AppVersion,
+					InstanceIndex: indexToStop,
+					InstanceGuid:  app1.GetInstance(indexToStop).InstanceGuid,
+					IsDuplicate:   isDuplicate,
 				}))
 			})
 		}
@@ -570,7 +568,7 @@ var _ = Describe("Sender", func() {
 							})
 						})
 
-						assertMessageWasSent(0, models.RunningIndices{"0": 2, "1": 1})
+						assertMessageWasSent(0, true)
 					})
 
 					Context("When there are no other running instances on the index", func() {
@@ -583,7 +581,7 @@ var _ = Describe("Sender", func() {
 						indexToStop = 1
 					})
 
-					assertMessageWasSent(1, models.RunningIndices{"0": 1, "1": 1})
+					assertMessageWasSent(1, false)
 				})
 			})
 
@@ -600,7 +598,7 @@ var _ = Describe("Sender", func() {
 						app1.GetInstance(1).Heartbeat(0),
 					})
 				})
-				assertMessageWasSent(0, models.RunningIndices{"0": 1, "1": 1})
+				assertMessageWasSent(0, false)
 			})
 
 			Context("when the instance is not running", func() {

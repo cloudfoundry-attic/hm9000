@@ -2,36 +2,21 @@ package models
 
 import (
 	"encoding/json"
-	"strconv"
 )
 
 //Start and Stop Messages
 type StartMessage struct {
-	AppGuid        string         `json:"droplet"`
-	AppVersion     string         `json:"version"`
-	InstanceIndex  int            `json:"instance_index"`
-	RunningIndices RunningIndices `json:"running_indices"`
+	AppGuid       string `json:"droplet"`
+	AppVersion    string `json:"version"`
+	InstanceIndex int    `json:"instance_index"`
 }
 
 type StopMessage struct {
-	AppGuid        string         `json:"droplet"`
-	AppVersion     string         `json:"version"`
-	InstanceGuid   string         `json:"instance_guid"`
-	InstanceIndex  int            `json:"instance_index"`
-	RunningIndices RunningIndices `json:"running_indices"`
-}
-
-type RunningIndices map[string]int
-
-func (indices RunningIndices) IncrementIndex(index int) {
-	stringIndex := strconv.Itoa(index)
-	_, ok := indices[stringIndex]
-	if !ok {
-		indices[stringIndex] = 1
-		return
-	}
-	indices[stringIndex] += 1
-	return
+	AppGuid       string `json:"droplet"`
+	AppVersion    string `json:"version"`
+	InstanceGuid  string `json:"instance_guid"`
+	InstanceIndex int    `json:"instance_index"`
+	IsDuplicate   bool   `json:"is_duplicate"`
 }
 
 func NewStartMessageFromJSON(encoded []byte) (StartMessage, error) {
