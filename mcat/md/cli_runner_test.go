@@ -41,6 +41,8 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.StoreURLs = storeURLs
 	conf.CCBaseURL = ccBaseURL
 	conf.NATS.Port = natsPort
+	conf.NumberOfDEAs = 4
+	conf.SenderMessageLimitPerDEA = 2
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccured())
@@ -81,7 +83,7 @@ func (runner *CLIRunner) Run(command string, timestamp int) {
 	cmd := exec.Command("hm9000", command, fmt.Sprintf("--config=%s", runner.configPath))
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
 	out, err := cmd.CombinedOutput()
-	Ω(err).ShouldNot(HaveOccured())
+	Ω(err).ShouldNot(HaveOccured(), "%s command failed", command)
 	if runner.verbose {
 		fmt.Printf(command + "\n")
 		fmt.Printf(strings.Repeat("~", len(command)) + "\n")

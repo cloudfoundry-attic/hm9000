@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -89,8 +90,7 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 			return
 		}
 
-		body := make([]byte, resp.ContentLength)
-		_, err = resp.Body.Read(body)
+		body, err := ioutil.ReadAll(resp.Body)
 
 		if err != nil {
 			resultChan <- DesiredStateFetcherResult{Message: "Failed to read HTTP response body", Error: err}

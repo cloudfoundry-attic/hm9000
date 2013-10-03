@@ -22,6 +22,7 @@ var _ = Describe("Sender", func() {
 		messageBus   *fake_cfmessagebus.FakeMessageBus
 		timeProvider *faketimeprovider.FakeTimeProvider
 		app1         app.App
+		conf         config.Config
 	)
 
 	BeforeEach(func() {
@@ -29,7 +30,7 @@ var _ = Describe("Sender", func() {
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
 		timeProvider = &faketimeprovider.FakeTimeProvider{}
 		app1 = app.NewApp()
-		conf, _ := config.DefaultConfig()
+		conf, _ = config.DefaultConfig()
 
 		sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
 		store.BumpActualFreshness(time.Unix(10, 0))
@@ -604,6 +605,87 @@ var _ = Describe("Sender", func() {
 			Context("when the instance is not running", func() {
 				assertMessageWasNotSent()
 			})
+		})
+	})
+
+	Context("When there are multiple start and stop messages in the queue", func() {
+		var invalidStartMessages, validStartMessages, expiredStartMessages []models.QueueStartMessage
+
+		BeforeEach(func() {
+			conf, _ = config.DefaultConfig()
+			conf.SenderMessageLimitPerDEA = 2
+			conf.NumberOfDEAs = 10
+
+			sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
+
+			for i := 0; i < 40; i += 1 {
+				a := app.NewApp()
+				store.SaveDesiredState([]models.DesiredAppState{a.DesiredState(0)})
+				store.SaveActualState([]models.InstanceHeartbeat{
+					a.GetInstance(1).Heartbeat(0),
+				})
+
+				//only some of these should be sent:
+				validStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 0)
+				validStartMessages = append(validStartMessages, validStartMessage)
+				store.SaveQueueStartMessages([]models.QueueStartMessage{
+					validStartMessage,
+				})
+
+				//all of these should be deleted:
+				invalidStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 1)
+				invalidStartMessages = append(invalidStartMessages, invalidStartMessage)
+				store.SaveQueueStartMessages([]models.QueueStartMessage{
+					invalidStartMessage,
+				})
+
+				//all of these should be deleted:
+				expiredStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 0, 20, a.AppGuid, a.AppVersion, 2)
+				expiredStartMessage.SentOn = 100
+				expiredStartMessages = append(expiredStartMessages, expiredStartMessage)
+				store.SaveQueueStartMessages([]models.QueueStartMessage{
+					expiredStartMessage,
+				})
+
+				stopMessage := models.NewQueueStopMessage(time.Unix(100, 0), 30, 0, a.GetInstance(1).InstanceGuid)
+				store.SaveQueueStopMessages([]models.QueueStopMessage{
+					stopMessage,
+				})
+			}
+
+			timeProvider.TimeToProvide = time.Unix(130, 0)
+			err := sender.Send()
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		It("should limit the number of start messages that it sends", func() {
+			remainingStartMessages, _ := store.GetQueueStartMessages()
+			Ω(remainingStartMessages).Should(HaveLen(20))
+			Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(20))
+
+			for _, remainingStartMessage := range remainingStartMessages {
+				Ω(validStartMessages).Should(ContainElement(remainingStartMessage))
+			}
+		})
+
+		It("should delete all the invalid start messages", func() {
+			remainingStartMessages, _ := store.GetQueueStartMessages()
+			for _, invalidStartMessage := range invalidStartMessages {
+				Ω(remainingStartMessages).ShouldNot(ContainElement(invalidStartMessage))
+			}
+		})
+
+		It("should delete all the expired start messages", func() {
+			remainingStartMessages, _ := store.GetQueueStartMessages()
+			for _, expiredStartMessage := range expiredStartMessages {
+				Ω(remainingStartMessages).ShouldNot(ContainElement(expiredStartMessage))
+			}
+		})
+
+		It("should send all the stop messages, as they are cheap to handle", func() {
+			remainingStopMessages, _ := store.GetQueueStopMessages()
+			Ω(remainingStopMessages).Should(BeEmpty())
+			Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(40))
 		})
 	})
 })

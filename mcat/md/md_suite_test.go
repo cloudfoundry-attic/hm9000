@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	ginkgoConfig "github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
+	"os/exec"
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -38,13 +39,16 @@ func TestMd(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
+	cmd := exec.Command("go", "install", "github.com/cloudfoundry/hm9000")
+	err := cmd.Run()
+	Ω(err).ShouldNot(HaveOccured())
+
 	natsRunner = natsrunner.NewNATSRunner(natsPort)
 	natsRunner.Start()
 
 	stateServer = desiredstateserver.NewDesiredStateServer(natsRunner.MessageBus)
 	go stateServer.SpinUp(6001)
 
-	var err error
 	conf, err = config.DefaultConfig()
 	Ω(err).ShouldNot(HaveOccured())
 

@@ -24,6 +24,8 @@ var _ = Describe("Config", func() {
         "store_max_concurrent_requests": 100,
         "sender_nats_start_subject": "hm9000.start",
         "sender_nats_stop_subject": "hm9000.stop",
+        "sender_message_limit_per_dea": 4,
+        "number_of_deas": 16,
         "nats": {
             "host": "127.0.0.1",
             "port": 4222,
@@ -51,6 +53,8 @@ var _ = Describe("Config", func() {
 			Ω(config.StoreMaxConcurrentRequests).Should(Equal(100))
 			Ω(config.SenderNatsStartSubject).Should(Equal("hm9000.start"))
 			Ω(config.SenderNatsStopSubject).Should(Equal("hm9000.stop"))
+			Ω(config.SenderMessageLimitPerDEA).Should(Equal(4))
+			Ω(config.NumberOfDEAs).Should(Equal(16))
 
 			Ω(config.NATS.Host).Should(Equal("127.0.0.1"))
 			Ω(config.NATS.Port).Should(Equal(4222))

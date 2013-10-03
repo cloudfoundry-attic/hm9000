@@ -13,6 +13,8 @@
     "store_max_concurrent_requests": 100,
     "sender_nats_start_subject": "hm9000.start",
     "sender_nats_stop_subject": "hm9000.stop",
+    "sender_message_limit_per_dea": 4,
+    "number_of_deas": 16,
     "nats": {
         "host": "127.0.0.1",
         "port": 4222,

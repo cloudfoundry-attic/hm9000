@@ -67,28 +67,34 @@ func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage
 	startMessagesToSave := []models.QueueStartMessage{}
 	startMessagesToDelete := []models.QueueStartMessage{}
 
+	numSent := 0
+	maxSent := sender.conf.NumberOfDEAs * sender.conf.SenderMessageLimitPerDEA
+
 	for _, startMessage := range startMessages {
 		if startMessage.IsExpired(sender.timeProvider.Time()) {
 			sender.logger.Info("Deleting expired start message", startMessage.LogDescription())
 			startMessagesToDelete = append(startMessagesToDelete, startMessage)
 		} else if startMessage.IsTimeToSend(sender.timeProvider.Time()) {
 			if sender.verifyStartMessageShouldBeSent(startMessage) {
-				messageToSend := models.StartMessage{
-					AppGuid:       startMessage.AppGuid,
-					AppVersion:    startMessage.AppVersion,
-					InstanceIndex: startMessage.IndexToStart,
-				}
-				err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, messageToSend.ToJSON())
-				if err != nil {
-					sender.logger.Error("Failed to send start message", err, startMessage.LogDescription())
-					return err
-				}
-				if startMessage.KeepAlive == 0 {
-					sender.logger.Info("Deleting sent start message with no keep alive", startMessage.LogDescription())
-					startMessagesToDelete = append(startMessagesToDelete, startMessage)
-				} else {
-					startMessage.SentOn = sender.timeProvider.Time().Unix()
-					startMessagesToSave = append(startMessagesToSave, startMessage)
+				if numSent < maxSent {
+					messageToSend := models.StartMessage{
+						AppGuid:       startMessage.AppGuid,
+						AppVersion:    startMessage.AppVersion,
+						InstanceIndex: startMessage.IndexToStart,
+					}
+					err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, messageToSend.ToJSON())
+					if err != nil {
+						sender.logger.Error("Failed to send start message", err, startMessage.LogDescription())
+						return err
+					}
+					if startMessage.KeepAlive == 0 {
+						sender.logger.Info("Deleting sent start message with no keep alive", startMessage.LogDescription())
+						startMessagesToDelete = append(startMessagesToDelete, startMessage)
+					} else {
+						startMessage.SentOn = sender.timeProvider.Time().Unix()
+						startMessagesToSave = append(startMessagesToSave, startMessage)
+					}
+					numSent += 1
 				}
 			} else {
 				sender.logger.Info("Deleting start message that will not be sent", startMessage.LogDescription())
