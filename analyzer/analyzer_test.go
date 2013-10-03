@@ -39,14 +39,20 @@ var _ = Describe("Analyzer", func() {
 	assertStartMessages := func(messages ...models.QueueStartMessage) {
 		Ω(outbox.StartMessages).Should(HaveLen(len(messages)))
 		for _, message := range messages {
-			Ω(outbox.StartMessages[message.StoreKey()]).Should(Equal(message))
+			Ω(outbox.StartMessages[message.StoreKey()]).ShouldNot(BeZero())
+			candidateMatch := outbox.StartMessages[message.StoreKey()]
+			candidateMatch.MessageId = message.MessageId
+			Ω(candidateMatch).Should(Equal(message))
 		}
 	}
 
 	assertStopMessages := func(messages ...models.QueueStopMessage) {
 		Ω(outbox.StopMessages).Should(HaveLen(len(messages)))
 		for _, message := range messages {
-			Ω(outbox.StopMessages[message.StoreKey()]).Should(Equal(message))
+			Ω(outbox.StopMessages[message.StoreKey()]).ShouldNot(BeZero())
+			candidateMatch := outbox.StopMessages[message.StoreKey()]
+			candidateMatch.MessageId = message.MessageId
+			Ω(candidateMatch).Should(Equal(message))
 		}
 	}
 
@@ -264,11 +270,11 @@ var _ = Describe("Analyzer", func() {
 			})
 
 			duplicateInstance1 = a.GetInstance(2)
-			duplicateInstance1.InstanceGuid = app.Guid()
+			duplicateInstance1.InstanceGuid = models.Guid()
 			duplicateInstance2 = a.GetInstance(2)
-			duplicateInstance2.InstanceGuid = app.Guid()
+			duplicateInstance2.InstanceGuid = models.Guid()
 			duplicateInstance3 = a.GetInstance(2)
-			duplicateInstance3.InstanceGuid = app.Guid()
+			duplicateInstance3.InstanceGuid = models.Guid()
 		})
 
 		Context("When there are missing instances on other indices", func() {
@@ -320,9 +326,9 @@ var _ = Describe("Analyzer", func() {
 
 			BeforeEach(func() {
 				duplicateExtraInstance1 = a.GetInstance(3)
-				duplicateExtraInstance1.InstanceGuid = app.Guid()
+				duplicateExtraInstance1.InstanceGuid = models.Guid()
 				duplicateExtraInstance2 = a.GetInstance(3)
-				duplicateExtraInstance2.InstanceGuid = app.Guid()
+				duplicateExtraInstance2.InstanceGuid = models.Guid()
 			})
 
 			It("should terminate the extra indices with extreme prejudice", func() {

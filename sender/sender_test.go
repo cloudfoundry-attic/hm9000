@@ -93,14 +93,15 @@ var _ = Describe("Sender", func() {
 		var keepAliveTime int
 		var sentOn int64
 		var err error
+		var queueMessage models.QueueStartMessage
 
 		JustBeforeEach(func() {
 			store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState(0)})
 
-			message := models.NewQueueStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0)
-			message.SentOn = sentOn
+			queueMessage = models.NewQueueStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0)
+			queueMessage.SentOn = sentOn
 			store.SaveQueueStartMessages([]models.QueueStartMessage{
-				message,
+				queueMessage,
 			})
 
 			err = sender.Send()
@@ -143,6 +144,7 @@ var _ = Describe("Sender", func() {
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
 					InstanceIndex: 0,
+					MessageId:     queueMessage.MessageId,
 				}))
 			})
 
@@ -240,6 +242,7 @@ var _ = Describe("Sender", func() {
 		var keepAliveTime int
 		var sentOn int64
 		var err error
+		var queuedMessage models.QueueStopMessage
 
 		JustBeforeEach(func() {
 			store.SaveActualState([]models.InstanceHeartbeat{
@@ -247,10 +250,10 @@ var _ = Describe("Sender", func() {
 				app1.GetInstance(1).Heartbeat(0),
 			})
 
-			message := models.NewQueueStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.GetInstance(0).InstanceGuid)
-			message.SentOn = sentOn
+			queuedMessage = models.NewQueueStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.GetInstance(0).InstanceGuid)
+			queuedMessage.SentOn = sentOn
 			store.SaveQueueStopMessages([]models.QueueStopMessage{
-				message,
+				queuedMessage,
 			})
 
 			err = sender.Send()
@@ -299,6 +302,7 @@ var _ = Describe("Sender", func() {
 					InstanceIndex: 0,
 					InstanceGuid:  app1.GetInstance(0).InstanceGuid,
 					IsDuplicate:   false,
+					MessageId:     queuedMessage.MessageId,
 				}))
 			})
 
@@ -396,13 +400,14 @@ var _ = Describe("Sender", func() {
 	Describe("Verifying that start messages should be sent", func() {
 		var err error
 		var indexToStart int
+		var queuedMessage models.QueueStartMessage
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			message := models.NewQueueStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart)
-			message.SentOn = 0
+			queuedMessage = models.NewQueueStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart)
+			queuedMessage.SentOn = 0
 			store.SaveQueueStartMessages([]models.QueueStartMessage{
-				message,
+				queuedMessage,
 			})
 
 			err = sender.Send()
@@ -438,6 +443,7 @@ var _ = Describe("Sender", func() {
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
 					InstanceIndex: 0,
+					MessageId:     queuedMessage.MessageId,
 				}))
 			})
 		}
@@ -494,13 +500,14 @@ var _ = Describe("Sender", func() {
 	Describe("Verifying that stop messages should be sent", func() {
 		var err error
 		var indexToStop int
+		var queuedMessage models.QueueStopMessage
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			message := models.NewQueueStopMessage(time.Unix(100, 0), 30, 10, app1.GetInstance(indexToStop).InstanceGuid)
-			message.SentOn = 0
+			queuedMessage = models.NewQueueStopMessage(time.Unix(100, 0), 30, 10, app1.GetInstance(indexToStop).InstanceGuid)
+			queuedMessage.SentOn = 0
 			store.SaveQueueStopMessages([]models.QueueStopMessage{
-				message,
+				queuedMessage,
 			})
 
 			err = sender.Send()
@@ -537,6 +544,7 @@ var _ = Describe("Sender", func() {
 					InstanceIndex: indexToStop,
 					InstanceGuid:  app1.GetInstance(indexToStop).InstanceGuid,
 					IsDuplicate:   isDuplicate,
+					MessageId:     queuedMessage.MessageId,
 				}))
 			})
 		}
@@ -562,7 +570,7 @@ var _ = Describe("Sender", func() {
 					Context("When there are other running instances on the index", func() {
 						BeforeEach(func() {
 							instance := app1.GetInstance(0)
-							instance.InstanceGuid = app.Guid()
+							instance.InstanceGuid = models.Guid()
 
 							store.SaveActualState([]models.InstanceHeartbeat{
 								instance.Heartbeat(0),

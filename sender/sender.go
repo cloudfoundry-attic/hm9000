@@ -81,6 +81,7 @@ func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage
 						AppGuid:       startMessage.AppGuid,
 						AppVersion:    startMessage.AppVersion,
 						InstanceIndex: startMessage.IndexToStart,
+						MessageId:     startMessage.MessageId,
 					}
 					err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, messageToSend.ToJSON())
 					if err != nil {
@@ -135,6 +136,7 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 					InstanceIndex: actual.InstanceIndex,
 					InstanceGuid:  stopMessage.InstanceGuid,
 					IsDuplicate:   isDuplicate,
+					MessageId:     stopMessage.MessageId,
 				}
 				err := sender.messageBus.Publish(sender.conf.SenderNatsStopSubject, messageToSend.ToJSON())
 				if err != nil {

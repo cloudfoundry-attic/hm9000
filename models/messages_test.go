@@ -14,11 +14,13 @@ var _ = Describe("Messages", func() {
 					AppGuid:       "abc",
 					AppVersion:    "123",
 					InstanceIndex: 1,
+					MessageId:     "msg-id",
 				}
 				json := string(message.ToJSON())
 				Ω(json).Should(ContainSubstring(`"droplet":"abc"`))
 				Ω(json).Should(ContainSubstring(`"version":"123"`))
 				Ω(json).Should(ContainSubstring(`"instance_index":1`))
+				Ω(json).Should(ContainSubstring(`"message_id":"msg-id"`))
 			})
 		})
 		Describe("NewStartMessageFromJSON", func() {
@@ -27,6 +29,7 @@ var _ = Describe("Messages", func() {
 					AppGuid:       "abc",
 					AppVersion:    "123",
 					InstanceIndex: 1,
+					MessageId:     "msg-id",
 				}
 				decodedMessage, err := NewStartMessageFromJSON(message.ToJSON())
 				Ω(err).ShouldNot(HaveOccured())
@@ -50,6 +53,7 @@ var _ = Describe("Messages", func() {
 					InstanceGuid:  "def",
 					InstanceIndex: 1,
 					IsDuplicate:   true,
+					MessageId:     "msg-id",
 				}
 				json := string(message.ToJSON())
 				Ω(json).Should(ContainSubstring(`"droplet":"abc"`))
@@ -57,6 +61,7 @@ var _ = Describe("Messages", func() {
 				Ω(json).Should(ContainSubstring(`"instance_guid":"def"`))
 				Ω(json).Should(ContainSubstring(`"instance_index":1`))
 				Ω(json).Should(ContainSubstring(`"is_duplicate":true`))
+				Ω(json).Should(ContainSubstring(`"message_id":"msg-id"`))
 			})
 		})
 		Describe("NewStopMessageFromJSON", func() {
@@ -67,6 +72,7 @@ var _ = Describe("Messages", func() {
 					InstanceGuid:  "def",
 					InstanceIndex: 1,
 					IsDuplicate:   false,
+					MessageId:     "msg-id",
 				}
 				decodedMessage, err := NewStopMessageFromJSON(message.ToJSON())
 				Ω(err).ShouldNot(HaveOccured())

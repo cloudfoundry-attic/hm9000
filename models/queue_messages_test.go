@@ -77,6 +77,10 @@ var _ = Describe("QueueMessages", func() {
 			message = NewQueueStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1)
 		})
 
+		It("should generate a random message id guid", func() {
+			Ω(message.MessageId).ShouldNot(BeZero())
+		})
+
 		Describe("Creating new start messages programatically", func() {
 			It("should populate the start message correctly, and compute the correct SendOn time", func() {
 				Ω(message.SendOn).Should(BeNumerically("==", 130))
@@ -97,9 +101,11 @@ var _ = Describe("QueueMessages", func() {
                         "keep_alive": 10,
                         "droplet": "app-guid",
                         "version": "app-version",
-                        "index": 1
+                        "index": 1,
+                        "message_id": "abc"
                     }`))
 					Ω(err).ShouldNot(HaveOccured())
+					message.MessageId = "abc"
 					Ω(parsed).Should(Equal(message))
 				})
 			})
@@ -136,6 +142,7 @@ var _ = Describe("QueueMessages", func() {
 					"AppGuid":      "app-guid",
 					"AppVersion":   "app-version",
 					"IndexToStart": "1",
+					"MessageId":    message.MessageId,
 				}))
 			})
 		})
@@ -145,6 +152,10 @@ var _ = Describe("QueueMessages", func() {
 		var message QueueStopMessage
 		BeforeEach(func() {
 			message = NewQueueStopMessage(time.Unix(100, 0), 30, 10, "instance-guid")
+		})
+
+		It("should generate a random message id guid", func() {
+			Ω(message.MessageId).ShouldNot(BeZero())
 		})
 
 		Describe("Creating new start messages programatically", func() {
@@ -163,9 +174,11 @@ var _ = Describe("QueueMessages", func() {
                         "send_on": 130,
                         "sent_on": 0,
                         "keep_alive": 10,
-                        "instance": "instance-guid"
+                        "instance": "instance-guid",
+                        "message_id": "abc"
                     }`))
 					Ω(err).ShouldNot(HaveOccured())
+					message.MessageId = "abc"
 					Ω(parsed).Should(Equal(message))
 				})
 			})
@@ -200,6 +213,7 @@ var _ = Describe("QueueMessages", func() {
 					"SentOn":       time.Unix(0, 0).String(),
 					"KeepAlive":    "10",
 					"InstanceGuid": "instance-guid",
+					"MessageId":    message.MessageId,
 				}))
 			})
 		})

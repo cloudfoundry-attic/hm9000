@@ -11,7 +11,7 @@ type Dea struct {
 
 func NewDea() Dea {
 	return Dea{
-		DeaGuid: Guid(),
+		DeaGuid: models.Guid(),
 		apps:    make(map[int]App, 0),
 	}
 }

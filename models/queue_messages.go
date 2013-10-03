@@ -7,9 +7,10 @@ import (
 )
 
 type QueueMessage struct {
-	SendOn    int64 `json:"send_on"`
-	SentOn    int64 `json:"sent_on"`
-	KeepAlive int   `json:"keep_alive"`
+	MessageId string `json:"message_id"`
+	SendOn    int64  `json:"send_on"`
+	SentOn    int64  `json:"sent_on"`
+	KeepAlive int    `json:"keep_alive"`
 }
 
 type QueueStartMessage struct {
@@ -29,6 +30,7 @@ func newQueueMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int) 
 		SendOn:    now.Add(time.Duration(delayInSeconds) * time.Second).Unix(),
 		SentOn:    0,
 		KeepAlive: keepAliveInSeconds,
+		MessageId: Guid(),
 	}
 }
 
@@ -37,6 +39,7 @@ func (message QueueMessage) queueLogDescription() map[string]string {
 		"SendOn":    time.Unix(message.SendOn, 0).String(),
 		"SentOn":    time.Unix(message.SentOn, 0).String(),
 		"KeepAlive": strconv.Itoa(int(message.KeepAlive)),
+		"MessageId": message.MessageId,
 	}
 }
 

@@ -6,12 +6,14 @@ import (
 
 //Start and Stop Messages
 type StartMessage struct {
+	MessageId     string `json:"message_id"`
 	AppGuid       string `json:"droplet"`
 	AppVersion    string `json:"version"`
 	InstanceIndex int    `json:"instance_index"`
 }
 
 type StopMessage struct {
+	MessageId     string `json:"message_id"`
 	AppGuid       string `json:"droplet"`
 	AppVersion    string `json:"version"`
 	InstanceGuid  string `json:"instance_guid"`

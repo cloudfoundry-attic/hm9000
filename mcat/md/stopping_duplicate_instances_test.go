@@ -21,7 +21,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 			instance0 = a.GetInstance(0)
 			instance1 = a.GetInstance(1)
 			duplicateInstance1 = a.GetInstance(1)
-			duplicateInstance1.InstanceGuid = app.Guid()
+			duplicateInstance1.InstanceGuid = models.Guid()
 
 			heartbeat = models.Heartbeat{
 				DeaGuid:            "abc",
