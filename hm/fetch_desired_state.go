@@ -10,29 +10,28 @@ import (
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"os"
 	"strconv"
-	"time"
 )
 
-func FetchDesiredState(l logger.Logger, conf config.Config, pollingInterval int) {
+func FetchDesiredState(l logger.Logger, conf config.Config, poll bool) {
 	messageBus := connectToMessageBus(l, conf)
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 
-	if pollingInterval == 0 {
+	if poll {
+		l.Info("Starting Desired State Daemon...")
+		err := Daemonize(func() error {
+			return fetchDesiredState(l, conf, messageBus, etcdStoreAdapter)
+		}, conf.FetcherPollingInterval(), conf.FetcherTimeout(), l)
+		if err != nil {
+			l.Error("Desired State Daemon Errored", err)
+		}
+		l.Info("Desired State Daemon is Down")
+	} else {
 		err := fetchDesiredState(l, conf, messageBus, etcdStoreAdapter)
 		if err != nil {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
-	} else {
-		l.Info("Starting Desired State Daemon...")
-		err := Daemonize(func() error {
-			return fetchDesiredState(l, conf, messageBus, etcdStoreAdapter)
-		}, time.Duration(pollingInterval)*time.Second, 600*time.Second, l)
-		if err != nil {
-			l.Error("Desired State Daemon Errored", err)
-		}
-		l.Info("Desired State Daemon is Down")
 	}
 }
 

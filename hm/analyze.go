@@ -9,28 +9,27 @@ import (
 	"github.com/cloudfoundry/hm9000/storeadapter"
 
 	"os"
-	"time"
 )
 
-func Analyze(l logger.Logger, conf config.Config, pollingInterval int) {
+func Analyze(l logger.Logger, conf config.Config, poll bool) {
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 
-	if pollingInterval == 0 {
+	if poll {
+		l.Info("Starting Analyze Daemon...")
+		err := Daemonize(func() error {
+			return analyze(l, conf, etcdStoreAdapter)
+		}, conf.AnalyzerPollingInterval(), conf.AnalyzerTimeout(), l)
+		if err != nil {
+			l.Error("Analyze Daemon Errored", err)
+		}
+		l.Info("Analyze Daemon is Down")
+	} else {
 		err := analyze(l, conf, etcdStoreAdapter)
 		if err != nil {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
-	} else {
-		l.Info("Starting Analyze Daemon...")
-		err := Daemonize(func() error {
-			return analyze(l, conf, etcdStoreAdapter)
-		}, time.Duration(pollingInterval)*time.Second, time.Duration(pollingInterval)*10*time.Second, l)
-		if err != nil {
-			l.Error("Analyze Daemon Errored", err)
-		}
-		l.Info("Analyze Daemon is Down")
 	}
 }
 

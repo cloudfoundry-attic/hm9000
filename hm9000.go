@@ -20,13 +20,13 @@ func main() {
 		cli.Command{
 			Name:        "fetch_desired",
 			Description: "Fetches desired state",
-			Usage:       "hm fetch_desired --config=/path/to/config --pollEvery=duration",
+			Usage:       "hm fetch_desired --config=/path/to/config --poll",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
-				cli.IntFlag{"pollEvery", 0, "Polling interval in seconds (leave blank to run just once)"},
+				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
 			},
 			Action: func(c *cli.Context) {
-				hm.FetchDesiredState(l, loadConfig(l, c), c.Int("pollEvery"))
+				hm.FetchDesiredState(l, loadConfig(l, c), c.Bool("poll"))
 			},
 		},
 		cli.Command{
@@ -43,26 +43,26 @@ func main() {
 		cli.Command{
 			Name:        "analyze",
 			Description: "Analyze the desired and actual state and enqueue start/stop messages",
-			Usage:       "hm analyze --config=/path/to/config --pollEvery=duration",
+			Usage:       "hm analyze --config=/path/to/config --poll",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
-				cli.IntFlag{"pollEvery", 0, "Polling interval in seconds (leave blank to run just once)"},
+				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
 			},
 			Action: func(c *cli.Context) {
-				hm.Analyze(l, loadConfig(l, c), c.Int("pollEvery"))
+				hm.Analyze(l, loadConfig(l, c), c.Bool("poll"))
 			},
 		},
 		cli.Command{
 			Name:        "send",
 			Description: "Send the enqueued start/stop messages",
-			Usage:       "hm send --config=/path/to/config --pollEvery=duration --noop",
+			Usage:       "hm send --config=/path/to/config --poll --noop",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
-				cli.IntFlag{"pollEvery", 0, "Polling interval in seconds (leave blank to run just once)"},
+				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
 				cli.BoolFlag{"noop", "Enable noop mode to prevent sending messages over nats (messages will simply be logged, instead)"},
 			},
 			Action: func(c *cli.Context) {
-				hm.Send(l, loadConfig(l, c), c.Int("pollEvery"), c.Bool("noop"))
+				hm.Send(l, loadConfig(l, c), c.Bool("poll"), c.Bool("noop"))
 			},
 		},
 		cli.Command{

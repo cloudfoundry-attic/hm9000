@@ -27,6 +27,12 @@ var _ = Describe("Config", func() {
         "sender_nats_stop_subject": "hm9000.stop",
         "sender_message_limit_per_dea": 4,
         "number_of_deas": 16,
+        "sender_polling_interval_in_heartbeats": 1,
+        "sender_timeout_in_heartbeats": 10,
+        "fetcher_polling_interval_in_heartbeats": 6,
+        "fetcher_timeout_in_heartbeats": 60,        
+        "analyzer_polling_interval_in_heartbeats": 1,
+        "analyzer_timeout_in_heartbeats": 10,
         "nats": {
             "host": "127.0.0.1",
             "port": 4222,
@@ -46,6 +52,14 @@ var _ = Describe("Config", func() {
 			Ω(config.GracePeriod()).Should(BeNumerically("==", 30))
 			Ω(config.DesiredStateTTL()).Should(BeNumerically("==", 600))
 			Ω(config.DesiredFreshnessTTL()).Should(BeNumerically("==", 120))
+
+			Ω(config.SenderPollingInterval().Seconds()).Should(BeNumerically("==", 10))
+			Ω(config.SenderTimeout().Seconds()).Should(BeNumerically("==", 100))
+			Ω(config.FetcherPollingInterval().Seconds()).Should(BeNumerically("==", 60))
+			Ω(config.FetcherTimeout().Seconds()).Should(BeNumerically("==", 600))
+			Ω(config.AnalyzerPollingInterval().Seconds()).Should(BeNumerically("==", 10))
+			Ω(config.AnalyzerTimeout().Seconds()).Should(BeNumerically("==", 100))
+
 			Ω(config.DesiredStateBatchSize).Should(BeNumerically("==", 500))
 			Ω(config.ActualFreshnessKey).Should(Equal("/actual-fresh"))
 			Ω(config.DesiredFreshnessKey).Should(Equal("/desired-fresh"))

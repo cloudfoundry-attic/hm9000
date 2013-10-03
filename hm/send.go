@@ -10,10 +10,9 @@ import (
 	"github.com/cloudfoundry/hm9000/storeadapter"
 
 	"os"
-	"time"
 )
 
-func Send(l logger.Logger, conf config.Config, pollingInterval int, noop bool) {
+func Send(l logger.Logger, conf config.Config, poll bool, noop bool) {
 	var messageBus cfmessagebus.MessageBus
 	if noop {
 		messageBus = &logging_cfmessagebus.LoggingMessageBus{}
@@ -22,22 +21,22 @@ func Send(l logger.Logger, conf config.Config, pollingInterval int, noop bool) {
 	}
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 
-	if pollingInterval == 0 {
+	if poll {
+		l.Info("Starting Sender Daemon...")
+		err := Daemonize(func() error {
+			return send(l, conf, messageBus, etcdStoreAdapter)
+		}, conf.SenderPollingInterval(), conf.SenderTimeout(), l)
+		if err != nil {
+			l.Error("Sender Daemon Errored", err)
+		}
+		l.Info("Sender Daemon is Down")
+	} else {
 		err := send(l, conf, messageBus, etcdStoreAdapter)
 		if err != nil {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
-	} else {
-		l.Info("Starting Sender Daemon...")
-		err := Daemonize(func() error {
-			return send(l, conf, messageBus, etcdStoreAdapter)
-		}, time.Duration(pollingInterval)*time.Second, time.Duration(pollingInterval)*10*time.Second, l)
-		if err != nil {
-			l.Error("Sender Daemon Errored", err)
-		}
-		l.Info("Sender Daemon is Down")
 	}
 }
 

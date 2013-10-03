@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 type Config struct {
@@ -12,8 +13,15 @@ type Config struct {
 	HeartbeatTTLInHeartbeats        uint64 `json:"heartbeat_ttl_in_heartbeats"`
 	ActualFreshnessTTLInHeartbeats  uint64 `json:"actual_freshness_ttl_in_heartbeats"`
 	GracePeriodInHeartbeats         int    `json:"grace_period_in_heartbeats"`
-	DesiredStateTTLInHeartBeats     uint64 `json:"desired_state_ttl_in_heartbeats"`
-	DesiredFreshnessTTLInHeartBeats uint64 `json:"desired_freshness_ttl_in_heartbeats"`
+	DesiredStateTTLInHeartbeats     uint64 `json:"desired_state_ttl_in_heartbeats"`
+	DesiredFreshnessTTLInHeartbeats uint64 `json:"desired_freshness_ttl_in_heartbeats"`
+
+	SenderPollingIntervalInHeartbeats   int `json:"sender_polling_interval_in_heartbeats"`
+	SenderTimeoutInHeartbeats           int `json:"sender_timeout_in_heartbeats"`
+	FetcherPollingIntervalInHeartbeats  int `json:"fetcher_polling_interval_in_heartbeats"`
+	FetcherTimeoutInHeartbeats          int `json:"fetcher_timeout_in_heartbeats"`
+	AnalyzerPollingIntervalInHeartbeats int `json:"analyzer_polling_interval_in_heartbeats"`
+	AnalyzerTimeoutInHeartbeats         int `json:"analyzer_timeout_in_heartbeats"`
 
 	DesiredStateBatchSize      int      `json:"desired_state_batch_size"`
 	ActualFreshnessKey         string   `json:"actual_freshness_key"`
@@ -48,11 +56,35 @@ func (conf *Config) GracePeriod() int {
 }
 
 func (conf *Config) DesiredStateTTL() uint64 {
-	return conf.DesiredStateTTLInHeartBeats * conf.HeartbeatPeriod
+	return conf.DesiredStateTTLInHeartbeats * conf.HeartbeatPeriod
 }
 
 func (conf *Config) DesiredFreshnessTTL() uint64 {
-	return conf.DesiredFreshnessTTLInHeartBeats * conf.HeartbeatPeriod
+	return conf.DesiredFreshnessTTLInHeartbeats * conf.HeartbeatPeriod
+}
+
+func (conf *Config) SenderPollingInterval() time.Duration {
+	return time.Duration(conf.SenderPollingIntervalInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) SenderTimeout() time.Duration {
+	return time.Duration(conf.SenderTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) FetcherPollingInterval() time.Duration {
+	return time.Duration(conf.FetcherPollingIntervalInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) FetcherTimeout() time.Duration {
+	return time.Duration(conf.FetcherTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) AnalyzerPollingInterval() time.Duration {
+	return time.Duration(conf.AnalyzerPollingIntervalInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) AnalyzerTimeout() time.Duration {
+	return time.Duration(conf.AnalyzerTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
 }
 
 func DefaultConfig() (Config, error) {
