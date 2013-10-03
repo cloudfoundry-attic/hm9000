@@ -57,12 +57,12 @@ var _ = Describe("Desired State", func() {
 			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/desired/" + app1.AppGuid + "-" + app1.AppVersion,
 				Value: app1.DesiredState(0).ToJSON(),
-				TTL:   conf.DesiredStateTTL - 1,
+				TTL:   conf.DesiredStateTTL() - 1,
 			}))
 			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/desired/" + app2.AppGuid + "-" + app2.AppVersion,
 				Value: app2.DesiredState(0).ToJSON(),
-				TTL:   conf.DesiredStateTTL - 1,
+				TTL:   conf.DesiredStateTTL() - 1,
 			}))
 		})
 	})

@@ -6,7 +6,7 @@ import (
 )
 
 func (store *RealStore) SaveActualState(actualStates []models.InstanceHeartbeat) error {
-	return store.save(actualStates, "/actual", store.config.HeartbeatTTL)
+	return store.save(actualStates, "/actual", store.config.HeartbeatTTL())
 }
 
 func (store *RealStore) GetActualState() ([]models.InstanceHeartbeat, error) {

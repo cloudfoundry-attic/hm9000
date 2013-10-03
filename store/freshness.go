@@ -8,11 +8,11 @@ import (
 )
 
 func (store *RealStore) BumpDesiredFreshness(timestamp time.Time) error {
-	return store.bumpFreshness(store.config.DesiredFreshnessKey, store.config.DesiredFreshnessTTL, timestamp)
+	return store.bumpFreshness(store.config.DesiredFreshnessKey, store.config.DesiredFreshnessTTL(), timestamp)
 }
 
 func (store *RealStore) BumpActualFreshness(timestamp time.Time) error {
-	return store.bumpFreshness(store.config.ActualFreshnessKey, store.config.ActualFreshnessTTL, timestamp)
+	return store.bumpFreshness(store.config.ActualFreshnessKey, store.config.ActualFreshnessTTL(), timestamp)
 }
 
 func (store *RealStore) bumpFreshness(key string, ttl uint64, timestamp time.Time) error {
@@ -60,6 +60,6 @@ func (store *RealStore) IsActualStateFresh(currentTime time.Time) (bool, error) 
 		return false, err
 	}
 
-	isUpToDate := currentTime.Sub(time.Unix(freshnessTimestamp.Timestamp, 0)) >= time.Duration(store.config.ActualFreshnessTTL)*time.Second
+	isUpToDate := currentTime.Sub(time.Unix(freshnessTimestamp.Timestamp, 0)) >= time.Duration(store.config.ActualFreshnessTTL())*time.Second
 	return isUpToDate, nil
 }

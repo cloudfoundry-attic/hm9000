@@ -27,7 +27,7 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 				"InstanceIndex":          strconv.Itoa(index),
 				"Desired # of Instances": strconv.Itoa(desired.NumberOfInstances),
 			})
-			startMessages = append(startMessages, models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod, 0, desired.AppGuid, desired.AppVersion, index))
+			startMessages = append(startMessages, models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod(), 0, desired.AppGuid, desired.AppVersion, index))
 		}
 	}
 
@@ -46,7 +46,7 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 				"Desired # of Instances": strconv.Itoa(desired.NumberOfInstances),
 			})
 
-			stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod, runningInstance.InstanceGuid))
+			stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod(), runningInstance.InstanceGuid))
 		}
 	}
 
@@ -73,7 +73,7 @@ func (analyzer *Analyzer) stopMessagesForDuplicateInstances(runningInstances []m
 			"InstanceIndex": strconv.Itoa(instance.InstanceIndex),
 		})
 
-		stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), (i+1)*analyzer.conf.GracePeriod, analyzer.conf.GracePeriod, instance.InstanceGuid))
+		stopMessages = append(stopMessages, models.NewQueueStopMessage(analyzer.timeProvider.Time(), (i+1)*analyzer.conf.GracePeriod(), analyzer.conf.GracePeriod(), instance.InstanceGuid))
 	}
 
 	return

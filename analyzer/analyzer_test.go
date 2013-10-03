@@ -29,11 +29,11 @@ var _ = Describe("Analyzer", func() {
 	conf, _ := config.DefaultConfig()
 
 	newStartMessage := func(a app.App, indexToStart int) models.QueueStartMessage {
-		return models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod, 0, a.AppGuid, a.AppVersion, indexToStart)
+		return models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, a.AppGuid, a.AppVersion, indexToStart)
 	}
 
 	newStopMessage := func(instance app.Instance) models.QueueStopMessage {
-		return models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod, instance.InstanceGuid)
+		return models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), instance.InstanceGuid)
 	}
 
 	assertStartMessages := func(messages ...models.QueueStartMessage) {
@@ -303,11 +303,11 @@ var _ = Describe("Analyzer", func() {
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(outbox.StartMessages).Should(BeEmpty())
 				stop0 := newStopMessage(a.GetInstance(2))
-				stop0.SendOn = stop0.SendOn + int64(conf.GracePeriod)
+				stop0.SendOn = stop0.SendOn + int64(conf.GracePeriod())
 				stop1 := newStopMessage(duplicateInstance1)
-				stop1.SendOn = stop1.SendOn + int64(conf.GracePeriod*2)
+				stop1.SendOn = stop1.SendOn + int64(conf.GracePeriod()*2)
 				stop2 := newStopMessage(duplicateInstance2)
-				stop2.SendOn = stop2.SendOn + int64(conf.GracePeriod*3)
+				stop2.SendOn = stop2.SendOn + int64(conf.GracePeriod()*3)
 				assertStopMessages(stop0, stop1, stop2)
 			})
 		})

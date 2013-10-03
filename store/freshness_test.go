@@ -85,11 +85,11 @@ var _ = Describe("Freshness", func() {
 		}
 
 		Context("the actual state", func() {
-			bumpingFreshness(conf.ActualFreshnessKey, conf.ActualFreshnessTTL, Store.BumpActualFreshness)
+			bumpingFreshness(conf.ActualFreshnessKey, conf.ActualFreshnessTTL(), Store.BumpActualFreshness)
 		})
 
 		Context("the desired state", func() {
-			bumpingFreshness(conf.DesiredFreshnessKey, conf.DesiredFreshnessTTL, Store.BumpDesiredFreshness)
+			bumpingFreshness(conf.DesiredFreshnessKey, conf.DesiredFreshnessTTL(), Store.BumpDesiredFreshness)
 		})
 	})
 

@@ -8,11 +8,13 @@ import (
 )
 
 type Config struct {
-	HeartbeatTTL               uint64   `json:"heartbeat_ttl_in_seconds"`
-	ActualFreshnessTTL         uint64   `json:"actual_freshness_ttl_in_seconds"`
-	GracePeriod                int      `json:"grace_period_in_seconds"`
-	DesiredStateTTL            uint64   `json:"desired_state_ttl_in_seconds"`
-	DesiredFreshnessTTL        uint64   `json:"desired_freshness_ttl_in_seconds"`
+	HeartbeatPeriod                 uint64 `json:"heartbeat_period_in_seconds"`
+	HeartbeatTTLInHeartbeats        uint64 `json:"heartbeat_ttl_in_heartbeats"`
+	ActualFreshnessTTLInHeartbeats  uint64 `json:"actual_freshness_ttl_in_heartbeats"`
+	GracePeriodInHeartbeats         int    `json:"grace_period_in_heartbeats"`
+	DesiredStateTTLInHeartBeats     uint64 `json:"desired_state_ttl_in_heartbeats"`
+	DesiredFreshnessTTLInHeartBeats uint64 `json:"desired_freshness_ttl_in_heartbeats"`
+
 	DesiredStateBatchSize      int      `json:"desired_state_batch_size"`
 	ActualFreshnessKey         string   `json:"actual_freshness_key"`
 	DesiredFreshnessKey        string   `json:"desired_freshness_key"`
@@ -31,6 +33,26 @@ type Config struct {
 		User     string `json:"user"`
 		Password string `json:"password"`
 	} `json:"nats"`
+}
+
+func (conf *Config) HeartbeatTTL() uint64 {
+	return conf.HeartbeatTTLInHeartbeats * conf.HeartbeatPeriod
+}
+
+func (conf *Config) ActualFreshnessTTL() uint64 {
+	return conf.ActualFreshnessTTLInHeartbeats * conf.HeartbeatPeriod
+}
+
+func (conf *Config) GracePeriod() int {
+	return conf.GracePeriodInHeartbeats * int(conf.HeartbeatPeriod)
+}
+
+func (conf *Config) DesiredStateTTL() uint64 {
+	return conf.DesiredStateTTLInHeartBeats * conf.HeartbeatPeriod
+}
+
+func (conf *Config) DesiredFreshnessTTL() uint64 {
+	return conf.DesiredFreshnessTTLInHeartBeats * conf.HeartbeatPeriod
 }
 
 func DefaultConfig() (Config, error) {

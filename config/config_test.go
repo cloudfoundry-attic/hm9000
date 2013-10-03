@@ -10,11 +10,12 @@ import (
 var _ = Describe("Config", func() {
 	configJSON := `
     {
-        "heartbeat_ttl_in_seconds": 30,
-        "actual_freshness_ttl_in_seconds": 30,
-        "grace_period_in_seconds": 30,
-        "desired_state_ttl_in_seconds": 600,
-        "desired_freshness_ttl_in_seconds": 120,
+        "heartbeat_period_in_seconds": 10,
+        "heartbeat_ttl_in_heartbeats": 3,
+        "actual_freshness_ttl_in_heartbeats": 3,
+        "grace_period_in_heartbeats": 3,
+        "desired_state_ttl_in_heartbeats": 60,
+        "desired_freshness_ttl_in_heartbeats": 12,
         "desired_state_batch_size": 500,
         "actual_freshness_key": "/actual-fresh",
         "desired_freshness_key": "/desired-fresh",
@@ -39,11 +40,12 @@ var _ = Describe("Config", func() {
 		It("deserializes", func() {
 			config, err := FromJSON([]byte(configJSON))
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(config.HeartbeatTTL).Should(BeNumerically("==", 30))
-			Ω(config.ActualFreshnessTTL).Should(BeNumerically("==", 30))
-			Ω(config.GracePeriod).Should(BeNumerically("==", 30))
-			Ω(config.DesiredStateTTL).Should(BeNumerically("==", 600))
-			Ω(config.DesiredFreshnessTTL).Should(BeNumerically("==", 120))
+			Ω(config.HeartbeatPeriod).Should(BeNumerically("==", 10))
+			Ω(config.HeartbeatTTL()).Should(BeNumerically("==", 30))
+			Ω(config.ActualFreshnessTTL()).Should(BeNumerically("==", 30))
+			Ω(config.GracePeriod()).Should(BeNumerically("==", 30))
+			Ω(config.DesiredStateTTL()).Should(BeNumerically("==", 600))
+			Ω(config.DesiredFreshnessTTL()).Should(BeNumerically("==", 120))
 			Ω(config.DesiredStateBatchSize).Should(BeNumerically("==", 500))
 			Ω(config.ActualFreshnessKey).Should(Equal("/actual-fresh"))
 			Ω(config.DesiredFreshnessKey).Should(Equal("/desired-fresh"))

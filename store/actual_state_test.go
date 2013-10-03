@@ -57,12 +57,12 @@ var _ = Describe("Actual State", func() {
 			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/actual/" + heartbeat1.InstanceGuid,
 				Value: heartbeat1.ToJSON(),
-				TTL:   conf.HeartbeatTTL - 1,
+				TTL:   conf.HeartbeatTTL() - 1,
 			}))
 			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/actual/" + heartbeat2.InstanceGuid,
 				Value: heartbeat2.ToJSON(),
-				TTL:   conf.HeartbeatTTL - 1,
+				TTL:   conf.HeartbeatTTL() - 1,
 			}))
 		})
 	})

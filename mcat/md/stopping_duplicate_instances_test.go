@@ -48,7 +48,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 
 		Context("after a grace period", func() {
 			BeforeEach(func() {
-				timestamp += conf.GracePeriod
+				timestamp += conf.GracePeriod()
 			})
 
 			Context("if both instances are still running", func() {
@@ -70,7 +70,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 
 				Context("after another grace period (assuming the stopped instance stops)", func() {
 					BeforeEach(func() {
-						timestamp += conf.GracePeriod
+						timestamp += conf.GracePeriod()
 						instanceGuidToStop := startStopListener.Stops[0].InstanceGuid
 
 						remainingInstance := instance1
