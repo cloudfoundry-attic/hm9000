@@ -8,8 +8,9 @@ matrix:
     - go: tip
 
 install:
+  - gem install eventmachine -v 0.12.10
   - gem install thin -v 1.4.1
-  - gem install nats
+  - gem install nats -v 0.4.28
   - go get -v ./...
   - go get -v github.com/onsi/ginkgo
   - go install -v github.com/onsi/ginkgo/ginkgo
