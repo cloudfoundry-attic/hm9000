@@ -8,7 +8,6 @@ import (
 
 	"encoding/json"
 	"fmt"
-	"github.com/cloudfoundry/go_cfmessagebus/mock_cfmessagebus"
 	. "github.com/cloudfoundry/hm9000/models"
 
 	"net/http"
@@ -29,12 +28,10 @@ func TestDesiredStateServer(t *testing.T) {
 
 var server *DesiredStateServer
 var didRunGlobalBeforeEach bool
-var fakeMessageBus *mock_cfmessagebus.MockMessageBus
 
 var _ = BeforeEach(func() {
 	if !didRunGlobalBeforeEach {
-		fakeMessageBus = mock_cfmessagebus.NewMockMessageBus()
-		server = NewDesiredStateServer(fakeMessageBus)
+		server = NewDesiredStateServer()
 		go server.SpinUp(6000)
 		didRunGlobalBeforeEach = true
 	}
@@ -246,18 +243,4 @@ var _ = Describe("making requests", func() {
 			})
 		})
 	})
-})
-
-var _ = Describe("fetch credetials", func() {
-	It("should respond to 'cloudcontroller.bulk.credentials.default' with a username and password", func(done Done) {
-		response := make(chan string, 0)
-		err := fakeMessageBus.Request("cloudcontroller.bulk.credentials.default", []byte{}, func(r []byte) {
-			response <- string(r)
-		})
-
-		Ω(err).ShouldNot(HaveOccured())
-		Ω(<-response).Should(Equal(`{"user":"mcat","password":"testing"}`))
-
-		done <- true
-	}, 2)
 })

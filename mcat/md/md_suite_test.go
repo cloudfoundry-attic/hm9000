@@ -46,7 +46,7 @@ func TestMd(t *testing.T) {
 	natsRunner = natsrunner.NewNATSRunner(natsPort)
 	natsRunner.Start()
 
-	stateServer = desiredstateserver.NewDesiredStateServer(natsRunner.MessageBus)
+	stateServer = desiredstateserver.NewDesiredStateServer()
 	go stateServer.SpinUp(6001)
 
 	conf, err = config.DefaultConfig()

@@ -3,7 +3,6 @@ package desiredstateserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cloudfoundry/go_cfmessagebus"
 	. "github.com/cloudfoundry/hm9000/models"
 	"net/http"
 	"strconv"
@@ -15,7 +14,6 @@ type DesiredStateServerInterface interface {
 }
 
 type DesiredStateServer struct {
-	messageBus              cfmessagebus.MessageBus
 	apps                    []DesiredAppState
 	NumberOfCompleteFetches int
 }
@@ -34,16 +32,8 @@ func min(a, b int) int {
 	return a
 }
 
-func NewDesiredStateServer(messageBus cfmessagebus.MessageBus) *DesiredStateServer {
-	server := &DesiredStateServer{
-		messageBus: messageBus,
-	}
-
-	messageBus.RespondToChannel("cloudcontroller.bulk.credentials.default", func(request []byte) []byte {
-		return []byte(`{"user":"mcat","password":"testing"}`)
-	})
-
-	return server
+func NewDesiredStateServer() *DesiredStateServer {
+	return &DesiredStateServer{}
 }
 
 func (server *DesiredStateServer) SpinUp(port int) {

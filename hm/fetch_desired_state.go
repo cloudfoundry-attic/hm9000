@@ -1,7 +1,6 @@
 package hm
 
 import (
-	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
@@ -13,20 +12,19 @@ import (
 )
 
 func FetchDesiredState(l logger.Logger, conf config.Config, poll bool) {
-	messageBus := connectToMessageBus(l, conf)
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 
 	if poll {
 		l.Info("Starting Desired State Daemon...")
 		err := Daemonize(func() error {
-			return fetchDesiredState(l, conf, messageBus, etcdStoreAdapter)
+			return fetchDesiredState(l, conf, etcdStoreAdapter)
 		}, conf.FetcherPollingInterval(), conf.FetcherTimeout(), l)
 		if err != nil {
 			l.Error("Desired State Daemon Errored", err)
 		}
 		l.Info("Desired State Daemon is Down")
 	} else {
-		err := fetchDesiredState(l, conf, messageBus, etcdStoreAdapter)
+		err := fetchDesiredState(l, conf, etcdStoreAdapter)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -35,12 +33,11 @@ func FetchDesiredState(l logger.Logger, conf config.Config, poll bool) {
 	}
 }
 
-func fetchDesiredState(l logger.Logger, conf config.Config, messageBus cfmessagebus.MessageBus, etcdStoreAdapter storeadapter.StoreAdapter) error {
+func fetchDesiredState(l logger.Logger, conf config.Config, etcdStoreAdapter storeadapter.StoreAdapter) error {
 	l.Info("Fetching Desired State")
 	store := store.NewStore(conf, etcdStoreAdapter)
 
 	fetcher := desiredstatefetcher.New(conf,
-		messageBus,
 		store,
 		httpclient.NewHttpClient(),
 		buildTimeProvider(l),
@@ -50,7 +47,6 @@ func fetchDesiredState(l logger.Logger, conf config.Config, messageBus cfmessage
 	fetcher.Fetch(resultChan)
 
 	result := <-resultChan
-	messageBus.UnsubscribeAll()
 
 	if result.Success {
 		l.Info("Success", map[string]string{"Number of Desired Apps Fetched": strconv.Itoa(result.NumResults)})

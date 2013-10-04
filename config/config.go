@@ -23,11 +23,13 @@ type Config struct {
 	AnalyzerPollingIntervalInHeartbeats int `json:"analyzer_polling_interval_in_heartbeats"`
 	AnalyzerTimeoutInHeartbeats         int `json:"analyzer_timeout_in_heartbeats"`
 
-	DesiredStateBatchSize      int      `json:"desired_state_batch_size"`
-	ActualFreshnessKey         string   `json:"actual_freshness_key"`
-	DesiredFreshnessKey        string   `json:"desired_freshness_key"`
-	CCAuthMessageBusSubject    string   `json:"cc_auth_message_bus_subject"`
-	CCBaseURL                  string   `json:"cc_base_url"`
+	DesiredStateBatchSize int    `json:"desired_state_batch_size"`
+	ActualFreshnessKey    string `json:"actual_freshness_key"`
+	DesiredFreshnessKey   string `json:"desired_freshness_key"`
+	CCAuthUser            string `json:"cc_auth_user"`
+	CCAuthPassword        string `json:"cc_auth_password"`
+	CCBaseURL             string `json:"cc_base_url"`
+
 	StoreURLs                  []string `json:"store_urls"`
 	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`
 	SenderNatsStartSubject     string   `json:"sender_nats_start_subject"`

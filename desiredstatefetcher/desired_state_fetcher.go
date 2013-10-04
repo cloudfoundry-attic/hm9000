@@ -2,7 +2,6 @@ package desiredstatefetcher
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
@@ -23,7 +22,6 @@ const initialBulkToken = "{}"
 
 type DesiredStateFetcher struct {
 	config       config.Config
-	messageBus   cfmessagebus.MessageBus
 	httpClient   httpclient.HttpClient
 	store        store.Store
 	timeProvider timeprovider.TimeProvider
@@ -31,14 +29,12 @@ type DesiredStateFetcher struct {
 }
 
 func New(config config.Config,
-	messageBus cfmessagebus.MessageBus,
 	store store.Store,
 	httpClient httpclient.HttpClient,
 	timeProvider timeprovider.TimeProvider) *DesiredStateFetcher {
 
 	return &DesiredStateFetcher{
 		config:       config,
-		messageBus:   messageBus,
 		httpClient:   httpClient,
 		store:        store,
 		timeProvider: timeProvider,
@@ -48,18 +44,13 @@ func New(config config.Config,
 
 func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult) {
 	fetcher.cache = map[string]models.DesiredAppState{}
-	err := fetcher.messageBus.Request(fetcher.config.CCAuthMessageBusSubject, []byte{}, func(response []byte) {
-		authInfo, err := models.NewBasicAuthInfoFromJSON(response)
-		if err != nil {
-			resultChan <- DesiredStateFetcherResult{Message: "Failed to parse authentication info from JSON", Error: err}
-			return
-		}
 
-		fetcher.fetchBatch(authInfo.Encode(), initialBulkToken, 0, resultChan)
-	})
-	if err != nil {
-		resultChan <- DesiredStateFetcherResult{Message: "Failed to request auth info", Error: err}
+	authInfo := models.BasicAuthInfo{
+		User:     fetcher.config.CCAuthUser,
+		Password: fetcher.config.CCAuthPassword,
 	}
+
+	fetcher.fetchBatch(authInfo.Encode(), initialBulkToken, 0, resultChan)
 }
 
 func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult) {

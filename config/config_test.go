@@ -19,7 +19,8 @@ var _ = Describe("Config", func() {
         "desired_state_batch_size": 500,
         "actual_freshness_key": "/actual-fresh",
         "desired_freshness_key": "/desired-fresh",
-        "cc_auth_message_bus_subject": "cloudcontroller.bulk.credentials.default",
+        "cc_auth_user": "mcat",
+        "cc_auth_password": "testing",
         "cc_base_url": "http://127.0.0.1:6001",
         "store_urls": ["http://127.0.0.1:4001"],
         "store_max_concurrent_requests": 100,
@@ -63,7 +64,8 @@ var _ = Describe("Config", func() {
 			Ω(config.DesiredStateBatchSize).Should(BeNumerically("==", 500))
 			Ω(config.ActualFreshnessKey).Should(Equal("/actual-fresh"))
 			Ω(config.DesiredFreshnessKey).Should(Equal("/desired-fresh"))
-			Ω(config.CCAuthMessageBusSubject).Should(Equal("cloudcontroller.bulk.credentials.default"))
+			Ω(config.CCAuthUser).Should(Equal("mcat"))
+			Ω(config.CCAuthPassword).Should(Equal("testing"))
 			Ω(config.CCBaseURL).Should(Equal("http://127.0.0.1:6001"))
 			Ω(config.StoreURLs).Should(Equal([]string{"http://127.0.0.1:4001"}))
 			Ω(config.StoreMaxConcurrentRequests).Should(Equal(100))
