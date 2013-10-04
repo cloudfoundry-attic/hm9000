@@ -19,7 +19,11 @@ type RealLogger struct {
 
 func NewRealLogger() *RealLogger {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	infoSysLogger, _ := syslog.NewLogger(syslog.LOG_INFO, log.LstdFlags)
+	sysLogWriter, err := syslog.New(syslog.LOG_DEBUG, "vcap.hm9000")
+	if err != nil {
+		panic(err)
+	}
+	infoSysLogger := log.New(sysLogWriter, "", log.LstdFlags)
 
 	return &RealLogger{
 		logger:        logger,
