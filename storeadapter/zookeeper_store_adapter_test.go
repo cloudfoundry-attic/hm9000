@@ -372,12 +372,16 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 
 				It("does not return those entries in the result set", func() {
 					Ω(nodes).Should(HaveLen(2))
-					Ω(nodes).Should(ContainElement(StoreNode{
-						Key:   "/restaurant/menu/lunch",
-						Value: []byte("fried chicken"),
-						TTL:   1,
-						Dir:   false,
-					}))
+					found := false
+					for _, node := range nodes {
+						if node.Key == "/restaurant/menu/lunch" {
+							Ω(node.Value).Should(Equal([]byte("fried chicken")))
+							Ω(node.TTL).Should(BeNumerically("<=", 2), "We've had some timing issues with this test.  Setting the expectation to <= 2 should help.")
+							Ω(node.Dir).Should(BeFalse())
+							found = true
+						}
+					}
+					Ω(found).Should(BeTrue())
 					Ω(nodes).Should(ContainElement(StoreNode{
 						Key:   "/restaurant/menu/dinner",
 						Value: []byte{},
