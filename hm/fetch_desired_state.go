@@ -39,7 +39,7 @@ func fetchDesiredState(l logger.Logger, conf config.Config, etcdStoreAdapter sto
 
 	fetcher := desiredstatefetcher.New(conf,
 		store,
-		httpclient.NewHttpClient(),
+		httpclient.NewHttpClient(conf.FetcherNetworkTimeout()),
 		buildTimeProvider(l),
 	)
 

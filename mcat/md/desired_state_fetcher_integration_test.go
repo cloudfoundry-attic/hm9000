@@ -33,7 +33,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			a3.DesiredState(0),
 		})
 
-		fetcher = desiredstatefetcher.New(conf, store.NewStore(conf, storeAdapter), httpclient.NewHttpClient(), &timeprovider.RealTimeProvider{})
+		fetcher = desiredstatefetcher.New(conf, store.NewStore(conf, storeAdapter), httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
 	})
 

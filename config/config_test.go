@@ -17,6 +17,7 @@ var _ = Describe("Config", func() {
         "desired_state_ttl_in_heartbeats": 60,
         "desired_freshness_ttl_in_heartbeats": 12,
         "desired_state_batch_size": 500,
+        "fetcher_network_timeout_in_seconds": 10,
         "actual_freshness_key": "/actual-fresh",
         "desired_freshness_key": "/desired-fresh",
         "cc_auth_user": "mcat",
@@ -62,6 +63,7 @@ var _ = Describe("Config", func() {
 			Ω(config.AnalyzerTimeout().Seconds()).Should(BeNumerically("==", 100))
 
 			Ω(config.DesiredStateBatchSize).Should(BeNumerically("==", 500))
+			Ω(config.FetcherNetworkTimeout().Seconds()).Should(BeNumerically("==", 10))
 			Ω(config.ActualFreshnessKey).Should(Equal("/actual-fresh"))
 			Ω(config.DesiredFreshnessKey).Should(Equal("/desired-fresh"))
 			Ω(config.CCAuthUser).Should(Equal("mcat"))

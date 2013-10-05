@@ -23,12 +23,13 @@ type Config struct {
 	AnalyzerPollingIntervalInHeartbeats int `json:"analyzer_polling_interval_in_heartbeats"`
 	AnalyzerTimeoutInHeartbeats         int `json:"analyzer_timeout_in_heartbeats"`
 
-	DesiredStateBatchSize int    `json:"desired_state_batch_size"`
-	ActualFreshnessKey    string `json:"actual_freshness_key"`
-	DesiredFreshnessKey   string `json:"desired_freshness_key"`
-	CCAuthUser            string `json:"cc_auth_user"`
-	CCAuthPassword        string `json:"cc_auth_password"`
-	CCBaseURL             string `json:"cc_base_url"`
+	DesiredStateBatchSize          int    `json:"desired_state_batch_size"`
+	FetcherNetworkTimeoutInSeconds int    `json:"fetcher_network_timeout_in_seconds"`
+	ActualFreshnessKey             string `json:"actual_freshness_key"`
+	DesiredFreshnessKey            string `json:"desired_freshness_key"`
+	CCAuthUser                     string `json:"cc_auth_user"`
+	CCAuthPassword                 string `json:"cc_auth_password"`
+	CCBaseURL                      string `json:"cc_base_url"`
 
 	StoreURLs                  []string `json:"store_urls"`
 	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`
@@ -63,6 +64,10 @@ func (conf *Config) DesiredStateTTL() uint64 {
 
 func (conf *Config) DesiredFreshnessTTL() uint64 {
 	return conf.DesiredFreshnessTTLInHeartbeats * conf.HeartbeatPeriod
+}
+
+func (conf *Config) FetcherNetworkTimeout() time.Duration {
+	return time.Duration(conf.FetcherNetworkTimeoutInSeconds) * time.Second
 }
 
 func (conf *Config) SenderPollingInterval() time.Duration {

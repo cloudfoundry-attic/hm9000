@@ -1,10 +1,29 @@
 package httpclient
 
-import "net/http"
+import (
+	"net"
+	"net/http"
+	"time"
+)
 
-func NewHttpClient() HttpClient {
+func NewHttpClient(timeout time.Duration) HttpClient {
+	dialFunc := func(network, addr string) (net.Conn, error) {
+		conn, err := net.DialTimeout(network, addr, timeout)
+		if err != nil {
+			return nil, err
+		}
+		conn.SetDeadline(time.Now().Add(timeout))
+		return conn, err
+	}
+
+	transport := &http.Transport{
+		Dial: dialFunc,
+	}
+
 	return &RealHttpClient{
-		client: &http.Client{},
+		client: &http.Client{
+			Transport: transport,
+		},
 	}
 }
 
