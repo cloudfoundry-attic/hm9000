@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-var _ = Describe("Storing QueueStartMessages", func() {
+var _ = Describe("Storing PendingStartMessages", func() {
 	var (
 		store       Store
 		etcdAdapter storeadapter.StoreAdapter
 		conf        config.Config
-		message1    models.QueueStartMessage
-		message2    models.QueueStartMessage
-		message3    models.QueueStartMessage
+		message1    models.PendingStartMessage
+		message2    models.PendingStartMessage
+		message3    models.PendingStartMessage
 	)
 
 	BeforeEach(func() {
@@ -28,9 +28,9 @@ var _ = Describe("Storing QueueStartMessages", func() {
 		err = etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		message1 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
-		message2 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0)
-		message3 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0)
+		message1 = models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
+		message2 = models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0)
+		message3 = models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0)
 
 		store = NewStore(conf, etcdAdapter)
 	})
@@ -41,7 +41,7 @@ var _ = Describe("Storing QueueStartMessages", func() {
 
 	Describe("Saving start messages", func() {
 		BeforeEach(func() {
-			err := store.SaveQueueStartMessages([]models.QueueStartMessage{
+			err := store.SavePendingStartMessages([]models.PendingStartMessage{
 				message1,
 				message2,
 			})
@@ -68,7 +68,7 @@ var _ = Describe("Storing QueueStartMessages", func() {
 	Describe("Fetching start message", func() {
 		Context("When the start message is present", func() {
 			BeforeEach(func() {
-				err := store.SaveQueueStartMessages([]models.QueueStartMessage{
+				err := store.SavePendingStartMessages([]models.PendingStartMessage{
 					message1,
 					message2,
 				})
@@ -76,7 +76,7 @@ var _ = Describe("Storing QueueStartMessages", func() {
 			})
 
 			It("can fetch the start message", func() {
-				desired, err := store.GetQueueStartMessages()
+				desired, err := store.GetPendingStartMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(desired).Should(HaveLen(2))
 				Ω(desired).Should(ContainElement(message1))
@@ -87,14 +87,14 @@ var _ = Describe("Storing QueueStartMessages", func() {
 		Context("when the start message is empty", func() {
 			BeforeEach(func() {
 				hb := message1
-				err := store.SaveQueueStartMessages([]models.QueueStartMessage{hb})
+				err := store.SavePendingStartMessages([]models.PendingStartMessage{hb})
 				Ω(err).ShouldNot(HaveOccured())
-				err = store.DeleteQueueStartMessages([]models.QueueStartMessage{hb})
+				err = store.DeletePendingStartMessages([]models.PendingStartMessage{hb})
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
 			It("returns an empty array", func() {
-				start, err := store.GetQueueStartMessages()
+				start, err := store.GetPendingStartMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(start).Should(BeEmpty())
 			})
@@ -107,7 +107,7 @@ var _ = Describe("Storing QueueStartMessages", func() {
 			})
 
 			It("returns an empty array and no error", func() {
-				start, err := store.GetQueueStartMessages()
+				start, err := store.GetPendingStartMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(start).Should(BeEmpty())
 			})
@@ -116,7 +116,7 @@ var _ = Describe("Storing QueueStartMessages", func() {
 
 	Describe("Deleting start message", func() {
 		BeforeEach(func() {
-			err := store.SaveQueueStartMessages([]models.QueueStartMessage{
+			err := store.SavePendingStartMessages([]models.PendingStartMessage{
 				message1,
 				message2,
 				message3,
@@ -126,14 +126,14 @@ var _ = Describe("Storing QueueStartMessages", func() {
 
 		Context("When the start message is present", func() {
 			It("can delete the start message (and only cares about the relevant fields)", func() {
-				toDelete := []models.QueueStartMessage{
-					models.QueueStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
-					models.QueueStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
+				toDelete := []models.PendingStartMessage{
+					models.PendingStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
+					models.PendingStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
 				}
-				err := store.DeleteQueueStartMessages(toDelete)
+				err := store.DeletePendingStartMessages(toDelete)
 				Ω(err).ShouldNot(HaveOccured())
 
-				desired, err := store.GetQueueStartMessages()
+				desired, err := store.GetPendingStartMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(desired).Should(HaveLen(1))
 				Ω(desired).Should(ContainElement(message2))
@@ -142,15 +142,15 @@ var _ = Describe("Storing QueueStartMessages", func() {
 
 		Context("When the desired message key is not present", func() {
 			It("returns an error, but does leave things in a broken state... for now...", func() {
-				toDelete := []models.QueueStartMessage{
-					models.QueueStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
-					models.QueueStartMessage{AppGuid: "floobedey", AppVersion: "abc"},
-					models.QueueStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
+				toDelete := []models.PendingStartMessage{
+					models.PendingStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
+					models.PendingStartMessage{AppGuid: "floobedey", AppVersion: "abc"},
+					models.PendingStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
 				}
-				err := store.DeleteQueueStartMessages(toDelete)
+				err := store.DeletePendingStartMessages(toDelete)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-				start, err := store.GetQueueStartMessages()
+				start, err := store.GetPendingStartMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(start).Should(HaveLen(2))
 				Ω(start).Should(ContainElement(message2))

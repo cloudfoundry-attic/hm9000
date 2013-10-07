@@ -5,15 +5,15 @@ import (
 	"reflect"
 )
 
-func (store *RealStore) SaveQueueStartMessages(messages []models.QueueStartMessage) error {
+func (store *RealStore) SavePendingStartMessages(messages []models.PendingStartMessage) error {
 	return store.save(messages, "/start", 0)
 }
 
-func (store *RealStore) GetQueueStartMessages() ([]models.QueueStartMessage, error) {
-	slice, err := store.get("/start", reflect.TypeOf([]models.QueueStartMessage{}), reflect.ValueOf(models.NewQueueStartMessageFromJSON))
-	return slice.Interface().([]models.QueueStartMessage), err
+func (store *RealStore) GetPendingStartMessages() ([]models.PendingStartMessage, error) {
+	slice, err := store.get("/start", reflect.TypeOf([]models.PendingStartMessage{}), reflect.ValueOf(models.NewPendingStartMessageFromJSON))
+	return slice.Interface().([]models.PendingStartMessage), err
 }
 
-func (store *RealStore) DeleteQueueStartMessages(messages []models.QueueStartMessage) error {
+func (store *RealStore) DeletePendingStartMessages(messages []models.PendingStartMessage) error {
 	return store.delete(messages, "/start")
 }

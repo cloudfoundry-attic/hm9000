@@ -28,29 +28,29 @@ var _ = Describe("Analyzer", func() {
 
 	conf, _ := config.DefaultConfig()
 
-	newStartMessage := func(a app.App, indexToStart int, priority float64) models.QueueStartMessage {
-		return models.NewQueueStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, a.AppGuid, a.AppVersion, indexToStart, priority)
+	newStartMessage := func(a app.App, indexToStart int, priority float64) models.PendingStartMessage {
+		return models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, a.AppGuid, a.AppVersion, indexToStart, priority)
 	}
 
-	newStopMessage := func(instance app.Instance) models.QueueStopMessage {
-		return models.NewQueueStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), instance.InstanceGuid)
+	newStopMessage := func(instance app.Instance) models.PendingStopMessage {
+		return models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), instance.InstanceGuid)
 	}
 
-	assertStartMessages := func(messages ...models.QueueStartMessage) {
-		Ω(outbox.QueuedStartMessages).Should(HaveLen(len(messages)))
+	assertStartMessages := func(messages ...models.PendingStartMessage) {
+		Ω(outbox.PendingStartMessages).Should(HaveLen(len(messages)))
 		for _, message := range messages {
-			Ω(outbox.QueuedStartMessages[message.StoreKey()]).ShouldNot(BeZero())
-			candidateMatch := outbox.QueuedStartMessages[message.StoreKey()]
+			Ω(outbox.PendingStartMessages[message.StoreKey()]).ShouldNot(BeZero())
+			candidateMatch := outbox.PendingStartMessages[message.StoreKey()]
 			candidateMatch.MessageId = message.MessageId
 			Ω(candidateMatch).Should(Equal(message))
 		}
 	}
 
-	assertStopMessages := func(messages ...models.QueueStopMessage) {
-		Ω(outbox.QueuedStopMessages).Should(HaveLen(len(messages)))
+	assertStopMessages := func(messages ...models.PendingStopMessage) {
+		Ω(outbox.PendingStopMessages).Should(HaveLen(len(messages)))
 		for _, message := range messages {
-			Ω(outbox.QueuedStopMessages[message.StoreKey()]).ShouldNot(BeZero())
-			candidateMatch := outbox.QueuedStopMessages[message.StoreKey()]
+			Ω(outbox.PendingStopMessages[message.StoreKey()]).ShouldNot(BeZero())
+			candidateMatch := outbox.PendingStopMessages[message.StoreKey()]
 			candidateMatch.MessageId = message.MessageId
 			Ω(candidateMatch).Should(Equal(message))
 		}
@@ -79,8 +79,8 @@ var _ = Describe("Analyzer", func() {
 			It("should not send any start or stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err).Should(Equal(errors.New("oops!")))
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 
@@ -92,8 +92,8 @@ var _ = Describe("Analyzer", func() {
 			It("should not send any start or stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err).Should(Equal(errors.New("oops!")))
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 	})
@@ -103,8 +103,8 @@ var _ = Describe("Analyzer", func() {
 			It("should not send any start or stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 
@@ -126,8 +126,8 @@ var _ = Describe("Analyzer", func() {
 			It("should not send any start or stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 	})
@@ -146,13 +146,13 @@ var _ = Describe("Analyzer", func() {
 				It("should send a start message for each of the missing instances", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
-					Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+					Ω(outbox.PendingStopMessages).Should(BeEmpty())
 					assertStartMessages(newStartMessage(a, 0, 1), newStartMessage(a, 1, 1), newStartMessage(a, 2, 1), newStartMessage(a, 3, 1))
 				})
 
 				It("should set the priority to 1", func() {
 					analyzer.Analyze()
-					for _, message := range outbox.QueuedStartMessages {
+					for _, message := range outbox.PendingStartMessages {
 						Ω(message.Priority).Should(Equal(1.0))
 					}
 				})
@@ -169,13 +169,13 @@ var _ = Describe("Analyzer", func() {
 				It("should return a start message containing only the missing indices", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
-					Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+					Ω(outbox.PendingStopMessages).Should(BeEmpty())
 					assertStartMessages(newStartMessage(a, 1, 0.5), newStartMessage(a, 3, 0.5))
 				})
 
 				It("should set the priority to 0.5", func() {
 					analyzer.Analyze()
-					for _, message := range outbox.QueuedStartMessages {
+					for _, message := range outbox.PendingStartMessages {
 						Ω(message.Priority).Should(Equal(0.5))
 					}
 				})
@@ -197,7 +197,7 @@ var _ = Describe("Analyzer", func() {
 				It("should return an array of stop messages for the extra instances", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
-					Ω(outbox.QueuedStartMessages).Should(BeEmpty())
+					Ω(outbox.PendingStartMessages).Should(BeEmpty())
 					assertStopMessages(newStopMessage(a.GetInstance(0)), newStopMessage(a.GetInstance(1)), newStopMessage(a.GetInstance(2)))
 				})
 			})
@@ -214,7 +214,7 @@ var _ = Describe("Analyzer", func() {
 				It("should return an array of stop messages for the (correct) extra instances", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
-					Ω(outbox.QueuedStartMessages).Should(BeEmpty())
+					Ω(outbox.PendingStartMessages).Should(BeEmpty())
 					assertStopMessages(newStopMessage(a.GetInstance(1)), newStopMessage(a.GetInstance(2)))
 				})
 			})
@@ -245,7 +245,7 @@ var _ = Describe("Analyzer", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
 				assertStartMessages(newStartMessage(a, 0, 2.0/3.0), newStartMessage(a, 2, 2.0/3.0))
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 
@@ -263,7 +263,7 @@ var _ = Describe("Analyzer", func() {
 			It("should stop the extra indices", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
 				assertStopMessages(newStopMessage(a.GetInstance(3)), newStopMessage(a.GetInstance(4)))
 			})
 		})
@@ -303,7 +303,7 @@ var _ = Describe("Analyzer", func() {
 
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 				assertStartMessages(newStartMessage(a, 0, 2.0/3.0), newStartMessage(a, 1, 2.0/3.0))
 			})
 		})
@@ -321,7 +321,7 @@ var _ = Describe("Analyzer", func() {
 
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
 				stop0 := newStopMessage(a.GetInstance(2))
 				stop0.SendOn = stop0.SendOn + int64(conf.GracePeriod())
 				stop1 := newStopMessage(duplicateInstance1)
@@ -358,7 +358,7 @@ var _ = Describe("Analyzer", func() {
 
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
 				stop0 := newStopMessage(a.GetInstance(3))
 				stop1 := newStopMessage(duplicateExtraInstance1)
 				stop2 := newStopMessage(duplicateExtraInstance2)
@@ -430,8 +430,8 @@ var _ = Describe("Analyzer", func() {
 			It("should not send any start or stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err.Error()).Should(Equal("Desired state is not fresh"))
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 
@@ -445,8 +445,8 @@ var _ = Describe("Analyzer", func() {
 			It("should return the store's error and not send any start/stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err).Should(Equal(store.IsDesiredStateFreshError))
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 
@@ -463,8 +463,8 @@ var _ = Describe("Analyzer", func() {
 			It("should not send any start or stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err.Error()).Should(Equal("Actual state is not fresh"))
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 
@@ -478,8 +478,8 @@ var _ = Describe("Analyzer", func() {
 			It("should return the store's error and not send any start/stop messages", func() {
 				err := analyzer.Analyze()
 				Ω(err).Should(Equal(store.IsActualStateFreshError))
-				Ω(outbox.QueuedStartMessages).Should(BeEmpty())
-				Ω(outbox.QueuedStopMessages).Should(BeEmpty())
+				Ω(outbox.PendingStartMessages).Should(BeEmpty())
+				Ω(outbox.PendingStopMessages).Should(BeEmpty())
 			})
 		})
 	})

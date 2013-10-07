@@ -7,7 +7,7 @@ import (
 )
 
 type Outbox interface {
-	Enqueue([]models.QueueStartMessage, []models.QueueStopMessage) error
+	Enqueue([]models.PendingStartMessage, []models.PendingStopMessage) error
 }
 
 type RealOutbox struct {
@@ -26,14 +26,14 @@ func New(store store.Store, logger logger.Logger) Outbox {
 	}
 }
 
-func (outbox *RealOutbox) Enqueue(startMessages []models.QueueStartMessage, stopMessages []models.QueueStopMessage) error {
+func (outbox *RealOutbox) Enqueue(startMessages []models.PendingStartMessage, stopMessages []models.PendingStopMessage) error {
 	err := outbox.fetchCurrentlyEnqueuedMessages()
 	if err != nil {
 		return err
 	}
 
-	dedupedStartMessages := []models.QueueStartMessage{}
-	dedupedStopMessages := []models.QueueStopMessage{}
+	dedupedStartMessages := []models.PendingStartMessage{}
+	dedupedStopMessages := []models.PendingStopMessage{}
 
 	for _, message := range startMessages {
 		if outbox.existingStartMessages[message.StoreKey()] {
@@ -53,12 +53,12 @@ func (outbox *RealOutbox) Enqueue(startMessages []models.QueueStartMessage, stop
 		}
 	}
 
-	err = outbox.store.SaveQueueStartMessages(dedupedStartMessages)
+	err = outbox.store.SavePendingStartMessages(dedupedStartMessages)
 	if err != nil {
 		return err
 	}
 
-	err = outbox.store.SaveQueueStopMessages(dedupedStopMessages)
+	err = outbox.store.SavePendingStopMessages(dedupedStopMessages)
 	if err != nil {
 		return err
 	}
@@ -66,11 +66,11 @@ func (outbox *RealOutbox) Enqueue(startMessages []models.QueueStartMessage, stop
 }
 
 func (outbox *RealOutbox) fetchCurrentlyEnqueuedMessages() error {
-	starts, err := outbox.store.GetQueueStartMessages()
+	starts, err := outbox.store.GetPendingStartMessages()
 	if err != nil {
 		return err
 	}
-	stops, err := outbox.store.GetQueueStopMessages()
+	stops, err := outbox.store.GetPendingStopMessages()
 	if err != nil {
 		return err
 	}

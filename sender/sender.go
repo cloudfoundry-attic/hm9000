@@ -33,13 +33,13 @@ func New(store store.Store, conf config.Config, messageBus cfmessagebus.MessageB
 }
 
 func (sender *Sender) Send() error {
-	startMessages, err := sender.store.GetQueueStartMessages()
+	startMessages, err := sender.store.GetPendingStartMessages()
 	if err != nil {
 		sender.logger.Error("Failed to fetch start messages", err)
 		return err
 	}
 
-	stopMessages, err := sender.store.GetQueueStopMessages()
+	stopMessages, err := sender.store.GetPendingStopMessages()
 	if err != nil {
 		sender.logger.Error("Failed to fetch stop messages", err)
 		return err
@@ -64,17 +64,17 @@ func (sender *Sender) Send() error {
 	return nil
 }
 
-type SortableQueueStartMessages []models.QueueStartMessage
+type SortablePendingStartMessages []models.PendingStartMessage
 
-func (s SortableQueueStartMessages) Len() int           { return len(s) }
-func (s SortableQueueStartMessages) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s SortableQueueStartMessages) Less(i, j int) bool { return s[i].Priority < s[j].Priority }
+func (s SortablePendingStartMessages) Len() int           { return len(s) }
+func (s SortablePendingStartMessages) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s SortablePendingStartMessages) Less(i, j int) bool { return s[i].Priority < s[j].Priority }
 
-func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage) error {
-	startMessagesToSave := []models.QueueStartMessage{}
-	startMessagesToDelete := []models.QueueStartMessage{}
+func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessage) error {
+	startMessagesToSave := []models.PendingStartMessage{}
+	startMessagesToDelete := []models.PendingStartMessage{}
 
-	sortedStartMessages := make(SortableQueueStartMessages, len(startMessages))
+	sortedStartMessages := make(SortablePendingStartMessages, len(startMessages))
 	for i, message := range startMessages {
 		sortedStartMessages[i] = message
 	}
@@ -117,12 +117,12 @@ func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage
 		}
 	}
 
-	err := sender.store.SaveQueueStartMessages(startMessagesToSave)
+	err := sender.store.SavePendingStartMessages(startMessagesToSave)
 	if err != nil {
 		sender.logger.Error("Failed to save start messages to send", err)
 		return err
 	}
-	err = sender.store.DeleteQueueStartMessages(startMessagesToDelete)
+	err = sender.store.DeletePendingStartMessages(startMessagesToDelete)
 	if err != nil {
 		sender.logger.Error("Failed to delete start messages", err)
 		return err
@@ -131,9 +131,9 @@ func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage
 	return nil
 }
 
-func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) error {
-	stopMessagesToSave := []models.QueueStopMessage{}
-	stopMessagesToDelete := []models.QueueStopMessage{}
+func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage) error {
+	stopMessagesToSave := []models.PendingStopMessage{}
+	stopMessagesToDelete := []models.PendingStopMessage{}
 
 	for _, stopMessage := range stopMessages {
 		if stopMessage.IsExpired(sender.timeProvider.Time()) {
@@ -170,12 +170,12 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 		}
 	}
 
-	err := sender.store.SaveQueueStopMessages(stopMessagesToSave)
+	err := sender.store.SavePendingStopMessages(stopMessagesToSave)
 	if err != nil {
 		sender.logger.Error("Failed to save stop messages to send", err)
 		return err
 	}
-	err = sender.store.DeleteQueueStopMessages(stopMessagesToDelete)
+	err = sender.store.DeletePendingStopMessages(stopMessagesToDelete)
 	if err != nil {
 		sender.logger.Error("Failed to delete stop messages", err)
 		return err
@@ -184,7 +184,7 @@ func (sender *Sender) sendStopMessages(stopMessages []models.QueueStopMessage) e
 	return nil
 }
 
-func (sender *Sender) verifyStartMessageShouldBeSent(message models.QueueStartMessage) bool {
+func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStartMessage) bool {
 	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
 	desired, ok := sender.storecache.DesiredByApp[appKey]
 	if !ok {
@@ -220,7 +220,7 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.QueueStartMe
 	return true
 }
 
-func (sender *Sender) verifyStopMessageShouldBeSent(message models.QueueStopMessage) (bool, isDuplicate bool) {
+func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMessage) (bool, isDuplicate bool) {
 	instanceToStop, ok := sender.storecache.RunningByInstance[message.InstanceGuid]
 	if !ok {
 		//there was no running instance found with that guid, don't send a stop message

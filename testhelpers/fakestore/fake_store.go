@@ -29,8 +29,8 @@ type FakeStore struct {
 
 	desiredState  map[string]models.DesiredAppState
 	actualState   map[string]models.InstanceHeartbeat
-	startMessages map[string]models.QueueStartMessage
-	stopMessages  map[string]models.QueueStopMessage
+	startMessages map[string]models.PendingStartMessage
+	stopMessages  map[string]models.PendingStopMessage
 }
 
 func NewFakeStore() *FakeStore {
@@ -42,8 +42,8 @@ func NewFakeStore() *FakeStore {
 func (store *FakeStore) Reset() {
 	store.desiredState = make(map[string]models.DesiredAppState, 0)
 	store.actualState = make(map[string]models.InstanceHeartbeat, 0)
-	store.startMessages = make(map[string]models.QueueStartMessage, 0)
-	store.stopMessages = make(map[string]models.QueueStopMessage, 0)
+	store.startMessages = make(map[string]models.PendingStartMessage, 0)
+	store.stopMessages = make(map[string]models.PendingStopMessage, 0)
 
 	store.ActualFreshnessTimestamp = time.Time{}
 	store.DesiredFreshnessTimestamp = time.Time{}
@@ -153,19 +153,19 @@ func (store *FakeStore) DeleteActualState(actualStates []models.InstanceHeartbea
 	return nil
 }
 
-func (store *FakeStore) SaveQueueStartMessages(messages []models.QueueStartMessage) error {
+func (store *FakeStore) SavePendingStartMessages(messages []models.PendingStartMessage) error {
 	for _, message := range messages {
 		store.startMessages[message.StoreKey()] = message
 	}
 	return store.SaveStartMessagesError
 }
 
-func (store *FakeStore) GetQueueStartMessages() ([]models.QueueStartMessage, error) {
+func (store *FakeStore) GetPendingStartMessages() ([]models.PendingStartMessage, error) {
 	if store.GetStartMessagesError != nil {
-		return []models.QueueStartMessage{}, store.GetStartMessagesError
+		return []models.PendingStartMessage{}, store.GetStartMessagesError
 	}
 
-	actuals := make([]models.QueueStartMessage, len(store.startMessages))
+	actuals := make([]models.PendingStartMessage, len(store.startMessages))
 
 	i := 0
 	for _, actual := range store.startMessages {
@@ -176,7 +176,7 @@ func (store *FakeStore) GetQueueStartMessages() ([]models.QueueStartMessage, err
 	return actuals, nil
 }
 
-func (store *FakeStore) DeleteQueueStartMessages(messages []models.QueueStartMessage) error {
+func (store *FakeStore) DeletePendingStartMessages(messages []models.PendingStartMessage) error {
 	for _, message := range messages {
 		_, present := store.startMessages[message.StoreKey()]
 		if !present {
@@ -187,19 +187,19 @@ func (store *FakeStore) DeleteQueueStartMessages(messages []models.QueueStartMes
 	return store.DeleteStartMessagesError
 }
 
-func (store *FakeStore) SaveQueueStopMessages(messages []models.QueueStopMessage) error {
+func (store *FakeStore) SavePendingStopMessages(messages []models.PendingStopMessage) error {
 	for _, message := range messages {
 		store.stopMessages[message.StoreKey()] = message
 	}
 	return store.SaveStopMessagesError
 }
 
-func (store *FakeStore) GetQueueStopMessages() ([]models.QueueStopMessage, error) {
+func (store *FakeStore) GetPendingStopMessages() ([]models.PendingStopMessage, error) {
 	if store.GetStopMessagesError != nil {
-		return []models.QueueStopMessage{}, store.GetStopMessagesError
+		return []models.PendingStopMessage{}, store.GetStopMessagesError
 	}
 
-	actuals := make([]models.QueueStopMessage, len(store.stopMessages))
+	actuals := make([]models.PendingStopMessage, len(store.stopMessages))
 
 	i := 0
 	for _, actual := range store.stopMessages {
@@ -210,7 +210,7 @@ func (store *FakeStore) GetQueueStopMessages() ([]models.QueueStopMessage, error
 	return actuals, nil
 }
 
-func (store *FakeStore) DeleteQueueStopMessages(messages []models.QueueStopMessage) error {
+func (store *FakeStore) DeletePendingStopMessages(messages []models.PendingStopMessage) error {
 	for _, message := range messages {
 		_, present := store.stopMessages[message.StoreKey()]
 		if !present {

@@ -93,15 +93,15 @@ var _ = Describe("Sender", func() {
 		var keepAliveTime int
 		var sentOn int64
 		var err error
-		var queueMessage models.QueueStartMessage
+		var pendingMessage models.PendingStartMessage
 
 		JustBeforeEach(func() {
 			store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState(0)})
 
-			queueMessage = models.NewQueueStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0)
-			queueMessage.SentOn = sentOn
-			store.SaveQueueStartMessages([]models.QueueStartMessage{
-				queueMessage,
+			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0)
+			pendingMessage.SentOn = sentOn
+			store.SavePendingStartMessages([]models.PendingStartMessage{
+				pendingMessage,
 			})
 
 			err = sender.Send()
@@ -127,7 +127,7 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should leave the messages in the queue", func() {
-				messages, _ := store.GetQueueStartMessages()
+				messages, _ := store.GetPendingStartMessages()
 				Ω(messages).Should(HaveLen(1))
 			})
 		})
@@ -144,7 +144,7 @@ var _ = Describe("Sender", func() {
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
 					InstanceIndex: 0,
-					MessageId:     queueMessage.MessageId,
+					MessageId:     pendingMessage.MessageId,
 				}))
 			})
 
@@ -158,7 +158,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should update the sent on times", func() {
-					messages, _ := store.GetQueueStartMessages()
+					messages, _ := store.GetPendingStartMessages()
 					Ω(messages[0].SentOn).Should(Equal(timeProvider.Time().Unix()))
 				})
 			})
@@ -169,7 +169,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should just delete the message after sending it", func() {
-					messages, _ := store.GetQueueStartMessages()
+					messages, _ := store.GetPendingStartMessages()
 					Ω(messages).Should(BeEmpty())
 				})
 			})
@@ -217,7 +217,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should delete the message and not send it", func() {
-					messages, _ := store.GetQueueStartMessages()
+					messages, _ := store.GetPendingStartMessages()
 					Ω(messages).Should(BeEmpty())
 					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
 				})
@@ -229,7 +229,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should neither delete the message nor send it", func() {
-					messages, _ := store.GetQueueStartMessages()
+					messages, _ := store.GetPendingStartMessages()
 					Ω(messages).Should(HaveLen(1))
 
 					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
@@ -242,7 +242,7 @@ var _ = Describe("Sender", func() {
 		var keepAliveTime int
 		var sentOn int64
 		var err error
-		var queuedMessage models.QueueStopMessage
+		var pendingMessage models.PendingStopMessage
 
 		JustBeforeEach(func() {
 			store.SaveActualState([]models.InstanceHeartbeat{
@@ -250,10 +250,10 @@ var _ = Describe("Sender", func() {
 				app1.GetInstance(1).Heartbeat(0),
 			})
 
-			queuedMessage = models.NewQueueStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.GetInstance(0).InstanceGuid)
-			queuedMessage.SentOn = sentOn
-			store.SaveQueueStopMessages([]models.QueueStopMessage{
-				queuedMessage,
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.GetInstance(0).InstanceGuid)
+			pendingMessage.SentOn = sentOn
+			store.SavePendingStopMessages([]models.PendingStopMessage{
+				pendingMessage,
 			})
 
 			err = sender.Send()
@@ -279,7 +279,7 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should leave the messages in the queue", func() {
-				messages, _ := store.GetQueueStopMessages()
+				messages, _ := store.GetPendingStopMessages()
 				Ω(messages).Should(HaveLen(1))
 			})
 		})
@@ -302,7 +302,7 @@ var _ = Describe("Sender", func() {
 					InstanceIndex: 0,
 					InstanceGuid:  app1.GetInstance(0).InstanceGuid,
 					IsDuplicate:   false,
-					MessageId:     queuedMessage.MessageId,
+					MessageId:     pendingMessage.MessageId,
 				}))
 			})
 
@@ -312,7 +312,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should update the sent on times", func() {
-					messages, _ := store.GetQueueStopMessages()
+					messages, _ := store.GetPendingStopMessages()
 					Ω(messages[0].SentOn).Should(Equal(timeProvider.Time().Unix()))
 				})
 			})
@@ -323,7 +323,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should just delete the message after sending it", func() {
-					messages, _ := store.GetQueueStopMessages()
+					messages, _ := store.GetPendingStopMessages()
 					Ω(messages).Should(BeEmpty())
 				})
 			})
@@ -376,7 +376,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should delete the message and not send it", func() {
-					messages, _ := store.GetQueueStopMessages()
+					messages, _ := store.GetPendingStopMessages()
 					Ω(messages).Should(BeEmpty())
 					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.stop"))
 				})
@@ -388,7 +388,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should neither delete the message nor send it", func() {
-					messages, _ := store.GetQueueStopMessages()
+					messages, _ := store.GetPendingStopMessages()
 					Ω(messages).Should(HaveLen(1))
 
 					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.stop"))
@@ -400,14 +400,14 @@ var _ = Describe("Sender", func() {
 	Describe("Verifying that start messages should be sent", func() {
 		var err error
 		var indexToStart int
-		var queuedMessage models.QueueStartMessage
+		var pendingMessage models.PendingStartMessage
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			queuedMessage = models.NewQueueStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart, 1.0)
-			queuedMessage.SentOn = 0
-			store.SaveQueueStartMessages([]models.QueueStartMessage{
-				queuedMessage,
+			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart, 1.0)
+			pendingMessage.SentOn = 0
+			store.SavePendingStartMessages([]models.PendingStartMessage{
+				pendingMessage,
 			})
 
 			err = sender.Send()
@@ -420,7 +420,7 @@ var _ = Describe("Sender", func() {
 
 		assertMessageWasNotSent := func() {
 			It("should ignore the keep-alive and delete the start message from queue", func() {
-				messages, _ := store.GetQueueStartMessages()
+				messages, _ := store.GetPendingStartMessages()
 				Ω(messages).Should(HaveLen(0))
 			})
 
@@ -431,7 +431,7 @@ var _ = Describe("Sender", func() {
 
 		assertMessageWasSent := func() {
 			It("should honor the keep alive of the start message", func() {
-				messages, _ := store.GetQueueStartMessages()
+				messages, _ := store.GetPendingStartMessages()
 				Ω(messages).Should(HaveLen(1))
 				Ω(messages[0].SentOn).Should(BeNumerically("==", 130))
 			})
@@ -443,7 +443,7 @@ var _ = Describe("Sender", func() {
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
 					InstanceIndex: 0,
-					MessageId:     queuedMessage.MessageId,
+					MessageId:     pendingMessage.MessageId,
 				}))
 			})
 		}
@@ -500,14 +500,14 @@ var _ = Describe("Sender", func() {
 	Describe("Verifying that stop messages should be sent", func() {
 		var err error
 		var indexToStop int
-		var queuedMessage models.QueueStopMessage
+		var pendingMessage models.PendingStopMessage
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			queuedMessage = models.NewQueueStopMessage(time.Unix(100, 0), 30, 10, app1.GetInstance(indexToStop).InstanceGuid)
-			queuedMessage.SentOn = 0
-			store.SaveQueueStopMessages([]models.QueueStopMessage{
-				queuedMessage,
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app1.GetInstance(indexToStop).InstanceGuid)
+			pendingMessage.SentOn = 0
+			store.SavePendingStopMessages([]models.PendingStopMessage{
+				pendingMessage,
 			})
 
 			err = sender.Send()
@@ -519,7 +519,7 @@ var _ = Describe("Sender", func() {
 
 		assertMessageWasNotSent := func() {
 			It("should ignore the keep-alive and delete the stop message from queue", func() {
-				messages, _ := store.GetQueueStopMessages()
+				messages, _ := store.GetPendingStopMessages()
 				Ω(messages).Should(HaveLen(0))
 			})
 
@@ -530,7 +530,7 @@ var _ = Describe("Sender", func() {
 
 		assertMessageWasSent := func(indexToStop int, isDuplicate bool) {
 			It("should honor the keep alive of the stop message", func() {
-				messages, _ := store.GetQueueStopMessages()
+				messages, _ := store.GetPendingStopMessages()
 				Ω(messages).Should(HaveLen(1))
 				Ω(messages[0].SentOn).Should(BeNumerically("==", 130))
 			})
@@ -544,7 +544,7 @@ var _ = Describe("Sender", func() {
 					InstanceIndex: indexToStop,
 					InstanceGuid:  app1.GetInstance(indexToStop).InstanceGuid,
 					IsDuplicate:   isDuplicate,
-					MessageId:     queuedMessage.MessageId,
+					MessageId:     pendingMessage.MessageId,
 				}))
 			})
 		}
@@ -617,7 +617,7 @@ var _ = Describe("Sender", func() {
 	})
 
 	Context("When there are multiple start and stop messages in the queue", func() {
-		var invalidStartMessages, validStartMessages, expiredStartMessages []models.QueueStartMessage
+		var invalidStartMessages, validStartMessages, expiredStartMessages []models.PendingStartMessage
 
 		BeforeEach(func() {
 			conf, _ = config.DefaultConfig()
@@ -634,29 +634,29 @@ var _ = Describe("Sender", func() {
 				})
 
 				//only some of these should be sent:
-				validStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 0, float64(i)/40.0)
+				validStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 0, float64(i)/40.0)
 				validStartMessages = append(validStartMessages, validStartMessage)
-				store.SaveQueueStartMessages([]models.QueueStartMessage{
+				store.SavePendingStartMessages([]models.PendingStartMessage{
 					validStartMessage,
 				})
 
 				//all of these should be deleted:
-				invalidStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 1, 1.0)
+				invalidStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 1, 1.0)
 				invalidStartMessages = append(invalidStartMessages, invalidStartMessage)
-				store.SaveQueueStartMessages([]models.QueueStartMessage{
+				store.SavePendingStartMessages([]models.PendingStartMessage{
 					invalidStartMessage,
 				})
 
 				//all of these should be deleted:
-				expiredStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 0, 20, a.AppGuid, a.AppVersion, 2, 1.0)
+				expiredStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 0, 20, a.AppGuid, a.AppVersion, 2, 1.0)
 				expiredStartMessage.SentOn = 100
 				expiredStartMessages = append(expiredStartMessages, expiredStartMessage)
-				store.SaveQueueStartMessages([]models.QueueStartMessage{
+				store.SavePendingStartMessages([]models.PendingStartMessage{
 					expiredStartMessage,
 				})
 
-				stopMessage := models.NewQueueStopMessage(time.Unix(100, 0), 30, 0, a.GetInstance(1).InstanceGuid)
-				store.SaveQueueStopMessages([]models.QueueStopMessage{
+				stopMessage := models.NewPendingStopMessage(time.Unix(100, 0), 30, 0, a.GetInstance(1).InstanceGuid)
+				store.SavePendingStopMessages([]models.PendingStopMessage{
 					stopMessage,
 				})
 			}
@@ -667,7 +667,7 @@ var _ = Describe("Sender", func() {
 		})
 
 		It("should limit the number of start messages that it sends", func() {
-			remainingStartMessages, _ := store.GetQueueStartMessages()
+			remainingStartMessages, _ := store.GetPendingStartMessages()
 			Ω(remainingStartMessages).Should(HaveLen(20))
 			Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(20))
 
@@ -678,21 +678,21 @@ var _ = Describe("Sender", func() {
 		})
 
 		It("should delete all the invalid start messages", func() {
-			remainingStartMessages, _ := store.GetQueueStartMessages()
+			remainingStartMessages, _ := store.GetPendingStartMessages()
 			for _, invalidStartMessage := range invalidStartMessages {
 				Ω(remainingStartMessages).ShouldNot(ContainElement(invalidStartMessage))
 			}
 		})
 
 		It("should delete all the expired start messages", func() {
-			remainingStartMessages, _ := store.GetQueueStartMessages()
+			remainingStartMessages, _ := store.GetPendingStartMessages()
 			for _, expiredStartMessage := range expiredStartMessages {
 				Ω(remainingStartMessages).ShouldNot(ContainElement(expiredStartMessage))
 			}
 		})
 
 		It("should send all the stop messages, as they are cheap to handle", func() {
-			remainingStopMessages, _ := store.GetQueueStopMessages()
+			remainingStopMessages, _ := store.GetPendingStopMessages()
 			Ω(remainingStopMessages).Should(BeEmpty())
 			Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(40))
 		})

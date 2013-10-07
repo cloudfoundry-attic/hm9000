@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-var _ = Describe("QueueMessages", func() {
-	Describe("Queue Message", func() {
-		var message QueueMessage
+var _ = Describe("Pending Messages", func() {
+	Describe("Pending Message", func() {
+		var message PendingMessage
 		BeforeEach(func() {
-			message = QueueMessage{}
+			message = PendingMessage{}
 		})
 
 		Context("when it was sent", func() {
@@ -72,9 +72,9 @@ var _ = Describe("QueueMessages", func() {
 	})
 
 	Describe("Start Message", func() {
-		var message QueueStartMessage
+		var message PendingStartMessage
 		BeforeEach(func() {
-			message = NewQueueStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.3)
+			message = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.3)
 		})
 
 		It("should generate a random message id guid", func() {
@@ -96,7 +96,7 @@ var _ = Describe("QueueMessages", func() {
 		Describe("Creating new start messages from JSON", func() {
 			Context("when passed valid JSON", func() {
 				It("should parse correctly", func() {
-					parsed, err := NewQueueStartMessageFromJSON([]byte(`{
+					parsed, err := NewPendingStartMessageFromJSON([]byte(`{
                         "send_on": 130,
                         "sent_on": 0,
                         "keep_alive": 10,
@@ -114,7 +114,7 @@ var _ = Describe("QueueMessages", func() {
 
 			Context("when passed unparseable JSON", func() {
 				It("should error", func() {
-					parsed, err := NewQueueStartMessageFromJSON([]byte(`ß`))
+					parsed, err := NewPendingStartMessageFromJSON([]byte(`ß`))
 					Ω(parsed).Should(BeZero())
 					Ω(err).Should(HaveOccured())
 				})
@@ -123,7 +123,7 @@ var _ = Describe("QueueMessages", func() {
 
 		Describe("ToJSON", func() {
 			It("should generate valid JSON", func() {
-				roundTripMessage, err := NewQueueStartMessageFromJSON(message.ToJSON())
+				roundTripMessage, err := NewPendingStartMessageFromJSON(message.ToJSON())
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(roundTripMessage).Should(Equal(message))
 			})
@@ -151,9 +151,9 @@ var _ = Describe("QueueMessages", func() {
 	})
 
 	Describe("Stop Message", func() {
-		var message QueueStopMessage
+		var message PendingStopMessage
 		BeforeEach(func() {
-			message = NewQueueStopMessage(time.Unix(100, 0), 30, 10, "instance-guid")
+			message = NewPendingStopMessage(time.Unix(100, 0), 30, 10, "instance-guid")
 		})
 
 		It("should generate a random message id guid", func() {
@@ -172,7 +172,7 @@ var _ = Describe("QueueMessages", func() {
 		Describe("Creating new start messages from JSON", func() {
 			Context("when passed valid JSON", func() {
 				It("should parse correctly", func() {
-					parsed, err := NewQueueStopMessageFromJSON([]byte(`{
+					parsed, err := NewPendingStopMessageFromJSON([]byte(`{
                         "send_on": 130,
                         "sent_on": 0,
                         "keep_alive": 10,
@@ -187,7 +187,7 @@ var _ = Describe("QueueMessages", func() {
 
 			Context("when passed unparseable JSON", func() {
 				It("should error", func() {
-					parsed, err := NewQueueStopMessageFromJSON([]byte(`ß`))
+					parsed, err := NewPendingStopMessageFromJSON([]byte(`ß`))
 					Ω(parsed).Should(BeZero())
 					Ω(err).Should(HaveOccured())
 				})
@@ -196,7 +196,7 @@ var _ = Describe("QueueMessages", func() {
 
 		Describe("ToJSON", func() {
 			It("should generate valid JSON", func() {
-				roundTripMessage, err := NewQueueStopMessageFromJSON(message.ToJSON())
+				roundTripMessage, err := NewPendingStopMessageFromJSON(message.ToJSON())
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(roundTripMessage).Should(Equal(message))
 			})

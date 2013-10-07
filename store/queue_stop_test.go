@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-var _ = Describe("Storing QueueStopMessages", func() {
+var _ = Describe("Storing PendingStopMessages", func() {
 	var (
 		store       Store
 		etcdAdapter storeadapter.StoreAdapter
 		conf        config.Config
-		message1    models.QueueStopMessage
-		message2    models.QueueStopMessage
-		message3    models.QueueStopMessage
+		message1    models.PendingStopMessage
+		message2    models.PendingStopMessage
+		message3    models.PendingStopMessage
 	)
 
 	BeforeEach(func() {
@@ -28,9 +28,9 @@ var _ = Describe("Storing QueueStopMessages", func() {
 		err = etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		message1 = models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "ABC")
-		message2 = models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "DEF")
-		message3 = models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "GHI")
+		message1 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC")
+		message2 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF")
+		message3 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI")
 
 		store = NewStore(conf, etcdAdapter)
 	})
@@ -41,7 +41,7 @@ var _ = Describe("Storing QueueStopMessages", func() {
 
 	Describe("Saving stop messages", func() {
 		BeforeEach(func() {
-			err := store.SaveQueueStopMessages([]models.QueueStopMessage{
+			err := store.SavePendingStopMessages([]models.PendingStopMessage{
 				message1,
 				message2,
 			})
@@ -68,7 +68,7 @@ var _ = Describe("Storing QueueStopMessages", func() {
 	Describe("Fetching stop message", func() {
 		Context("When the stop message is present", func() {
 			BeforeEach(func() {
-				err := store.SaveQueueStopMessages([]models.QueueStopMessage{
+				err := store.SavePendingStopMessages([]models.PendingStopMessage{
 					message1,
 					message2,
 				})
@@ -76,7 +76,7 @@ var _ = Describe("Storing QueueStopMessages", func() {
 			})
 
 			It("can fetch the stop message", func() {
-				desired, err := store.GetQueueStopMessages()
+				desired, err := store.GetPendingStopMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(desired).Should(HaveLen(2))
 				Ω(desired).Should(ContainElement(message1))
@@ -87,14 +87,14 @@ var _ = Describe("Storing QueueStopMessages", func() {
 		Context("when the stop message is empty", func() {
 			BeforeEach(func() {
 				hb := message1
-				err := store.SaveQueueStopMessages([]models.QueueStopMessage{hb})
+				err := store.SavePendingStopMessages([]models.PendingStopMessage{hb})
 				Ω(err).ShouldNot(HaveOccured())
-				err = store.DeleteQueueStopMessages([]models.QueueStopMessage{hb})
+				err = store.DeletePendingStopMessages([]models.PendingStopMessage{hb})
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
 			It("returns an empty array", func() {
-				stop, err := store.GetQueueStopMessages()
+				stop, err := store.GetPendingStopMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(stop).Should(BeEmpty())
 			})
@@ -107,7 +107,7 @@ var _ = Describe("Storing QueueStopMessages", func() {
 			})
 
 			It("returns an empty array and no error", func() {
-				stop, err := store.GetQueueStopMessages()
+				stop, err := store.GetPendingStopMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(stop).Should(BeEmpty())
 			})
@@ -116,7 +116,7 @@ var _ = Describe("Storing QueueStopMessages", func() {
 
 	Describe("Deleting stop message", func() {
 		BeforeEach(func() {
-			err := store.SaveQueueStopMessages([]models.QueueStopMessage{
+			err := store.SavePendingStopMessages([]models.PendingStopMessage{
 				message1,
 				message2,
 				message3,
@@ -126,14 +126,14 @@ var _ = Describe("Storing QueueStopMessages", func() {
 
 		Context("When the stop message is present", func() {
 			It("can delete the stop message (and only cares about the relevant fields)", func() {
-				toDelete := []models.QueueStopMessage{
-					models.QueueStopMessage{InstanceGuid: message1.InstanceGuid},
-					models.QueueStopMessage{InstanceGuid: message3.InstanceGuid},
+				toDelete := []models.PendingStopMessage{
+					models.PendingStopMessage{InstanceGuid: message1.InstanceGuid},
+					models.PendingStopMessage{InstanceGuid: message3.InstanceGuid},
 				}
-				err := store.DeleteQueueStopMessages(toDelete)
+				err := store.DeletePendingStopMessages(toDelete)
 				Ω(err).ShouldNot(HaveOccured())
 
-				desired, err := store.GetQueueStopMessages()
+				desired, err := store.GetPendingStopMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(desired).Should(HaveLen(1))
 				Ω(desired).Should(ContainElement(message2))
@@ -142,15 +142,15 @@ var _ = Describe("Storing QueueStopMessages", func() {
 
 		Context("When the desired message key is not present", func() {
 			It("returns an error, but does leave things in a broken state... for now...", func() {
-				toDelete := []models.QueueStopMessage{
-					models.QueueStopMessage{InstanceGuid: message1.InstanceGuid},
-					models.QueueStopMessage{InstanceGuid: "floobedey"},
-					models.QueueStopMessage{InstanceGuid: message3.InstanceGuid},
+				toDelete := []models.PendingStopMessage{
+					models.PendingStopMessage{InstanceGuid: message1.InstanceGuid},
+					models.PendingStopMessage{InstanceGuid: "floobedey"},
+					models.PendingStopMessage{InstanceGuid: message3.InstanceGuid},
 				}
-				err := store.DeleteQueueStopMessages(toDelete)
+				err := store.DeletePendingStopMessages(toDelete)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-				stop, err := store.GetQueueStopMessages()
+				stop, err := store.GetPendingStopMessages()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(stop).Should(HaveLen(2))
 				Ω(stop).Should(ContainElement(message2))

@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInstances []models.InstanceHeartbeat) (startMessages []models.QueueStartMessage, stopMessages []models.QueueStopMessage) {
+func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInstances []models.InstanceHeartbeat) (startMessages []models.PendingStartMessage, stopMessages []models.PendingStopMessage) {
 	hasDesired := (desired.AppGuid != "")
 	numDesired := 0
 	if hasDesired {
@@ -29,7 +29,7 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 
 	for index := 0; index < desired.NumberOfInstances; index++ {
 		if len(runningByIndex[index]) == 0 {
-			message := models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod(), 0, desired.AppGuid, desired.AppVersion, index, priority)
+			message := models.NewPendingStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod(), 0, desired.AppGuid, desired.AppVersion, index, priority)
 			startMessages = append(startMessages, message)
 			analyzer.logger.Info("Identified missing instance", message.LogDescription(), map[string]string{
 				"Desired # of Instances": strconv.Itoa(desired.NumberOfInstances),
@@ -44,7 +44,7 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 	//stop extra instances at indices >= numDesired
 	for _, runningInstance := range runningInstances {
 		if runningInstance.InstanceIndex >= numDesired {
-			message := models.NewQueueStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod(), runningInstance.InstanceGuid)
+			message := models.NewPendingStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod(), runningInstance.InstanceGuid)
 			stopMessages = append(stopMessages, message)
 			analyzer.logger.Info("Identified extra running instance", message.LogDescription(), map[string]string{
 				"AppGuid":                desired.AppGuid,
@@ -69,9 +69,9 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 	return
 }
 
-func (analyzer *Analyzer) stopMessagesForDuplicateInstances(runningInstances []models.InstanceHeartbeat) (stopMessages []models.QueueStopMessage) {
+func (analyzer *Analyzer) stopMessagesForDuplicateInstances(runningInstances []models.InstanceHeartbeat) (stopMessages []models.PendingStopMessage) {
 	for i, instance := range runningInstances {
-		message := models.NewQueueStopMessage(analyzer.timeProvider.Time(), (i+1)*analyzer.conf.GracePeriod(), analyzer.conf.GracePeriod(), instance.InstanceGuid)
+		message := models.NewPendingStopMessage(analyzer.timeProvider.Time(), (i+1)*analyzer.conf.GracePeriod(), analyzer.conf.GracePeriod(), instance.InstanceGuid)
 		stopMessages = append(stopMessages, message)
 		analyzer.logger.Info("Identified duplicate running instance", message.LogDescription(), map[string]string{
 			"AppGuid":       instance.AppGuid,

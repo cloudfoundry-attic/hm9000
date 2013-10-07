@@ -246,136 +246,136 @@ var _ = Describe("FakeStore", func() {
 
 	Describe("Setting, getting, and deleting start messages", func() {
 		It("should set, get, and delete the start messages state", func() {
-			message1 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
-			message2 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0)
+			message1 := models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
+			message2 := models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0)
 
-			err := store.SaveQueueStartMessages([]models.QueueStartMessage{message1, message1, message2})
+			err := store.SavePendingStartMessages([]models.PendingStartMessage{message1, message1, message2})
 			Ω(err).ShouldNot(HaveOccured())
 
-			actual, err := store.GetQueueStartMessages()
+			actual, err := store.GetPendingStartMessages()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(2))
 			Ω(actual).Should(ContainElement(message1))
 			Ω(actual).Should(ContainElement(message2))
 
 			message2.SendOn = 120
-			message3 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0)
+			message3 := models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0)
 
-			err = store.SaveQueueStartMessages([]models.QueueStartMessage{message2, message3})
+			err = store.SavePendingStartMessages([]models.PendingStartMessage{message2, message3})
 			Ω(err).ShouldNot(HaveOccured())
 
-			actual, err = store.GetQueueStartMessages()
+			actual, err = store.GetPendingStartMessages()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(3))
 			Ω(actual).Should(ContainElement(message1))
 			Ω(actual).Should(ContainElement(message2))
 			Ω(actual).Should(ContainElement(message3))
 
-			err = store.DeleteQueueStartMessages([]models.QueueStartMessage{message2, message3})
+			err = store.DeletePendingStartMessages([]models.PendingStartMessage{message2, message3})
 			Ω(err).ShouldNot(HaveOccured())
-			actual, err = store.GetQueueStartMessages()
+			actual, err = store.GetPendingStartMessages()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(1))
 			Ω(actual).Should(ContainElement(message1))
 
-			err = store.DeleteQueueStartMessages([]models.QueueStartMessage{message2})
+			err = store.DeletePendingStartMessages([]models.PendingStartMessage{message2})
 			Ω(err).Should(HaveOccured())
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 			store.Reset()
 
-			actual, err = store.GetQueueStartMessages()
+			actual, err = store.GetPendingStartMessages()
 			Ω(actual).Should(BeEmpty())
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
 		It("should support returning errors", func() {
-			message1 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
-			store.SaveQueueStartMessages([]models.QueueStartMessage{message1})
+			message1 := models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
+			store.SavePendingStartMessages([]models.PendingStartMessage{message1})
 
 			errIn := errors.New("foo")
 
 			store.SaveStartMessagesError = errIn
-			err := store.SaveQueueStartMessages([]models.QueueStartMessage{message1})
+			err := store.SavePendingStartMessages([]models.PendingStartMessage{message1})
 			Ω(err).Should(Equal(errIn))
 
 			store.GetStartMessagesError = errIn
-			desired, err := store.GetQueueStartMessages()
+			desired, err := store.GetPendingStartMessages()
 			Ω(desired).Should(BeEmpty())
 			Ω(err).Should(Equal(errIn))
 
 			store.Reset()
-			err = store.SaveQueueStartMessages([]models.QueueStartMessage{message1})
+			err = store.SavePendingStartMessages([]models.PendingStartMessage{message1})
 			Ω(err).ShouldNot(HaveOccured())
-			_, err = store.GetQueueStartMessages()
+			_, err = store.GetPendingStartMessages()
 			Ω(err).ShouldNot(HaveOccured())
 		})
 	})
 
 	Describe("Setting, getting, and deleting stop messages", func() {
 		It("should set, get, and delete the stop messages state", func() {
-			message1 := models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "ABC")
-			message2 := models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "DEF")
+			message1 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC")
+			message2 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF")
 
-			err := store.SaveQueueStopMessages([]models.QueueStopMessage{message1, message1, message2})
+			err := store.SavePendingStopMessages([]models.PendingStopMessage{message1, message1, message2})
 			Ω(err).ShouldNot(HaveOccured())
 
-			actual, err := store.GetQueueStopMessages()
+			actual, err := store.GetPendingStopMessages()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(2))
 			Ω(actual).Should(ContainElement(message1))
 			Ω(actual).Should(ContainElement(message2))
 
 			message2.SendOn = 12310
-			message3 := models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "GHI")
+			message3 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI")
 
-			err = store.SaveQueueStopMessages([]models.QueueStopMessage{message2, message3})
+			err = store.SavePendingStopMessages([]models.PendingStopMessage{message2, message3})
 			Ω(err).ShouldNot(HaveOccured())
 
-			actual, err = store.GetQueueStopMessages()
+			actual, err = store.GetPendingStopMessages()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(3))
 			Ω(actual).Should(ContainElement(message1))
 			Ω(actual).Should(ContainElement(message2))
 			Ω(actual).Should(ContainElement(message3))
 
-			err = store.DeleteQueueStopMessages([]models.QueueStopMessage{message2, message3})
+			err = store.DeletePendingStopMessages([]models.PendingStopMessage{message2, message3})
 			Ω(err).ShouldNot(HaveOccured())
-			actual, err = store.GetQueueStopMessages()
+			actual, err = store.GetPendingStopMessages()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(1))
 			Ω(actual).Should(ContainElement(message1))
 
-			err = store.DeleteQueueStopMessages([]models.QueueStopMessage{message2})
+			err = store.DeletePendingStopMessages([]models.PendingStopMessage{message2})
 			Ω(err).Should(HaveOccured())
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 			store.Reset()
 
-			actual, err = store.GetQueueStopMessages()
+			actual, err = store.GetPendingStopMessages()
 			Ω(actual).Should(BeEmpty())
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
 		It("should support returning errors", func() {
-			message1 := models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "ABC")
-			store.SaveQueueStopMessages([]models.QueueStopMessage{message1})
+			message1 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC")
+			store.SavePendingStopMessages([]models.PendingStopMessage{message1})
 
 			errIn := errors.New("foo")
 
 			store.SaveStopMessagesError = errIn
-			err := store.SaveQueueStopMessages([]models.QueueStopMessage{message1})
+			err := store.SavePendingStopMessages([]models.PendingStopMessage{message1})
 			Ω(err).Should(Equal(errIn))
 
 			store.GetStopMessagesError = errIn
-			desired, err := store.GetQueueStopMessages()
+			desired, err := store.GetPendingStopMessages()
 			Ω(desired).Should(BeEmpty())
 			Ω(err).Should(Equal(errIn))
 
 			store.Reset()
-			err = store.SaveQueueStopMessages([]models.QueueStopMessage{message1})
+			err = store.SavePendingStopMessages([]models.PendingStopMessage{message1})
 			Ω(err).ShouldNot(HaveOccured())
-			_, err = store.GetQueueStopMessages()
+			_, err = store.GetPendingStopMessages()
 			Ω(err).ShouldNot(HaveOccured())
 		})
 	})

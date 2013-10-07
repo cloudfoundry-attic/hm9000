@@ -15,8 +15,8 @@ var _ = Describe("Outbox", func() {
 	var (
 		store         *fakestore.FakeStore
 		logger        *fakelogger.FakeLogger
-		startMessages []models.QueueStartMessage
-		stopMessages  []models.QueueStopMessage
+		startMessages []models.PendingStartMessage
+		stopMessages  []models.PendingStopMessage
 
 		outbox Outbox
 	)
@@ -24,16 +24,16 @@ var _ = Describe("Outbox", func() {
 	BeforeEach(func() {
 		store = fakestore.NewFakeStore()
 		logger = fakelogger.NewFakeLogger()
-		startMessages = []models.QueueStartMessage{
-			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0),
-			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0),
-			models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 2, 1.0),
+		startMessages = []models.PendingStartMessage{
+			models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0),
+			models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0),
+			models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 2, 1.0),
 		}
 
-		stopMessages = []models.QueueStopMessage{
-			models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "ABC"),
-			models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "DEF"),
-			models.NewQueueStopMessage(time.Unix(100, 0), 10, 4, "GHI"),
+		stopMessages = []models.PendingStopMessage{
+			models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC"),
+			models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF"),
+			models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI"),
 		}
 
 		outbox = New(store, logger)
@@ -51,8 +51,8 @@ var _ = Describe("Outbox", func() {
 			})
 
 			It("should store all the messages", func() {
-				starts, _ := store.GetQueueStartMessages()
-				stops, _ := store.GetQueueStopMessages()
+				starts, _ := store.GetPendingStartMessages()
+				stops, _ := store.GetPendingStopMessages()
 
 				Ω(starts).Should(HaveLen(3))
 				Ω(starts).Should(ContainElement(startMessages[0]))
@@ -79,11 +79,11 @@ var _ = Describe("Outbox", func() {
 		})
 
 		Context("when the store has colliding start messages", func() {
-			var collidingStartMessage models.QueueStartMessage
+			var collidingStartMessage models.PendingStartMessage
 
 			BeforeEach(func() {
-				collidingStartMessage = models.NewQueueStartMessage(time.Unix(120, 0), 10, 4, "DEF", "123", 1, 1.0)
-				store.SaveQueueStartMessages([]models.QueueStartMessage{
+				collidingStartMessage = models.NewPendingStartMessage(time.Unix(120, 0), 10, 4, "DEF", "123", 1, 1.0)
+				store.SavePendingStartMessages([]models.PendingStartMessage{
 					collidingStartMessage,
 				})
 			})
@@ -93,8 +93,8 @@ var _ = Describe("Outbox", func() {
 			})
 
 			It("should store the non-colliding messages, but leave the colliding message intact", func() {
-				starts, _ := store.GetQueueStartMessages()
-				stops, _ := store.GetQueueStopMessages()
+				starts, _ := store.GetPendingStartMessages()
+				stops, _ := store.GetPendingStopMessages()
 
 				Ω(starts).Should(HaveLen(3))
 				Ω(starts).Should(ContainElement(startMessages[0]))
@@ -116,11 +116,11 @@ var _ = Describe("Outbox", func() {
 		})
 
 		Context("When the store has colliding stop messages", func() {
-			var collidingStopMessage models.QueueStopMessage
+			var collidingStopMessage models.PendingStopMessage
 
 			BeforeEach(func() {
-				collidingStopMessage = models.NewQueueStopMessage(time.Unix(120, 0), 10, 4, "DEF")
-				store.SaveQueueStopMessages([]models.QueueStopMessage{
+				collidingStopMessage = models.NewPendingStopMessage(time.Unix(120, 0), 10, 4, "DEF")
+				store.SavePendingStopMessages([]models.PendingStopMessage{
 					collidingStopMessage,
 				})
 			})
@@ -130,8 +130,8 @@ var _ = Describe("Outbox", func() {
 			})
 
 			It("should store the non-colliding messages, but leave the colliding message intact", func() {
-				starts, _ := store.GetQueueStartMessages()
-				stops, _ := store.GetQueueStopMessages()
+				starts, _ := store.GetPendingStartMessages()
+				stops, _ := store.GetPendingStopMessages()
 
 				Ω(starts).Should(HaveLen(3))
 				Ω(starts).Should(ContainElement(startMessages[0]))
@@ -163,8 +163,8 @@ var _ = Describe("Outbox", func() {
 
 			It("should not enqueue any messages", func() {
 				store.GetStartMessagesError = nil
-				starts, _ := store.GetQueueStartMessages()
-				stops, _ := store.GetQueueStopMessages()
+				starts, _ := store.GetPendingStartMessages()
+				stops, _ := store.GetPendingStopMessages()
 				Ω(starts).Should(BeEmpty())
 				Ω(stops).Should(BeEmpty())
 			})
@@ -181,8 +181,8 @@ var _ = Describe("Outbox", func() {
 
 			It("should not enqueue any messages", func() {
 				store.GetStartMessagesError = nil
-				starts, _ := store.GetQueueStartMessages()
-				stops, _ := store.GetQueueStopMessages()
+				starts, _ := store.GetPendingStartMessages()
+				stops, _ := store.GetPendingStopMessages()
 				Ω(starts).Should(BeEmpty())
 				Ω(stops).Should(BeEmpty())
 			})

@@ -28,13 +28,13 @@ type Store interface {
 	GetActualState() ([]models.InstanceHeartbeat, error)
 	DeleteActualState(actualStates []models.InstanceHeartbeat) error
 
-	SaveQueueStartMessages(startMessages []models.QueueStartMessage) error
-	GetQueueStartMessages() ([]models.QueueStartMessage, error)
-	DeleteQueueStartMessages(startMessages []models.QueueStartMessage) error
+	SavePendingStartMessages(startMessages []models.PendingStartMessage) error
+	GetPendingStartMessages() ([]models.PendingStartMessage, error)
+	DeletePendingStartMessages(startMessages []models.PendingStartMessage) error
 
-	SaveQueueStopMessages(stopMessages []models.QueueStopMessage) error
-	GetQueueStopMessages() ([]models.QueueStopMessage, error)
-	DeleteQueueStopMessages(stopMessages []models.QueueStopMessage) error
+	SavePendingStopMessages(stopMessages []models.PendingStopMessage) error
+	GetPendingStopMessages() ([]models.PendingStopMessage, error)
+	DeletePendingStopMessages(stopMessages []models.PendingStopMessage) error
 }
 
 type RealStore struct {

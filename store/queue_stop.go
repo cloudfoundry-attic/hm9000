@@ -5,15 +5,15 @@ import (
 	"reflect"
 )
 
-func (store *RealStore) SaveQueueStopMessages(messages []models.QueueStopMessage) error {
+func (store *RealStore) SavePendingStopMessages(messages []models.PendingStopMessage) error {
 	return store.save(messages, "/stop", 0)
 }
 
-func (store *RealStore) GetQueueStopMessages() ([]models.QueueStopMessage, error) {
-	slice, err := store.get("/stop", reflect.TypeOf([]models.QueueStopMessage{}), reflect.ValueOf(models.NewQueueStopMessageFromJSON))
-	return slice.Interface().([]models.QueueStopMessage), err
+func (store *RealStore) GetPendingStopMessages() ([]models.PendingStopMessage, error) {
+	slice, err := store.get("/stop", reflect.TypeOf([]models.PendingStopMessage{}), reflect.ValueOf(models.NewPendingStopMessageFromJSON))
+	return slice.Interface().([]models.PendingStopMessage), err
 }
 
-func (store *RealStore) DeleteQueueStopMessages(messages []models.QueueStopMessage) error {
+func (store *RealStore) DeletePendingStopMessages(messages []models.PendingStopMessage) error {
 	return store.delete(messages, "/stop")
 }

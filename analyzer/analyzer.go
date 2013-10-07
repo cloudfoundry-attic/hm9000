@@ -38,8 +38,8 @@ func (analyzer *Analyzer) Analyze() error {
 		return err
 	}
 
-	allStartMessages := []models.QueueStartMessage{}
-	allStopMessages := []models.QueueStopMessage{}
+	allStartMessages := []models.PendingStartMessage{}
+	allStopMessages := []models.PendingStopMessage{}
 
 	for appVersionKey := range analyzer.storecache.SetOfApps {
 		desired := analyzer.storecache.DesiredByApp[appVersionKey]
