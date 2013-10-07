@@ -35,7 +35,6 @@ var _ = Describe("Httpclient", func() {
 		It("should return an appropriate timeout error", func(done Done) {
 			request, _ := http.NewRequest("GET", "http://127.0.0.1:8887/", nil)
 			client.Do(request, func(response *http.Response, err error) {
-				fmt.Printf("%v\n", err)
 				Ω(err).Should(HaveOccured())
 				close(done)
 			})
@@ -46,7 +45,6 @@ var _ = Describe("Httpclient", func() {
 		It("should return an appropriate timeout error", func() {
 			request, _ := http.NewRequest("GET", "http://127.0.0.1:8889/sleep?time=1", nil)
 			client.Do(request, func(response *http.Response, err error) {
-				fmt.Printf("%v\n", err)
 				Ω(err).Should(HaveOccured())
 			})
 		})

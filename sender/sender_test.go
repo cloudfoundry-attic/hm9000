@@ -246,11 +246,11 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			store.SaveActualState([]models.InstanceHeartbeat{
-				app1.GetInstance(0).Heartbeat(0),
-				app1.GetInstance(1).Heartbeat(0),
+				app1.InstanceAtIndex(0).Heartbeat(0),
+				app1.InstanceAtIndex(1).Heartbeat(0),
 			})
 
-			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.GetInstance(0).InstanceGuid)
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.InstanceAtIndex(0).InstanceGuid)
 			pendingMessage.SentOn = sentOn
 			store.SavePendingStopMessages([]models.PendingStopMessage{
 				pendingMessage,
@@ -300,7 +300,7 @@ var _ = Describe("Sender", func() {
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
 					InstanceIndex: 0,
-					InstanceGuid:  app1.GetInstance(0).InstanceGuid,
+					InstanceGuid:  app1.InstanceAtIndex(0).InstanceGuid,
 					IsDuplicate:   false,
 					MessageId:     pendingMessage.MessageId,
 				}))
@@ -465,8 +465,8 @@ var _ = Describe("Sender", func() {
 				Context("when there is no running instance reporting at that index", func() {
 					BeforeEach(func() {
 						store.SaveActualState([]models.InstanceHeartbeat{
-							app1.GetInstance(1).Heartbeat(0),
-							app1.GetInstance(2).Heartbeat(0),
+							app1.InstanceAtIndex(1).Heartbeat(0),
+							app1.InstanceAtIndex(2).Heartbeat(0),
 						})
 					})
 					assertMessageWasSent()
@@ -475,7 +475,7 @@ var _ = Describe("Sender", func() {
 				Context("when there *is* a running instance reporting at that index", func() {
 					BeforeEach(func() {
 						store.SaveActualState([]models.InstanceHeartbeat{
-							app1.GetInstance(0).Heartbeat(0),
+							app1.InstanceAtIndex(0).Heartbeat(0),
 						})
 					})
 
@@ -504,7 +504,7 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app1.GetInstance(indexToStop).InstanceGuid)
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app1.InstanceAtIndex(indexToStop).InstanceGuid)
 			pendingMessage.SentOn = 0
 			store.SavePendingStopMessages([]models.PendingStopMessage{
 				pendingMessage,
@@ -542,7 +542,7 @@ var _ = Describe("Sender", func() {
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
 					InstanceIndex: indexToStop,
-					InstanceGuid:  app1.GetInstance(indexToStop).InstanceGuid,
+					InstanceGuid:  app1.InstanceAtIndex(indexToStop).InstanceGuid,
 					IsDuplicate:   isDuplicate,
 					MessageId:     pendingMessage.MessageId,
 				}))
@@ -557,8 +557,8 @@ var _ = Describe("Sender", func() {
 			Context("When index is still running", func() {
 				BeforeEach(func() {
 					store.SaveActualState([]models.InstanceHeartbeat{
-						app1.GetInstance(0).Heartbeat(0),
-						app1.GetInstance(1).Heartbeat(0),
+						app1.InstanceAtIndex(0).Heartbeat(0),
+						app1.InstanceAtIndex(1).Heartbeat(0),
 					})
 				})
 
@@ -569,7 +569,7 @@ var _ = Describe("Sender", func() {
 
 					Context("When there are other running instances on the index", func() {
 						BeforeEach(func() {
-							instance := app1.GetInstance(0)
+							instance := app1.InstanceAtIndex(0)
 							instance.InstanceGuid = models.Guid()
 
 							store.SaveActualState([]models.InstanceHeartbeat{
@@ -582,13 +582,8 @@ var _ = Describe("Sender", func() {
 
 					Context("when there are other, crashed, instances on the index", func() {
 						BeforeEach(func() {
-							instance := app1.GetInstance(0)
-							instance.InstanceGuid = models.Guid()
-							heartbeat := instance.Heartbeat(0)
-							heartbeat.State = models.InstanceStateCrashed
-
 							store.SaveActualState([]models.InstanceHeartbeat{
-								heartbeat,
+								app1.CrashedInstanceHeartbeatAtIndex(0),
 							})
 						})
 
@@ -618,8 +613,8 @@ var _ = Describe("Sender", func() {
 			Context("when the instance is still running", func() {
 				BeforeEach(func() {
 					store.SaveActualState([]models.InstanceHeartbeat{
-						app1.GetInstance(0).Heartbeat(0),
-						app1.GetInstance(1).Heartbeat(0),
+						app1.InstanceAtIndex(0).Heartbeat(0),
+						app1.InstanceAtIndex(1).Heartbeat(0),
 					})
 				})
 				assertMessageWasSent(0, false)
@@ -644,7 +639,7 @@ var _ = Describe("Sender", func() {
 				a := app.NewApp()
 				store.SaveDesiredState([]models.DesiredAppState{a.DesiredState(0)})
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(1).Heartbeat(0),
+					a.InstanceAtIndex(1).Heartbeat(0),
 				})
 
 				//only some of these should be sent:
@@ -669,7 +664,7 @@ var _ = Describe("Sender", func() {
 					expiredStartMessage,
 				})
 
-				stopMessage := models.NewPendingStopMessage(time.Unix(100, 0), 30, 0, a.GetInstance(1).InstanceGuid)
+				stopMessage := models.NewPendingStopMessage(time.Unix(100, 0), 30, 0, a.InstanceAtIndex(1).InstanceGuid)
 				store.SavePendingStopMessages([]models.PendingStopMessage{
 					stopMessage,
 				})

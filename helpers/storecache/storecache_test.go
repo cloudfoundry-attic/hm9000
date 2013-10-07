@@ -33,10 +33,10 @@ var _ = Describe("Storecache", func() {
 		cache = New(store)
 
 		actualState = []models.InstanceHeartbeat{
-			app1.GetInstance(0).Heartbeat(0),
-			app1.GetInstance(1).Heartbeat(0),
-			app1.GetInstance(2).Heartbeat(0),
-			app2.GetInstance(0).Heartbeat(0),
+			app1.InstanceAtIndex(0).Heartbeat(0),
+			app1.InstanceAtIndex(1).Heartbeat(0),
+			app1.InstanceAtIndex(2).Heartbeat(0),
+			app2.InstanceAtIndex(0).Heartbeat(0),
 		}
 		desiredState = []models.DesiredAppState{
 			app1.DesiredState(0),
@@ -74,12 +74,12 @@ var _ = Describe("Storecache", func() {
 			Ω(cache.HeartbeatingInstancesByApp).Should(HaveLen(2))
 			runningApp1 := cache.HeartbeatingInstancesByApp[app1.AppGuid+"-"+app1.AppVersion]
 			Ω(runningApp1).Should(HaveLen(3))
-			Ω(runningApp1).Should(ContainElement(app1.GetInstance(0).Heartbeat(0)))
-			Ω(runningApp1).Should(ContainElement(app1.GetInstance(1).Heartbeat(0)))
-			Ω(runningApp1).Should(ContainElement(app1.GetInstance(2).Heartbeat(0)))
+			Ω(runningApp1).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat(0)))
+			Ω(runningApp1).Should(ContainElement(app1.InstanceAtIndex(1).Heartbeat(0)))
+			Ω(runningApp1).Should(ContainElement(app1.InstanceAtIndex(2).Heartbeat(0)))
 			runningApp2 := cache.HeartbeatingInstancesByApp[app2.AppGuid+"-"+app2.AppVersion]
 			Ω(runningApp2).Should(HaveLen(1))
-			Ω(runningApp2).Should(ContainElement(app2.GetInstance(0).Heartbeat(0)))
+			Ω(runningApp2).Should(ContainElement(app2.InstanceAtIndex(0).Heartbeat(0)))
 
 			Ω(cache.DesiredByApp).Should(HaveLen(2))
 			desiredApp1 := cache.DesiredByApp[app1.AppGuid+"-"+app1.AppVersion]
@@ -88,13 +88,13 @@ var _ = Describe("Storecache", func() {
 			Ω(desiredApp3).Should(Equal(app3.DesiredState(0)))
 
 			Ω(cache.HeartbeatingInstancesByGuid).Should(HaveLen(4))
-			instance1 := app1.GetInstance(0)
+			instance1 := app1.InstanceAtIndex(0)
 			Ω(cache.HeartbeatingInstancesByGuid[instance1.InstanceGuid]).Should(Equal(instance1.Heartbeat(0)))
-			instance2 := app1.GetInstance(1)
+			instance2 := app1.InstanceAtIndex(1)
 			Ω(cache.HeartbeatingInstancesByGuid[instance2.InstanceGuid]).Should(Equal(instance2.Heartbeat(0)))
-			instance3 := app1.GetInstance(2)
+			instance3 := app1.InstanceAtIndex(2)
 			Ω(cache.HeartbeatingInstancesByGuid[instance3.InstanceGuid]).Should(Equal(instance3.Heartbeat(0)))
-			instance4 := app2.GetInstance(0)
+			instance4 := app2.InstanceAtIndex(0)
 			Ω(cache.HeartbeatingInstancesByGuid[instance4.InstanceGuid]).Should(Equal(instance4.Heartbeat(0)))
 		})
 

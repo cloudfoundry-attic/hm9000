@@ -1,12 +1,12 @@
 package app_test
 
 import (
-    . "github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/cloudfoundry/hm9000/models"
+	. "github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-		"time"
+	"time"
 )
 
 var _ = Describe("App Model", func() {
@@ -39,28 +39,41 @@ var _ = Describe("App Model", func() {
 		})
 	})
 
-	Describe("GetInstance", func() {
+	Describe("InstanceAtIndex", func() {
 		It("creates and memoizes instance", func() {
-			instance := app.GetInstance(0)
+			instance := app.InstanceAtIndex(0)
 
 			Ω(instance.AppGuid).Should(Equal(app.AppGuid))
 			Ω(instance.AppVersion).Should(Equal(app.AppVersion))
 			Ω(instance.InstanceGuid).ShouldNot(BeEmpty())
 			Ω(instance.InstanceIndex).Should(Equal(0))
 
-			instanceAgain := app.GetInstance(0)
+			instanceAgain := app.InstanceAtIndex(0)
 			Ω(instanceAgain).Should(Equal(instance))
 
-			otherInstance := app.GetInstance(3)
+			otherInstance := app.InstanceAtIndex(3)
 			Ω(otherInstance.InstanceIndex).Should(Equal(3))
 			Ω(otherInstance.InstanceGuid).ShouldNot(Equal(instance.InstanceGuid))
+		})
+	})
+
+	Describe("CrashedInstanceHeartbeatAtIndex", func() {
+		It("should create an instance heartbeat, in the crashed state, at the passed in index", func() {
+			index := 1
+			heartbeat := app.CrashedInstanceHeartbeatAtIndex(index)
+			Ω(heartbeat.State).Should(Equal(InstanceStateCrashed))
+			Ω(heartbeat.CCPartition).Should(Equal("default"))
+			Ω(heartbeat.AppGuid).Should(Equal(app.AppGuid))
+			Ω(heartbeat.AppVersion).Should(Equal(app.AppVersion))
+			Ω(heartbeat.InstanceGuid).ShouldNot(BeZero())
+			Ω(heartbeat.InstanceIndex).Should(Equal(index))
 		})
 	})
 
 	Describe("Instance", func() {
 		var instance Instance
 		BeforeEach(func() {
-			instance = app.GetInstance(0)
+			instance = app.InstanceAtIndex(0)
 		})
 
 		Describe("Heartbeat", func() {
@@ -106,14 +119,14 @@ var _ = Describe("App Model", func() {
 
 	Describe("Heartbeat", func() {
 		It("creates a heartbeat for the desired number of instances, using the correct instnace guids when available", func() {
-			instance := app.GetInstance(0)
+			instance := app.InstanceAtIndex(0)
 			heartbeat := app.Heartbeat(2, 1)
 
 			Ω(heartbeat.DeaGuid).ShouldNot(BeEmpty())
 
 			Ω(heartbeat.InstanceHeartbeats).Should(HaveLen(2))
 			Ω(heartbeat.InstanceHeartbeats[0]).Should(Equal(instance.Heartbeat(1)))
-			Ω(heartbeat.InstanceHeartbeats[1]).Should(Equal(app.GetInstance(1).Heartbeat(1)))
+			Ω(heartbeat.InstanceHeartbeats[1]).Should(Equal(app.InstanceAtIndex(1).Heartbeat(1)))
 
 			Ω(app.Heartbeat(2, 1)).Should(Equal(heartbeat))
 		})

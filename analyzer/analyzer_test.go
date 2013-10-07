@@ -117,9 +117,9 @@ var _ = Describe("Analyzer", func() {
 					desired,
 				})
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(0).Heartbeat(0),
-					a.GetInstance(1).Heartbeat(0),
-					a.GetInstance(2).Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(0),
+					a.InstanceAtIndex(1).Heartbeat(0),
+					a.InstanceAtIndex(2).Heartbeat(0),
 				})
 			})
 
@@ -161,8 +161,8 @@ var _ = Describe("Analyzer", func() {
 			Context("but only some of the instances are running", func() {
 				BeforeEach(func() {
 					store.SaveActualState([]models.InstanceHeartbeat{
-						a.GetInstance(0).Heartbeat(0),
-						a.GetInstance(2).Heartbeat(0),
+						a.InstanceAtIndex(0).Heartbeat(0),
+						a.InstanceAtIndex(2).Heartbeat(0),
 					})
 				})
 
@@ -187,9 +187,9 @@ var _ = Describe("Analyzer", func() {
 		Context("When there are running instances", func() {
 			BeforeEach(func() {
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(0).Heartbeat(0),
-					a.GetInstance(1).Heartbeat(0),
-					a.GetInstance(2).Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(0),
+					a.InstanceAtIndex(1).Heartbeat(0),
+					a.InstanceAtIndex(2).Heartbeat(0),
 				})
 			})
 
@@ -198,7 +198,7 @@ var _ = Describe("Analyzer", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(outbox.PendingStartMessages).Should(BeEmpty())
-					assertStopMessages(newStopMessage(a.GetInstance(0)), newStopMessage(a.GetInstance(1)), newStopMessage(a.GetInstance(2)))
+					assertStopMessages(newStopMessage(a.InstanceAtIndex(0)), newStopMessage(a.InstanceAtIndex(1)), newStopMessage(a.InstanceAtIndex(2)))
 				})
 			})
 
@@ -215,7 +215,7 @@ var _ = Describe("Analyzer", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(outbox.PendingStartMessages).Should(BeEmpty())
-					assertStopMessages(newStopMessage(a.GetInstance(1)), newStopMessage(a.GetInstance(2)))
+					assertStopMessages(newStopMessage(a.InstanceAtIndex(1)), newStopMessage(a.InstanceAtIndex(2)))
 				})
 			})
 
@@ -225,15 +225,9 @@ var _ = Describe("Analyzer", func() {
 	Describe("Handling crashed instances", func() {
 		Context("When there are multiple crashed instances on the same index", func() {
 			BeforeEach(func() {
-				crashedInstanceHeartbeat1 := a.GetInstance(0).Heartbeat(0)
-				crashedInstanceHeartbeat1.State = models.InstanceStateCrashed
-				crashedInstanceHeartbeat2 := a.GetInstance(1).Heartbeat(0)
-				crashedInstanceHeartbeat2.InstanceIndex = 0
-				crashedInstanceHeartbeat2.State = models.InstanceStateCrashed
-
 				store.SaveActualState([]models.InstanceHeartbeat{
-					crashedInstanceHeartbeat1,
-					crashedInstanceHeartbeat2,
+					a.CrashedInstanceHeartbeatAtIndex(0),
+					a.CrashedInstanceHeartbeatAtIndex(0),
 				})
 			})
 
@@ -253,9 +247,7 @@ var _ = Describe("Analyzer", func() {
 
 				Context("when there is a running instance on the same index", func() {
 					BeforeEach(func() {
-						runningInstance := a.GetInstance(2).Heartbeat(0)
-						runningInstance.InstanceIndex = 0
-						store.SaveActualState([]models.InstanceHeartbeat{runningInstance})
+						store.SaveActualState([]models.InstanceHeartbeat{a.InstanceAtIndex(0).Heartbeat(0)})
 					})
 
 					It("should not try to stop the running instance!", func() {
@@ -287,11 +279,11 @@ var _ = Describe("Analyzer", func() {
 		Context("when there are indices missing", func() {
 			BeforeEach(func() {
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(1).Heartbeat(0),
-					a.GetInstance(3).Heartbeat(0),
-					a.GetInstance(4).Heartbeat(0),
-					a.GetInstance(5).Heartbeat(0),
-					a.GetInstance(6).Heartbeat(0),
+					a.InstanceAtIndex(1).Heartbeat(0),
+					a.InstanceAtIndex(3).Heartbeat(0),
+					a.InstanceAtIndex(4).Heartbeat(0),
+					a.InstanceAtIndex(5).Heartbeat(0),
+					a.InstanceAtIndex(6).Heartbeat(0),
 				})
 			})
 
@@ -306,11 +298,11 @@ var _ = Describe("Analyzer", func() {
 		Context("when all desired indices are present", func() {
 			BeforeEach(func() {
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(0).Heartbeat(0),
-					a.GetInstance(1).Heartbeat(0),
-					a.GetInstance(2).Heartbeat(0),
-					a.GetInstance(3).Heartbeat(0),
-					a.GetInstance(4).Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(0),
+					a.InstanceAtIndex(1).Heartbeat(0),
+					a.InstanceAtIndex(2).Heartbeat(0),
+					a.InstanceAtIndex(3).Heartbeat(0),
+					a.InstanceAtIndex(4).Heartbeat(0),
 				})
 			})
 
@@ -318,7 +310,7 @@ var _ = Describe("Analyzer", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(outbox.PendingStartMessages).Should(BeEmpty())
-				assertStopMessages(newStopMessage(a.GetInstance(3)), newStopMessage(a.GetInstance(4)))
+				assertStopMessages(newStopMessage(a.InstanceAtIndex(3)), newStopMessage(a.InstanceAtIndex(4)))
 			})
 		})
 	})
@@ -337,11 +329,11 @@ var _ = Describe("Analyzer", func() {
 				desired,
 			})
 
-			duplicateInstance1 = a.GetInstance(2)
+			duplicateInstance1 = a.InstanceAtIndex(2)
 			duplicateInstance1.InstanceGuid = models.Guid()
-			duplicateInstance2 = a.GetInstance(2)
+			duplicateInstance2 = a.InstanceAtIndex(2)
 			duplicateInstance2.InstanceGuid = models.Guid()
-			duplicateInstance3 = a.GetInstance(2)
+			duplicateInstance3 = a.InstanceAtIndex(2)
 			duplicateInstance3.InstanceGuid = models.Guid()
 		})
 
@@ -349,7 +341,7 @@ var _ = Describe("Analyzer", func() {
 			It("should not schedule any stops and start the missing indices", func() {
 				//[-,-,2|2|2|2]
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(2).Heartbeat(0),
+					a.InstanceAtIndex(2).Heartbeat(0),
 					duplicateInstance1.Heartbeat(0),
 					duplicateInstance2.Heartbeat(0),
 					duplicateInstance3.Heartbeat(0),
@@ -368,9 +360,9 @@ var _ = Describe("Analyzer", func() {
 				crashedHeartbeat := duplicateInstance3.Heartbeat(0)
 				crashedHeartbeat.State = models.InstanceStateCrashed
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(0).Heartbeat(0),
-					a.GetInstance(1).Heartbeat(0),
-					a.GetInstance(2).Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(0),
+					a.InstanceAtIndex(1).Heartbeat(0),
+					a.InstanceAtIndex(2).Heartbeat(0),
 					duplicateInstance1.Heartbeat(0),
 					duplicateInstance2.Heartbeat(0),
 					crashedHeartbeat,
@@ -379,7 +371,7 @@ var _ = Describe("Analyzer", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(outbox.PendingStartMessages).Should(BeEmpty())
-				stop0 := newStopMessage(a.GetInstance(2))
+				stop0 := newStopMessage(a.InstanceAtIndex(2))
 				stop0.SendOn = stop0.SendOn + int64(conf.GracePeriod())
 				stop1 := newStopMessage(duplicateInstance1)
 				stop1.SendOn = stop1.SendOn + int64(conf.GracePeriod()*2)
@@ -396,19 +388,19 @@ var _ = Describe("Analyzer", func() {
 			)
 
 			BeforeEach(func() {
-				duplicateExtraInstance1 = a.GetInstance(3)
+				duplicateExtraInstance1 = a.InstanceAtIndex(3)
 				duplicateExtraInstance1.InstanceGuid = models.Guid()
-				duplicateExtraInstance2 = a.GetInstance(3)
+				duplicateExtraInstance2 = a.InstanceAtIndex(3)
 				duplicateExtraInstance2.InstanceGuid = models.Guid()
 			})
 
 			It("should terminate the extra indices with extreme prejudice", func() {
 				//[0,1,2,3,3,3] < stop 3,3,3
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.GetInstance(0).Heartbeat(0),
-					a.GetInstance(1).Heartbeat(0),
-					a.GetInstance(2).Heartbeat(0),
-					a.GetInstance(3).Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(0),
+					a.InstanceAtIndex(1).Heartbeat(0),
+					a.InstanceAtIndex(2).Heartbeat(0),
+					a.InstanceAtIndex(3).Heartbeat(0),
 					duplicateExtraInstance1.Heartbeat(0),
 					duplicateExtraInstance2.Heartbeat(0),
 				})
@@ -416,7 +408,7 @@ var _ = Describe("Analyzer", func() {
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(outbox.PendingStartMessages).Should(BeEmpty())
-				stop0 := newStopMessage(a.GetInstance(3))
+				stop0 := newStopMessage(a.InstanceAtIndex(3))
 				stop1 := newStopMessage(duplicateExtraInstance1)
 				stop2 := newStopMessage(duplicateExtraInstance2)
 				assertStopMessages(stop0, stop1, stop2)
@@ -449,11 +441,11 @@ var _ = Describe("Analyzer", func() {
 				yetAnotherDesired,
 			})
 			store.SaveActualState([]models.InstanceHeartbeat{
-				a.GetInstance(0).Heartbeat(0),
-				a.GetInstance(1).Heartbeat(0),
-				undesiredApp.GetInstance(0).Heartbeat(0),
-				otherApp.GetInstance(0).Heartbeat(0),
-				otherApp.GetInstance(2).Heartbeat(0),
+				a.InstanceAtIndex(0).Heartbeat(0),
+				a.InstanceAtIndex(1).Heartbeat(0),
+				undesiredApp.InstanceAtIndex(0).Heartbeat(0),
+				otherApp.InstanceAtIndex(0).Heartbeat(0),
+				otherApp.InstanceAtIndex(2).Heartbeat(0),
 			})
 		})
 
@@ -461,7 +453,7 @@ var _ = Describe("Analyzer", func() {
 			err := analyzer.Analyze()
 			Ω(err).ShouldNot(HaveOccured())
 			assertStartMessages(newStartMessage(otherApp, 1, 1.0/3.0), newStartMessage(yetAnotherApp, 0, 1.0), newStartMessage(yetAnotherApp, 1, 1.0))
-			assertStopMessages(newStopMessage(a.GetInstance(1)), newStopMessage(undesiredApp.GetInstance(0)))
+			assertStopMessages(newStopMessage(a.InstanceAtIndex(1)), newStopMessage(undesiredApp.InstanceAtIndex(0)))
 		})
 	})
 
@@ -475,7 +467,7 @@ var _ = Describe("Analyzer", func() {
 				desired,
 			})
 			store.SaveActualState([]models.InstanceHeartbeat{
-				app.NewApp().GetInstance(0).Heartbeat(0),
+				app.NewApp().InstanceAtIndex(0).Heartbeat(0),
 			})
 		})
 

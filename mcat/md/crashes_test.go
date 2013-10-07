@@ -7,28 +7,25 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Crashes", func() {
+var _ = Describe("Crashes", func() {
 	var timestamp int
 
 	Context("when there are multiple crashed instances on a given index", func() {
 		BeforeEach(func() {
-			app1 := app.NewApp()
+			a := app.NewApp()
 
 			stateServer.SetDesiredState([]models.DesiredAppState{
-				app1.DesiredState(0),
+				a.DesiredState(0),
 			})
 
 			timestamp = 100
 
-			instanceHeartbeat1 := app1.GetInstance(0).Heartbeat(0)
-			instanceHeartbeat1.State = models.InstanceStateCrashed
-			instanceHeartbeat2 := app1.GetInstance(1).Heartbeat(0)
-			instanceHeartbeat2.InstanceIndex = 0
-			instanceHeartbeat2.State = models.InstanceStateCrashed
-
 			heartbeat := models.Heartbeat{
-				DeaGuid:            models.Guid(),
-				InstanceHeartbeats: []models.InstanceHeartbeat{instanceHeartbeat1, instanceHeartbeat2},
+				DeaGuid: models.Guid(),
+				InstanceHeartbeats: []models.InstanceHeartbeat{
+					a.CrashedInstanceHeartbeatAtIndex(0),
+					a.CrashedInstanceHeartbeatAtIndex(0),
+				},
 			}
 
 			for i := 0; i < 3; i++ {

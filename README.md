@@ -303,7 +303,7 @@ desiredState := app.DesiredState(UPDATED_AT_TIMESTAMP)
 //get an instance at index 0.  this getter will lazily create and memoize
 //instances and populate them with an INSTANCE_GUID and the correct
 //INDEX.
-instance0 := app.GetInstance(0)
+instance0 := app.InstanceAtIndex(0)
 
 //fetch, for example, the exit message for the instance. Time is always injected
 exitedMessage := instance0.DropletExited(DropletExitReasonCrashed, TIMESTAMP)
@@ -311,7 +311,7 @@ exitedMessage := instance0.DropletExited(DropletExitReasonCrashed, TIMESTAMP)
 //generate a heartbeat for the app.  first argument is the # of instances,
 // second is a timestamp denoting *when the app transitioned into its current state*  
 //note that the INSTANCE_GUID associated with the instance at index 0 will
-//match that provided by app.GetInstance(0)
+//match that provided by app.InstanceAtIndex(0)
 app.Heartbeat(2, TIMESTAMP)
 ```
 

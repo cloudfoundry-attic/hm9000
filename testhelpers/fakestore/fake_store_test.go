@@ -178,8 +178,8 @@ var _ = Describe("FakeStore", func() {
 
 	Describe("Setting, getting, and deleting actual state", func() {
 		It("should set, get, and delete the actual state", func() {
-			heartbeat1 := app1.GetInstance(0).Heartbeat(12)
-			heartbeat2 := app2.GetInstance(0).Heartbeat(10)
+			heartbeat1 := app1.InstanceAtIndex(0).Heartbeat(12)
+			heartbeat2 := app2.InstanceAtIndex(0).Heartbeat(10)
 
 			err := store.SaveActualState([]models.InstanceHeartbeat{heartbeat1, heartbeat1, heartbeat2})
 			Ω(err).ShouldNot(HaveOccured())
@@ -191,7 +191,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(actual).Should(ContainElement(heartbeat2))
 
 			heartbeat2.State = models.InstanceStateCrashed
-			heartbeat3 := app1.GetInstance(1).Heartbeat(12)
+			heartbeat3 := app1.InstanceAtIndex(1).Heartbeat(12)
 
 			err = store.SaveActualState([]models.InstanceHeartbeat{heartbeat2, heartbeat3})
 			Ω(err).ShouldNot(HaveOccured())
@@ -222,7 +222,7 @@ var _ = Describe("FakeStore", func() {
 		})
 
 		It("should support returning errors", func() {
-			heartbeat1 := app1.GetInstance(0).Heartbeat(12)
+			heartbeat1 := app1.InstanceAtIndex(0).Heartbeat(12)
 			store.SaveActualState([]models.InstanceHeartbeat{heartbeat1})
 
 			errIn := errors.New("foo")

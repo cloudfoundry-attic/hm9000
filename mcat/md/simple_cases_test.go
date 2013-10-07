@@ -143,7 +143,7 @@ var _ = Describe("Simple Cases Test", func() {
 
 		Context("when the instance is no longer running", func() {
 			BeforeEach(func() {
-				expireHeartbeat(app2.GetInstance(1).Heartbeat(0))
+				expireHeartbeat(app2.InstanceAtIndex(1).Heartbeat(0))
 				cliRunner.Run("send", timestamp)
 			})
 
@@ -181,7 +181,7 @@ var _ = Describe("Simple Cases Test", func() {
 				stop := startStopListener.Stops[0]
 				Ω(stop.AppGuid).Should(Equal(app2.AppGuid))
 				Ω(stop.AppVersion).Should(Equal(app2.AppVersion))
-				Ω(stop.InstanceGuid).Should(Equal(app2.GetInstance(1).InstanceGuid))
+				Ω(stop.InstanceGuid).Should(Equal(app2.InstanceAtIndex(1).InstanceGuid))
 				Ω(stop.InstanceIndex).Should(Equal(1))
 				Ω(stop.IsDuplicate).Should(BeFalse())
 			})

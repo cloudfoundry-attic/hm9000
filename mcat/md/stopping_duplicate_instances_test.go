@@ -18,9 +18,9 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 			timestamp = 100
 			a = app.NewApp()
 
-			instance0 = a.GetInstance(0)
-			instance1 = a.GetInstance(1)
-			duplicateInstance1 = a.GetInstance(1)
+			instance0 = a.InstanceAtIndex(0)
+			instance1 = a.InstanceAtIndex(1)
+			duplicateInstance1 = a.InstanceAtIndex(1)
 			duplicateInstance1.InstanceGuid = models.Guid()
 
 			heartbeat = models.Heartbeat{

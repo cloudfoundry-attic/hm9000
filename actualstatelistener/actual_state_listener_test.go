@@ -78,7 +78,7 @@ var _ = Describe("Actual state listener", func() {
 
 		It("Stores it in the store", func() {
 			actual, _ := store.GetActualState()
-			Ω(actual).Should(ContainElement(app.GetInstance(0).Heartbeat(17)))
+			Ω(actual).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat(17)))
 		})
 	})
 
@@ -89,9 +89,9 @@ var _ = Describe("Actual state listener", func() {
 			heartbeat := Heartbeat{
 				DeaGuid: Guid(),
 				InstanceHeartbeats: []InstanceHeartbeat{
-					app.GetInstance(0).Heartbeat(17),
-					app.GetInstance(1).Heartbeat(22),
-					anotherApp.GetInstance(0).Heartbeat(11),
+					app.InstanceAtIndex(0).Heartbeat(17),
+					app.InstanceAtIndex(1).Heartbeat(22),
+					anotherApp.InstanceAtIndex(0).Heartbeat(11),
 				},
 			}
 
@@ -100,9 +100,9 @@ var _ = Describe("Actual state listener", func() {
 
 		It("Stores it in the store", func() {
 			actual, _ := store.GetActualState()
-			Ω(actual).Should(ContainElement(app.GetInstance(0).Heartbeat(17)))
-			Ω(actual).Should(ContainElement(app.GetInstance(1).Heartbeat(22)))
-			Ω(actual).Should(ContainElement(anotherApp.GetInstance(0).Heartbeat(11)))
+			Ω(actual).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat(17)))
+			Ω(actual).Should(ContainElement(app.InstanceAtIndex(1).Heartbeat(22)))
+			Ω(actual).Should(ContainElement(anotherApp.InstanceAtIndex(0).Heartbeat(11)))
 		})
 
 		Context("when the save succeeds", func() {

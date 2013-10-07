@@ -34,7 +34,18 @@ func newAppForDeaGuid(deaGuid string) App {
 	}
 }
 
-func (app App) GetInstance(index int) Instance {
+func (app App) CrashedInstanceHeartbeatAtIndex(index int) InstanceHeartbeat {
+	return InstanceHeartbeat{
+		State:         InstanceStateCrashed,
+		CCPartition:   "default",
+		AppGuid:       app.AppGuid,
+		AppVersion:    app.AppVersion,
+		InstanceGuid:  Guid(),
+		InstanceIndex: index,
+	}
+}
+
+func (app App) InstanceAtIndex(index int) Instance {
 	_, ok := app.instances[index]
 	if !ok {
 		app.instances[index] = Instance{
@@ -101,7 +112,7 @@ func (instance Instance) DropletExited(reason DropletExitedReason, crashTimestam
 func (app App) Heartbeat(instances int, timestamp int64) Heartbeat {
 	instanceHeartbeats := make([]InstanceHeartbeat, instances)
 	for i := 0; i < instances; i++ {
-		instanceHeartbeats[i] = app.GetInstance(i).Heartbeat(timestamp)
+		instanceHeartbeats[i] = app.InstanceAtIndex(i).Heartbeat(timestamp)
 	}
 
 	return Heartbeat{
