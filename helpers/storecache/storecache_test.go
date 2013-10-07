@@ -71,13 +71,13 @@ var _ = Describe("Storecache", func() {
 			Ω(cache.SetOfApps).Should(HaveKey(app2.AppGuid + "-" + app2.AppVersion))
 			Ω(cache.SetOfApps).Should(HaveKey(app3.AppGuid + "-" + app3.AppVersion))
 
-			Ω(cache.RunningByApp).Should(HaveLen(2))
-			runningApp1 := cache.RunningByApp[app1.AppGuid+"-"+app1.AppVersion]
+			Ω(cache.HeartbeatingInstancesByApp).Should(HaveLen(2))
+			runningApp1 := cache.HeartbeatingInstancesByApp[app1.AppGuid+"-"+app1.AppVersion]
 			Ω(runningApp1).Should(HaveLen(3))
 			Ω(runningApp1).Should(ContainElement(app1.GetInstance(0).Heartbeat(0)))
 			Ω(runningApp1).Should(ContainElement(app1.GetInstance(1).Heartbeat(0)))
 			Ω(runningApp1).Should(ContainElement(app1.GetInstance(2).Heartbeat(0)))
-			runningApp2 := cache.RunningByApp[app2.AppGuid+"-"+app2.AppVersion]
+			runningApp2 := cache.HeartbeatingInstancesByApp[app2.AppGuid+"-"+app2.AppVersion]
 			Ω(runningApp2).Should(HaveLen(1))
 			Ω(runningApp2).Should(ContainElement(app2.GetInstance(0).Heartbeat(0)))
 
@@ -87,15 +87,15 @@ var _ = Describe("Storecache", func() {
 			desiredApp3 := cache.DesiredByApp[app3.AppGuid+"-"+app3.AppVersion]
 			Ω(desiredApp3).Should(Equal(app3.DesiredState(0)))
 
-			Ω(cache.RunningByInstance).Should(HaveLen(4))
+			Ω(cache.HeartbeatingInstancesByGuid).Should(HaveLen(4))
 			instance1 := app1.GetInstance(0)
-			Ω(cache.RunningByInstance[instance1.InstanceGuid]).Should(Equal(instance1.Heartbeat(0)))
+			Ω(cache.HeartbeatingInstancesByGuid[instance1.InstanceGuid]).Should(Equal(instance1.Heartbeat(0)))
 			instance2 := app1.GetInstance(1)
-			Ω(cache.RunningByInstance[instance2.InstanceGuid]).Should(Equal(instance2.Heartbeat(0)))
+			Ω(cache.HeartbeatingInstancesByGuid[instance2.InstanceGuid]).Should(Equal(instance2.Heartbeat(0)))
 			instance3 := app1.GetInstance(2)
-			Ω(cache.RunningByInstance[instance3.InstanceGuid]).Should(Equal(instance3.Heartbeat(0)))
+			Ω(cache.HeartbeatingInstancesByGuid[instance3.InstanceGuid]).Should(Equal(instance3.Heartbeat(0)))
 			instance4 := app2.GetInstance(0)
-			Ω(cache.RunningByInstance[instance4.InstanceGuid]).Should(Equal(instance4.Heartbeat(0)))
+			Ω(cache.HeartbeatingInstancesByGuid[instance4.InstanceGuid]).Should(Equal(instance4.Heartbeat(0)))
 		})
 
 		Context("when there is an error getting desired state", func() {

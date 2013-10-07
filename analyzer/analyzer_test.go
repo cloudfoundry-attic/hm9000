@@ -222,6 +222,60 @@ var _ = Describe("Analyzer", func() {
 		})
 	})
 
+	Describe("Handling crashed instances", func() {
+		Context("When there are multiple crashed instances on the same index", func() {
+			BeforeEach(func() {
+				crashedInstanceHeartbeat1 := a.GetInstance(0).Heartbeat(0)
+				crashedInstanceHeartbeat1.State = models.InstanceStateCrashed
+				crashedInstanceHeartbeat2 := a.GetInstance(1).Heartbeat(0)
+				crashedInstanceHeartbeat2.InstanceIndex = 0
+				crashedInstanceHeartbeat2.State = models.InstanceStateCrashed
+
+				store.SaveActualState([]models.InstanceHeartbeat{
+					crashedInstanceHeartbeat1,
+					crashedInstanceHeartbeat2,
+				})
+			})
+
+			Context("when the app is desired", func() {
+				BeforeEach(func() {
+					desired := a.DesiredState(0)
+					store.SaveDesiredState([]models.DesiredAppState{
+						desired,
+					})
+				})
+
+				It("should not try to stop crashed instances", func() {
+					err := analyzer.Analyze()
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(outbox.PendingStopMessages).Should(BeEmpty())
+				})
+
+				Context("when there is a running instance on the same index", func() {
+					BeforeEach(func() {
+						runningInstance := a.GetInstance(2).Heartbeat(0)
+						runningInstance.InstanceIndex = 0
+						store.SaveActualState([]models.InstanceHeartbeat{runningInstance})
+					})
+
+					It("should not try to stop the running instance!", func() {
+						err := analyzer.Analyze()
+						Ω(err).ShouldNot(HaveOccured())
+						Ω(outbox.PendingStopMessages).Should(BeEmpty())
+					})
+				})
+			})
+
+			Context("when the app is not desired", func() {
+				It("should not try to stop crashed instances", func() {
+					err := analyzer.Analyze()
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(outbox.PendingStopMessages).Should(BeEmpty())
+				})
+			})
+		})
+	})
+
 	Describe("Interesting edge cases involving extra instances (instances at indices >= numdesired)", func() {
 		BeforeEach(func() {
 			desired := a.DesiredState(0)
@@ -309,14 +363,17 @@ var _ = Describe("Analyzer", func() {
 		})
 
 		Context("When all the other indices has instances", func() {
-			It("should schedule a stop for every instance at the duplicated index with increasing delays", func() {
+			It("should schedule a stop for every running instance at the duplicated index with increasing delays", func() {
 				//[0,1,2|2|2] < stop 2,2,2 with increasing delays etc...
+				crashedHeartbeat := duplicateInstance3.Heartbeat(0)
+				crashedHeartbeat.State = models.InstanceStateCrashed
 				store.SaveActualState([]models.InstanceHeartbeat{
 					a.GetInstance(0).Heartbeat(0),
 					a.GetInstance(1).Heartbeat(0),
 					a.GetInstance(2).Heartbeat(0),
 					duplicateInstance1.Heartbeat(0),
 					duplicateInstance2.Heartbeat(0),
+					crashedHeartbeat,
 				})
 
 				err := analyzer.Analyze()

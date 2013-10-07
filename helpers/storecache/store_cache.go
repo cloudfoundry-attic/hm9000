@@ -13,21 +13,21 @@ type StoreCache struct {
 	DesiredStates []models.DesiredAppState
 	ActualStates  []models.InstanceHeartbeat
 
-	SetOfApps         map[string]bool
-	RunningByApp      map[string][]models.InstanceHeartbeat
-	DesiredByApp      map[string]models.DesiredAppState
-	RunningByInstance map[string]models.InstanceHeartbeat
+	SetOfApps                   map[string]bool
+	HeartbeatingInstancesByApp  map[string][]models.InstanceHeartbeat
+	DesiredByApp                map[string]models.DesiredAppState
+	HeartbeatingInstancesByGuid map[string]models.InstanceHeartbeat
 }
 
 func New(store store.Store) (storecache *StoreCache) {
 	return &StoreCache{
-		store:             store,
-		DesiredStates:     make([]models.DesiredAppState, 0),
-		ActualStates:      make([]models.InstanceHeartbeat, 0),
-		SetOfApps:         make(map[string]bool, 0),
-		RunningByApp:      make(map[string][]models.InstanceHeartbeat, 0),
-		DesiredByApp:      make(map[string]models.DesiredAppState, 0),
-		RunningByInstance: make(map[string]models.InstanceHeartbeat, 0),
+		store:                       store,
+		DesiredStates:               make([]models.DesiredAppState, 0),
+		ActualStates:                make([]models.InstanceHeartbeat, 0),
+		SetOfApps:                   make(map[string]bool, 0),
+		HeartbeatingInstancesByApp:  make(map[string][]models.InstanceHeartbeat, 0),
+		DesiredByApp:                make(map[string]models.DesiredAppState, 0),
+		HeartbeatingInstancesByGuid: make(map[string]models.InstanceHeartbeat, 0),
 	}
 }
 
@@ -48,9 +48,9 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 	}
 
 	storecache.SetOfApps = make(map[string]bool, 0)
-	storecache.RunningByApp = make(map[string][]models.InstanceHeartbeat, 0)
+	storecache.HeartbeatingInstancesByApp = make(map[string][]models.InstanceHeartbeat, 0)
 	storecache.DesiredByApp = make(map[string]models.DesiredAppState, 0)
-	storecache.RunningByInstance = make(map[string]models.InstanceHeartbeat, 0)
+	storecache.HeartbeatingInstancesByGuid = make(map[string]models.InstanceHeartbeat, 0)
 
 	for _, desired := range storecache.DesiredStates {
 		appKey := storecache.Key(desired.AppGuid, desired.AppVersion)
@@ -61,8 +61,8 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 	for _, actual := range storecache.ActualStates {
 		appKey := storecache.Key(actual.AppGuid, actual.AppVersion)
 
-		storecache.RunningByInstance[actual.InstanceGuid] = actual
-		storecache.RunningByApp[appKey] = append(storecache.RunningByApp[appKey], actual)
+		storecache.HeartbeatingInstancesByGuid[actual.InstanceGuid] = actual
+		storecache.HeartbeatingInstancesByApp[appKey] = append(storecache.HeartbeatingInstancesByApp[appKey], actual)
 		storecache.SetOfApps[appKey] = true
 	}
 

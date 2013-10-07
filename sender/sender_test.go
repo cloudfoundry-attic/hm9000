@@ -580,6 +580,21 @@ var _ = Describe("Sender", func() {
 						assertMessageWasSent(0, true)
 					})
 
+					Context("when there are other, crashed, instances on the index", func() {
+						BeforeEach(func() {
+							instance := app1.GetInstance(0)
+							instance.InstanceGuid = models.Guid()
+							heartbeat := instance.Heartbeat(0)
+							heartbeat.State = models.InstanceStateCrashed
+
+							store.SaveActualState([]models.InstanceHeartbeat{
+								heartbeat,
+							})
+						})
+
+						assertMessageWasNotSent()
+					})
+
 					Context("When there are no other running instances on the index", func() {
 						assertMessageWasNotSent()
 					})

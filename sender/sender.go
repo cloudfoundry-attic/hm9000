@@ -142,7 +142,7 @@ func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage)
 		} else if stopMessage.IsTimeToSend(sender.timeProvider.Time()) {
 			shouldSend, isDuplicate := sender.verifyStopMessageShouldBeSent(stopMessage)
 			if shouldSend {
-				actual := sender.storecache.RunningByInstance[stopMessage.InstanceGuid]
+				actual := sender.storecache.HeartbeatingInstancesByGuid[stopMessage.InstanceGuid]
 				messageToSend := models.StopMessage{
 					AppGuid:       actual.AppGuid,
 					AppVersion:    actual.AppVersion,
@@ -198,7 +198,7 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStart
 			message.LogDescription(), desired.LogDescription())
 		return false
 	}
-	allRunningInstances, ok := sender.storecache.RunningByApp[appKey]
+	allRunningInstances, ok := sender.storecache.HeartbeatingInstancesByApp[appKey]
 	if !ok {
 		//there are no running instances, start the instance
 		sender.logger.Info("Sending start message: instance is desired but not running",
@@ -221,7 +221,7 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStart
 }
 
 func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMessage) (bool, isDuplicate bool) {
-	instanceToStop, ok := sender.storecache.RunningByInstance[message.InstanceGuid]
+	instanceToStop, ok := sender.storecache.HeartbeatingInstancesByGuid[message.InstanceGuid]
 	if !ok {
 		//there was no running instance found with that guid, don't send a stop message
 		sender.logger.Info("Skipping sending stop message: instance is no longer running", message.LogDescription())
@@ -244,9 +244,11 @@ func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMe
 			desired.LogDescription())
 		return true, false
 	}
-	allRunningInstances, _ := sender.storecache.RunningByApp[appKey]
+	allRunningInstances, _ := sender.storecache.HeartbeatingInstancesByApp[appKey]
 	for _, heartbeat := range allRunningInstances {
-		if heartbeat.InstanceIndex == instanceToStop.InstanceIndex && heartbeat.InstanceGuid != instanceToStop.InstanceGuid {
+		if heartbeat.InstanceIndex == instanceToStop.InstanceIndex &&
+			heartbeat.InstanceGuid != instanceToStop.InstanceGuid &&
+			heartbeat.State != models.InstanceStateCrashed {
 			// there is *another* instance reporting at this index,
 			// so the instance-to-stop is an extra instance reporting on a desired index, stop it
 			sender.logger.Info("Sending stop message: instance is a duplicate running at a desired index",
