@@ -19,9 +19,17 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, runningInst
 	}
 
 	//start missing instances
+	totalRunning := 0
+	for index := 0; index < desired.NumberOfInstances; index++ {
+		if len(runningByIndex[index]) > 0 {
+			totalRunning += 1
+		}
+	}
+	priority := float64(desired.NumberOfInstances-totalRunning) / float64(desired.NumberOfInstances)
+
 	for index := 0; index < desired.NumberOfInstances; index++ {
 		if len(runningByIndex[index]) == 0 {
-			message := models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod(), 0, desired.AppGuid, desired.AppVersion, index)
+			message := models.NewQueueStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod(), 0, desired.AppGuid, desired.AppVersion, index, priority)
 			startMessages = append(startMessages, message)
 			analyzer.logger.Info("Identified missing instance", message.LogDescription(), map[string]string{
 				"Desired # of Instances": strconv.Itoa(desired.NumberOfInstances),

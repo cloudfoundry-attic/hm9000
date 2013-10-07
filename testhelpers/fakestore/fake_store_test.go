@@ -246,8 +246,8 @@ var _ = Describe("FakeStore", func() {
 
 	Describe("Setting, getting, and deleting start messages", func() {
 		It("should set, get, and delete the start messages state", func() {
-			message1 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1)
-			message2 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1)
+			message1 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
+			message2 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0)
 
 			err := store.SaveQueueStartMessages([]models.QueueStartMessage{message1, message1, message2})
 			Ω(err).ShouldNot(HaveOccured())
@@ -259,7 +259,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(actual).Should(ContainElement(message2))
 
 			message2.SendOn = 120
-			message3 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1)
+			message3 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0)
 
 			err = store.SaveQueueStartMessages([]models.QueueStartMessage{message2, message3})
 			Ω(err).ShouldNot(HaveOccured())
@@ -290,7 +290,7 @@ var _ = Describe("FakeStore", func() {
 		})
 
 		It("should support returning errors", func() {
-			message1 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1)
+			message1 := models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
 			store.SaveQueueStartMessages([]models.QueueStartMessage{message1})
 
 			errIn := errors.New("foo")

@@ -15,9 +15,10 @@ type QueueMessage struct {
 
 type QueueStartMessage struct {
 	QueueMessage
-	AppGuid      string `json:"droplet"`
-	AppVersion   string `json:"version"`
-	IndexToStart int    `json:"index"`
+	AppGuid      string  `json:"droplet"`
+	AppVersion   string  `json:"version"`
+	IndexToStart int     `json:"index"`
+	Priority     float64 `json:"priority"`
 }
 
 type QueueStopMessage struct {
@@ -55,12 +56,13 @@ func (message QueueMessage) IsExpired(currentTime time.Time) bool {
 	return message.HasBeenSent() && message.SentOn+int64(message.KeepAlive) <= currentTime.Unix()
 }
 
-func NewQueueStartMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, appGuid string, appVersion string, indexToStart int) QueueStartMessage {
+func NewQueueStartMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, appGuid string, appVersion string, indexToStart int, priority float64) QueueStartMessage {
 	return QueueStartMessage{
 		QueueMessage: newQueueMessage(now, delayInSeconds, keepAliveInSeconds),
 		AppGuid:      appGuid,
 		AppVersion:   appVersion,
 		IndexToStart: indexToStart,
+		Priority:     priority,
 	}
 }
 

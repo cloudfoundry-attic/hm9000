@@ -74,7 +74,7 @@ var _ = Describe("QueueMessages", func() {
 	Describe("Start Message", func() {
 		var message QueueStartMessage
 		BeforeEach(func() {
-			message = NewQueueStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1)
+			message = NewQueueStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.3)
 		})
 
 		It("should generate a random message id guid", func() {
@@ -89,6 +89,7 @@ var _ = Describe("QueueMessages", func() {
 				Ω(message.AppGuid).Should(Equal("app-guid"))
 				Ω(message.AppVersion).Should(Equal("app-version"))
 				Ω(message.IndexToStart).Should(Equal(1))
+				Ω(message.Priority).Should(Equal(0.3))
 			})
 		})
 
@@ -102,7 +103,8 @@ var _ = Describe("QueueMessages", func() {
                         "droplet": "app-guid",
                         "version": "app-version",
                         "index": 1,
-                        "message_id": "abc"
+                        "message_id": "abc",
+                        "priority": 0.3
                     }`))
 					Ω(err).ShouldNot(HaveOccured())
 					message.MessageId = "abc"

@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"sort"
 )
 
 type Sender struct {
@@ -63,14 +64,26 @@ func (sender *Sender) Send() error {
 	return nil
 }
 
+type SortableQueueStartMessages []models.QueueStartMessage
+
+func (s SortableQueueStartMessages) Len() int           { return len(s) }
+func (s SortableQueueStartMessages) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s SortableQueueStartMessages) Less(i, j int) bool { return s[i].Priority < s[j].Priority }
+
 func (sender *Sender) sendStartMessages(startMessages []models.QueueStartMessage) error {
 	startMessagesToSave := []models.QueueStartMessage{}
 	startMessagesToDelete := []models.QueueStartMessage{}
 
+	sortedStartMessages := make(SortableQueueStartMessages, len(startMessages))
+	for i, message := range startMessages {
+		sortedStartMessages[i] = message
+	}
+	sort.Sort(sort.Reverse(sortedStartMessages))
+
 	numSent := 0
 	maxSent := sender.conf.NumberOfDEAs * sender.conf.SenderMessageLimitPerDEA
 
-	for _, startMessage := range startMessages {
+	for _, startMessage := range sortedStartMessages {
 		if startMessage.IsExpired(sender.timeProvider.Time()) {
 			sender.logger.Info("Deleting expired start message", startMessage.LogDescription())
 			startMessagesToDelete = append(startMessagesToDelete, startMessage)

@@ -98,7 +98,7 @@ var _ = Describe("Sender", func() {
 		JustBeforeEach(func() {
 			store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState(0)})
 
-			queueMessage = models.NewQueueStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0)
+			queueMessage = models.NewQueueStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0)
 			queueMessage.SentOn = sentOn
 			store.SaveQueueStartMessages([]models.QueueStartMessage{
 				queueMessage,
@@ -404,7 +404,7 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			queuedMessage = models.NewQueueStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart)
+			queuedMessage = models.NewQueueStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart, 1.0)
 			queuedMessage.SentOn = 0
 			store.SaveQueueStartMessages([]models.QueueStartMessage{
 				queuedMessage,
@@ -634,21 +634,21 @@ var _ = Describe("Sender", func() {
 				})
 
 				//only some of these should be sent:
-				validStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 0)
+				validStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 0, float64(i)/40.0)
 				validStartMessages = append(validStartMessages, validStartMessage)
 				store.SaveQueueStartMessages([]models.QueueStartMessage{
 					validStartMessage,
 				})
 
 				//all of these should be deleted:
-				invalidStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 1)
+				invalidStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 1, 1.0)
 				invalidStartMessages = append(invalidStartMessages, invalidStartMessage)
 				store.SaveQueueStartMessages([]models.QueueStartMessage{
 					invalidStartMessage,
 				})
 
 				//all of these should be deleted:
-				expiredStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 0, 20, a.AppGuid, a.AppVersion, 2)
+				expiredStartMessage := models.NewQueueStartMessage(time.Unix(100, 0), 0, 20, a.AppGuid, a.AppVersion, 2, 1.0)
 				expiredStartMessage.SentOn = 100
 				expiredStartMessages = append(expiredStartMessages, expiredStartMessage)
 				store.SaveQueueStartMessages([]models.QueueStartMessage{
@@ -673,6 +673,7 @@ var _ = Describe("Sender", func() {
 
 			for _, remainingStartMessage := range remainingStartMessages {
 				Ω(validStartMessages).Should(ContainElement(remainingStartMessage))
+				Ω(remainingStartMessage.Priority).Should(BeNumerically("<=", 0.5))
 			}
 		})
 

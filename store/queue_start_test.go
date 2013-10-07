@@ -28,9 +28,9 @@ var _ = Describe("Storing QueueStartMessages", func() {
 		err = etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		message1 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1)
-		message2 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1)
-		message3 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1)
+		message1 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
+		message2 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0)
+		message3 = models.NewQueueStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0)
 
 		store = NewStore(conf, etcdAdapter)
 	})
