@@ -14,7 +14,7 @@ var _ = Describe("Daemon", func() {
 		callTimes := []float64{}
 		startTime := time.Now()
 		i := 0
-		err := Daemonize(func() error {
+		err := Daemonize("Daemon Test", func() error {
 			callTimes = append(callTimes, time.Since(startTime).Seconds())
 			i += 1
 			time.Sleep(time.Duration(i*10) * time.Millisecond)

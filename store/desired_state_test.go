@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 )
 
 var _ = Describe("Desired State", func() {
@@ -34,7 +35,7 @@ var _ = Describe("Desired State", func() {
 		app2 = app.NewApp()
 		app3 = app.NewApp()
 
-		store = NewStore(conf, etcdAdapter)
+		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
 	})
 
 	AfterEach(func() {

@@ -16,7 +16,7 @@ func Analyze(l logger.Logger, conf config.Config, poll bool) {
 
 	if poll {
 		l.Info("Starting Analyze Daemon...")
-		err := Daemonize(func() error {
+		err := Daemonize("Analyzer", func() error {
 			return analyze(l, conf, etcdStoreAdapter)
 		}, conf.AnalyzerPollingInterval(), conf.AnalyzerTimeout(), l)
 		if err != nil {
@@ -34,7 +34,7 @@ func Analyze(l logger.Logger, conf config.Config, poll bool) {
 }
 
 func analyze(l logger.Logger, conf config.Config, etcdStoreAdapter storeadapter.StoreAdapter) error {
-	store := store.NewStore(conf, etcdStoreAdapter)
+	store := store.NewStore(conf, etcdStoreAdapter, l)
 	outbox := outbox.New(store, l)
 
 	l.Info("Analyzing...")

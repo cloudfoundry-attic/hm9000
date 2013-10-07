@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
@@ -32,7 +33,7 @@ var _ = Describe("Storing PendingStartMessages", func() {
 		message2 = models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0)
 		message3 = models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0)
 
-		store = NewStore(conf, etcdAdapter)
+		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
 	})
 
 	AfterEach(func() {

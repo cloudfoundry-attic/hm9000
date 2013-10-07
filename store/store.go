@@ -1,7 +1,9 @@
 package store
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"reflect"
@@ -40,12 +42,14 @@ type Store interface {
 type RealStore struct {
 	config  config.Config
 	adapter storeadapter.StoreAdapter
+	logger  logger.Logger
 }
 
-func NewStore(config config.Config, adapter storeadapter.StoreAdapter) *RealStore {
+func NewStore(config config.Config, adapter storeadapter.StoreAdapter, logger logger.Logger) *RealStore {
 	return &RealStore{
 		config:  config,
 		adapter: adapter,
+		logger:  logger,
 	}
 }
 
@@ -63,6 +67,7 @@ func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode
 // buckle up, here be dragons...
 
 func (store *RealStore) save(stuff interface{}, root string, ttl uint64) error {
+	t := time.Now()
 	arrValue := reflect.ValueOf(stuff)
 
 	nodes := make([]storeadapter.StoreNode, arrValue.Len())
@@ -75,10 +80,18 @@ func (store *RealStore) save(stuff interface{}, root string, ttl uint64) error {
 		}
 	}
 
-	return store.adapter.Set(nodes)
+	err := store.adapter.Set(nodes)
+
+	store.logger.Info("Save Duration", map[string]string{
+		"Number of Items": fmt.Sprintf("%d", arrValue.Len()),
+		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+	})
+	return err
 }
 
 func (store *RealStore) get(root string, sliceType reflect.Type, constructor reflect.Value) (reflect.Value, error) {
+	t := time.Now()
+
 	nodes, err := store.fetchNodesUnderDir(root)
 	if err != nil {
 		return reflect.MakeSlice(sliceType, 0, 0), err
@@ -93,10 +106,15 @@ func (store *RealStore) get(root string, sliceType reflect.Type, constructor ref
 		}
 	}
 
+	store.logger.Info("Get Duration", map[string]string{
+		"Number of Items": fmt.Sprintf("%d", slice.Len()),
+		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+	})
 	return slice, nil
 }
 
 func (store *RealStore) delete(stuff interface{}, root string) error {
+	t := time.Now()
 	arrValue := reflect.ValueOf(stuff)
 
 	for i := 0; i < arrValue.Len(); i++ {
@@ -107,5 +125,11 @@ func (store *RealStore) delete(stuff interface{}, root string) error {
 			return err
 		}
 	}
+
+	store.logger.Info("Delete Duration", map[string]string{
+		"Number of Items": fmt.Sprintf("%d", arrValue.Len()),
+		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+	})
+
 	return nil
 }

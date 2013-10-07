@@ -17,7 +17,7 @@ func Send(l logger.Logger, conf config.Config, poll bool) {
 
 	if poll {
 		l.Info("Starting Sender Daemon...")
-		err := Daemonize(func() error {
+		err := Daemonize("Sender", func() error {
 			return send(l, conf, messageBus, etcdStoreAdapter)
 		}, conf.SenderPollingInterval(), conf.SenderTimeout(), l)
 		if err != nil {
@@ -35,7 +35,7 @@ func Send(l logger.Logger, conf config.Config, poll bool) {
 }
 
 func send(l logger.Logger, conf config.Config, messageBus cfmessagebus.MessageBus, etcdStoreAdapter storeadapter.StoreAdapter) error {
-	store := store.NewStore(conf, etcdStoreAdapter)
+	store := store.NewStore(conf, etcdStoreAdapter, l)
 	l.Info("Sending...")
 
 	sender := sender.New(store, conf, messageBus, buildTimeProvider(l), l)

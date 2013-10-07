@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -26,7 +27,7 @@ var _ = Describe("Freshness", func() {
 		err := etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		store = NewStore(conf, etcdAdapter)
+		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
 	})
 
 	Describe("Bumping freshness", func() {

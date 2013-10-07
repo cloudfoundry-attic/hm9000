@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 )
 
 var _ = Describe("Actual State", func() {
@@ -34,7 +35,7 @@ var _ = Describe("Actual State", func() {
 		heartbeat2 = a.GetInstance(1).Heartbeat(12)
 		heartbeat3 = a.GetInstance(2).Heartbeat(14)
 
-		store = NewStore(conf, etcdAdapter)
+		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
 	})
 
 	AfterEach(func() {

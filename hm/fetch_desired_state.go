@@ -16,7 +16,7 @@ func FetchDesiredState(l logger.Logger, conf config.Config, poll bool) {
 
 	if poll {
 		l.Info("Starting Desired State Daemon...")
-		err := Daemonize(func() error {
+		err := Daemonize("Fetcher", func() error {
 			return fetchDesiredState(l, conf, etcdStoreAdapter)
 		}, conf.FetcherPollingInterval(), conf.FetcherTimeout(), l)
 		if err != nil {
@@ -35,7 +35,7 @@ func FetchDesiredState(l logger.Logger, conf config.Config, poll bool) {
 
 func fetchDesiredState(l logger.Logger, conf config.Config, etcdStoreAdapter storeadapter.StoreAdapter) error {
 	l.Info("Fetching Desired State")
-	store := store.NewStore(conf, etcdStoreAdapter)
+	store := store.NewStore(conf, etcdStoreAdapter, l)
 
 	fetcher := desiredstatefetcher.New(conf,
 		store,

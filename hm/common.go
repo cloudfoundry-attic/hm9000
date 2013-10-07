@@ -59,5 +59,5 @@ func connectToETCDStoreAdapter(l logger.Logger, conf config.Config) storeadapter
 
 func connectToStore(l logger.Logger, conf config.Config) store.Store {
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
-	return store.NewStore(conf, etcdStoreAdapter)
+	return store.NewStore(conf, etcdStoreAdapter, l)
 }
