@@ -156,9 +156,7 @@ HM9000 is configured using a JSON file.  Here are the available entries:
 
 - `sender_nats_stop_subject`:  The NATS subject for HM9000's stop messages.  Set to `"hm9000.stop"`.
 
-- `sender_message_limit_per_dea`:  The maximum number of messages the sender should send per dea per invocation.  Set to 4
-
-- `number_of_deas`:  The number of deployed DEAs.  Used by the sender to limit how many messages are sent per invocation.  Set by BOSH.
+- `sender_message_limit`:  The maximum number of messages the sender should send per invocation.  Set to 30.
 
 - `sender_polling_interval_in_heartbeats`:  The time period in heartbeat units between sender invocations when using `hm9000 send --poll`.  Set to 1.
 

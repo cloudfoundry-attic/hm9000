@@ -81,7 +81,7 @@ func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessa
 	sort.Sort(sort.Reverse(sortedStartMessages))
 
 	numSent := 0
-	maxSent := sender.conf.NumberOfDEAs * sender.conf.SenderMessageLimitPerDEA
+	maxSent := sender.conf.SenderMessageLimit
 
 	for _, startMessage := range sortedStartMessages {
 		if startMessage.IsExpired(sender.timeProvider.Time()) {

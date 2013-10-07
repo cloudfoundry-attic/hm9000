@@ -35,8 +35,7 @@ type Config struct {
 	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`
 	SenderNatsStartSubject     string   `json:"sender_nats_start_subject"`
 	SenderNatsStopSubject      string   `json:"sender_nats_stop_subject"`
-	SenderMessageLimitPerDEA   int      `json:"sender_message_limit_per_dea"`
-	NumberOfDEAs               int      `json:"number_of_deas"`
+	SenderMessageLimit         int      `json:"sender_message_limit"`
 
 	NATS struct {
 		Host     string `json:"host"`

@@ -621,8 +621,7 @@ var _ = Describe("Sender", func() {
 
 		BeforeEach(func() {
 			conf, _ = config.DefaultConfig()
-			conf.SenderMessageLimitPerDEA = 2
-			conf.NumberOfDEAs = 10
+			conf.SenderMessageLimit = 20
 
 			sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
 

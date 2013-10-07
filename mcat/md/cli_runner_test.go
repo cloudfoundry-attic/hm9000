@@ -41,8 +41,7 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.StoreURLs = storeURLs
 	conf.CCBaseURL = ccBaseURL
 	conf.NATS.Port = natsPort
-	conf.NumberOfDEAs = 4
-	conf.SenderMessageLimitPerDEA = 2
+	conf.SenderMessageLimit = 8
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccured())
