@@ -21,21 +21,18 @@ type UserCountResponse struct {
 	} `json:"counts"`
 }
 
+var server *DesiredStateServer
+
 func TestDesiredStateServer(t *testing.T) {
 	RegisterFailHandler(Fail)
+
+	server = NewDesiredStateServer()
+	go server.SpinUp(6000)
+
 	RunSpecs(t, "Desired State Server Suite")
 }
 
-var server *DesiredStateServer
-var didRunGlobalBeforeEach bool
-
 var _ = BeforeEach(func() {
-	if !didRunGlobalBeforeEach {
-		server = NewDesiredStateServer()
-		go server.SpinUp(6000)
-		didRunGlobalBeforeEach = true
-	}
-
 	server.Reset()
 })
 
@@ -57,7 +54,7 @@ var _ = Describe("making requests", func() {
 			err = json.Unmarshal(body, &response)
 
 			done <- true
-		}, 2)
+		}, 5)
 
 		It("Returns a user count", func() {
 			Ω(response.Counts.User).Should(Equal(17))
@@ -90,7 +87,7 @@ var _ = Describe("making requests", func() {
 
 			Ω(err).ShouldNot(HaveOccured())
 			done <- true
-		}, 2)
+		}, 5)
 
 		AfterEach(func() {
 			resp.Body.Close()
