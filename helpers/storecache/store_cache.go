@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"strconv"
 	"time"
 )
 
@@ -12,11 +13,13 @@ type StoreCache struct {
 
 	DesiredStates []models.DesiredAppState
 	ActualStates  []models.InstanceHeartbeat
+	CrashCounts   []models.CrashCount
 
-	SetOfApps                   map[string]bool
-	HeartbeatingInstancesByApp  map[string][]models.InstanceHeartbeat
-	DesiredByApp                map[string]models.DesiredAppState
-	HeartbeatingInstancesByGuid map[string]models.InstanceHeartbeat
+	SetOfApps                      map[string]bool
+	HeartbeatingInstancesByApp     map[string][]models.InstanceHeartbeat
+	DesiredByApp                   map[string]models.DesiredAppState
+	HeartbeatingInstancesByGuid    map[string]models.InstanceHeartbeat
+	crashCountByAppVersionIndexKey map[string]models.CrashCount
 }
 
 func New(store store.Store) (storecache *StoreCache) {
@@ -47,10 +50,16 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 		return err
 	}
 
+	storecache.CrashCounts, err = storecache.store.GetCrashCounts()
+	if err != nil {
+		return err
+	}
+
 	storecache.SetOfApps = make(map[string]bool, 0)
 	storecache.HeartbeatingInstancesByApp = make(map[string][]models.InstanceHeartbeat, 0)
 	storecache.DesiredByApp = make(map[string]models.DesiredAppState, 0)
 	storecache.HeartbeatingInstancesByGuid = make(map[string]models.InstanceHeartbeat, 0)
+	storecache.crashCountByAppVersionIndexKey = make(map[string]models.CrashCount, 0)
 
 	for _, desired := range storecache.DesiredStates {
 		appKey := storecache.Key(desired.AppGuid, desired.AppVersion)
@@ -64,6 +73,11 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 		storecache.HeartbeatingInstancesByGuid[actual.InstanceGuid] = actual
 		storecache.HeartbeatingInstancesByApp[appKey] = append(storecache.HeartbeatingInstancesByApp[appKey], actual)
 		storecache.SetOfApps[appKey] = true
+	}
+
+	for _, crashCount := range storecache.CrashCounts {
+		key := crashCount.StoreKey()
+		storecache.crashCountByAppVersionIndexKey[key] = crashCount
 	}
 
 	return nil
@@ -91,4 +105,8 @@ func (storecache *StoreCache) verifyFreshness(time time.Time) error {
 	}
 
 	return nil
+}
+
+func (storecache *StoreCache) CrashCount(appGuid string, appVersion string, instanceIndex int) models.CrashCount {
+	return storecache.crashCountByAppVersionIndexKey[appGuid+"-"+appVersion+"-"+strconv.Itoa(instanceIndex)]
 }

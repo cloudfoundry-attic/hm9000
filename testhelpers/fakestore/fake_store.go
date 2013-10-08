@@ -26,11 +26,15 @@ type FakeStore struct {
 	SaveStopMessagesError    error
 	GetStopMessagesError     error
 	DeleteStopMessagesError  error
+	SaveCrashCountsError     error
+	GetCrashCountsError      error
+	DeleteCrashCountsError   error
 
 	desiredState  map[string]models.DesiredAppState
 	actualState   map[string]models.InstanceHeartbeat
 	startMessages map[string]models.PendingStartMessage
 	stopMessages  map[string]models.PendingStopMessage
+	crashCounts   map[string]models.CrashCount
 }
 
 func NewFakeStore() *FakeStore {
@@ -44,6 +48,7 @@ func (store *FakeStore) Reset() {
 	store.actualState = make(map[string]models.InstanceHeartbeat, 0)
 	store.startMessages = make(map[string]models.PendingStartMessage, 0)
 	store.stopMessages = make(map[string]models.PendingStopMessage, 0)
+	store.crashCounts = make(map[string]models.CrashCount, 0)
 
 	store.ActualFreshnessTimestamp = time.Time{}
 	store.DesiredFreshnessTimestamp = time.Time{}
@@ -64,6 +69,9 @@ func (store *FakeStore) Reset() {
 	store.SaveStopMessagesError = nil
 	store.GetStopMessagesError = nil
 	store.DeleteStopMessagesError = nil
+	store.SaveCrashCountsError = nil
+	store.GetCrashCountsError = nil
+	store.DeleteCrashCountsError = nil
 }
 
 func (store *FakeStore) BumpDesiredFreshness(timestamp time.Time) error {
@@ -219,4 +227,38 @@ func (store *FakeStore) DeletePendingStopMessages(messages []models.PendingStopM
 		delete(store.stopMessages, message.StoreKey())
 	}
 	return store.DeleteStopMessagesError
+}
+
+func (store *FakeStore) SaveCrashCounts(crashCounts []models.CrashCount) error {
+	for _, crashCount := range crashCounts {
+		store.crashCounts[crashCount.StoreKey()] = crashCount
+	}
+	return store.SaveCrashCountsError
+}
+
+func (store *FakeStore) GetCrashCounts() ([]models.CrashCount, error) {
+	if store.GetCrashCountsError != nil {
+		return []models.CrashCount{}, store.GetCrashCountsError
+	}
+
+	actuals := make([]models.CrashCount, len(store.crashCounts))
+
+	i := 0
+	for _, actual := range store.crashCounts {
+		actuals[i] = actual
+		i++
+	}
+
+	return actuals, nil
+}
+
+func (store *FakeStore) DeleteCrashCounts(crashCounts []models.CrashCount) error {
+	for _, crashCount := range crashCounts {
+		_, present := store.crashCounts[crashCount.StoreKey()]
+		if !present {
+			return storeadapter.ErrorKeyNotFound
+		}
+		delete(store.crashCounts, crashCount.StoreKey())
+	}
+	return store.DeleteCrashCountsError
 }

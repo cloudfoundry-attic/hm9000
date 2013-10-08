@@ -19,9 +19,10 @@ var _ = Describe("Storecache", func() {
 		actualState  []models.InstanceHeartbeat
 		desiredState []models.DesiredAppState
 
-		app1 app.App
-		app2 app.App
-		app3 app.App
+		app1       app.App
+		app2       app.App
+		app3       app.App
+		crashCount models.CrashCount
 	)
 
 	BeforeEach(func() {
@@ -47,6 +48,13 @@ var _ = Describe("Storecache", func() {
 		store.SaveDesiredState(desiredState)
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
+		crashCount = models.CrashCount{
+			AppGuid:       "abc",
+			AppVersion:    "xyz",
+			InstanceIndex: 1,
+			CrashCount:    12,
+		}
+		store.SaveCrashCounts([]models.CrashCount{crashCount})
 	})
 
 	Describe("Key", func() {
@@ -96,6 +104,8 @@ var _ = Describe("Storecache", func() {
 			Ω(cache.HeartbeatingInstancesByGuid[instance3.InstanceGuid]).Should(Equal(instance3.Heartbeat()))
 			instance4 := app2.InstanceAtIndex(0)
 			Ω(cache.HeartbeatingInstancesByGuid[instance4.InstanceGuid]).Should(Equal(instance4.Heartbeat()))
+
+			Ω(cache.CrashCount(crashCount.AppGuid, crashCount.AppVersion, crashCount.InstanceIndex)).Should(Equal(crashCount))
 		})
 
 		Context("when there is an error getting desired state", func() {
@@ -109,6 +119,14 @@ var _ = Describe("Storecache", func() {
 		Context("when there is an error getting actual state", func() {
 			It("should return an error", func() {
 				store.GetActualStateError = errors.New("oops")
+				err := cache.Load(time.Unix(30, 0))
+				Ω(err).Should(Equal(errors.New("oops")))
+			})
+		})
+
+		Context("when there is an error getting the crash counts", func() {
+			It("should return an error", func() {
+				store.GetCrashCountsError = errors.New("oops")
 				err := cache.Load(time.Unix(30, 0))
 				Ω(err).Should(Equal(errors.New("oops")))
 			})

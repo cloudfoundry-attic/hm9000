@@ -37,6 +37,10 @@ type Store interface {
 	SavePendingStopMessages(stopMessages []models.PendingStopMessage) error
 	GetPendingStopMessages() ([]models.PendingStopMessage, error)
 	DeletePendingStopMessages(stopMessages []models.PendingStopMessage) error
+
+	SaveCrashCounts(crashCounts []models.CrashCount) error
+	GetCrashCounts() ([]models.CrashCount, error)
+	DeleteCrashCounts(crashCounts []models.CrashCount) error
 }
 
 type RealStore struct {

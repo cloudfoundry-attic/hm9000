@@ -379,4 +379,93 @@ var _ = Describe("FakeStore", func() {
 			Ω(err).ShouldNot(HaveOccured())
 		})
 	})
+
+	Describe("Setting, getting, and deleting crash counts", func() {
+		It("should set, get, and delete the crash counts", func() {
+			crashCount1 := models.CrashCount{
+				AppGuid:       models.Guid(),
+				AppVersion:    models.Guid(),
+				InstanceIndex: 1,
+				CrashCount:    12,
+			}
+
+			crashCount2 := models.CrashCount{
+				AppGuid:       models.Guid(),
+				AppVersion:    models.Guid(),
+				InstanceIndex: 2,
+				CrashCount:    7,
+			}
+
+			err := store.SaveCrashCounts([]models.CrashCount{crashCount1, crashCount1, crashCount2})
+			Ω(err).ShouldNot(HaveOccured())
+
+			crashCounts, err := store.GetCrashCounts()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(crashCounts).Should(HaveLen(2))
+			Ω(crashCounts).Should(ContainElement(crashCount1))
+			Ω(crashCounts).Should(ContainElement(crashCount2))
+
+			crashCount2.CrashCount = 8
+			crashCount3 := models.CrashCount{
+				AppGuid:       models.Guid(),
+				AppVersion:    models.Guid(),
+				InstanceIndex: 3,
+				CrashCount:    9,
+			}
+
+			err = store.SaveCrashCounts([]models.CrashCount{crashCount2, crashCount3})
+			Ω(err).ShouldNot(HaveOccured())
+
+			crashCounts, err = store.GetCrashCounts()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(crashCounts).Should(HaveLen(3))
+			Ω(crashCounts).Should(ContainElement(crashCount1))
+			Ω(crashCounts).Should(ContainElement(crashCount2))
+			Ω(crashCounts).Should(ContainElement(crashCount3))
+
+			err = store.DeleteCrashCounts([]models.CrashCount{crashCount2, crashCount3})
+			Ω(err).ShouldNot(HaveOccured())
+			crashCounts, err = store.GetCrashCounts()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(crashCounts).Should(HaveLen(1))
+			Ω(crashCounts).Should(ContainElement(crashCount1))
+
+			err = store.DeleteCrashCounts([]models.CrashCount{crashCount2})
+			Ω(err).Should(HaveOccured())
+			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+
+			store.Reset()
+
+			crashCounts, err = store.GetCrashCounts()
+			Ω(crashCounts).Should(BeEmpty())
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		It("should support returning errors", func() {
+			crashCount1 := models.CrashCount{
+				AppGuid:       models.Guid(),
+				AppVersion:    models.Guid(),
+				InstanceIndex: 1,
+				CrashCount:    12,
+			}
+			store.SaveCrashCounts([]models.CrashCount{crashCount1})
+
+			errIn := errors.New("foo")
+
+			store.SaveCrashCountsError = errIn
+			err := store.SaveCrashCounts([]models.CrashCount{crashCount1})
+			Ω(err).Should(Equal(errIn))
+
+			store.GetCrashCountsError = errIn
+			crashCounts, err := store.GetCrashCounts()
+			Ω(crashCounts).Should(BeEmpty())
+			Ω(err).Should(Equal(errIn))
+
+			store.Reset()
+			err = store.SaveCrashCounts([]models.CrashCount{crashCount1})
+			Ω(err).ShouldNot(HaveOccured())
+			_, err = store.GetCrashCounts()
+			Ω(err).ShouldNot(HaveOccured())
+		})
+	})
 })

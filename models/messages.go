@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 )
 
-//Start and Stop Messages
 type StartMessage struct {
 	MessageId     string `json:"message_id"`
 	AppGuid       string `json:"droplet"`
