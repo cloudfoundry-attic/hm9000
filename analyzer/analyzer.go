@@ -60,12 +60,6 @@ func (analyzer *Analyzer) Analyze() error {
 }
 
 func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatingInstances []models.InstanceHeartbeat) (startMessages []models.PendingStartMessage, stopMessages []models.PendingStopMessage) {
-	hasDesired := (desired.AppGuid != "")
-	numDesired := 0
-	if hasDesired {
-		numDesired = desired.NumberOfInstances
-	}
-
 	runningInstances := []models.InstanceHeartbeat{}
 	runningByIndex := map[int][]models.InstanceHeartbeat{}
 	for _, heartbeatingInstance := range heartbeatingInstances {
@@ -77,13 +71,8 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatin
 	}
 
 	//start missing instances
-	totalRunning := 0
-	for index := 0; index < desired.NumberOfInstances; index++ {
-		if len(runningByIndex[index]) > 0 {
-			totalRunning += 1
-		}
-	}
-	priority := float64(desired.NumberOfInstances-totalRunning) / float64(desired.NumberOfInstances)
+	// if desired.NumberOfInstances > 0 {
+	priority := analyzer.computePriority(desired.NumberOfInstances, runningByIndex)
 
 	for index := 0; index < desired.NumberOfInstances; index++ {
 		if len(runningByIndex[index]) == 0 {
@@ -94,6 +83,7 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatin
 			})
 		}
 	}
+	// }
 
 	if len(startMessages) > 0 {
 		return
@@ -101,7 +91,7 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatin
 
 	//stop extra instances at indices >= numDesired
 	for _, runningInstance := range runningInstances {
-		if runningInstance.InstanceIndex >= numDesired {
+		if runningInstance.InstanceIndex >= desired.NumberOfInstances {
 			message := models.NewPendingStopMessage(analyzer.timeProvider.Time(), 0, analyzer.conf.GracePeriod(), runningInstance.InstanceGuid)
 			stopMessages = append(stopMessages, message)
 			analyzer.logger.Info("Identified extra running instance", message.LogDescription(), map[string]string{
@@ -139,4 +129,15 @@ func (analyzer *Analyzer) stopMessagesForDuplicateInstances(runningInstances []m
 	}
 
 	return
+}
+
+func (analyzer *Analyzer) computePriority(numDesired int, runningByIndex map[int][]models.InstanceHeartbeat) float64 {
+	totalRunningIndices := 0
+	for index := 0; index < numDesired; index++ {
+		if len(runningByIndex[index]) > 0 {
+			totalRunningIndices += 1
+		}
+	}
+
+	return float64(numDesired-totalRunningIndices) / float64(numDesired)
 }

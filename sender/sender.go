@@ -186,8 +186,8 @@ func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage)
 
 func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStartMessage) bool {
 	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
-	desired, ok := sender.storecache.DesiredByApp[appKey]
-	if !ok {
+	desired, found := sender.storecache.DesiredByApp[appKey]
+	if !found {
 		//app is no longer desired, don't start the instance
 		sender.logger.Info("Skipping sending start message: app is no longer desired", message.LogDescription())
 		return false
@@ -198,8 +198,8 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStart
 			message.LogDescription(), desired.LogDescription())
 		return false
 	}
-	allRunningInstances, ok := sender.storecache.HeartbeatingInstancesByApp[appKey]
-	if !ok {
+	allRunningInstances, found := sender.storecache.HeartbeatingInstancesByApp[appKey]
+	if !found {
 		//there are no running instances, start the instance
 		sender.logger.Info("Sending start message: instance is desired but not running",
 			message.LogDescription(), desired.LogDescription())
@@ -221,15 +221,15 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStart
 }
 
 func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMessage) (bool, isDuplicate bool) {
-	instanceToStop, ok := sender.storecache.HeartbeatingInstancesByGuid[message.InstanceGuid]
-	if !ok {
+	instanceToStop, found := sender.storecache.HeartbeatingInstancesByGuid[message.InstanceGuid]
+	if !found {
 		//there was no running instance found with that guid, don't send a stop message
 		sender.logger.Info("Skipping sending stop message: instance is no longer running", message.LogDescription())
 		return false, false
 	}
 	appKey := sender.storecache.Key(instanceToStop.AppGuid, instanceToStop.AppVersion)
-	desired, ok := sender.storecache.DesiredByApp[appKey]
-	if !ok {
+	desired, found := sender.storecache.DesiredByApp[appKey]
+	if !found {
 		//there is no desired app for this instance, send the stop message
 		sender.logger.Info("Sending stop message: instance is running, app is no longer desired",
 			message.LogDescription(),
