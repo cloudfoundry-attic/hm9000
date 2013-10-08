@@ -186,8 +186,8 @@ func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage)
 
 func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStartMessage) bool {
 	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
-	desired, found := sender.storecache.DesiredByApp[appKey]
-	if !found {
+	desired, hasDesiredState := sender.storecache.DesiredByApp[appKey]
+	if !hasDesiredState {
 		//app is no longer desired, don't start the instance
 		sender.logger.Info("Skipping sending start message: app is no longer desired", message.LogDescription())
 		return false
@@ -198,15 +198,16 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStart
 			message.LogDescription(), desired.LogDescription())
 		return false
 	}
-	allRunningInstances, found := sender.storecache.HeartbeatingInstancesByApp[appKey]
-	if !found {
+	allHeartbeatingInstances, hasHeartbeatingInstances := sender.storecache.HeartbeatingInstancesByApp[appKey]
+	if !hasHeartbeatingInstances {
 		//there are no running instances, start the instance
 		sender.logger.Info("Sending start message: instance is desired but not running",
 			message.LogDescription(), desired.LogDescription())
 		return true
 	}
-	for _, heartbeat := range allRunningInstances {
-		if heartbeat.InstanceIndex == message.IndexToStart {
+
+	for _, heartbeat := range allHeartbeatingInstances {
+		if heartbeat.InstanceIndex == message.IndexToStart && heartbeat.State != models.InstanceStateCrashed {
 			//there is already an instance running at that index, don't start another
 			sender.logger.Info("Skipping sending start message: instance is already running",
 				message.LogDescription(), desired.LogDescription(), heartbeat.LogDescription())

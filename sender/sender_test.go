@@ -472,6 +472,19 @@ var _ = Describe("Sender", func() {
 					assertMessageWasSent()
 				})
 
+				Context("when there are crashed instances reporting at that index", func() {
+					BeforeEach(func() {
+						store.SaveActualState([]models.InstanceHeartbeat{
+							app1.CrashedInstanceHeartbeatAtIndex(0),
+							app1.CrashedInstanceHeartbeatAtIndex(0),
+							app1.InstanceAtIndex(1).Heartbeat(),
+							app1.InstanceAtIndex(2).Heartbeat(),
+						})
+					})
+
+					assertMessageWasSent()
+				})
+
 				Context("when there *is* a running instance reporting at that index", func() {
 					BeforeEach(func() {
 						store.SaveActualState([]models.InstanceHeartbeat{

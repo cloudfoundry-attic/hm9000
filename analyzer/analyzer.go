@@ -62,9 +62,12 @@ func (analyzer *Analyzer) Analyze() error {
 func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatingInstances []models.InstanceHeartbeat) (startMessages []models.PendingStartMessage, stopMessages []models.PendingStopMessage) {
 	runningInstances := []models.InstanceHeartbeat{}
 	runningByIndex := map[int][]models.InstanceHeartbeat{}
+	numberOfCrashesByIndex := map[int]int{}
 	for _, heartbeatingInstance := range heartbeatingInstances {
-		if heartbeatingInstance.State != models.InstanceStateCrashed {
-			index := heartbeatingInstance.InstanceIndex
+		index := heartbeatingInstance.InstanceIndex
+		if heartbeatingInstance.State == models.InstanceStateCrashed {
+			numberOfCrashesByIndex[index] += 1
+		} else {
 			runningByIndex[index] = append(runningByIndex[index], heartbeatingInstance)
 			runningInstances = append(runningInstances, heartbeatingInstance)
 		}
@@ -76,7 +79,14 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatin
 
 	for index := 0; index < desired.NumberOfInstances; index++ {
 		if len(runningByIndex[index]) == 0 {
-			message := models.NewPendingStartMessage(analyzer.timeProvider.Time(), analyzer.conf.GracePeriod(), 0, desired.AppGuid, desired.AppVersion, index, priority)
+			delay := analyzer.conf.GracePeriod()
+			keepAlive := 0
+			if numberOfCrashesByIndex[index] != 0 {
+				delay = 0
+				keepAlive = analyzer.conf.GracePeriod()
+			}
+
+			message := models.NewPendingStartMessage(analyzer.timeProvider.Time(), delay, keepAlive, desired.AppGuid, desired.AppVersion, index, priority)
 			startMessages = append(startMessages, message)
 			analyzer.logger.Info("Identified missing instance", message.LogDescription(), map[string]string{
 				"Desired # of Instances": strconv.Itoa(desired.NumberOfInstances),

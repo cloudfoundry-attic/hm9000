@@ -8,14 +8,19 @@ import (
 )
 
 var _ = Describe("Crashes", func() {
-	var timestamp int
+	var (
+		timestamp int
+		a         app.App
+	)
 
 	Context("when there are multiple crashed instances on a given index", func() {
 		BeforeEach(func() {
-			a := app.NewApp()
+			a = app.NewApp()
 
+			desiredState := a.DesiredState()
+			desiredState.NumberOfInstances = 2
 			stateServer.SetDesiredState([]models.DesiredAppState{
-				a.DesiredState(),
+				desiredState,
 			})
 
 			timestamp = 100
@@ -23,8 +28,9 @@ var _ = Describe("Crashes", func() {
 			heartbeat := models.Heartbeat{
 				DeaGuid: models.Guid(),
 				InstanceHeartbeats: []models.InstanceHeartbeat{
-					a.CrashedInstanceHeartbeatAtIndex(0),
-					a.CrashedInstanceHeartbeatAtIndex(0),
+					a.InstanceAtIndex(0).Heartbeat(),
+					a.CrashedInstanceHeartbeatAtIndex(1),
+					a.CrashedInstanceHeartbeatAtIndex(1),
 				},
 			}
 
@@ -35,14 +41,25 @@ var _ = Describe("Crashes", func() {
 
 			cliRunner.Run("fetch_desired", timestamp)
 			cliRunner.Run("analyze", timestamp)
-			timestamp += 30
 			cliRunner.Run("send", timestamp)
 		})
 
-		It("should send a start message for the missing instance", func() {
-			Ω(startStopListener.Starts).Should(BeEmpty())
+		It("should send a start message", func() {
 			Ω(startStopListener.Stops).Should(BeEmpty())
+			Ω(startStopListener.Starts).Should(HaveLen(1))
+			Ω(startStopListener.Starts[0].AppVersion).Should(Equal(a.AppVersion))
+			Ω(startStopListener.Starts[0].InstanceIndex).Should(Equal(1))
+		})
+
+		Context("when time passes", func() {
+			BeforeEach(func() {
+				timestamp += 30
+				cliRunner.Run("send", timestamp)
+			})
+
+			It("should still not send any stop messages", func() {
+				Ω(startStopListener.Stops).Should(BeEmpty())
+			})
 		})
 	})
-
 })

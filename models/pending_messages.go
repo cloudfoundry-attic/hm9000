@@ -35,13 +35,19 @@ func newPendingMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int
 	}
 }
 
-func (message PendingMessage) queueLogDescription() map[string]string {
+func (message PendingMessage) pendingLogDescription() map[string]string {
 	return map[string]string{
 		"SendOn":    time.Unix(message.SendOn, 0).String(),
 		"SentOn":    time.Unix(message.SentOn, 0).String(),
 		"KeepAlive": strconv.Itoa(int(message.KeepAlive)),
 		"MessageId": message.MessageId,
 	}
+}
+
+func (message PendingMessage) pendingEqual(another PendingMessage) bool {
+	return message.SendOn == another.SendOn &&
+		message.SentOn == another.SentOn &&
+		message.KeepAlive == another.KeepAlive
 }
 
 func (message PendingMessage) HasBeenSent() bool {
@@ -85,11 +91,19 @@ func (message PendingStartMessage) ToJSON() []byte {
 }
 
 func (message PendingStartMessage) LogDescription() map[string]string {
-	base := message.queueLogDescription()
+	base := message.pendingLogDescription()
 	base["AppGuid"] = message.AppGuid
 	base["AppVersion"] = message.AppVersion
 	base["IndexToStart"] = strconv.Itoa(message.IndexToStart)
 	return base
+}
+
+func (message PendingStartMessage) Equal(another PendingStartMessage) bool {
+	return message.pendingEqual(another.PendingMessage) &&
+		message.AppGuid == another.AppGuid &&
+		message.AppVersion == another.AppVersion &&
+		message.IndexToStart == another.IndexToStart &&
+		message.Priority == another.Priority
 }
 
 func NewPendingStopMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, instanceGuid string) PendingStopMessage {
@@ -118,7 +132,12 @@ func (message PendingStopMessage) StoreKey() string {
 }
 
 func (message PendingStopMessage) LogDescription() map[string]string {
-	base := message.queueLogDescription()
+	base := message.pendingLogDescription()
 	base["InstanceGuid"] = message.InstanceGuid
 	return base
+}
+
+func (message PendingStopMessage) Equal(another PendingStopMessage) bool {
+	return message.pendingEqual(another.PendingMessage) &&
+		message.InstanceGuid == another.InstanceGuid
 }

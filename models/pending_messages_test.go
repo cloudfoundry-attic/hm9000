@@ -148,6 +148,41 @@ var _ = Describe("Pending Messages", func() {
 				}))
 			})
 		})
+
+		Describe("Equality", func() {
+			It("should work, and ignore the random MessageId", func() {
+				anotherMessage := NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.3)
+				Ω(message.Equal(anotherMessage)).Should(BeTrue())
+
+				mutatedMessage := anotherMessage
+				mutatedMessage.SendOn = 1
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.SentOn = 1
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.KeepAlive = 1
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.AppGuid = "fluff"
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.AppVersion = "bunny"
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.IndexToStart = 17
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.Priority = 3.141
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+			})
+		})
 	})
 
 	Describe("Stop Message", func() {
@@ -217,6 +252,29 @@ var _ = Describe("Pending Messages", func() {
 					"InstanceGuid": "instance-guid",
 					"MessageId":    message.MessageId,
 				}))
+			})
+		})
+
+		Describe("Equality", func() {
+			It("should work, and ignore the random MessageId", func() {
+				anotherMessage := NewPendingStopMessage(time.Unix(100, 0), 30, 10, "instance-guid")
+				Ω(message.Equal(anotherMessage)).Should(BeTrue())
+
+				mutatedMessage := anotherMessage
+				mutatedMessage.SendOn = 1
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.SentOn = 1
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.KeepAlive = 1
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.InstanceGuid = "cheesecake"
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
 			})
 		})
 	})
