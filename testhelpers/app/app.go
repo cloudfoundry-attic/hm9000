@@ -2,8 +2,6 @@ package app
 
 import (
 	. "github.com/cloudfoundry/hm9000/models"
-
-	"time"
 )
 
 type App struct {
@@ -59,7 +57,7 @@ func (app App) InstanceAtIndex(index int) Instance {
 	return app.instances[index]
 }
 
-func (app App) DesiredState(updatedAt int64) DesiredAppState {
+func (app App) DesiredState() DesiredAppState {
 	return DesiredAppState{
 		AppGuid:           app.AppGuid,
 		AppVersion:        app.AppVersion,
@@ -67,29 +65,21 @@ func (app App) DesiredState(updatedAt int64) DesiredAppState {
 		Memory:            1024,
 		State:             AppStateStarted,
 		PackageState:      AppPackageStateStaged,
-		UpdatedAt:         time.Unix(updatedAt, 0),
 	}
 }
 
-func (app App) DesiredStateArr(updatedAt int64) []DesiredAppState {
-	return []DesiredAppState{
-		app.DesiredState(updatedAt),
-	}
-}
-
-func (instance Instance) Heartbeat(timestamp int64) InstanceHeartbeat {
+func (instance Instance) Heartbeat() InstanceHeartbeat {
 	return InstanceHeartbeat{
-		CCPartition:    "default",
-		AppGuid:        instance.AppGuid,
-		AppVersion:     instance.AppVersion,
-		InstanceGuid:   instance.InstanceGuid,
-		InstanceIndex:  instance.InstanceIndex,
-		State:          InstanceStateRunning,
-		StateTimestamp: float64(timestamp),
+		CCPartition:   "default",
+		AppGuid:       instance.AppGuid,
+		AppVersion:    instance.AppVersion,
+		InstanceGuid:  instance.InstanceGuid,
+		InstanceIndex: instance.InstanceIndex,
+		State:         InstanceStateRunning,
 	}
 }
 
-func (instance Instance) DropletExited(reason DropletExitedReason, crashTimestamp int64) DropletExitedMessage {
+func (instance Instance) DropletExited(reason DropletExitedReason) DropletExitedMessage {
 	droplet_exited := DropletExitedMessage{
 		CCPartition:     "default",
 		AppGuid:         instance.AppGuid,
@@ -100,19 +90,13 @@ func (instance Instance) DropletExited(reason DropletExitedReason, crashTimestam
 		ExitDescription: "exited",
 	}
 
-	if reason == DropletExitedReasonCrashed {
-		droplet_exited.ExitDescription = "crashed"
-		droplet_exited.ExitStatusCode = 1
-		droplet_exited.CrashTimestamp = crashTimestamp
-	}
-
 	return droplet_exited
 }
 
-func (app App) Heartbeat(instances int, timestamp int64) Heartbeat {
+func (app App) Heartbeat(instances int) Heartbeat {
 	instanceHeartbeats := make([]InstanceHeartbeat, instances)
 	for i := 0; i < instances; i++ {
-		instanceHeartbeats[i] = app.InstanceAtIndex(i).Heartbeat(timestamp)
+		instanceHeartbeats[i] = app.InstanceAtIndex(i).Heartbeat()
 	}
 
 	return Heartbeat{

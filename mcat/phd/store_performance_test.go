@@ -51,7 +51,7 @@ var _ = XDescribe("Store Performance (these are better covered in the new detail
 					Measure(fmt.Sprintf("Read/Write Performance With %d Apps", numApps), func(b Benchmarker) {
 						data := make([]storeadapter.StoreNode, numApps)
 
-						heartbeat := app.NewDea().Heartbeat(numApps, time.Now().Unix())
+						heartbeat := app.NewDea().Heartbeat(numApps)
 						for i, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
 							data[i] = storeadapter.StoreNode{
 								Key:   "/actual/" + instanceHeartbeat.InstanceGuid,

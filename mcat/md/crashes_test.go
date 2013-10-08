@@ -15,7 +15,7 @@ var _ = Describe("Crashes", func() {
 			a := app.NewApp()
 
 			stateServer.SetDesiredState([]models.DesiredAppState{
-				a.DesiredState(0),
+				a.DesiredState(),
 			})
 
 			timestamp = 100

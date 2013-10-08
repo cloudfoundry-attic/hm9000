@@ -31,9 +31,9 @@ var _ = Describe("Actual State", func() {
 		Ω(err).ShouldNot(HaveOccured())
 
 		a := app.NewApp()
-		heartbeat1 = a.InstanceAtIndex(0).Heartbeat(17)
-		heartbeat2 = a.InstanceAtIndex(1).Heartbeat(12)
-		heartbeat3 = a.InstanceAtIndex(2).Heartbeat(14)
+		heartbeat1 = a.InstanceAtIndex(0).Heartbeat()
+		heartbeat2 = a.InstanceAtIndex(1).Heartbeat()
+		heartbeat3 = a.InstanceAtIndex(2).Heartbeat()
 
 		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
 	})

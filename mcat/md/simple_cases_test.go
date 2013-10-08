@@ -17,14 +17,14 @@ var _ = Describe("Simple Cases Test", func() {
 			app2 = app.NewApp()
 
 			stateServer.SetDesiredState([]models.DesiredAppState{
-				app1.DesiredState(0),
-				app2.DesiredState(0),
+				app1.DesiredState(),
+				app2.DesiredState(),
 			})
 
 			timestamp = 100
 
 			for i := 0; i < 3; i++ {
-				sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+				sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
 				timestamp += 10
 			}
 
@@ -46,16 +46,16 @@ var _ = Describe("Simple Cases Test", func() {
 			app1 = app.NewApp()
 			app2 = app.NewApp()
 
-			desired := app2.DesiredState(0)
+			desired := app2.DesiredState()
 			desired.NumberOfInstances = 2
 
 			stateServer.SetDesiredState([]models.DesiredAppState{
-				app1.DesiredState(0),
+				app1.DesiredState(),
 				desired,
 			})
 
 			for i := 0; i < 3; i++ {
-				sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+				sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
 				timestamp += 10
 			}
 
@@ -63,24 +63,24 @@ var _ = Describe("Simple Cases Test", func() {
 
 			cliRunner.Run("analyze", timestamp)
 
-			sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+			sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
 			timestamp += 10
 			cliRunner.Run("send", timestamp)
 			Ω(startStopListener.Starts).Should(BeEmpty())
 
-			sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+			sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
 			timestamp += 10
 			cliRunner.Run("send", timestamp)
 			Ω(startStopListener.Starts).Should(BeEmpty())
 
-			sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(1, 0))
+			sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
 			timestamp += 10
 			cliRunner.Run("fetch_desired", timestamp)
 		})
 
 		Context("when the app recovers on its own", func() {
 			BeforeEach(func() {
-				sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(2, 0))
+				sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(2))
 				cliRunner.Run("send", timestamp)
 			})
 
@@ -92,8 +92,8 @@ var _ = Describe("Simple Cases Test", func() {
 		Context("when the app is no longer desired", func() {
 			BeforeEach(func() {
 				stateServer.SetDesiredState([]models.DesiredAppState{
-					app1.DesiredState(0),
-					app2.DesiredState(0),
+					app1.DesiredState(),
+					app2.DesiredState(),
 				})
 				cliRunner.Run("fetch_desired", timestamp)
 				cliRunner.Run("send", timestamp)
@@ -126,14 +126,14 @@ var _ = Describe("Simple Cases Test", func() {
 			app2 = app.NewApp()
 
 			stateServer.SetDesiredState([]models.DesiredAppState{
-				app1.DesiredState(0),
-				app2.DesiredState(0),
+				app1.DesiredState(),
+				app2.DesiredState(),
 			})
 
 			timestamp = 100
 
 			for i := 0; i < 3; i++ {
-				sendHeartbeats(timestamp, app1.Heartbeat(1, 0), app2.Heartbeat(2, 0))
+				sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(2))
 				timestamp += 10
 			}
 
@@ -143,7 +143,7 @@ var _ = Describe("Simple Cases Test", func() {
 
 		Context("when the instance is no longer running", func() {
 			BeforeEach(func() {
-				expireHeartbeat(app2.InstanceAtIndex(1).Heartbeat(0))
+				expireHeartbeat(app2.InstanceAtIndex(1).Heartbeat())
 				cliRunner.Run("send", timestamp)
 			})
 
@@ -154,11 +154,11 @@ var _ = Describe("Simple Cases Test", func() {
 
 		Context("when the instance becomes desired", func() {
 			BeforeEach(func() {
-				desired := app2.DesiredState(0)
+				desired := app2.DesiredState()
 				desired.NumberOfInstances = 2
 
 				stateServer.SetDesiredState([]models.DesiredAppState{
-					app1.DesiredState(0),
+					app1.DesiredState(),
 					desired,
 				})
 				cliRunner.Run("fetch_desired", timestamp)

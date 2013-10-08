@@ -73,12 +73,12 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a simple heartbeat over the message bus", func() {
 		BeforeEach(func() {
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1, 17).ToJSON())
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1).ToJSON())
 		})
 
 		It("Stores it in the store", func() {
 			actual, _ := store.GetActualState()
-			Ω(actual).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat(17)))
+			Ω(actual).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
 		})
 	})
 
@@ -89,9 +89,9 @@ var _ = Describe("Actual state listener", func() {
 			heartbeat := Heartbeat{
 				DeaGuid: Guid(),
 				InstanceHeartbeats: []InstanceHeartbeat{
-					app.InstanceAtIndex(0).Heartbeat(17),
-					app.InstanceAtIndex(1).Heartbeat(22),
-					anotherApp.InstanceAtIndex(0).Heartbeat(11),
+					app.InstanceAtIndex(0).Heartbeat(),
+					app.InstanceAtIndex(1).Heartbeat(),
+					anotherApp.InstanceAtIndex(0).Heartbeat(),
 				},
 			}
 
@@ -100,9 +100,9 @@ var _ = Describe("Actual state listener", func() {
 
 		It("Stores it in the store", func() {
 			actual, _ := store.GetActualState()
-			Ω(actual).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat(17)))
-			Ω(actual).Should(ContainElement(app.InstanceAtIndex(1).Heartbeat(22)))
-			Ω(actual).Should(ContainElement(anotherApp.InstanceAtIndex(0).Heartbeat(11)))
+			Ω(actual).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
+			Ω(actual).Should(ContainElement(app.InstanceAtIndex(1).Heartbeat()))
+			Ω(actual).Should(ContainElement(anotherApp.InstanceAtIndex(0).Heartbeat()))
 		})
 
 		Context("when the save succeeds", func() {

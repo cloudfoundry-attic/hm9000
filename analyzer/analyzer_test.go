@@ -110,16 +110,16 @@ var _ = Describe("Analyzer", func() {
 
 		Context("When the desired number of instances and the running number of instances match", func() {
 			BeforeEach(func() {
-				desired := a.DesiredState(0)
+				desired := a.DesiredState()
 				desired.State = models.AppStateStarted
 				desired.NumberOfInstances = 3
 				store.SaveDesiredState([]models.DesiredAppState{
 					desired,
 				})
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.InstanceAtIndex(0).Heartbeat(0),
-					a.InstanceAtIndex(1).Heartbeat(0),
-					a.InstanceAtIndex(2).Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(),
+					a.InstanceAtIndex(1).Heartbeat(),
+					a.InstanceAtIndex(2).Heartbeat(),
 				})
 			})
 
@@ -135,7 +135,7 @@ var _ = Describe("Analyzer", func() {
 	Describe("Starting missing instances", func() {
 		Context("where an app has desired instances", func() {
 			BeforeEach(func() {
-				desired := a.DesiredState(0)
+				desired := a.DesiredState()
 				desired.NumberOfInstances = 4
 				store.SaveDesiredState([]models.DesiredAppState{
 					desired,
@@ -161,8 +161,8 @@ var _ = Describe("Analyzer", func() {
 			Context("but only some of the instances are running", func() {
 				BeforeEach(func() {
 					store.SaveActualState([]models.InstanceHeartbeat{
-						a.InstanceAtIndex(0).Heartbeat(0),
-						a.InstanceAtIndex(2).Heartbeat(0),
+						a.InstanceAtIndex(0).Heartbeat(),
+						a.InstanceAtIndex(2).Heartbeat(),
 					})
 				})
 
@@ -187,9 +187,9 @@ var _ = Describe("Analyzer", func() {
 		Context("When there are running instances", func() {
 			BeforeEach(func() {
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.InstanceAtIndex(0).Heartbeat(0),
-					a.InstanceAtIndex(1).Heartbeat(0),
-					a.InstanceAtIndex(2).Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(),
+					a.InstanceAtIndex(1).Heartbeat(),
+					a.InstanceAtIndex(2).Heartbeat(),
 				})
 			})
 
@@ -204,7 +204,7 @@ var _ = Describe("Analyzer", func() {
 
 			Context("and the desired app desires fewer instances", func() {
 				BeforeEach(func() {
-					desired := a.DesiredState(0)
+					desired := a.DesiredState()
 					desired.NumberOfInstances = 1
 					store.SaveDesiredState([]models.DesiredAppState{
 						desired,
@@ -233,7 +233,7 @@ var _ = Describe("Analyzer", func() {
 
 			Context("when the app is desired", func() {
 				BeforeEach(func() {
-					desired := a.DesiredState(0)
+					desired := a.DesiredState()
 					store.SaveDesiredState([]models.DesiredAppState{
 						desired,
 					})
@@ -247,7 +247,7 @@ var _ = Describe("Analyzer", func() {
 
 				Context("when there is a running instance on the same index", func() {
 					BeforeEach(func() {
-						store.SaveActualState([]models.InstanceHeartbeat{a.InstanceAtIndex(0).Heartbeat(0)})
+						store.SaveActualState([]models.InstanceHeartbeat{a.InstanceAtIndex(0).Heartbeat()})
 					})
 
 					It("should not try to stop the running instance!", func() {
@@ -270,7 +270,7 @@ var _ = Describe("Analyzer", func() {
 
 	Describe("Interesting edge cases involving extra instances (instances at indices >= numdesired)", func() {
 		BeforeEach(func() {
-			desired := a.DesiredState(0)
+			desired := a.DesiredState()
 			desired.NumberOfInstances = 3
 			store.SaveDesiredState([]models.DesiredAppState{
 				desired,
@@ -279,11 +279,11 @@ var _ = Describe("Analyzer", func() {
 		Context("when there are indices missing", func() {
 			BeforeEach(func() {
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.InstanceAtIndex(1).Heartbeat(0),
-					a.InstanceAtIndex(3).Heartbeat(0),
-					a.InstanceAtIndex(4).Heartbeat(0),
-					a.InstanceAtIndex(5).Heartbeat(0),
-					a.InstanceAtIndex(6).Heartbeat(0),
+					a.InstanceAtIndex(1).Heartbeat(),
+					a.InstanceAtIndex(3).Heartbeat(),
+					a.InstanceAtIndex(4).Heartbeat(),
+					a.InstanceAtIndex(5).Heartbeat(),
+					a.InstanceAtIndex(6).Heartbeat(),
 				})
 			})
 
@@ -298,11 +298,11 @@ var _ = Describe("Analyzer", func() {
 		Context("when all desired indices are present", func() {
 			BeforeEach(func() {
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.InstanceAtIndex(0).Heartbeat(0),
-					a.InstanceAtIndex(1).Heartbeat(0),
-					a.InstanceAtIndex(2).Heartbeat(0),
-					a.InstanceAtIndex(3).Heartbeat(0),
-					a.InstanceAtIndex(4).Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(),
+					a.InstanceAtIndex(1).Heartbeat(),
+					a.InstanceAtIndex(2).Heartbeat(),
+					a.InstanceAtIndex(3).Heartbeat(),
+					a.InstanceAtIndex(4).Heartbeat(),
 				})
 			})
 
@@ -323,7 +323,7 @@ var _ = Describe("Analyzer", func() {
 		)
 
 		BeforeEach(func() {
-			desired := a.DesiredState(0)
+			desired := a.DesiredState()
 			desired.NumberOfInstances = 3
 			store.SaveDesiredState([]models.DesiredAppState{
 				desired,
@@ -341,10 +341,10 @@ var _ = Describe("Analyzer", func() {
 			It("should not schedule any stops and start the missing indices", func() {
 				//[-,-,2|2|2|2]
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.InstanceAtIndex(2).Heartbeat(0),
-					duplicateInstance1.Heartbeat(0),
-					duplicateInstance2.Heartbeat(0),
-					duplicateInstance3.Heartbeat(0),
+					a.InstanceAtIndex(2).Heartbeat(),
+					duplicateInstance1.Heartbeat(),
+					duplicateInstance2.Heartbeat(),
+					duplicateInstance3.Heartbeat(),
 				})
 
 				err := analyzer.Analyze()
@@ -357,14 +357,14 @@ var _ = Describe("Analyzer", func() {
 		Context("When all the other indices has instances", func() {
 			It("should schedule a stop for every running instance at the duplicated index with increasing delays", func() {
 				//[0,1,2|2|2] < stop 2,2,2 with increasing delays etc...
-				crashedHeartbeat := duplicateInstance3.Heartbeat(0)
+				crashedHeartbeat := duplicateInstance3.Heartbeat()
 				crashedHeartbeat.State = models.InstanceStateCrashed
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.InstanceAtIndex(0).Heartbeat(0),
-					a.InstanceAtIndex(1).Heartbeat(0),
-					a.InstanceAtIndex(2).Heartbeat(0),
-					duplicateInstance1.Heartbeat(0),
-					duplicateInstance2.Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(),
+					a.InstanceAtIndex(1).Heartbeat(),
+					a.InstanceAtIndex(2).Heartbeat(),
+					duplicateInstance1.Heartbeat(),
+					duplicateInstance2.Heartbeat(),
 					crashedHeartbeat,
 				})
 
@@ -397,12 +397,12 @@ var _ = Describe("Analyzer", func() {
 			It("should terminate the extra indices with extreme prejudice", func() {
 				//[0,1,2,3,3,3] < stop 3,3,3
 				store.SaveActualState([]models.InstanceHeartbeat{
-					a.InstanceAtIndex(0).Heartbeat(0),
-					a.InstanceAtIndex(1).Heartbeat(0),
-					a.InstanceAtIndex(2).Heartbeat(0),
-					a.InstanceAtIndex(3).Heartbeat(0),
-					duplicateExtraInstance1.Heartbeat(0),
-					duplicateExtraInstance2.Heartbeat(0),
+					a.InstanceAtIndex(0).Heartbeat(),
+					a.InstanceAtIndex(1).Heartbeat(),
+					a.InstanceAtIndex(2).Heartbeat(),
+					a.InstanceAtIndex(3).Heartbeat(),
+					duplicateExtraInstance1.Heartbeat(),
+					duplicateExtraInstance2.Heartbeat(),
 				})
 
 				err := analyzer.Analyze()
@@ -429,23 +429,23 @@ var _ = Describe("Analyzer", func() {
 			yetAnotherApp = app.NewApp()
 			undesiredApp.AppGuid = a.AppGuid
 
-			otherDesired := otherApp.DesiredState(0)
+			otherDesired := otherApp.DesiredState()
 			otherDesired.NumberOfInstances = 3
 
-			yetAnotherDesired := yetAnotherApp.DesiredState(0)
+			yetAnotherDesired := yetAnotherApp.DesiredState()
 			yetAnotherDesired.NumberOfInstances = 2
 
 			store.SaveDesiredState([]models.DesiredAppState{
-				a.DesiredState(0),
+				a.DesiredState(),
 				otherDesired,
 				yetAnotherDesired,
 			})
 			store.SaveActualState([]models.InstanceHeartbeat{
-				a.InstanceAtIndex(0).Heartbeat(0),
-				a.InstanceAtIndex(1).Heartbeat(0),
-				undesiredApp.InstanceAtIndex(0).Heartbeat(0),
-				otherApp.InstanceAtIndex(0).Heartbeat(0),
-				otherApp.InstanceAtIndex(2).Heartbeat(0),
+				a.InstanceAtIndex(0).Heartbeat(),
+				a.InstanceAtIndex(1).Heartbeat(),
+				undesiredApp.InstanceAtIndex(0).Heartbeat(),
+				otherApp.InstanceAtIndex(0).Heartbeat(),
+				otherApp.InstanceAtIndex(2).Heartbeat(),
 			})
 		})
 
@@ -461,13 +461,13 @@ var _ = Describe("Analyzer", func() {
 		BeforeEach(func() {
 			store.Reset()
 
-			desired := a.DesiredState(0)
+			desired := a.DesiredState()
 			//this setup would, ordinarily, trigger a start and a stop
 			store.SaveDesiredState([]models.DesiredAppState{
 				desired,
 			})
 			store.SaveActualState([]models.InstanceHeartbeat{
-				app.NewApp().InstanceAtIndex(0).Heartbeat(0),
+				app.NewApp().InstanceAtIndex(0).Heartbeat(),
 			})
 		})
 

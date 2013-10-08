@@ -24,29 +24,29 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 			//this generates 8 low priority start messages
 			for i := 0; i < 8; i += 1 {
 				appToStart := app.NewApp()
-				desiredState := appToStart.DesiredState(0)
+				desiredState := appToStart.DesiredState()
 				desiredState.NumberOfInstances = 4
 				desiredStates = append(desiredStates, desiredState)
 				lowPriorityAppGuids = append(lowPriorityAppGuids, appToStart.AppGuid)
-				heartbeats = append(heartbeats, appToStart.Heartbeat(3, 0))
+				heartbeats = append(heartbeats, appToStart.Heartbeat(3))
 			}
 
 			mediumPriorityAppGuids = make([]string, 0)
 			//this generates 8 medium priority start messages
 			for i := 0; i < 8; i += 1 {
 				appToStart := app.NewApp()
-				desiredState := appToStart.DesiredState(0)
+				desiredState := appToStart.DesiredState()
 				desiredState.NumberOfInstances = 2
 				desiredStates = append(desiredStates, desiredState)
 				mediumPriorityAppGuids = append(mediumPriorityAppGuids, appToStart.AppGuid)
-				heartbeats = append(heartbeats, appToStart.Heartbeat(1, 0))
+				heartbeats = append(heartbeats, appToStart.Heartbeat(1))
 			}
 
 			highPriorityAppGuids = make([]string, 0)
 			//this generates 9 high priority start messages
 			for i := 0; i < 9; i += 1 {
 				appToStart := app.NewApp()
-				desiredState := appToStart.DesiredState(0)
+				desiredState := appToStart.DesiredState()
 				desiredState.NumberOfInstances = 1
 				desiredStates = append(desiredStates, desiredState)
 				highPriorityAppGuids = append(highPriorityAppGuids, appToStart.AppGuid)
@@ -54,7 +54,7 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 
 			for i := 0; i < 40; i += 1 {
 				appToStop := app.NewApp()
-				heartbeats = append(heartbeats, appToStop.Heartbeat(1, 0))
+				heartbeats = append(heartbeats, appToStop.Heartbeat(1))
 			}
 
 			stateServer.SetDesiredState(desiredStates)

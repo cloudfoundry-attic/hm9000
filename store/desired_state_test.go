@@ -45,8 +45,8 @@ var _ = Describe("Desired State", func() {
 	Describe("Saving desired state ", func() {
 		BeforeEach(func() {
 			err := store.SaveDesiredState([]models.DesiredAppState{
-				app1.DesiredState(0),
-				app2.DesiredState(0),
+				app1.DesiredState(),
+				app2.DesiredState(),
 			})
 			Ω(err).ShouldNot(HaveOccured())
 		})
@@ -57,12 +57,12 @@ var _ = Describe("Desired State", func() {
 			Ω(nodes).Should(HaveLen(2))
 			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/desired/" + app1.AppGuid + "-" + app1.AppVersion,
-				Value: app1.DesiredState(0).ToJSON(),
+				Value: app1.DesiredState().ToJSON(),
 				TTL:   conf.DesiredStateTTL() - 1,
 			}))
 			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/desired/" + app2.AppGuid + "-" + app2.AppVersion,
-				Value: app2.DesiredState(0).ToJSON(),
+				Value: app2.DesiredState().ToJSON(),
 				TTL:   conf.DesiredStateTTL() - 1,
 			}))
 		})
@@ -72,8 +72,8 @@ var _ = Describe("Desired State", func() {
 		Context("When the desired state is present", func() {
 			BeforeEach(func() {
 				err := store.SaveDesiredState([]models.DesiredAppState{
-					app1.DesiredState(0),
-					app2.DesiredState(0),
+					app1.DesiredState(),
+					app2.DesiredState(),
 				})
 				Ω(err).ShouldNot(HaveOccured())
 			})
@@ -82,18 +82,18 @@ var _ = Describe("Desired State", func() {
 				desired, err := store.GetDesiredState()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(desired).Should(HaveLen(2))
-				Ω(desired).Should(ContainElement(EqualDesiredState(app1.DesiredState(0))))
-				Ω(desired).Should(ContainElement(EqualDesiredState(app2.DesiredState(0))))
+				Ω(desired).Should(ContainElement(EqualDesiredState(app1.DesiredState())))
+				Ω(desired).Should(ContainElement(EqualDesiredState(app2.DesiredState())))
 			})
 		})
 
 		Context("when the desired state is empty", func() {
 			BeforeEach(func() {
 				err := store.SaveDesiredState([]models.DesiredAppState{
-					app1.DesiredState(0),
+					app1.DesiredState(),
 				})
 				Ω(err).ShouldNot(HaveOccured())
-				err = store.DeleteDesiredState([]models.DesiredAppState{app1.DesiredState(0)})
+				err = store.DeleteDesiredState([]models.DesiredAppState{app1.DesiredState()})
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -121,9 +121,9 @@ var _ = Describe("Desired State", func() {
 	Describe("Deleting desired state", func() {
 		BeforeEach(func() {
 			err := store.SaveDesiredState([]models.DesiredAppState{
-				app1.DesiredState(0),
-				app2.DesiredState(0),
-				app3.DesiredState(0),
+				app1.DesiredState(),
+				app2.DesiredState(),
+				app3.DesiredState(),
 			})
 			Ω(err).ShouldNot(HaveOccured())
 		})
@@ -140,7 +140,7 @@ var _ = Describe("Desired State", func() {
 				desired, err := store.GetDesiredState()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(desired).Should(HaveLen(1))
-				Ω(desired).Should(ContainElement(EqualDesiredState(app2.DesiredState(0))))
+				Ω(desired).Should(ContainElement(EqualDesiredState(app2.DesiredState())))
 			})
 		})
 
@@ -157,8 +157,8 @@ var _ = Describe("Desired State", func() {
 				desired, err := store.GetDesiredState()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(desired).Should(HaveLen(2))
-				Ω(desired).Should(ContainElement(EqualDesiredState(app2.DesiredState(0))))
-				Ω(desired).Should(ContainElement(EqualDesiredState(app3.DesiredState(0))))
+				Ω(desired).Should(ContainElement(EqualDesiredState(app2.DesiredState())))
+				Ω(desired).Should(ContainElement(EqualDesiredState(app3.DesiredState())))
 			})
 		})
 	})

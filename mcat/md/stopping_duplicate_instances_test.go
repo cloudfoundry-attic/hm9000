@@ -25,10 +25,10 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 
 			heartbeat = models.Heartbeat{
 				DeaGuid:            "abc",
-				InstanceHeartbeats: []models.InstanceHeartbeat{instance0.Heartbeat(0), instance1.Heartbeat(0), duplicateInstance1.Heartbeat(0)},
+				InstanceHeartbeats: []models.InstanceHeartbeat{instance0.Heartbeat(), instance1.Heartbeat(), duplicateInstance1.Heartbeat()},
 			}
 
-			desired := a.DesiredState(0)
+			desired := a.DesiredState()
 			desired.NumberOfInstances = 2
 			stateServer.SetDesiredState([]models.DesiredAppState{desired})
 
@@ -80,10 +80,10 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 							stoppedInstance = instance1
 						}
 
-						expireHeartbeat(stoppedInstance.Heartbeat(0))
+						expireHeartbeat(stoppedInstance.Heartbeat())
 						heartbeat = models.Heartbeat{
 							DeaGuid:            "abc",
-							InstanceHeartbeats: []models.InstanceHeartbeat{instance0.Heartbeat(0), remainingInstance.Heartbeat(0)},
+							InstanceHeartbeats: []models.InstanceHeartbeat{instance0.Heartbeat(), remainingInstance.Heartbeat()},
 						}
 						sendHeartbeats(timestamp, heartbeat)
 						startStopListener.Reset()
@@ -101,9 +101,9 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 				BeforeEach(func() {
 					heartbeat = models.Heartbeat{
 						DeaGuid:            "abc",
-						InstanceHeartbeats: []models.InstanceHeartbeat{instance0.Heartbeat(0), instance1.Heartbeat(0)},
+						InstanceHeartbeats: []models.InstanceHeartbeat{instance0.Heartbeat(), instance1.Heartbeat()},
 					}
-					expireHeartbeat(duplicateInstance1.Heartbeat(0))
+					expireHeartbeat(duplicateInstance1.Heartbeat())
 					sendHeartbeats(timestamp, heartbeat)
 					cliRunner.Run("analyze", timestamp)
 					cliRunner.Run("send", timestamp)

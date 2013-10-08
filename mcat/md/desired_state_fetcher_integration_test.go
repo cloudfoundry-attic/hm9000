@@ -29,9 +29,9 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		a3 = app.NewApp()
 
 		stateServer.SetDesiredState([]models.DesiredAppState{
-			a1.DesiredState(0),
-			a2.DesiredState(0),
-			a3.DesiredState(0),
+			a1.DesiredState(),
+			a2.DesiredState(),
+			a3.DesiredState(),
 		})
 
 		fetcher = desiredstatefetcher.New(conf, store.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger()), httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{})
@@ -49,7 +49,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a1.DesiredState(0).ToJSON()))
+		Ω(node.Value).Should(Equal(a1.DesiredState().ToJSON()))
 
 		node, err = storeAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
@@ -57,7 +57,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a2.DesiredState(0).ToJSON()))
+		Ω(node.Value).Should(Equal(a2.DesiredState().ToJSON()))
 
 		node, err = storeAdapter.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
@@ -65,7 +65,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJSON()))
+		Ω(node.Value).Should(Equal(a3.DesiredState().ToJSON()))
 
 	})
 
@@ -88,12 +88,12 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		BeforeEach(func() {
 			<-resultChan
 
-			desired1 := a1.DesiredState(0)
+			desired1 := a1.DesiredState()
 			desired1.State = models.AppStateStopped
 
 			stateServer.SetDesiredState([]models.DesiredAppState{
 				desired1,
-				a3.DesiredState(0),
+				a3.DesiredState(),
 			})
 
 			fetcher.Fetch(resultChan)
@@ -114,7 +114,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 			Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-			Ω(node.Value).Should(Equal(a3.DesiredState(0).ToJSON()))
+			Ω(node.Value).Should(Equal(a3.DesiredState().ToJSON()))
 		})
 	})
 })

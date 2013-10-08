@@ -25,10 +25,10 @@ func (dea Dea) GetApp(index int) App {
 	return dea.apps[index]
 }
 
-func (dea Dea) Heartbeat(numApps int, timestamp int64) models.Heartbeat {
+func (dea Dea) Heartbeat(numApps int) models.Heartbeat {
 	instanceHeartbeats := make([]models.InstanceHeartbeat, 0)
 	for i := 0; i < numApps; i++ {
-		instanceHeartbeats = append(instanceHeartbeats, dea.GetApp(i).InstanceAtIndex(0).Heartbeat(timestamp))
+		instanceHeartbeats = append(instanceHeartbeats, dea.GetApp(i).InstanceAtIndex(0).Heartbeat())
 	}
 
 	return models.Heartbeat{

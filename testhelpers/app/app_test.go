@@ -5,8 +5,6 @@ import (
 	. "github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"time"
 )
 
 var _ = Describe("App Model", func() {
@@ -23,7 +21,7 @@ var _ = Describe("App Model", func() {
 
 	Describe("the desired state message", func() {
 		It("generates one with sane defaults", func() {
-			desired := app.DesiredState(12)
+			desired := app.DesiredState()
 
 			Ω(desired.AppGuid).Should(Equal(app.AppGuid))
 			Ω(desired.AppVersion).Should(Equal(app.AppVersion))
@@ -31,11 +29,6 @@ var _ = Describe("App Model", func() {
 			Ω(desired.Memory).Should(BeNumerically("==", 1024))
 			Ω(desired.State).Should(Equal(AppStateStarted))
 			Ω(desired.PackageState).Should(Equal(AppPackageStateStaged))
-			Ω(desired.UpdatedAt).Should(Equal(time.Unix(12, 0)))
-		})
-
-		It("can generate an array of one desired state for convenience", func() {
-			Ω(app.DesiredStateArr(12)).Should(Equal([]DesiredAppState{app.DesiredState(12)}))
 		})
 	})
 
@@ -78,7 +71,7 @@ var _ = Describe("App Model", func() {
 
 		Describe("Heartbeat", func() {
 			It("creates an instance heartbeat", func() {
-				heartbeat := instance.Heartbeat(1)
+				heartbeat := instance.Heartbeat()
 
 				Ω(heartbeat.CCPartition).Should(Equal("default"))
 				Ω(heartbeat.AppGuid).Should(Equal(app.AppGuid))
@@ -86,13 +79,12 @@ var _ = Describe("App Model", func() {
 				Ω(heartbeat.InstanceGuid).Should(Equal(instance.InstanceGuid))
 				Ω(heartbeat.InstanceIndex).Should(Equal(instance.InstanceIndex))
 				Ω(heartbeat.State).Should(Equal(InstanceStateRunning))
-				Ω(heartbeat.StateTimestamp).Should(BeNumerically("==", 1))
 			})
 		})
 
 		Describe("DropletExited", func() {
 			It("returns droplet exited with the passed in reason", func() {
-				exited := instance.DropletExited(DropletExitedReasonStopped, 12381)
+				exited := instance.DropletExited(DropletExitedReasonStopped)
 
 				Ω(exited.CCPartition).Should(Equal("default"))
 				Ω(exited.AppGuid).Should(Equal(app.AppGuid))
@@ -104,31 +96,21 @@ var _ = Describe("App Model", func() {
 				Ω(exited.ExitDescription).Should(Equal("exited"))
 				Ω(exited.CrashTimestamp).Should(BeZero())
 			})
-
-			Context("when the reason is crashed", func() {
-				It("includes the crash timestamp", func() {
-					exited := instance.DropletExited(DropletExitedReasonCrashed, 17)
-					Ω(exited.Reason).Should(Equal(DropletExitedReasonCrashed))
-					Ω(exited.ExitStatusCode).Should(Equal(1))
-					Ω(exited.ExitDescription).Should(Equal("crashed"))
-					Ω(exited.CrashTimestamp).Should(Equal(int64(17)))
-				})
-			})
 		})
 	})
 
 	Describe("Heartbeat", func() {
 		It("creates a heartbeat for the desired number of instances, using the correct instnace guids when available", func() {
 			instance := app.InstanceAtIndex(0)
-			heartbeat := app.Heartbeat(2, 1)
+			heartbeat := app.Heartbeat(2)
 
 			Ω(heartbeat.DeaGuid).ShouldNot(BeEmpty())
 
 			Ω(heartbeat.InstanceHeartbeats).Should(HaveLen(2))
-			Ω(heartbeat.InstanceHeartbeats[0]).Should(Equal(instance.Heartbeat(1)))
-			Ω(heartbeat.InstanceHeartbeats[1]).Should(Equal(app.InstanceAtIndex(1).Heartbeat(1)))
+			Ω(heartbeat.InstanceHeartbeats[0]).Should(Equal(instance.Heartbeat()))
+			Ω(heartbeat.InstanceHeartbeats[1]).Should(Equal(app.InstanceAtIndex(1).Heartbeat()))
 
-			Ω(app.Heartbeat(2, 1)).Should(Equal(heartbeat))
+			Ω(app.Heartbeat(2)).Should(Equal(heartbeat))
 		})
 	})
 
