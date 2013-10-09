@@ -1,7 +1,6 @@
 package md_test
 
 import (
-	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -9,31 +8,20 @@ import (
 
 var _ = Describe("Simple Cases Test", func() {
 	var app1, app2 app.App
-	var timestamp int
+
+	BeforeEach(func() {
+		app1 = app.NewApp()
+		app2 = app.NewApp()
+	})
 
 	Context("when all running instances are desired", func() {
 		BeforeEach(func() {
-			app1 = app.NewApp()
-			app2 = app.NewApp()
-
-			stateServer.SetDesiredState([]models.DesiredAppState{
-				app1.DesiredState(),
-				app2.DesiredState(),
-			})
-
-			timestamp = 100
-
-			for i := 0; i < 3; i++ {
-				sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
-				timestamp += 10
-			}
-
-			cliRunner.Run("fetch_desired", timestamp)
-			cliRunner.Run("analyze", timestamp)
-			cliRunner.Run("send", timestamp)
+			simulator.SetDesiredState(app1.DesiredState(), app2.DesiredState())
+			simulator.Tick(simulator.TicksToAttainFreshness)
+			simulator.Tick(1)
 		})
 
-		It("should send a start message for the missing instance", func() {
+		It("should not send any messages", func() {
 			Ω(startStopListener.Starts).Should(BeEmpty())
 			Ω(startStopListener.Stops).Should(BeEmpty())
 		})
@@ -41,47 +29,28 @@ var _ = Describe("Simple Cases Test", func() {
 
 	Context("when there is a missing instance", func() {
 		BeforeEach(func() {
-			timestamp = 100
-
-			app1 = app.NewApp()
-			app2 = app.NewApp()
-
 			desired := app2.DesiredState()
 			desired.NumberOfInstances = 2
 
-			stateServer.SetDesiredState([]models.DesiredAppState{
-				app1.DesiredState(),
-				desired,
-			})
+			simulator.SetCurrentHeartbeats(app1.Heartbeat(1), app2.Heartbeat(1))
+			simulator.SetDesiredState(app1.DesiredState(), desired)
+			simulator.Tick(simulator.TicksToAttainFreshness)
 
-			for i := 0; i < 3; i++ {
-				sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
-				timestamp += 10
-			}
+			//this tick will schedule a start
+			simulator.Tick(1)
 
-			cliRunner.Run("fetch_desired", timestamp)
-
-			cliRunner.Run("analyze", timestamp)
-
-			sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
-			timestamp += 10
-			cliRunner.Run("send", timestamp)
+			// no message is sent during the start send message delay
+			simulator.Tick(1)
 			Ω(startStopListener.Starts).Should(BeEmpty())
 
-			sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
-			timestamp += 10
-			cliRunner.Run("send", timestamp)
+			simulator.Tick(1)
 			Ω(startStopListener.Starts).Should(BeEmpty())
-
-			sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(1))
-			timestamp += 10
-			cliRunner.Run("fetch_desired", timestamp)
 		})
 
-		Context("when the app recovers on its own", func() {
+		Context("when the instance recovers on its own", func() {
 			BeforeEach(func() {
-				sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(2))
-				cliRunner.Run("send", timestamp)
+				simulator.SetCurrentHeartbeats(app1.Heartbeat(1), app2.Heartbeat(2))
+				simulator.Tick(1)
 			})
 
 			It("should not send a start message", func() {
@@ -89,14 +58,10 @@ var _ = Describe("Simple Cases Test", func() {
 			})
 		})
 
-		Context("when the app is no longer desired", func() {
+		Context("when the instance is no longer desired", func() {
 			BeforeEach(func() {
-				stateServer.SetDesiredState([]models.DesiredAppState{
-					app1.DesiredState(),
-					app2.DesiredState(),
-				})
-				cliRunner.Run("fetch_desired", timestamp)
-				cliRunner.Run("send", timestamp)
+				simulator.SetDesiredState(app1.DesiredState(), app2.DesiredState())
+				simulator.Tick(1)
 			})
 
 			It("should not send a start message", func() {
@@ -104,12 +69,12 @@ var _ = Describe("Simple Cases Test", func() {
 			})
 		})
 
-		Context("when the app does not recover on its own", func() {
+		Context("when the instance does not recover on its own", func() {
 			BeforeEach(func() {
-				cliRunner.Run("send", timestamp)
+				simulator.Tick(1)
 			})
 
-			It("should send a start message for the missing instance", func() {
+			It("should send a start message, after a delay, for the missing instance", func() {
 				Ω(startStopListener.Starts).Should(HaveLen(1))
 
 				start := startStopListener.Starts[0]
@@ -122,47 +87,19 @@ var _ = Describe("Simple Cases Test", func() {
 
 	Context("when there is an undesired instance running", func() {
 		BeforeEach(func() {
-			app1 = app.NewApp()
-			app2 = app.NewApp()
-
-			stateServer.SetDesiredState([]models.DesiredAppState{
-				app1.DesiredState(),
-				app2.DesiredState(),
-			})
-
-			timestamp = 100
-
-			for i := 0; i < 3; i++ {
-				sendHeartbeats(timestamp, app1.Heartbeat(1), app2.Heartbeat(2))
-				timestamp += 10
-			}
-
-			cliRunner.Run("fetch_desired", timestamp)
-			cliRunner.Run("analyze", timestamp)
-		})
-
-		Context("when the instance is no longer running", func() {
-			BeforeEach(func() {
-				expireHeartbeat(app2.InstanceAtIndex(1).Heartbeat())
-				cliRunner.Run("send", timestamp)
-			})
-
-			It("should not send a stop message", func() {
-				Ω(startStopListener.Stops).Should(HaveLen(0))
-			})
+			simulator.SetDesiredState(app2.DesiredState())
+			simulator.SetCurrentHeartbeats(app2.Heartbeat(2))
+			simulator.Tick(simulator.TicksToAttainFreshness)
+			simulator.Tick(1)
 		})
 
 		Context("when the instance becomes desired", func() {
 			BeforeEach(func() {
 				desired := app2.DesiredState()
 				desired.NumberOfInstances = 2
-
-				stateServer.SetDesiredState([]models.DesiredAppState{
-					app1.DesiredState(),
-					desired,
-				})
-				cliRunner.Run("fetch_desired", timestamp)
-				cliRunner.Run("send", timestamp)
+				simulator.SetDesiredState(desired)
+				startStopListener.Reset()
+				simulator.Tick(1)
 			})
 
 			It("should not send a stop message", func() {
@@ -172,10 +109,10 @@ var _ = Describe("Simple Cases Test", func() {
 
 		Context("when the app is still running", func() {
 			BeforeEach(func() {
-				cliRunner.Run("send", timestamp)
+				simulator.Tick(1)
 			})
 
-			It("should send a stop message for the missing instance", func() {
+			It("should send a stop message, immediately, for the missing instance", func() {
 				Ω(startStopListener.Stops).Should(HaveLen(1))
 
 				stop := startStopListener.Stops[0]

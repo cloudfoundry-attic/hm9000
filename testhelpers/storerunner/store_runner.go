@@ -5,5 +5,6 @@ type StoreRunner interface {
 	Stop()
 	NodeURLS() []string
 	DiskUsage() (bytes int64, err error)
+	FastForwardTime(seconds int)
 	Reset()
 }

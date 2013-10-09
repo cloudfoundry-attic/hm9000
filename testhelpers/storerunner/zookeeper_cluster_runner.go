@@ -110,6 +110,10 @@ func (zk *ZookeeperClusterRunner) deleteRecursively(client *zkClient.Conn, key s
 	return
 }
 
+func (zk *ZookeeperClusterRunner) FastForwardTime(seconds int) {
+	//TODO: someday...
+}
+
 func (zk *ZookeeperClusterRunner) writeConfig(index int) {
 	config := "tickTime=2000\n"
 	config += fmt.Sprintf("dataDir=%s\n", zk.tmpPath(index))

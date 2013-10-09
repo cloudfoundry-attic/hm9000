@@ -87,6 +87,15 @@ func (etcd *ETCDClusterRunner) Reset() {
 	}
 }
 
+func (etcd *ETCDClusterRunner) FastForwardTime(seconds int) {
+	if etcd.running {
+		client := etcdclient.NewClient()
+		client.SetCluster(etcd.NodeURLS())
+
+		etcd.fastForwardTime(client, "/", seconds)
+	}
+}
+
 func (etcd *ETCDClusterRunner) deleteDir(client *etcdclient.Client, dir string) {
 	responses, err := client.Get(dir)
 	Ω(err).ShouldNot(HaveOccured())
@@ -97,6 +106,29 @@ func (etcd *ETCDClusterRunner) deleteDir(client *etcdclient.Client, dir string) 
 			} else {
 				_, err := client.Delete(response.Key)
 				Ω(err).ShouldNot(HaveOccured())
+			}
+		}
+	}
+}
+
+func (etcd *ETCDClusterRunner) fastForwardTime(client *etcdclient.Client, dir string, seconds int) {
+	responses, err := client.Get(dir)
+	Ω(err).ShouldNot(HaveOccured())
+	for _, response := range responses {
+		if response.Key != "/_etcd" {
+			if response.Dir == true {
+				etcd.fastForwardTime(client, response.Key, seconds)
+			} else {
+				if response.TTL == 0 {
+					continue
+				}
+				if response.TTL < int64(seconds) {
+					_, err := client.Delete(response.Key)
+					Ω(err).ShouldNot(HaveOccured())
+				} else {
+					_, err := client.Set(response.Key, response.Value, uint64(response.TTL-int64(seconds)+1))
+					Ω(err).ShouldNot(HaveOccured())
+				}
 			}
 		}
 	}

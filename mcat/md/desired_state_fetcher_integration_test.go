@@ -34,6 +34,8 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			a3.DesiredState(),
 		})
 
+		conf.CCBaseURL = desiredStateServerBaseUrl
+
 		fetcher = desiredstatefetcher.New(conf, store.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger()), httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
 	})

@@ -9,6 +9,7 @@ import (
 	ginkgoConfig "github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -21,18 +22,19 @@ import (
 	"testing"
 )
 
-const desiredStateServerBaseUrl = "http://127.0.0.1:6001"
-const natsPort = 4223
-
 var (
-	stateServer       *desiredstateserver.DesiredStateServer
-	storeRunner       storerunner.StoreRunner
-	storeAdapter      storeadapter.StoreAdapter
-	natsRunner        *natsrunner.NATSRunner
-	conf              config.Config
-	cliRunner         *CLIRunner
-	publisher         *messagepublisher.MessagePublisher
-	startStopListener *startstoplistener.StartStopListener
+	stateServer               *desiredstateserver.DesiredStateServer
+	storeRunner               storerunner.StoreRunner
+	storeAdapter              storeadapter.StoreAdapter
+	natsRunner                *natsrunner.NATSRunner
+	conf                      config.Config
+	cliRunner                 *CLIRunner
+	publisher                 *messagepublisher.MessagePublisher
+	startStopListener         *startstoplistener.StartStopListener
+	simulator                 *Simulator
+	desiredStateServerPort    int
+	desiredStateServerBaseUrl string
+	natsPort                  int
 )
 
 func TestMd(t *testing.T) {
@@ -43,11 +45,15 @@ func TestMd(t *testing.T) {
 	err := cmd.Run()
 	Ω(err).ShouldNot(HaveOccured())
 
+	desiredStateServerPort = 6001 + ginkgoConfig.GinkgoConfig.ParallelNode
+	desiredStateServerBaseUrl = "http://127.0.0.1:" + strconv.Itoa(desiredStateServerPort)
+	natsPort = 4223 + ginkgoConfig.GinkgoConfig.ParallelNode
+
 	natsRunner = natsrunner.NewNATSRunner(natsPort)
 	natsRunner.Start()
 
 	stateServer = desiredstateserver.NewDesiredStateServer()
-	go stateServer.SpinUp(6001)
+	go stateServer.SpinUp(desiredStateServerPort)
 
 	conf, err = config.DefaultConfig()
 	Ω(err).ShouldNot(HaveOccured())
@@ -76,6 +82,7 @@ func TestMd(t *testing.T) {
 var _ = BeforeEach(func() {
 	storeRunner.Reset()
 	startStopListener.Reset()
+	simulator = NewSimulator(conf, storeRunner, stateServer, cliRunner, publisher)
 })
 
 func stopAllExternalProcesses() {

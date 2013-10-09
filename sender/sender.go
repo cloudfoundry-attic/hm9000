@@ -96,6 +96,7 @@ func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessa
 						InstanceIndex: startMessage.IndexToStart,
 						MessageId:     startMessage.MessageId,
 					}
+					sender.logger.Info("Sending message", startMessage.LogDescription())
 					err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, messageToSend.ToJSON())
 					if err != nil {
 						sender.logger.Error("Failed to send start message", err, startMessage.LogDescription())
@@ -114,6 +115,10 @@ func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessa
 				sender.logger.Info("Deleting start message that will not be sent", startMessage.LogDescription())
 				startMessagesToDelete = append(startMessagesToDelete, startMessage)
 			}
+		} else {
+			sender.logger.Info("Skipping start message whose time has not come", startMessage.LogDescription(), map[string]string{
+				"current time": sender.timeProvider.Time().String(),
+			})
 		}
 	}
 
@@ -167,6 +172,8 @@ func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage)
 				sender.logger.Info("Deleting stop message that will not be sent", stopMessage.LogDescription())
 				stopMessagesToDelete = append(stopMessagesToDelete, stopMessage)
 			}
+		} else {
+			sender.logger.Info("Skipping stop message whose time has not come", stopMessage.LogDescription())
 		}
 	}
 
