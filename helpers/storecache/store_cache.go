@@ -130,5 +130,15 @@ func (storecache *StoreCache) verifyFreshness(time time.Time) error {
 }
 
 func (storecache *StoreCache) CrashCount(appGuid string, appVersion string, instanceIndex int) models.CrashCount {
-	return storecache.crashCountByAppVersionIndexKey[appGuid+"-"+appVersion+"-"+strconv.Itoa(instanceIndex)]
+	crashCount, found := storecache.crashCountByAppVersionIndexKey[appGuid+"-"+appVersion+"-"+strconv.Itoa(instanceIndex)]
+	if !found {
+		return models.CrashCount{
+			AppGuid:       appGuid,
+			AppVersion:    appVersion,
+			InstanceIndex: instanceIndex,
+		}
+	} else {
+		return crashCount
+	}
+
 }

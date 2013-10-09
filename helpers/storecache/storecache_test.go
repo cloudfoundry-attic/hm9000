@@ -126,6 +126,16 @@ var _ = Describe("Storecache", func() {
 				Ω(cache.CrashCount(crashCount.AppGuid, crashCount.AppVersion, crashCount.InstanceIndex)).Should(Equal(crashCount))
 			})
 
+			It("should return a correctly configured crash count when the crash count is not in the cache", func() {
+				crashCount := cache.CrashCount("app-guid", "app-version", 17)
+				Ω(crashCount).Should(Equal(models.CrashCount{
+					AppGuid:       "app-guid",
+					AppVersion:    "app-version",
+					InstanceIndex: 17,
+					CrashCount:    0,
+				}))
+			})
+
 			It("should index pending start and stop messages by storekey", func() {
 				Ω(cache.PendingStartMessages[startMessage.StoreKey()]).Should(EqualPendingStartMessage(startMessage))
 				Ω(cache.PendingStopMessages[stopMessage.StoreKey()]).Should(EqualPendingStopMessage(stopMessage))
