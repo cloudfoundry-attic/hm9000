@@ -37,6 +37,10 @@ type Config struct {
 	SenderNatsStopSubject      string   `json:"sender_nats_stop_subject"`
 	SenderMessageLimit         int      `json:"sender_message_limit"`
 
+	NumberOfCrashesBeforeBackoffBegins int `json:"number_of_crashes_before_backoff_begins"`
+	StartingBackoffDelayInHeartbeats   int `json:"starting_backoff_delay_in_heartbeats"`
+	MaximumBackoffDelayInHeartbeats    int `json:"maximum_backoff_delay_in_heartbeats"`
+
 	NATS struct {
 		Host     string `json:"host"`
 		Port     int    `json:"port"`
@@ -91,6 +95,14 @@ func (conf *Config) AnalyzerPollingInterval() time.Duration {
 
 func (conf *Config) AnalyzerTimeout() time.Duration {
 	return time.Duration(conf.AnalyzerTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) StartingBackoffDelay() time.Duration {
+	return time.Duration(conf.StartingBackoffDelayInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) MaximumBackoffDelay() time.Duration {
+	return time.Duration(conf.MaximumBackoffDelayInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
 }
 
 func DefaultConfig() (Config, error) {

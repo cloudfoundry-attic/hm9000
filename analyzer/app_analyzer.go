@@ -5,7 +5,6 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/models"
-	"math"
 	"strconv"
 	"time"
 )
@@ -34,22 +33,6 @@ func newAppAnalyzer(desired models.DesiredAppState, heartbeatingInstances []mode
 	}
 }
 
-func (a *appAnalyzer) partitionInstancesIntoRunningAndCrashed() {
-	a.runningInstances = []models.InstanceHeartbeat{}
-	a.runningByIndex = map[int][]models.InstanceHeartbeat{}
-	a.hasCrashAtIndex = map[int]bool{}
-
-	for _, heartbeatingInstance := range a.heartbeatingInstances {
-		index := heartbeatingInstance.InstanceIndex
-		if heartbeatingInstance.State == models.InstanceStateCrashed {
-			a.hasCrashAtIndex[index] = true
-		} else {
-			a.runningByIndex[index] = append(a.runningByIndex[index], heartbeatingInstance)
-			a.runningInstances = append(a.runningInstances, heartbeatingInstance)
-		}
-	}
-}
-
 func (a *appAnalyzer) analyzeApp() (startMessages []models.PendingStartMessage, stopMessages []models.PendingStopMessage, crashCounts []models.CrashCount) {
 	a.partitionInstancesIntoRunningAndCrashed()
 
@@ -65,6 +48,22 @@ func (a *appAnalyzer) analyzeApp() (startMessages []models.PendingStartMessage, 
 	stopMessages = a.dedupeStopMessages(stopMessages)
 
 	return
+}
+
+func (a *appAnalyzer) partitionInstancesIntoRunningAndCrashed() {
+	a.runningInstances = []models.InstanceHeartbeat{}
+	a.runningByIndex = map[int][]models.InstanceHeartbeat{}
+	a.hasCrashAtIndex = map[int]bool{}
+
+	for _, heartbeatingInstance := range a.heartbeatingInstances {
+		index := heartbeatingInstance.InstanceIndex
+		if heartbeatingInstance.State == models.InstanceStateCrashed {
+			a.hasCrashAtIndex[index] = true
+		} else {
+			a.runningByIndex[index] = append(a.runningByIndex[index], heartbeatingInstance)
+			a.runningInstances = append(a.runningInstances, heartbeatingInstance)
+		}
+	}
 }
 
 func (a *appAnalyzer) generatePendingStartsForMissingInstances() (startMessages []models.PendingStartMessage, crashCounts []models.CrashCount) {
@@ -186,12 +185,7 @@ func (a *appAnalyzer) computePendingStartMessagePriority() float64 {
 }
 
 func (a *appAnalyzer) computeDelayForCrashCount(crashCount models.CrashCount) (delay int) {
-	if crashCount.CrashCount < 3 {
-		return 0
-	}
-	if crashCount.CrashCount >= 9 {
-		return 960
-	}
-
-	return 30 * int(math.Pow(2.0, float64(crashCount.CrashCount-3)))
+	startingBackoffDelay := int(a.conf.StartingBackoffDelay().Seconds())
+	maximumBackoffDelay := int(a.conf.MaximumBackoffDelay().Seconds())
+	return ComputeCrashDelay(crashCount.CrashCount, a.conf.NumberOfCrashesBeforeBackoffBegins, startingBackoffDelay, maximumBackoffDelay)
 }

@@ -34,6 +34,9 @@ var _ = Describe("Config", func() {
         "fetcher_timeout_in_heartbeats": 60,        
         "analyzer_polling_interval_in_heartbeats": 1,
         "analyzer_timeout_in_heartbeats": 10,
+        "number_of_crashes_before_backoff_begins": 3,
+        "starting_backoff_delay_in_heartbeats": 3,
+        "maximum_backoff_delay_in_heartbeats": 96,
         "nats": {
             "host": "127.0.0.1",
             "port": 4222,
@@ -60,6 +63,10 @@ var _ = Describe("Config", func() {
 			Ω(config.FetcherTimeout().Seconds()).Should(BeNumerically("==", 600))
 			Ω(config.AnalyzerPollingInterval().Seconds()).Should(BeNumerically("==", 10))
 			Ω(config.AnalyzerTimeout().Seconds()).Should(BeNumerically("==", 100))
+
+			Ω(config.NumberOfCrashesBeforeBackoffBegins).Should(BeNumerically("==", 3))
+			Ω(config.StartingBackoffDelay().Seconds()).Should(BeNumerically("==", 30))
+			Ω(config.MaximumBackoffDelay().Seconds()).Should(BeNumerically("==", 960))
 
 			Ω(config.DesiredStateBatchSize).Should(BeNumerically("==", 500))
 			Ω(config.FetcherNetworkTimeout().Seconds()).Should(BeNumerically("==", 10))
