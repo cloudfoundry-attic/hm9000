@@ -6,7 +6,7 @@ import (
 )
 
 func (store *RealStore) SaveCrashCounts(crashCounts []models.CrashCount) error {
-	return store.save(crashCounts, "/crashes", 0)
+	return store.save(crashCounts, "/crashes", 1920)
 }
 
 func (store *RealStore) GetCrashCounts() ([]models.CrashCount, error) {

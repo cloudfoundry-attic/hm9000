@@ -11,6 +11,7 @@ var _ = Describe("Crashes", func() {
 	var (
 		timestamp int
 		a         app.App
+		heartbeat models.Heartbeat
 	)
 
 	Context("when there are multiple crashed instances on a given index", func() {
@@ -25,7 +26,7 @@ var _ = Describe("Crashes", func() {
 
 			timestamp = 100
 
-			heartbeat := models.Heartbeat{
+			heartbeat = models.Heartbeat{
 				DeaGuid: models.Guid(),
 				InstanceHeartbeats: []models.InstanceHeartbeat{
 					a.InstanceAtIndex(0).Heartbeat(),
@@ -59,6 +60,45 @@ var _ = Describe("Crashes", func() {
 
 			It("should still not send any stop messages", func() {
 				Ω(startStopListener.Stops).Should(BeEmpty())
+			})
+		})
+
+		tick := func() {
+			timestamp += 10
+			sendHeartbeats(timestamp, heartbeat)
+			cliRunner.Run("analyze", timestamp)
+			cliRunner.Run("send", timestamp)
+		}
+
+		expireKeepAlive := func() {
+			for i := 0; i < 3; i++ {
+				tick()
+			}
+		}
+
+		Context("when the app keeps crashing", func() {
+			It("should keep restarting the app with an appropriate backoff", func() {
+				//crash #2
+				startStopListener.Reset()
+				expireKeepAlive()
+				tick()
+				Ω(startStopListener.Starts).Should(HaveLen(1))
+
+				//crash #3
+				startStopListener.Reset()
+				expireKeepAlive()
+				tick()
+				Ω(startStopListener.Starts).Should(HaveLen(1))
+
+				//crash #4, backoff begins
+				startStopListener.Reset()
+				expireKeepAlive()
+				tick()
+				Ω(startStopListener.Starts).Should(HaveLen(0))
+				tick()
+				tick()
+				tick()
+				Ω(startStopListener.Starts).Should(HaveLen(1))
 			})
 		})
 	})

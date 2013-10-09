@@ -38,6 +38,11 @@ var _ = Describe("CrashCount", func() {
 			}
 			err := store.SaveCrashCounts([]models.CrashCount{crashCount})
 			Ω(err).ShouldNot(HaveOccured())
+
+			node, err := etcdAdapter.Get("/crashes/abc-xyz-1")
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(node.TTL).Should(BeNumerically("==", 1919))
+
 			results, err := store.GetCrashCounts()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(results).Should(HaveLen(1))

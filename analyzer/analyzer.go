@@ -3,11 +3,11 @@ package analyzer
 import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/outbox"
 	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"math"
 	"strconv"
 )
 
@@ -16,15 +16,13 @@ type Analyzer struct {
 	storecache *storecache.StoreCache
 
 	logger       logger.Logger
-	outbox       outbox.Outbox
 	timeProvider timeprovider.TimeProvider
 	conf         config.Config
 }
 
-func New(store store.Store, outbox outbox.Outbox, timeProvider timeprovider.TimeProvider, logger logger.Logger, conf config.Config) *Analyzer {
+func New(store store.Store, timeProvider timeprovider.TimeProvider, logger logger.Logger, conf config.Config) *Analyzer {
 	return &Analyzer{
 		store:        store,
-		outbox:       outbox,
 		timeProvider: timeProvider,
 		logger:       logger,
 		conf:         conf,
@@ -41,25 +39,53 @@ func (analyzer *Analyzer) Analyze() error {
 
 	allStartMessages := []models.PendingStartMessage{}
 	allStopMessages := []models.PendingStopMessage{}
+	allCrashCounts := []models.CrashCount{}
 
 	for appVersionKey := range analyzer.storecache.SetOfApps {
 		desired := analyzer.storecache.DesiredByApp[appVersionKey]
 		heartbeatingInstances := analyzer.storecache.HeartbeatingInstancesByApp[appVersionKey]
 
-		startMessages, stopMessages := analyzer.analyzeApp(desired, heartbeatingInstances)
+		startMessages, stopMessages, crashCounts := analyzer.analyzeApp(desired, heartbeatingInstances)
 		allStartMessages = append(allStartMessages, startMessages...)
 		allStopMessages = append(allStopMessages, stopMessages...)
+		allCrashCounts = append(allCrashCounts, crashCounts...)
 	}
 
-	err = analyzer.outbox.Enqueue(allStartMessages, allStopMessages)
+	err = analyzer.store.SaveCrashCounts(allCrashCounts)
+
 	if err != nil {
-		analyzer.logger.Error("Analyzer failed to enqueue messages", err)
+		analyzer.logger.Error("Analyzer failed to save crash counts", err)
 		return err
 	}
+
+	err = analyzer.store.SavePendingStartMessages(allStartMessages)
+
+	if err != nil {
+		analyzer.logger.Error("Analyzer failed to enqueue start messages", err)
+		return err
+	}
+
+	dedupedMessages := []models.PendingStopMessage{}
+
+	for _, message := range allStopMessages {
+		_, found := analyzer.storecache.PendingStopMessages[message.StoreKey()]
+		if !found {
+			dedupedMessages = append(dedupedMessages, message)
+			analyzer.logger.Info("Enqueuing Stop Message", message.LogDescription())
+		} else {
+			analyzer.logger.Info("Skipping Already Enqueued Stop Message", message.LogDescription())
+		}
+	}
+	err = analyzer.store.SavePendingStopMessages(dedupedMessages)
+	if err != nil {
+		analyzer.logger.Error("Analyzer failed to enqueue stop messages", err)
+		return err
+	}
+
 	return nil
 }
 
-func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatingInstances []models.InstanceHeartbeat) (startMessages []models.PendingStartMessage, stopMessages []models.PendingStopMessage) {
+func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatingInstances []models.InstanceHeartbeat) (startMessages []models.PendingStartMessage, stopMessages []models.PendingStopMessage, crashCounts []models.CrashCount) {
 	runningInstances := []models.InstanceHeartbeat{}
 	runningByIndex := map[int][]models.InstanceHeartbeat{}
 	numberOfCrashesByIndex := map[int]int{}
@@ -74,26 +100,44 @@ func (analyzer *Analyzer) analyzeApp(desired models.DesiredAppState, heartbeatin
 	}
 
 	//start missing instances
-	// if desired.NumberOfInstances > 0 {
 	priority := analyzer.computePriority(desired.NumberOfInstances, runningByIndex)
 
 	for index := 0; index < desired.NumberOfInstances; index++ {
 		if len(runningByIndex[index]) == 0 {
 			delay := analyzer.conf.GracePeriod()
 			keepAlive := 0
+			var crashCount models.CrashCount
 			if numberOfCrashesByIndex[index] != 0 {
-				delay = 0
+				previousCrashCount := analyzer.storecache.CrashCount(desired.AppGuid, desired.AppVersion, index)
+				delay = analyzer.computeDelayForCrashCount(previousCrashCount)
 				keepAlive = analyzer.conf.GracePeriod()
+
+				crashCount = models.CrashCount{
+					AppGuid:       desired.AppGuid,
+					AppVersion:    desired.AppVersion,
+					InstanceIndex: index,
+					CrashCount:    previousCrashCount.CrashCount + 1,
+				}
 			}
 
 			message := models.NewPendingStartMessage(analyzer.timeProvider.Time(), delay, keepAlive, desired.AppGuid, desired.AppVersion, index, priority)
-			startMessages = append(startMessages, message)
+			_, present := analyzer.storecache.PendingStartMessages[message.StoreKey()]
+
 			analyzer.logger.Info("Identified missing instance", message.LogDescription(), map[string]string{
 				"Desired # of Instances": strconv.Itoa(desired.NumberOfInstances),
 			})
+
+			if !present {
+				analyzer.logger.Info("Enqueuing Start Message", message.LogDescription())
+				startMessages = append(startMessages, message)
+				if crashCount.AppGuid != "" {
+					crashCounts = append(crashCounts, crashCount)
+				}
+			} else {
+				analyzer.logger.Info("Skipping Already Enqueued Start Message", message.LogDescription())
+			}
 		}
 	}
-	// }
 
 	if len(startMessages) > 0 {
 		return
@@ -150,4 +194,15 @@ func (analyzer *Analyzer) computePriority(numDesired int, runningByIndex map[int
 	}
 
 	return float64(numDesired-totalRunningIndices) / float64(numDesired)
+}
+
+func (analyzer *Analyzer) computeDelayForCrashCount(crashCount models.CrashCount) (delay int) {
+	if crashCount.CrashCount < 3 {
+		return 0
+	}
+	if crashCount.CrashCount >= 9 {
+		return 960
+	}
+
+	return 30 * int(math.Pow(2.0, float64(crashCount.CrashCount-3)))
 }
