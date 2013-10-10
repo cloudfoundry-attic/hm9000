@@ -42,7 +42,7 @@ func (etcd *ETCDClusterRunner) Start() {
 		Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
 
 		Eventually(func() bool {
-			client := etcdclient.NewClient()
+			client := etcdclient.NewClient([]string{})
 			return client.SetCluster([]string{"http://" + etcd.clientUrl(i)})
 		}, 3, 0.05).Should(BeTrue(), "Expected ETCD to be up and running")
 	}
@@ -80,8 +80,7 @@ func (etcd *ETCDClusterRunner) DiskUsage() (bytes int64, err error) {
 
 func (etcd *ETCDClusterRunner) Reset() {
 	if etcd.running {
-		client := etcdclient.NewClient()
-		client.SetCluster(etcd.NodeURLS())
+		client := etcdclient.NewClient(etcd.NodeURLS())
 
 		etcd.deleteDir(client, "/")
 	}
@@ -89,8 +88,7 @@ func (etcd *ETCDClusterRunner) Reset() {
 
 func (etcd *ETCDClusterRunner) FastForwardTime(seconds int) {
 	if etcd.running {
-		client := etcdclient.NewClient()
-		client.SetCluster(etcd.NodeURLS())
+		client := etcdclient.NewClient(etcd.NodeURLS())
 
 		etcd.fastForwardTime(client, "/", seconds)
 	}

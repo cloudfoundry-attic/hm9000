@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Prioritizing and sending messages in batches", func() {
+var _ = Describe("[Integration] Prioritizing and sending messages in batches", func() {
 	//Note: the sender is configured to only send 8 messages at a time
 	//This is done by cli_runner_test.go when it generates the config
 	Context("when there are start and stop messages", func() {

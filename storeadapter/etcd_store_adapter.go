@@ -19,8 +19,7 @@ func NewETCDStoreAdapter(urls []string, maxConcurrentRequests int) *ETCDStoreAda
 }
 
 func (adapter *ETCDStoreAdapter) Connect() error {
-	adapter.client = etcd.NewClient()
-	adapter.client.SetCluster(adapter.urls)
+	adapter.client = etcd.NewClient(adapter.urls)
 
 	return nil
 }

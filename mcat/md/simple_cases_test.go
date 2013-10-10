@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Simple Cases Test", func() {
+var _ = Describe("[Integration] Simple Cases Test", func() {
 	var app1, app2 app.App
 
 	BeforeEach(func() {

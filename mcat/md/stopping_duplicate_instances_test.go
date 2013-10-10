@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Stopping Duplicate Instances", func() {
+var _ = Describe("[Integration] Stopping Duplicate Instances", func() {
 	var a app.App
 
 	Context("when there are multiple instances on the same index", func() {

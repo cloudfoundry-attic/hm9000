@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Fetching from CC and storing the result in the Store", func() {
+var _ = Describe("[Integration] Fetching from CC and storing the result in the Store", func() {
 	var (
 		fetcher    *desiredstatefetcher.DesiredStateFetcher
 		a1         app.App
