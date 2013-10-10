@@ -44,10 +44,10 @@ var _ = Describe("Desired State", func() {
 
 	Describe("Saving desired state ", func() {
 		BeforeEach(func() {
-			err := store.SaveDesiredState([]models.DesiredAppState{
+			err := store.SaveDesiredState(
 				app1.DesiredState(1),
 				app2.DesiredState(1),
-			})
+			)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
@@ -71,10 +71,10 @@ var _ = Describe("Desired State", func() {
 	Describe("Fetching desired state", func() {
 		Context("When the desired state is present", func() {
 			BeforeEach(func() {
-				err := store.SaveDesiredState([]models.DesiredAppState{
+				err := store.SaveDesiredState(
 					app1.DesiredState(1),
 					app2.DesiredState(1),
-				})
+				)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -89,11 +89,11 @@ var _ = Describe("Desired State", func() {
 
 		Context("when the desired state is empty", func() {
 			BeforeEach(func() {
-				err := store.SaveDesiredState([]models.DesiredAppState{
+				err := store.SaveDesiredState(
 					app1.DesiredState(1),
-				})
+				)
 				Ω(err).ShouldNot(HaveOccured())
-				err = store.DeleteDesiredState([]models.DesiredAppState{app1.DesiredState(1)})
+				err = store.DeleteDesiredState(app1.DesiredState(1))
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -120,11 +120,11 @@ var _ = Describe("Desired State", func() {
 
 	Describe("Deleting desired state", func() {
 		BeforeEach(func() {
-			err := store.SaveDesiredState([]models.DesiredAppState{
+			err := store.SaveDesiredState(
 				app1.DesiredState(1),
 				app2.DesiredState(1),
 				app3.DesiredState(1),
-			})
+			)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
@@ -134,7 +134,7 @@ var _ = Describe("Desired State", func() {
 					models.DesiredAppState{AppGuid: app1.AppGuid, AppVersion: app1.AppVersion},
 					models.DesiredAppState{AppGuid: app3.AppGuid, AppVersion: app3.AppVersion},
 				}
-				err := store.DeleteDesiredState(toDelete)
+				err := store.DeleteDesiredState(toDelete...)
 				Ω(err).ShouldNot(HaveOccured())
 
 				desired, err := store.GetDesiredState()
@@ -151,7 +151,7 @@ var _ = Describe("Desired State", func() {
 					models.DesiredAppState{AppGuid: app3.AppGuid, AppVersion: app2.AppVersion}, //oops! this key is not present but we're trying to delete it
 					models.DesiredAppState{AppGuid: app2.AppGuid, AppVersion: app2.AppVersion},
 				}
-				err := store.DeleteDesiredState(toDelete)
+				err := store.DeleteDesiredState(toDelete...)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 				desired, err := store.GetDesiredState()

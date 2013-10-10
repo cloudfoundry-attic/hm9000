@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func (store *RealStore) SavePendingStartMessages(messages []models.PendingStartMessage) error {
+func (store *RealStore) SavePendingStartMessages(messages ...models.PendingStartMessage) error {
 	return store.save(messages, "/start", 0)
 }
 
@@ -14,6 +14,6 @@ func (store *RealStore) GetPendingStartMessages() ([]models.PendingStartMessage,
 	return slice.Interface().([]models.PendingStartMessage), err
 }
 
-func (store *RealStore) DeletePendingStartMessages(messages []models.PendingStartMessage) error {
+func (store *RealStore) DeletePendingStartMessages(messages ...models.PendingStartMessage) error {
 	return store.delete(messages, "/start")
 }

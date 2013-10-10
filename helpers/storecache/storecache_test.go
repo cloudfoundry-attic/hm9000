@@ -47,8 +47,8 @@ var _ = Describe("Storecache", func() {
 			app3.DesiredState(1),
 		}
 
-		store.SaveActualState(actualState)
-		store.SaveDesiredState(desiredState)
+		store.SaveActualState(actualState...)
+		store.SaveDesiredState(desiredState...)
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
 		crashCount = models.CrashCount{
@@ -57,12 +57,12 @@ var _ = Describe("Storecache", func() {
 			InstanceIndex: 1,
 			CrashCount:    12,
 		}
-		store.SaveCrashCounts([]models.CrashCount{crashCount})
+		store.SaveCrashCounts(crashCount)
 
 		startMessage = models.NewPendingStartMessage(time.Unix(10, 0), 0, 0, models.Guid(), models.Guid(), 2, 1.0)
-		store.SavePendingStartMessages([]models.PendingStartMessage{startMessage})
+		store.SavePendingStartMessages(startMessage)
 		stopMessage = models.NewPendingStopMessage(time.Unix(10, 0), 0, 0, models.Guid())
-		store.SavePendingStopMessages([]models.PendingStopMessage{stopMessage})
+		store.SavePendingStopMessages(stopMessage)
 	})
 
 	Describe("Key", func() {

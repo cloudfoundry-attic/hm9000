@@ -49,21 +49,21 @@ func (analyzer *Analyzer) Analyze() error {
 		allCrashCounts = append(allCrashCounts, crashCounts...)
 	}
 
-	err = analyzer.store.SaveCrashCounts(allCrashCounts)
+	err = analyzer.store.SaveCrashCounts(allCrashCounts...)
 
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to save crash counts", err)
 		return err
 	}
 
-	err = analyzer.store.SavePendingStartMessages(allStartMessages)
+	err = analyzer.store.SavePendingStartMessages(allStartMessages...)
 
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to enqueue start messages", err)
 		return err
 	}
 
-	err = analyzer.store.SavePendingStopMessages(allStopMessages)
+	err = analyzer.store.SavePendingStopMessages(allStopMessages...)
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to enqueue stop messages", err)
 		return err

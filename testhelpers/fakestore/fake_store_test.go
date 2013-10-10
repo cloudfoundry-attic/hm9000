@@ -113,7 +113,7 @@ var _ = Describe("FakeStore", func() {
 			desired1 := app1.DesiredState(1)
 			desired2 := app2.DesiredState(1)
 
-			err := store.SaveDesiredState([]models.DesiredAppState{desired1, desired1, desired2})
+			err := store.SaveDesiredState(desired1, desired1, desired2)
 			Ω(err).ShouldNot(HaveOccured())
 
 			desired, err := store.GetDesiredState()
@@ -125,7 +125,7 @@ var _ = Describe("FakeStore", func() {
 			desired2.NumberOfInstances = 17
 			desired3 := app.NewApp().DesiredState(1)
 
-			err = store.SaveDesiredState([]models.DesiredAppState{desired2, desired3})
+			err = store.SaveDesiredState(desired2, desired3)
 			Ω(err).ShouldNot(HaveOccured())
 
 			desired, err = store.GetDesiredState()
@@ -135,14 +135,14 @@ var _ = Describe("FakeStore", func() {
 			Ω(desired).Should(ContainElement(EqualDesiredState(desired2)))
 			Ω(desired).Should(ContainElement(EqualDesiredState(desired3)))
 
-			err = store.DeleteDesiredState([]models.DesiredAppState{desired2, desired3})
+			err = store.DeleteDesiredState(desired2, desired3)
 			Ω(err).ShouldNot(HaveOccured())
 			desired, err = store.GetDesiredState()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(desired).Should(HaveLen(1))
 			Ω(desired).Should(ContainElement(EqualDesiredState(desired1)))
 
-			err = store.DeleteDesiredState([]models.DesiredAppState{desired2})
+			err = store.DeleteDesiredState(desired2)
 			Ω(err).Should(HaveOccured())
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
@@ -155,12 +155,12 @@ var _ = Describe("FakeStore", func() {
 
 		It("should support returning errors", func() {
 			desired1 := app1.DesiredState(1)
-			store.SaveDesiredState([]models.DesiredAppState{desired1})
+			store.SaveDesiredState(desired1)
 
 			errIn := errors.New("foo")
 
 			store.SaveDesiredStateError = errIn
-			err := store.SaveDesiredState([]models.DesiredAppState{desired1})
+			err := store.SaveDesiredState(desired1)
 			Ω(err).Should(Equal(errIn))
 
 			store.GetDesiredStateError = errIn
@@ -169,7 +169,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(err).Should(Equal(errIn))
 
 			store.Reset()
-			err = store.SaveDesiredState([]models.DesiredAppState{desired1})
+			err = store.SaveDesiredState(desired1)
 			Ω(err).ShouldNot(HaveOccured())
 			_, err = store.GetDesiredState()
 			Ω(err).ShouldNot(HaveOccured())
@@ -181,7 +181,7 @@ var _ = Describe("FakeStore", func() {
 			heartbeat1 := app1.InstanceAtIndex(0).Heartbeat()
 			heartbeat2 := app2.InstanceAtIndex(0).Heartbeat()
 
-			err := store.SaveActualState([]models.InstanceHeartbeat{heartbeat1, heartbeat1, heartbeat2})
+			err := store.SaveActualState(heartbeat1, heartbeat1, heartbeat2)
 			Ω(err).ShouldNot(HaveOccured())
 
 			actual, err := store.GetActualState()
@@ -193,7 +193,7 @@ var _ = Describe("FakeStore", func() {
 			heartbeat2.State = models.InstanceStateCrashed
 			heartbeat3 := app1.InstanceAtIndex(1).Heartbeat()
 
-			err = store.SaveActualState([]models.InstanceHeartbeat{heartbeat2, heartbeat3})
+			err = store.SaveActualState(heartbeat2, heartbeat3)
 			Ω(err).ShouldNot(HaveOccured())
 
 			actual, err = store.GetActualState()
@@ -203,14 +203,14 @@ var _ = Describe("FakeStore", func() {
 			Ω(actual).Should(ContainElement(heartbeat2))
 			Ω(actual).Should(ContainElement(heartbeat3))
 
-			err = store.DeleteActualState([]models.InstanceHeartbeat{heartbeat2, heartbeat3})
+			err = store.DeleteActualState(heartbeat2, heartbeat3)
 			Ω(err).ShouldNot(HaveOccured())
 			actual, err = store.GetActualState()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(1))
 			Ω(actual).Should(ContainElement(heartbeat1))
 
-			err = store.DeleteActualState([]models.InstanceHeartbeat{heartbeat2})
+			err = store.DeleteActualState(heartbeat2)
 			Ω(err).Should(HaveOccured())
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
@@ -223,12 +223,12 @@ var _ = Describe("FakeStore", func() {
 
 		It("should support returning errors", func() {
 			heartbeat1 := app1.InstanceAtIndex(0).Heartbeat()
-			store.SaveActualState([]models.InstanceHeartbeat{heartbeat1})
+			store.SaveActualState(heartbeat1)
 
 			errIn := errors.New("foo")
 
 			store.SaveActualStateError = errIn
-			err := store.SaveActualState([]models.InstanceHeartbeat{heartbeat1})
+			err := store.SaveActualState(heartbeat1)
 			Ω(err).Should(Equal(errIn))
 
 			store.GetActualStateError = errIn
@@ -237,7 +237,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(err).Should(Equal(errIn))
 
 			store.Reset()
-			err = store.SaveActualState([]models.InstanceHeartbeat{heartbeat1})
+			err = store.SaveActualState(heartbeat1)
 			Ω(err).ShouldNot(HaveOccured())
 			_, err = store.GetActualState()
 			Ω(err).ShouldNot(HaveOccured())
@@ -249,7 +249,7 @@ var _ = Describe("FakeStore", func() {
 			message1 := models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
 			message2 := models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0)
 
-			err := store.SavePendingStartMessages([]models.PendingStartMessage{message1, message1, message2})
+			err := store.SavePendingStartMessages(message1, message1, message2)
 			Ω(err).ShouldNot(HaveOccured())
 
 			actual, err := store.GetPendingStartMessages()
@@ -261,7 +261,7 @@ var _ = Describe("FakeStore", func() {
 			message2.SendOn = 120
 			message3 := models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0)
 
-			err = store.SavePendingStartMessages([]models.PendingStartMessage{message2, message3})
+			err = store.SavePendingStartMessages(message2, message3)
 			Ω(err).ShouldNot(HaveOccured())
 
 			actual, err = store.GetPendingStartMessages()
@@ -271,14 +271,14 @@ var _ = Describe("FakeStore", func() {
 			Ω(actual).Should(ContainElement(message2))
 			Ω(actual).Should(ContainElement(message3))
 
-			err = store.DeletePendingStartMessages([]models.PendingStartMessage{message2, message3})
+			err = store.DeletePendingStartMessages(message2, message3)
 			Ω(err).ShouldNot(HaveOccured())
 			actual, err = store.GetPendingStartMessages()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(1))
 			Ω(actual).Should(ContainElement(message1))
 
-			err = store.DeletePendingStartMessages([]models.PendingStartMessage{message2})
+			err = store.DeletePendingStartMessages(message2)
 			Ω(err).Should(HaveOccured())
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
@@ -291,12 +291,12 @@ var _ = Describe("FakeStore", func() {
 
 		It("should support returning errors", func() {
 			message1 := models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0)
-			store.SavePendingStartMessages([]models.PendingStartMessage{message1})
+			store.SavePendingStartMessages(message1)
 
 			errIn := errors.New("foo")
 
 			store.SaveStartMessagesError = errIn
-			err := store.SavePendingStartMessages([]models.PendingStartMessage{message1})
+			err := store.SavePendingStartMessages(message1)
 			Ω(err).Should(Equal(errIn))
 
 			store.GetStartMessagesError = errIn
@@ -305,7 +305,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(err).Should(Equal(errIn))
 
 			store.Reset()
-			err = store.SavePendingStartMessages([]models.PendingStartMessage{message1})
+			err = store.SavePendingStartMessages(message1)
 			Ω(err).ShouldNot(HaveOccured())
 			_, err = store.GetPendingStartMessages()
 			Ω(err).ShouldNot(HaveOccured())
@@ -317,7 +317,7 @@ var _ = Describe("FakeStore", func() {
 			message1 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC")
 			message2 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF")
 
-			err := store.SavePendingStopMessages([]models.PendingStopMessage{message1, message1, message2})
+			err := store.SavePendingStopMessages(message1, message1, message2)
 			Ω(err).ShouldNot(HaveOccured())
 
 			actual, err := store.GetPendingStopMessages()
@@ -329,7 +329,7 @@ var _ = Describe("FakeStore", func() {
 			message2.SendOn = 12310
 			message3 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI")
 
-			err = store.SavePendingStopMessages([]models.PendingStopMessage{message2, message3})
+			err = store.SavePendingStopMessages(message2, message3)
 			Ω(err).ShouldNot(HaveOccured())
 
 			actual, err = store.GetPendingStopMessages()
@@ -339,14 +339,14 @@ var _ = Describe("FakeStore", func() {
 			Ω(actual).Should(ContainElement(message2))
 			Ω(actual).Should(ContainElement(message3))
 
-			err = store.DeletePendingStopMessages([]models.PendingStopMessage{message2, message3})
+			err = store.DeletePendingStopMessages(message2, message3)
 			Ω(err).ShouldNot(HaveOccured())
 			actual, err = store.GetPendingStopMessages()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(actual).Should(HaveLen(1))
 			Ω(actual).Should(ContainElement(message1))
 
-			err = store.DeletePendingStopMessages([]models.PendingStopMessage{message2})
+			err = store.DeletePendingStopMessages(message2)
 			Ω(err).Should(HaveOccured())
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
@@ -359,12 +359,12 @@ var _ = Describe("FakeStore", func() {
 
 		It("should support returning errors", func() {
 			message1 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC")
-			store.SavePendingStopMessages([]models.PendingStopMessage{message1})
+			store.SavePendingStopMessages(message1)
 
 			errIn := errors.New("foo")
 
 			store.SaveStopMessagesError = errIn
-			err := store.SavePendingStopMessages([]models.PendingStopMessage{message1})
+			err := store.SavePendingStopMessages(message1)
 			Ω(err).Should(Equal(errIn))
 
 			store.GetStopMessagesError = errIn
@@ -373,7 +373,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(err).Should(Equal(errIn))
 
 			store.Reset()
-			err = store.SavePendingStopMessages([]models.PendingStopMessage{message1})
+			err = store.SavePendingStopMessages(message1)
 			Ω(err).ShouldNot(HaveOccured())
 			_, err = store.GetPendingStopMessages()
 			Ω(err).ShouldNot(HaveOccured())
@@ -396,7 +396,7 @@ var _ = Describe("FakeStore", func() {
 				CrashCount:    7,
 			}
 
-			err := store.SaveCrashCounts([]models.CrashCount{crashCount1, crashCount1, crashCount2})
+			err := store.SaveCrashCounts(crashCount1, crashCount1, crashCount2)
 			Ω(err).ShouldNot(HaveOccured())
 
 			crashCounts, err := store.GetCrashCounts()
@@ -413,7 +413,7 @@ var _ = Describe("FakeStore", func() {
 				CrashCount:    9,
 			}
 
-			err = store.SaveCrashCounts([]models.CrashCount{crashCount2, crashCount3})
+			err = store.SaveCrashCounts(crashCount2, crashCount3)
 			Ω(err).ShouldNot(HaveOccured())
 
 			crashCounts, err = store.GetCrashCounts()
@@ -423,14 +423,14 @@ var _ = Describe("FakeStore", func() {
 			Ω(crashCounts).Should(ContainElement(crashCount2))
 			Ω(crashCounts).Should(ContainElement(crashCount3))
 
-			err = store.DeleteCrashCounts([]models.CrashCount{crashCount2, crashCount3})
+			err = store.DeleteCrashCounts(crashCount2, crashCount3)
 			Ω(err).ShouldNot(HaveOccured())
 			crashCounts, err = store.GetCrashCounts()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(crashCounts).Should(HaveLen(1))
 			Ω(crashCounts).Should(ContainElement(crashCount1))
 
-			err = store.DeleteCrashCounts([]models.CrashCount{crashCount2})
+			err = store.DeleteCrashCounts(crashCount2)
 			Ω(err).Should(HaveOccured())
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
@@ -448,12 +448,12 @@ var _ = Describe("FakeStore", func() {
 				InstanceIndex: 1,
 				CrashCount:    12,
 			}
-			store.SaveCrashCounts([]models.CrashCount{crashCount1})
+			store.SaveCrashCounts(crashCount1)
 
 			errIn := errors.New("foo")
 
 			store.SaveCrashCountsError = errIn
-			err := store.SaveCrashCounts([]models.CrashCount{crashCount1})
+			err := store.SaveCrashCounts(crashCount1)
 			Ω(err).Should(Equal(errIn))
 
 			store.GetCrashCountsError = errIn
@@ -462,7 +462,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(err).Should(Equal(errIn))
 
 			store.Reset()
-			err = store.SaveCrashCounts([]models.CrashCount{crashCount1})
+			err = store.SaveCrashCounts(crashCount1)
 			Ω(err).ShouldNot(HaveOccured())
 			_, err = store.GetCrashCounts()
 			Ω(err).ShouldNot(HaveOccured())

@@ -21,25 +21,25 @@ type Store interface {
 	IsDesiredStateFresh() (bool, error)
 	IsActualStateFresh(time.Time) (bool, error)
 
-	SaveDesiredState(desiredStates []models.DesiredAppState) error
+	SaveDesiredState(desiredStates ...models.DesiredAppState) error
 	GetDesiredState() ([]models.DesiredAppState, error)
-	DeleteDesiredState(desiredStates []models.DesiredAppState) error
+	DeleteDesiredState(desiredStates ...models.DesiredAppState) error
 
-	SaveActualState(actualStates []models.InstanceHeartbeat) error
+	SaveActualState(actualStates ...models.InstanceHeartbeat) error
 	GetActualState() ([]models.InstanceHeartbeat, error)
-	DeleteActualState(actualStates []models.InstanceHeartbeat) error
+	DeleteActualState(actualStates ...models.InstanceHeartbeat) error
 
-	SavePendingStartMessages(startMessages []models.PendingStartMessage) error
+	SavePendingStartMessages(startMessages ...models.PendingStartMessage) error
 	GetPendingStartMessages() ([]models.PendingStartMessage, error)
-	DeletePendingStartMessages(startMessages []models.PendingStartMessage) error
+	DeletePendingStartMessages(startMessages ...models.PendingStartMessage) error
 
-	SavePendingStopMessages(stopMessages []models.PendingStopMessage) error
+	SavePendingStopMessages(stopMessages ...models.PendingStopMessage) error
 	GetPendingStopMessages() ([]models.PendingStopMessage, error)
-	DeletePendingStopMessages(stopMessages []models.PendingStopMessage) error
+	DeletePendingStopMessages(stopMessages ...models.PendingStopMessage) error
 
-	SaveCrashCounts(crashCounts []models.CrashCount) error
+	SaveCrashCounts(crashCounts ...models.CrashCount) error
 	GetCrashCounts() ([]models.CrashCount, error)
-	DeleteCrashCounts(crashCounts []models.CrashCount) error
+	DeleteCrashCounts(crashCounts ...models.CrashCount) error
 }
 
 type RealStore struct {

@@ -122,7 +122,7 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 		desiredStates[i] = desiredState
 		i++
 	}
-	err := fetcher.store.SaveDesiredState(desiredStates)
+	err := fetcher.store.SaveDesiredState(desiredStates...)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 		}
 	}
 
-	return fetcher.store.DeleteDesiredState(statesToDelete)
+	return fetcher.store.DeleteDesiredState(statesToDelete...)
 }
 
 func (fetcher *DesiredStateFetcher) cacheResponse(response DesiredStateServerResponse) {

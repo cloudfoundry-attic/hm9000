@@ -42,10 +42,10 @@ var _ = Describe("Storing PendingStopMessages", func() {
 
 	Describe("Saving stop messages", func() {
 		BeforeEach(func() {
-			err := store.SavePendingStopMessages([]models.PendingStopMessage{
+			err := store.SavePendingStopMessages(
 				message1,
 				message2,
-			})
+			)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
@@ -69,10 +69,10 @@ var _ = Describe("Storing PendingStopMessages", func() {
 	Describe("Fetching stop message", func() {
 		Context("When the stop message is present", func() {
 			BeforeEach(func() {
-				err := store.SavePendingStopMessages([]models.PendingStopMessage{
+				err := store.SavePendingStopMessages(
 					message1,
 					message2,
-				})
+				)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -88,9 +88,9 @@ var _ = Describe("Storing PendingStopMessages", func() {
 		Context("when the stop message is empty", func() {
 			BeforeEach(func() {
 				hb := message1
-				err := store.SavePendingStopMessages([]models.PendingStopMessage{hb})
+				err := store.SavePendingStopMessages(hb)
 				Ω(err).ShouldNot(HaveOccured())
-				err = store.DeletePendingStopMessages([]models.PendingStopMessage{hb})
+				err = store.DeletePendingStopMessages(hb)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -117,11 +117,11 @@ var _ = Describe("Storing PendingStopMessages", func() {
 
 	Describe("Deleting stop message", func() {
 		BeforeEach(func() {
-			err := store.SavePendingStopMessages([]models.PendingStopMessage{
+			err := store.SavePendingStopMessages(
 				message1,
 				message2,
 				message3,
-			})
+			)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
@@ -131,7 +131,7 @@ var _ = Describe("Storing PendingStopMessages", func() {
 					models.PendingStopMessage{InstanceGuid: message1.InstanceGuid},
 					models.PendingStopMessage{InstanceGuid: message3.InstanceGuid},
 				}
-				err := store.DeletePendingStopMessages(toDelete)
+				err := store.DeletePendingStopMessages(toDelete...)
 				Ω(err).ShouldNot(HaveOccured())
 
 				desired, err := store.GetPendingStopMessages()
@@ -148,7 +148,7 @@ var _ = Describe("Storing PendingStopMessages", func() {
 					models.PendingStopMessage{InstanceGuid: "floobedey"},
 					models.PendingStopMessage{InstanceGuid: message3.InstanceGuid},
 				}
-				err := store.DeletePendingStopMessages(toDelete)
+				err := store.DeletePendingStopMessages(toDelete...)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 				stop, err := store.GetPendingStopMessages()

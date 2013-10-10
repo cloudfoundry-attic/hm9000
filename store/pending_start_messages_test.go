@@ -42,10 +42,10 @@ var _ = Describe("Storing PendingStartMessages", func() {
 
 	Describe("Saving start messages", func() {
 		BeforeEach(func() {
-			err := store.SavePendingStartMessages([]models.PendingStartMessage{
+			err := store.SavePendingStartMessages(
 				message1,
 				message2,
-			})
+			)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
@@ -69,10 +69,10 @@ var _ = Describe("Storing PendingStartMessages", func() {
 	Describe("Fetching start message", func() {
 		Context("When the start message is present", func() {
 			BeforeEach(func() {
-				err := store.SavePendingStartMessages([]models.PendingStartMessage{
+				err := store.SavePendingStartMessages(
 					message1,
 					message2,
-				})
+				)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -88,9 +88,9 @@ var _ = Describe("Storing PendingStartMessages", func() {
 		Context("when the start message is empty", func() {
 			BeforeEach(func() {
 				hb := message1
-				err := store.SavePendingStartMessages([]models.PendingStartMessage{hb})
+				err := store.SavePendingStartMessages(hb)
 				Ω(err).ShouldNot(HaveOccured())
-				err = store.DeletePendingStartMessages([]models.PendingStartMessage{hb})
+				err = store.DeletePendingStartMessages(hb)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -117,11 +117,11 @@ var _ = Describe("Storing PendingStartMessages", func() {
 
 	Describe("Deleting start message", func() {
 		BeforeEach(func() {
-			err := store.SavePendingStartMessages([]models.PendingStartMessage{
+			err := store.SavePendingStartMessages(
 				message1,
 				message2,
 				message3,
-			})
+			)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
@@ -131,7 +131,7 @@ var _ = Describe("Storing PendingStartMessages", func() {
 					models.PendingStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
 					models.PendingStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
 				}
-				err := store.DeletePendingStartMessages(toDelete)
+				err := store.DeletePendingStartMessages(toDelete...)
 				Ω(err).ShouldNot(HaveOccured())
 
 				desired, err := store.GetPendingStartMessages()
@@ -148,7 +148,7 @@ var _ = Describe("Storing PendingStartMessages", func() {
 					models.PendingStartMessage{AppGuid: "floobedey", AppVersion: "abc"},
 					models.PendingStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
 				}
-				err := store.DeletePendingStartMessages(toDelete)
+				err := store.DeletePendingStartMessages(toDelete...)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 				start, err := store.GetPendingStartMessages()

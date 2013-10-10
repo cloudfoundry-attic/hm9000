@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func (store *RealStore) SaveActualState(actualStates []models.InstanceHeartbeat) error {
+func (store *RealStore) SaveActualState(actualStates ...models.InstanceHeartbeat) error {
 	return store.save(actualStates, "/actual", store.config.HeartbeatTTL())
 }
 
@@ -14,6 +14,6 @@ func (store *RealStore) GetActualState() ([]models.InstanceHeartbeat, error) {
 	return slice.Interface().([]models.InstanceHeartbeat), err
 }
 
-func (store *RealStore) DeleteActualState(actualStates []models.InstanceHeartbeat) error {
+func (store *RealStore) DeleteActualState(actualStates ...models.InstanceHeartbeat) error {
 	return store.delete(actualStates, "/actual")
 }

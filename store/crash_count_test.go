@@ -36,7 +36,7 @@ var _ = Describe("CrashCount", func() {
 				InstanceIndex: 1,
 				CrashCount:    12,
 			}
-			err := store.SaveCrashCounts([]models.CrashCount{crashCount})
+			err := store.SaveCrashCounts(crashCount)
 			Ω(err).ShouldNot(HaveOccured())
 
 			node, err := etcdAdapter.Get("/crashes/abc-xyz-1")
@@ -48,7 +48,7 @@ var _ = Describe("CrashCount", func() {
 			Ω(results).Should(HaveLen(1))
 			Ω(results).Should(ContainElement(crashCount))
 
-			err = store.DeleteCrashCounts(results)
+			err = store.DeleteCrashCounts(results...)
 			Ω(err).ShouldNot(HaveOccured())
 
 			results, err = store.GetCrashCounts()

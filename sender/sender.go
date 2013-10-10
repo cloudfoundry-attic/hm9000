@@ -112,12 +112,12 @@ func (sender *Sender) sendStartMessages(startMessages map[string]models.PendingS
 		}
 	}
 
-	err := sender.store.SavePendingStartMessages(startMessagesToSave)
+	err := sender.store.SavePendingStartMessages(startMessagesToSave...)
 	if err != nil {
 		sender.logger.Error("Failed to save start messages to send", err)
 		return err
 	}
-	err = sender.store.DeletePendingStartMessages(startMessagesToDelete)
+	err = sender.store.DeletePendingStartMessages(startMessagesToDelete...)
 	if err != nil {
 		sender.logger.Error("Failed to delete start messages", err)
 		return err
@@ -167,12 +167,12 @@ func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingSto
 		}
 	}
 
-	err := sender.store.SavePendingStopMessages(stopMessagesToSave)
+	err := sender.store.SavePendingStopMessages(stopMessagesToSave...)
 	if err != nil {
 		sender.logger.Error("Failed to save stop messages to send", err)
 		return err
 	}
-	err = sender.store.DeletePendingStopMessages(stopMessagesToDelete)
+	err = sender.store.DeletePendingStopMessages(stopMessagesToDelete...)
 	if err != nil {
 		sender.logger.Error("Failed to delete stop messages", err)
 		return err

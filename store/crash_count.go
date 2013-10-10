@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func (store *RealStore) SaveCrashCounts(crashCounts []models.CrashCount) error {
+func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error {
 	return store.save(crashCounts, "/crashes", uint64(store.config.MaximumBackoffDelay().Seconds())*2)
 }
 
@@ -14,6 +14,6 @@ func (store *RealStore) GetCrashCounts() ([]models.CrashCount, error) {
 	return slice.Interface().([]models.CrashCount), err
 }
 
-func (store *RealStore) DeleteCrashCounts(crashCounts []models.CrashCount) error {
+func (store *RealStore) DeleteCrashCounts(crashCounts ...models.CrashCount) error {
 	return store.delete(crashCounts, "/crashes")
 }

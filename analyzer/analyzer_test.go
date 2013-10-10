@@ -91,14 +91,14 @@ var _ = Describe("Analyzer", func() {
 			BeforeEach(func() {
 				desired := a.DesiredState(3)
 				desired.State = models.AppStateStarted
-				store.SaveDesiredState([]models.DesiredAppState{
+				store.SaveDesiredState(
 					desired,
-				})
-				store.SaveActualState([]models.InstanceHeartbeat{
+				)
+				store.SaveActualState(
 					a.InstanceAtIndex(0).Heartbeat(),
 					a.InstanceAtIndex(1).Heartbeat(),
 					a.InstanceAtIndex(2).Heartbeat(),
-				})
+				)
 			})
 
 			It("should not send any start or stop messages", func() {
@@ -113,9 +113,9 @@ var _ = Describe("Analyzer", func() {
 	Describe("Starting missing instances", func() {
 		Context("where an app has desired instances", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState([]models.DesiredAppState{
+				store.SaveDesiredState(
 					a.DesiredState(2),
-				})
+				)
 			})
 
 			Context("and none of the instances are running", func() {
@@ -144,9 +144,9 @@ var _ = Describe("Analyzer", func() {
 				var existingMessage models.PendingStartMessage
 				BeforeEach(func() {
 					existingMessage = models.NewPendingStartMessage(time.Unix(1, 0), 0, 0, a.AppGuid, a.AppVersion, 0, 0.5)
-					store.SavePendingStartMessages([]models.PendingStartMessage{
+					store.SavePendingStartMessages(
 						existingMessage,
-					})
+					)
 					analyzer.Analyze()
 				})
 
@@ -158,9 +158,9 @@ var _ = Describe("Analyzer", func() {
 
 			Context("but only some of the instances are running", func() {
 				BeforeEach(func() {
-					store.SaveActualState([]models.InstanceHeartbeat{
+					store.SaveActualState(
 						a.InstanceAtIndex(0).Heartbeat(),
-					})
+					)
 				})
 
 				It("should return a start message containing only the missing indices", func() {
@@ -186,11 +186,11 @@ var _ = Describe("Analyzer", func() {
 
 	Describe("Stopping extra instances (index >= numDesired)", func() {
 		BeforeEach(func() {
-			store.SaveActualState([]models.InstanceHeartbeat{
+			store.SaveActualState(
 				a.InstanceAtIndex(0).Heartbeat(),
 				a.InstanceAtIndex(1).Heartbeat(),
 				a.InstanceAtIndex(2).Heartbeat(),
-			})
+			)
 		})
 
 		Context("when there are no desired instances", func() {
@@ -215,9 +215,9 @@ var _ = Describe("Analyzer", func() {
 			var existingMessage models.PendingStopMessage
 			BeforeEach(func() {
 				existingMessage = models.NewPendingStopMessage(time.Unix(1, 0), 0, 0, a.InstanceAtIndex(0).InstanceGuid)
-				store.SavePendingStopMessages([]models.PendingStopMessage{
+				store.SavePendingStopMessages(
 					existingMessage,
-				})
+				)
 				analyzer.Analyze()
 			})
 
@@ -229,9 +229,9 @@ var _ = Describe("Analyzer", func() {
 
 		Context("when the desired state requires fewer versions", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState([]models.DesiredAppState{
+				store.SaveDesiredState(
 					a.DesiredState(1),
-				})
+				)
 			})
 
 			Context("and all desired instances are present", func() {
@@ -252,7 +252,7 @@ var _ = Describe("Analyzer", func() {
 
 			Context("and desired instances are missing", func() {
 				BeforeEach(func() {
-					store.DeleteActualState([]models.InstanceHeartbeat{a.InstanceAtIndex(0).Heartbeat()})
+					store.DeleteActualState(a.InstanceAtIndex(0).Heartbeat())
 				})
 
 				It("should return a start message containing the missing indices and no stop messages", func() {
@@ -278,9 +278,9 @@ var _ = Describe("Analyzer", func() {
 		)
 
 		BeforeEach(func() {
-			store.SaveDesiredState([]models.DesiredAppState{
+			store.SaveDesiredState(
 				a.DesiredState(3),
-			})
+			)
 
 			duplicateInstance1 = a.InstanceAtIndex(2)
 			duplicateInstance1.InstanceGuid = models.Guid()
@@ -293,12 +293,12 @@ var _ = Describe("Analyzer", func() {
 		Context("When there are missing instances on other indices", func() {
 			It("should not schedule any stops and start the missing indices", func() {
 				//[-,-,2|2|2|2]
-				store.SaveActualState([]models.InstanceHeartbeat{
+				store.SaveActualState(
 					a.InstanceAtIndex(2).Heartbeat(),
 					duplicateInstance1.Heartbeat(),
 					duplicateInstance2.Heartbeat(),
 					duplicateInstance3.Heartbeat(),
-				})
+				)
 
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
@@ -319,14 +319,14 @@ var _ = Describe("Analyzer", func() {
 				//[0,1,2|2|2] < stop 2,2,2 with increasing delays etc...
 				crashedHeartbeat := duplicateInstance3.Heartbeat()
 				crashedHeartbeat.State = models.InstanceStateCrashed
-				store.SaveActualState([]models.InstanceHeartbeat{
+				store.SaveActualState(
 					a.InstanceAtIndex(0).Heartbeat(),
 					a.InstanceAtIndex(1).Heartbeat(),
 					a.InstanceAtIndex(2).Heartbeat(),
 					duplicateInstance1.Heartbeat(),
 					duplicateInstance2.Heartbeat(),
 					crashedHeartbeat,
-				})
+				)
 			})
 
 			It("should schedule a stop for every running instance at the duplicated index with increasing delays", func() {
@@ -350,9 +350,9 @@ var _ = Describe("Analyzer", func() {
 				var existingMessage models.PendingStopMessage
 				BeforeEach(func() {
 					existingMessage = models.NewPendingStopMessage(time.Unix(1, 0), 0, 0, a.InstanceAtIndex(2).InstanceGuid)
-					store.SavePendingStopMessages([]models.PendingStopMessage{
+					store.SavePendingStopMessages(
 						existingMessage,
-					})
+					)
 					analyzer.Analyze()
 				})
 
@@ -378,14 +378,14 @@ var _ = Describe("Analyzer", func() {
 
 			It("should terminate the extra indices with extreme prejudice", func() {
 				//[0,1,2,3,3,3] < stop 3,3,3
-				store.SaveActualState([]models.InstanceHeartbeat{
+				store.SaveActualState(
 					a.InstanceAtIndex(0).Heartbeat(),
 					a.InstanceAtIndex(1).Heartbeat(),
 					a.InstanceAtIndex(2).Heartbeat(),
 					a.InstanceAtIndex(3).Heartbeat(),
 					duplicateExtraInstance1.Heartbeat(),
 					duplicateExtraInstance2.Heartbeat(),
-				})
+				)
 
 				err := analyzer.Analyze()
 				Ω(err).ShouldNot(HaveOccured())
@@ -413,17 +413,17 @@ var _ = Describe("Analyzer", func() {
 			})
 
 			BeforeEach(func() {
-				store.SaveActualState([]models.InstanceHeartbeat{
+				store.SaveActualState(
 					a.CrashedInstanceHeartbeatAtIndex(0),
 					a.CrashedInstanceHeartbeatAtIndex(0),
-				})
+				)
 			})
 
 			Context("when the app is desired", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState([]models.DesiredAppState{
+					store.SaveDesiredState(
 						a.DesiredState(1),
-					})
+					)
 				})
 
 				It("should not try to stop crashed instances", func() {
@@ -438,7 +438,7 @@ var _ = Describe("Analyzer", func() {
 
 				Context("when there is a running instance on the same index", func() {
 					BeforeEach(func() {
-						store.SaveActualState([]models.InstanceHeartbeat{a.InstanceAtIndex(0).Heartbeat()})
+						store.SaveActualState(a.InstanceAtIndex(0).Heartbeat())
 					})
 
 					It("should not try to stop the running instance!", func() {
@@ -464,12 +464,12 @@ var _ = Describe("Analyzer", func() {
 
 		Describe("applying the backoff", func() {
 			BeforeEach(func() {
-				store.SaveActualState([]models.InstanceHeartbeat{
+				store.SaveActualState(
 					a.CrashedInstanceHeartbeatAtIndex(0),
-				})
-				store.SaveDesiredState([]models.DesiredAppState{
+				)
+				store.SaveDesiredState(
 					a.DesiredState(1),
-				})
+				)
 			})
 
 			It("should back off the scheduling", func() {
@@ -479,21 +479,21 @@ var _ = Describe("Analyzer", func() {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(startMessages()[0].SendOn).Should(Equal(timeProvider.Time().Unix() + expectedDelay))
-					store.DeletePendingStartMessages(startMessages())
+					store.DeletePendingStartMessages(startMessages()...)
 				}
 			})
 		})
 
 		Context("When all instances are crashed", func() {
 			BeforeEach(func() {
-				store.SaveActualState([]models.InstanceHeartbeat{
+				store.SaveActualState(
 					a.CrashedInstanceHeartbeatAtIndex(0),
 					a.CrashedInstanceHeartbeatAtIndex(1),
-				})
+				)
 
-				store.SaveDesiredState([]models.DesiredAppState{
+				store.SaveDesiredState(
 					a.DesiredState(2),
-				})
+				)
 			})
 
 			It("should only try to start the index 0", func() {
@@ -506,15 +506,15 @@ var _ = Describe("Analyzer", func() {
 
 		Context("When at least one instance is running and all others are crashed", func() {
 			BeforeEach(func() {
-				store.SaveActualState([]models.InstanceHeartbeat{
+				store.SaveActualState(
 					a.CrashedInstanceHeartbeatAtIndex(0),
 					a.CrashedInstanceHeartbeatAtIndex(1),
 					a.InstanceAtIndex(2).Heartbeat(),
-				})
+				)
 
-				store.SaveDesiredState([]models.DesiredAppState{
+				store.SaveDesiredState(
 					a.DesiredState(3),
-				})
+				)
 			})
 
 			It("should only try to start the index 0", func() {
@@ -544,18 +544,18 @@ var _ = Describe("Analyzer", func() {
 			yetAnotherApp = app.NewApp()
 			undesiredApp.AppGuid = a.AppGuid
 
-			store.SaveDesiredState([]models.DesiredAppState{
+			store.SaveDesiredState(
 				a.DesiredState(1),
 				otherApp.DesiredState(3),
 				yetAnotherApp.DesiredState(2),
-			})
-			store.SaveActualState([]models.InstanceHeartbeat{
+			)
+			store.SaveActualState(
 				a.InstanceAtIndex(0).Heartbeat(),
 				a.InstanceAtIndex(1).Heartbeat(),
 				undesiredApp.InstanceAtIndex(0).Heartbeat(),
 				otherApp.InstanceAtIndex(0).Heartbeat(),
 				otherApp.InstanceAtIndex(2).Heartbeat(),
-			})
+			)
 		})
 
 		It("should analyze each app-version combination separately", func() {
@@ -589,12 +589,12 @@ var _ = Describe("Analyzer", func() {
 
 			desired := a.DesiredState(1)
 			//this setup would, ordinarily, trigger a start and a stop
-			store.SaveDesiredState([]models.DesiredAppState{
+			store.SaveDesiredState(
 				desired,
-			})
-			store.SaveActualState([]models.InstanceHeartbeat{
+			)
+			store.SaveActualState(
 				app.NewApp().InstanceAtIndex(0).Heartbeat(),
-			})
+			)
 		})
 
 		Context("when the desired state is not fresh", func() {

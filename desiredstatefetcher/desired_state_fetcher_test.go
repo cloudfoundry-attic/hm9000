@@ -124,7 +124,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 			BeforeEach(func() {
 				deletedApp = app.NewApp()
-				store.SaveDesiredState([]models.DesiredAppState{deletedApp.DesiredState(1)})
+				store.SaveDesiredState(deletedApp.DesiredState(1))
 
 				a1 = app.NewApp()
 				a2 = app.NewApp()

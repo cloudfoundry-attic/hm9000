@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func (store *RealStore) SaveDesiredState(desiredStates []models.DesiredAppState) error {
+func (store *RealStore) SaveDesiredState(desiredStates ...models.DesiredAppState) error {
 	return store.save(desiredStates, "/desired", store.config.DesiredStateTTL())
 }
 
@@ -14,6 +14,6 @@ func (store *RealStore) GetDesiredState() ([]models.DesiredAppState, error) {
 	return slice.Interface().([]models.DesiredAppState), err
 }
 
-func (store *RealStore) DeleteDesiredState(desiredStates []models.DesiredAppState) error {
+func (store *RealStore) DeleteDesiredState(desiredStates ...models.DesiredAppState) error {
 	return store.delete(desiredStates, "/desired")
 }

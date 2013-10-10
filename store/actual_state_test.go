@@ -44,10 +44,7 @@ var _ = Describe("Actual State", func() {
 
 	Describe("Saving actual state ", func() {
 		BeforeEach(func() {
-			err := store.SaveActualState([]models.InstanceHeartbeat{
-				heartbeat1,
-				heartbeat2,
-			})
+			err := store.SaveActualState(heartbeat1, heartbeat2)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
@@ -71,10 +68,10 @@ var _ = Describe("Actual State", func() {
 	Describe("Fetching actual state", func() {
 		Context("When the actual state is present", func() {
 			BeforeEach(func() {
-				err := store.SaveActualState([]models.InstanceHeartbeat{
+				err := store.SaveActualState(
 					heartbeat1,
 					heartbeat2,
-				})
+				)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -90,9 +87,9 @@ var _ = Describe("Actual State", func() {
 		Context("when the actual state is empty", func() {
 			BeforeEach(func() {
 				hb := heartbeat1
-				err := store.SaveActualState([]models.InstanceHeartbeat{hb})
+				err := store.SaveActualState(hb)
 				Ω(err).ShouldNot(HaveOccured())
-				err = store.DeleteActualState([]models.InstanceHeartbeat{hb})
+				err = store.DeleteActualState(hb)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -119,11 +116,11 @@ var _ = Describe("Actual State", func() {
 
 	Describe("Deleting actual state", func() {
 		BeforeEach(func() {
-			err := store.SaveActualState([]models.InstanceHeartbeat{
+			err := store.SaveActualState(
 				heartbeat1,
 				heartbeat2,
 				heartbeat3,
-			})
+			)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
@@ -133,7 +130,7 @@ var _ = Describe("Actual State", func() {
 					models.InstanceHeartbeat{InstanceGuid: heartbeat1.InstanceGuid},
 					models.InstanceHeartbeat{InstanceGuid: heartbeat3.InstanceGuid},
 				}
-				err := store.DeleteActualState(toDelete)
+				err := store.DeleteActualState(toDelete...)
 				Ω(err).ShouldNot(HaveOccured())
 
 				desired, err := store.GetActualState()
@@ -150,7 +147,7 @@ var _ = Describe("Actual State", func() {
 					models.InstanceHeartbeat{InstanceGuid: "floobedey"},
 					models.InstanceHeartbeat{InstanceGuid: heartbeat3.InstanceGuid},
 				}
-				err := store.DeleteActualState(toDelete)
+				err := store.DeleteActualState(toDelete...)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 				actual, err := store.GetActualState()

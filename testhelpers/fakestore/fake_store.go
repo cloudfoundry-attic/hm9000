@@ -93,7 +93,7 @@ func (store *FakeStore) IsActualStateFresh(timestamp time.Time) (bool, error) {
 	return store.ActualFreshnessTimestamp != time.Time{}, store.IsActualStateFreshError
 }
 
-func (store *FakeStore) SaveDesiredState(desiredStates []models.DesiredAppState) error {
+func (store *FakeStore) SaveDesiredState(desiredStates ...models.DesiredAppState) error {
 	for _, state := range desiredStates {
 		store.desiredState[state.StoreKey()] = state
 	}
@@ -116,7 +116,7 @@ func (store *FakeStore) GetDesiredState() ([]models.DesiredAppState, error) {
 	return desireds, nil
 }
 
-func (store *FakeStore) DeleteDesiredState(desiredStates []models.DesiredAppState) error {
+func (store *FakeStore) DeleteDesiredState(desiredStates ...models.DesiredAppState) error {
 	for _, state := range desiredStates {
 		_, present := store.desiredState[state.StoreKey()]
 		if !present {
@@ -127,7 +127,7 @@ func (store *FakeStore) DeleteDesiredState(desiredStates []models.DesiredAppStat
 	return nil
 }
 
-func (store *FakeStore) SaveActualState(actualStates []models.InstanceHeartbeat) error {
+func (store *FakeStore) SaveActualState(actualStates ...models.InstanceHeartbeat) error {
 	for _, state := range actualStates {
 		store.actualState[state.StoreKey()] = state
 	}
@@ -150,7 +150,7 @@ func (store *FakeStore) GetActualState() ([]models.InstanceHeartbeat, error) {
 	return actuals, nil
 }
 
-func (store *FakeStore) DeleteActualState(actualStates []models.InstanceHeartbeat) error {
+func (store *FakeStore) DeleteActualState(actualStates ...models.InstanceHeartbeat) error {
 	for _, state := range actualStates {
 		_, present := store.actualState[state.StoreKey()]
 		if !present {
@@ -161,7 +161,7 @@ func (store *FakeStore) DeleteActualState(actualStates []models.InstanceHeartbea
 	return nil
 }
 
-func (store *FakeStore) SavePendingStartMessages(messages []models.PendingStartMessage) error {
+func (store *FakeStore) SavePendingStartMessages(messages ...models.PendingStartMessage) error {
 	for _, message := range messages {
 		store.startMessages[message.StoreKey()] = message
 	}
@@ -184,7 +184,7 @@ func (store *FakeStore) GetPendingStartMessages() ([]models.PendingStartMessage,
 	return actuals, nil
 }
 
-func (store *FakeStore) DeletePendingStartMessages(messages []models.PendingStartMessage) error {
+func (store *FakeStore) DeletePendingStartMessages(messages ...models.PendingStartMessage) error {
 	for _, message := range messages {
 		_, present := store.startMessages[message.StoreKey()]
 		if !present {
@@ -195,7 +195,7 @@ func (store *FakeStore) DeletePendingStartMessages(messages []models.PendingStar
 	return store.DeleteStartMessagesError
 }
 
-func (store *FakeStore) SavePendingStopMessages(messages []models.PendingStopMessage) error {
+func (store *FakeStore) SavePendingStopMessages(messages ...models.PendingStopMessage) error {
 	for _, message := range messages {
 		store.stopMessages[message.StoreKey()] = message
 	}
@@ -218,7 +218,7 @@ func (store *FakeStore) GetPendingStopMessages() ([]models.PendingStopMessage, e
 	return actuals, nil
 }
 
-func (store *FakeStore) DeletePendingStopMessages(messages []models.PendingStopMessage) error {
+func (store *FakeStore) DeletePendingStopMessages(messages ...models.PendingStopMessage) error {
 	for _, message := range messages {
 		_, present := store.stopMessages[message.StoreKey()]
 		if !present {
@@ -229,7 +229,7 @@ func (store *FakeStore) DeletePendingStopMessages(messages []models.PendingStopM
 	return store.DeleteStopMessagesError
 }
 
-func (store *FakeStore) SaveCrashCounts(crashCounts []models.CrashCount) error {
+func (store *FakeStore) SaveCrashCounts(crashCounts ...models.CrashCount) error {
 	for _, crashCount := range crashCounts {
 		store.crashCounts[crashCount.StoreKey()] = crashCount
 	}
@@ -252,7 +252,7 @@ func (store *FakeStore) GetCrashCounts() ([]models.CrashCount, error) {
 	return actuals, nil
 }
 
-func (store *FakeStore) DeleteCrashCounts(crashCounts []models.CrashCount) error {
+func (store *FakeStore) DeleteCrashCounts(crashCounts ...models.CrashCount) error {
 	for _, crashCount := range crashCounts {
 		_, present := store.crashCounts[crashCount.StoreKey()]
 		if !present {
