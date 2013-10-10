@@ -33,30 +33,18 @@ func New(store store.Store, conf config.Config, messageBus cfmessagebus.MessageB
 }
 
 func (sender *Sender) Send() error {
-	startMessages, err := sender.store.GetPendingStartMessages()
-	if err != nil {
-		sender.logger.Error("Failed to fetch start messages", err)
-		return err
-	}
-
-	stopMessages, err := sender.store.GetPendingStopMessages()
-	if err != nil {
-		sender.logger.Error("Failed to fetch stop messages", err)
-		return err
-	}
-
-	err = sender.storecache.Load(sender.timeProvider.Time())
+	err := sender.storecache.Load(sender.timeProvider.Time())
 	if err != nil {
 		sender.logger.Error("Failed to load desired and actual states", err)
 		return err
 	}
 
-	err = sender.sendStartMessages(startMessages)
+	err = sender.sendStartMessages(sender.storecache.PendingStartMessages)
 	if err != nil {
 		return err
 	}
 
-	err = sender.sendStopMessages(stopMessages)
+	err = sender.sendStopMessages(sender.storecache.PendingStopMessages)
 	if err != nil {
 		return err
 	}
@@ -70,13 +58,15 @@ func (s SortablePendingStartMessages) Len() int           { return len(s) }
 func (s SortablePendingStartMessages) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s SortablePendingStartMessages) Less(i, j int) bool { return s[i].Priority < s[j].Priority }
 
-func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessage) error {
+func (sender *Sender) sendStartMessages(startMessages map[string]models.PendingStartMessage) error {
 	startMessagesToSave := []models.PendingStartMessage{}
 	startMessagesToDelete := []models.PendingStartMessage{}
 
 	sortedStartMessages := make(SortablePendingStartMessages, len(startMessages))
-	for i, message := range startMessages {
+	i := 0
+	for _, message := range startMessages {
 		sortedStartMessages[i] = message
+		i++
 	}
 	sort.Sort(sort.Reverse(sortedStartMessages))
 
@@ -136,7 +126,7 @@ func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessa
 	return nil
 }
 
-func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage) error {
+func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingStopMessage) error {
 	stopMessagesToSave := []models.PendingStopMessage{}
 	stopMessagesToDelete := []models.PendingStopMessage{}
 
