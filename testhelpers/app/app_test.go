@@ -21,7 +21,7 @@ var _ = Describe("App Model", func() {
 
 	Describe("the desired state message", func() {
 		It("generates one with sane defaults", func() {
-			desired := app.DesiredState()
+			desired := app.DesiredState(1)
 
 			Ω(desired.AppGuid).Should(Equal(app.AppGuid))
 			Ω(desired.AppVersion).Should(Equal(app.AppVersion))

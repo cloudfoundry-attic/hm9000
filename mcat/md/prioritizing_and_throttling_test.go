@@ -21,8 +21,7 @@ var _ = Describe("[Integration] Prioritizing and sending messages in batches", f
 			lowPriorityAppGuids = make([]string, 0)
 			for i := 0; i < 8; i += 1 {
 				appToStart := app.NewApp()
-				desiredState := appToStart.DesiredState()
-				desiredState.NumberOfInstances = 2
+				desiredState := appToStart.DesiredState(2)
 				desiredStates = append(desiredStates, desiredState)
 				lowPriorityAppGuids = append(lowPriorityAppGuids, appToStart.AppGuid)
 				heartbeats = append(heartbeats, appToStart.Heartbeat(1))
@@ -31,8 +30,7 @@ var _ = Describe("[Integration] Prioritizing and sending messages in batches", f
 			highPriorityAppGuids = make([]string, 0)
 			for i := 0; i < 9; i += 1 {
 				appToStart := app.NewApp()
-				desiredState := appToStart.DesiredState()
-				desiredState.NumberOfInstances = 1
+				desiredState := appToStart.DesiredState(1)
 				desiredStates = append(desiredStates, desiredState)
 				highPriorityAppGuids = append(highPriorityAppGuids, appToStart.AppGuid)
 			}

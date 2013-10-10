@@ -43,8 +43,8 @@ var _ = Describe("Storecache", func() {
 			app2.InstanceAtIndex(0).Heartbeat(),
 		}
 		desiredState = []models.DesiredAppState{
-			app1.DesiredState(),
-			app3.DesiredState(),
+			app1.DesiredState(1),
+			app3.DesiredState(1),
 		}
 
 		store.SaveActualState(actualState)
@@ -105,9 +105,9 @@ var _ = Describe("Storecache", func() {
 			It("should index desired state by app/version guid", func() {
 				Ω(cache.DesiredByApp).Should(HaveLen(2))
 				desiredApp1 := cache.DesiredByApp[app1.AppGuid+"-"+app1.AppVersion]
-				Ω(desiredApp1).Should(Equal(app1.DesiredState()))
+				Ω(desiredApp1).Should(Equal(app1.DesiredState(1)))
 				desiredApp3 := cache.DesiredByApp[app3.AppGuid+"-"+app3.AppVersion]
-				Ω(desiredApp3).Should(Equal(app3.DesiredState()))
+				Ω(desiredApp3).Should(Equal(app3.DesiredState(1)))
 			})
 
 			It("should index heartbeating instances by instance guid", func() {

@@ -29,9 +29,9 @@ var _ = Describe("[Integration] Fetching from CC and storing the result in the S
 		a3 = app.NewApp()
 
 		stateServer.SetDesiredState([]models.DesiredAppState{
-			a1.DesiredState(),
-			a2.DesiredState(),
-			a3.DesiredState(),
+			a1.DesiredState(1),
+			a2.DesiredState(1),
+			a3.DesiredState(1),
 		})
 
 		conf.CCBaseURL = desiredStateServerBaseUrl
@@ -51,7 +51,7 @@ var _ = Describe("[Integration] Fetching from CC and storing the result in the S
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a1.DesiredState().ToJSON()))
+		Ω(node.Value).Should(Equal(a1.DesiredState(1).ToJSON()))
 
 		node, err = storeAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
@@ -59,7 +59,7 @@ var _ = Describe("[Integration] Fetching from CC and storing the result in the S
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a2.DesiredState().ToJSON()))
+		Ω(node.Value).Should(Equal(a2.DesiredState(1).ToJSON()))
 
 		node, err = storeAdapter.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
 		Ω(err).ShouldNot(HaveOccured())
@@ -67,7 +67,7 @@ var _ = Describe("[Integration] Fetching from CC and storing the result in the S
 		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-		Ω(node.Value).Should(Equal(a3.DesiredState().ToJSON()))
+		Ω(node.Value).Should(Equal(a3.DesiredState(1).ToJSON()))
 
 	})
 
@@ -90,12 +90,12 @@ var _ = Describe("[Integration] Fetching from CC and storing the result in the S
 		BeforeEach(func() {
 			<-resultChan
 
-			desired1 := a1.DesiredState()
+			desired1 := a1.DesiredState(1)
 			desired1.State = models.AppStateStopped
 
 			stateServer.SetDesiredState([]models.DesiredAppState{
 				desired1,
-				a3.DesiredState(),
+				a3.DesiredState(1),
 			})
 
 			fetcher.Fetch(resultChan)
@@ -116,7 +116,7 @@ var _ = Describe("[Integration] Fetching from CC and storing the result in the S
 			Ω(node.TTL).Should(BeNumerically("<=", 10*60))
 			Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
 
-			Ω(node.Value).Should(Equal(a3.DesiredState().ToJSON()))
+			Ω(node.Value).Should(Equal(a3.DesiredState(1).ToJSON()))
 		})
 	})
 })

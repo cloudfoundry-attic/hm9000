@@ -124,17 +124,17 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 			BeforeEach(func() {
 				deletedApp = app.NewApp()
-				store.SaveDesiredState([]models.DesiredAppState{deletedApp.DesiredState()})
+				store.SaveDesiredState([]models.DesiredAppState{deletedApp.DesiredState(1)})
 
 				a1 = app.NewApp()
 				a2 = app.NewApp()
 				stoppedApp = app.NewApp()
-				stoppedDesiredState := stoppedApp.DesiredState()
+				stoppedDesiredState := stoppedApp.DesiredState(1)
 				stoppedDesiredState.State = models.AppStateStopped
 				response = DesiredStateServerResponse{
 					Results: map[string]models.DesiredAppState{
-						a1.AppGuid:         a1.DesiredState(),
-						a2.AppGuid:         a2.DesiredState(),
+						a1.AppGuid:         a1.DesiredState(1),
+						a2.AppGuid:         a2.DesiredState(1),
 						stoppedApp.AppGuid: stoppedDesiredState,
 					},
 					BulkToken: BulkToken{
@@ -148,7 +148,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			It("should not store the desired state (yet)", func() {
 				desired, _ := store.GetDesiredState()
 				Ω(desired).Should(HaveLen(1))
-				Ω(desired[0]).Should(EqualDesiredState(deletedApp.DesiredState()))
+				Ω(desired[0]).Should(EqualDesiredState(deletedApp.DesiredState(1)))
 			})
 
 			It("should request the next batch", func() {
@@ -187,8 +187,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 				It("should store any desired state that is in the STARTED appstate, and delete any stale data", func() {
 					desired, _ := store.GetDesiredState()
 					Ω(desired).Should(HaveLen(2))
-					Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState())))
-					Ω(desired).Should(ContainElement(EqualDesiredState(a2.DesiredState())))
+					Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState(1))))
+					Ω(desired).Should(ContainElement(EqualDesiredState(a2.DesiredState(1))))
 				})
 
 				It("should send a succesful result down the result channel", func(done Done) {

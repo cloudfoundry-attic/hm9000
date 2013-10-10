@@ -57,11 +57,11 @@ func (app App) InstanceAtIndex(index int) Instance {
 	return app.instances[index]
 }
 
-func (app App) DesiredState() DesiredAppState {
+func (app App) DesiredState(numberOfInstances int) DesiredAppState {
 	return DesiredAppState{
 		AppGuid:           app.AppGuid,
 		AppVersion:        app.AppVersion,
-		NumberOfInstances: 1,
+		NumberOfInstances: numberOfInstances,
 		Memory:            1024,
 		State:             AppStateStarted,
 		PackageState:      AppPackageStateStaged,

@@ -96,7 +96,7 @@ var _ = Describe("Sender", func() {
 		var pendingMessage models.PendingStartMessage
 
 		JustBeforeEach(func() {
-			store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState()})
+			store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState(1)})
 
 			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0)
 			pendingMessage.SentOn = sentOn
@@ -450,7 +450,7 @@ var _ = Describe("Sender", func() {
 
 		Context("When the app is still desired", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState()})
+				store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState(1)})
 			})
 
 			Context("when the index-to-start is within the # of desired instances", func() {
@@ -564,7 +564,7 @@ var _ = Describe("Sender", func() {
 
 		Context("When the app is still desired", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState()})
+				store.SaveDesiredState([]models.DesiredAppState{app1.DesiredState(1)})
 			})
 
 			Context("When index is still running", func() {
@@ -650,7 +650,7 @@ var _ = Describe("Sender", func() {
 
 			for i := 0; i < 40; i += 1 {
 				a := app.NewApp()
-				store.SaveDesiredState([]models.DesiredAppState{a.DesiredState()})
+				store.SaveDesiredState([]models.DesiredAppState{a.DesiredState(1)})
 				store.SaveActualState([]models.InstanceHeartbeat{
 					a.InstanceAtIndex(1).Heartbeat(),
 				})

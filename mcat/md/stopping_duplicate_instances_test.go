@@ -27,9 +27,7 @@ var _ = Describe("[Integration] Stopping Duplicate Instances", func() {
 			}
 			simulator.SetCurrentHeartbeats(heartbeat)
 
-			desired := a.DesiredState()
-			desired.NumberOfInstances = 2
-			simulator.SetDesiredState(desired)
+			simulator.SetDesiredState(a.DesiredState(2))
 
 			simulator.Tick(simulator.TicksToAttainFreshness)
 		})

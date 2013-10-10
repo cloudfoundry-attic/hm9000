@@ -18,7 +18,7 @@ var _ = Describe("Desired State Server Response JSON", func() {
 	BeforeEach(func() {
 		a = app.NewApp()
 
-		desired, _ := json.Marshal(a.DesiredState())
+		desired, _ := json.Marshal(a.DesiredState(1))
 		responseJson := fmt.Sprintf(`
         {
             "results":{"%s":%s},
@@ -33,7 +33,7 @@ var _ = Describe("Desired State Server Response JSON", func() {
 
 	It("can parse from JSON", func() {
 		Ω(response.Results).Should(HaveLen(1))
-		Ω(response.Results[a.AppGuid]).Should(EqualDesiredState(a.DesiredState()))
+		Ω(response.Results[a.AppGuid]).Should(EqualDesiredState(a.DesiredState(1)))
 		Ω(response.BulkToken.Id).Should(Equal(17))
 	})
 

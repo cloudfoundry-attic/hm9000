@@ -110,8 +110,8 @@ var _ = Describe("FakeStore", func() {
 
 	Describe("Setting, getting, and deleting desired state", func() {
 		It("should set, get, and delete the desired state", func() {
-			desired1 := app1.DesiredState()
-			desired2 := app2.DesiredState()
+			desired1 := app1.DesiredState(1)
+			desired2 := app2.DesiredState(1)
 
 			err := store.SaveDesiredState([]models.DesiredAppState{desired1, desired1, desired2})
 			Ω(err).ShouldNot(HaveOccured())
@@ -123,7 +123,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(desired).Should(ContainElement(EqualDesiredState(desired2)))
 
 			desired2.NumberOfInstances = 17
-			desired3 := app.NewApp().DesiredState()
+			desired3 := app.NewApp().DesiredState(1)
 
 			err = store.SaveDesiredState([]models.DesiredAppState{desired2, desired3})
 			Ω(err).ShouldNot(HaveOccured())
@@ -154,7 +154,7 @@ var _ = Describe("FakeStore", func() {
 		})
 
 		It("should support returning errors", func() {
-			desired1 := app1.DesiredState()
+			desired1 := app1.DesiredState(1)
 			store.SaveDesiredState([]models.DesiredAppState{desired1})
 
 			errIn := errors.New("foo")
