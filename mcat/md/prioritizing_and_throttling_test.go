@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("[Integration] Prioritizing and sending messages in batches", func() {
+var _ = Describe("Prioritizing and sending messages in batches", func() {
 	//Note: the sender is configured to only send 8 messages at a time
 	//This is done by cli_runner_test.go when it generates the config
 	Context("when there are start and stop messages", func() {
@@ -44,7 +44,6 @@ var _ = Describe("[Integration] Prioritizing and sending messages in batches", f
 			simulator.SetCurrentHeartbeats(heartbeats...)
 			simulator.Tick(simulator.TicksToAttainFreshness)
 			simulator.Tick(simulator.GracePeriod)
-			simulator.Tick(1)
 		})
 
 		It("should send all the stops", func() {

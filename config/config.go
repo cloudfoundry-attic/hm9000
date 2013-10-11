@@ -41,6 +41,10 @@ type Config struct {
 	StartingBackoffDelayInHeartbeats   int `json:"starting_backoff_delay_in_heartbeats"`
 	MaximumBackoffDelayInHeartbeats    int `json:"maximum_backoff_delay_in_heartbeats"`
 
+	MetricsServerPort     int    `json:"metrics_server_port"`
+	MetricsServerUser     string `json:"metrics_server_user"`
+	MetricsServerPassword string `json:"metrics_server_password"`
+
 	NATS struct {
 		Host     string `json:"host"`
 		Port     int    `json:"port"`

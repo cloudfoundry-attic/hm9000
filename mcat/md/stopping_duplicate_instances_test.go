@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("[Integration] Stopping Duplicate Instances", func() {
+var _ = Describe("Stopping Duplicate Instances", func() {
 	var a app.App
 
 	Context("when there are multiple instances on the same index", func() {
@@ -33,18 +33,13 @@ var _ = Describe("[Integration] Stopping Duplicate Instances", func() {
 		})
 
 		It("should not immediately stop anything", func() {
-			simulator.Tick(1)
 			Ω(startStopListener.Stops).Should(BeEmpty())
 		})
 
 		Context("after a grace period", func() {
-			BeforeEach(func() {
-				simulator.Tick(simulator.GracePeriod)
-			})
-
 			Context("if both instances are still running", func() {
 				BeforeEach(func() {
-					simulator.Tick(1)
+					simulator.Tick(simulator.GracePeriod)
 				})
 
 				It("should stop one of them", func() {
@@ -93,7 +88,7 @@ var _ = Describe("[Integration] Stopping Duplicate Instances", func() {
 					simulator.SetCurrentHeartbeats(heartbeat)
 					simulator.Tick(simulator.TicksToExpireHeartbeat)
 					startStopListener.Reset()
-					simulator.Tick(1)
+					simulator.Tick(simulator.GracePeriod)
 				})
 
 				It("should not stop any instances", func() {

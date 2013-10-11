@@ -17,7 +17,7 @@ func TestPhd(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t, "PhD Performance Suite", []Reporter{&DataReporter{}})
+	RunSpecsWithDefaultAndCustomReporters(t, "MCAT PhD Performance Suite", []Reporter{&DataReporter{}})
 
 	if storeRunner != nil {
 		storeRunner.Stop()

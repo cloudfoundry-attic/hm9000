@@ -1,6 +1,7 @@
 package metricsserver_test
 
 import (
+	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/metricsserver"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/app"
@@ -23,7 +24,8 @@ var _ = Describe("Metrics Server", func() {
 		store = fakestore.NewFakeStore()
 		timeProvider = &faketimeprovider.FakeTimeProvider{TimeToProvide: time.Unix(100, 0)}
 
-		metricsServer = New(store, timeProvider)
+		conf, _ := config.DefaultConfig()
+		metricsServer = New(nil, store, timeProvider, conf)
 	})
 
 	Describe("the returned context", func() {
@@ -258,7 +260,9 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 2}))
 				})
 			})
-
 		})
+	})
+	It("should tell its health", func() {
+		Ω(metricsServer.Ok()).Should(BeTrue())
 	})
 })

@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	ginkgoConfig "github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
+	"os"
 	"os/exec"
 	"strconv"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	"github.com/cloudfoundry/hm9000/testhelpers/natsrunner"
 	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
-	"os"
 	"os/signal"
 	"testing"
 )
@@ -35,6 +35,7 @@ var (
 	desiredStateServerPort    int
 	desiredStateServerBaseUrl string
 	natsPort                  int
+	metricsServerPort         int
 )
 
 func TestMd(t *testing.T) {
@@ -42,12 +43,18 @@ func TestMd(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	cmd := exec.Command("go", "install", "github.com/cloudfoundry/hm9000")
-	err := cmd.Run()
-	Ω(err).ShouldNot(HaveOccured())
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		println("FAILED TO COMPILE HM9000")
+		println(string(output))
+		os.Exit(1)
+	}
 
 	desiredStateServerPort = 6001 + ginkgoConfig.GinkgoConfig.ParallelNode
 	desiredStateServerBaseUrl = "http://127.0.0.1:" + strconv.Itoa(desiredStateServerPort)
 	natsPort = 4223 + ginkgoConfig.GinkgoConfig.ParallelNode
+
+	metricsServerPort = 7879 + ginkgoConfig.GinkgoConfig.ParallelNode
 
 	natsRunner = natsrunner.NewNATSRunner(natsPort)
 	natsRunner.Start()
@@ -63,9 +70,9 @@ func TestMd(t *testing.T) {
 	publisher = messagepublisher.NewMessagePublisher(natsRunner.MessageBus)
 	startStopListener = startstoplistener.NewStartStopListener(natsRunner.MessageBus, conf)
 
-	cliRunner = NewCLIRunner(storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, ginkgoConfig.DefaultReporterConfig.Verbose)
+	cliRunner = NewCLIRunner(storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
 
-	RunSpecs(t, "Md Suite (ETCD)")
+	RunSpecs(t, "MCAT Md Suite (ETCD)")
 
 	storeAdapter.Disconnect()
 	stopAllExternalProcesses()

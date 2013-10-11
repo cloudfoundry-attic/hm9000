@@ -18,18 +18,19 @@ type CLIRunner struct {
 	configPath           string
 	listenerCmd          *exec.Cmd
 	listenerStdoutBuffer *bytes.Buffer
+	metricsServerCmd     *exec.Cmd
 	verbose              bool
 }
 
-func NewCLIRunner(storeURLs []string, ccBaseURL string, natsPort int, verbose bool) *CLIRunner {
+func NewCLIRunner(storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int, verbose bool) *CLIRunner {
 	runner := &CLIRunner{
 		verbose: verbose,
 	}
-	runner.generateConfig(storeURLs, ccBaseURL, natsPort)
+	runner.generateConfig(storeURLs, ccBaseURL, natsPort, metricsServerPort)
 	return runner
 }
 
-func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int) {
+func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int) {
 	tmpFile, err := ioutil.TempFile("/tmp", "hm9000_clirunner")
 	defer tmpFile.Close()
 	Ω(err).ShouldNot(HaveOccured())
@@ -43,32 +44,45 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.NATS.Port = natsPort
 	conf.SenderMessageLimit = 8
 	conf.MaximumBackoffDelayInHeartbeats = 6
+	conf.MetricsServerPort = metricsServerPort
+	conf.MetricsServerUser = "bob"
+	conf.MetricsServerPassword = "password"
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccured())
 }
 
 func (runner *CLIRunner) StartListener(timestamp int) {
-	runner.start("listen", timestamp)
+	runner.listenerCmd, runner.listenerStdoutBuffer = runner.start("listen", timestamp)
 }
 
 func (runner *CLIRunner) StopListener() {
 	runner.listenerCmd.Process.Kill()
 }
 
+func (runner *CLIRunner) StartMetricsServer(timestamp int) {
+	runner.metricsServerCmd, _ = runner.start("serve_metrics", timestamp)
+}
+
+func (runner *CLIRunner) StopMetricsServer() {
+	runner.metricsServerCmd.Process.Kill()
+}
+
 func (runner *CLIRunner) Cleanup() {
 	os.Remove(runner.configPath)
 }
 
-func (runner *CLIRunner) start(command string, timestamp int) {
-	runner.listenerCmd = exec.Command("hm9000", command, fmt.Sprintf("--config=%s", runner.configPath))
-	runner.listenerCmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
-	runner.listenerStdoutBuffer = bytes.NewBuffer([]byte{})
-	runner.listenerCmd.Stdout = runner.listenerStdoutBuffer
-	runner.listenerCmd.Start()
+func (runner *CLIRunner) start(command string, timestamp int) (*exec.Cmd, *bytes.Buffer) {
+	cmd := exec.Command("hm9000", command, fmt.Sprintf("--config=%s", runner.configPath))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
+	buffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = buffer
+	cmd.Start()
 	Eventually(func() int {
-		return runner.listenerStdoutBuffer.Len()
+		return buffer.Len()
 	}).ShouldNot(BeZero())
+
+	return cmd, buffer
 }
 
 func (runner *CLIRunner) WaitForHeartbeats(num int) {

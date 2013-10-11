@@ -1,20 +1,30 @@
 package metricsserver
 
 import (
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type MetricsServer struct {
 	storecache   *storecache.StoreCache
+	steno        *gosteno.Logger
 	timeProvider timeprovider.TimeProvider
+	config       config.Config
 }
 
-func New(store store.Store, timeProvider timeprovider.TimeProvider) *MetricsServer {
+func New(steno *gosteno.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config) *MetricsServer {
 	storecache := storecache.New(store)
-	return &MetricsServer{storecache: storecache, timeProvider: timeProvider}
+	return &MetricsServer{
+		storecache:   storecache,
+		timeProvider: timeProvider,
+		steno:        steno,
+		config:       conf,
+	}
 }
 
 func (s *MetricsServer) Emit() (context instrumentation.Context) {
@@ -95,4 +105,27 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 	}
 
 	return
+}
+
+func (s *MetricsServer) Ok() bool {
+	return true
+}
+
+func (s *MetricsServer) Start() error {
+	component, err := cfcomponent.NewComponent(
+		s.steno,
+		"hm9000",
+		0,
+		s,
+		uint32(s.config.MetricsServerPort),
+		[]string{s.config.MetricsServerUser, s.config.MetricsServerPassword},
+		[]instrumentation.Instrumentable{s},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	component.StartMonitoringEndpoints()
+	return nil
 }

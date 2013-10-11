@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("[Integration] Crashes", func() {
+var _ = Describe("Crashes", func() {
 	var (
 		a                 app.App
 		crashingHeartbeat models.Heartbeat
@@ -32,7 +32,6 @@ var _ = Describe("[Integration] Crashes", func() {
 
 			simulator.SetCurrentHeartbeats(crashingHeartbeat)
 			simulator.Tick(simulator.TicksToAttainFreshness)
-			simulator.Tick(1)
 		})
 
 		It("should only try to start instance at index 0", func() {
@@ -63,7 +62,6 @@ var _ = Describe("[Integration] Crashes", func() {
 
 			simulator.SetCurrentHeartbeats(crashingHeartbeat)
 			simulator.Tick(simulator.TicksToAttainFreshness)
-			simulator.Tick(1)
 		})
 
 		It("should start all the crashed instances", func() {
@@ -94,7 +92,6 @@ var _ = Describe("[Integration] Crashes", func() {
 
 			simulator.SetCurrentHeartbeats(crashingHeartbeat)
 			simulator.Tick(simulator.TicksToAttainFreshness)
-			simulator.Tick(1)
 		})
 
 		Context("when the app keeps crashing", func() {

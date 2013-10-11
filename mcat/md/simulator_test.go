@@ -30,7 +30,7 @@ func NewSimulator(conf config.Config, storeRunner storerunner.StoreRunner, desir
 		storeRunner:            storeRunner,
 		desiredStateServer:     desiredStateServer,
 		cliRunner:              cliRunner,
-		TicksToAttainFreshness: int(conf.ActualFreshnessTTLInHeartbeats),
+		TicksToAttainFreshness: int(conf.ActualFreshnessTTLInHeartbeats) + 1,
 		TicksToExpireHeartbeat: int(conf.HeartbeatTTLInHeartbeats),
 		GracePeriod:            int(conf.GracePeriodInHeartbeats),
 		publisher:              publisher,

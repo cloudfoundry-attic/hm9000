@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/cloudfoundry/gosteno"
+
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/hm"
@@ -10,7 +12,17 @@ import (
 )
 
 func main() {
-	l := logger.NewRealLogger()
+	c := &gosteno.Config{
+		Sinks: []gosteno.Sink{
+			gosteno.NewSyslogSink("hm9000"),
+		},
+		Level:     gosteno.LOG_INFO,
+		Codec:     gosteno.NewJsonCodec(),
+		EnableLOC: true,
+	}
+	gosteno.Init(c)
+	steno := gosteno.NewLogger("hm9000")
+	l := logger.NewRealLogger(steno)
 
 	app := cli.NewApp()
 	app.Name = "HM9000"
@@ -62,6 +74,17 @@ func main() {
 			},
 			Action: func(c *cli.Context) {
 				hm.Send(l, loadConfig(l, c), c.Bool("poll"))
+			},
+		},
+		cli.Command{
+			Name:        "serve_metrics",
+			Description: "Listens for Varz calls to serve metrics",
+			Usage:       "hm serve_metrics --config=/path/to/config",
+			Flags: []cli.Flag{
+				cli.StringFlag{"config", "", "Path to config file"},
+			},
+			Action: func(c *cli.Context) {
+				hm.ServeMetrics(steno, l, loadConfig(l, c))
 			},
 		},
 		cli.Command{

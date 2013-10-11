@@ -37,6 +37,9 @@ var _ = Describe("Config", func() {
         "number_of_crashes_before_backoff_begins": 3,
         "starting_backoff_delay_in_heartbeats": 3,
         "maximum_backoff_delay_in_heartbeats": 96,
+        "metrics_server_port": 7879,
+        "metrics_server_user": "metrics_server_user",
+        "metrics_server_password": "canHazMetrics?",
         "nats": {
             "host": "127.0.0.1",
             "port": 4222,
@@ -80,6 +83,10 @@ var _ = Describe("Config", func() {
 			Ω(config.SenderNatsStartSubject).Should(Equal("hm9000.start"))
 			Ω(config.SenderNatsStopSubject).Should(Equal("hm9000.stop"))
 			Ω(config.SenderMessageLimit).Should(Equal(30))
+
+			Ω(config.MetricsServerPort).Should(Equal(7879))
+			Ω(config.MetricsServerUser).Should(Equal("metrics_server_user"))
+			Ω(config.MetricsServerPassword).Should(Equal("canHazMetrics?"))
 
 			Ω(config.NATS.Host).Should(Equal("127.0.0.1"))
 			Ω(config.NATS.Port).Should(Equal(4222))

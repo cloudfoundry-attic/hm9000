@@ -2,8 +2,8 @@ package logger
 
 import (
 	"encoding/json"
+	"github.com/cloudfoundry/gosteno"
 	"log"
-	"log/syslog"
 	"os"
 )
 
@@ -13,21 +13,14 @@ type Logger interface {
 }
 
 type RealLogger struct {
-	logger        *log.Logger
-	infoSysLogger *log.Logger
+	steno  *gosteno.Logger
+	logger *log.Logger
 }
 
-func NewRealLogger() *RealLogger {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
-	sysLogWriter, err := syslog.New(syslog.LOG_DEBUG, "vcap.hm9000")
-	if err != nil {
-		panic(err)
-	}
-	infoSysLogger := log.New(sysLogWriter, "", log.LstdFlags)
-
+func NewRealLogger(steno *gosteno.Logger) *RealLogger {
 	return &RealLogger{
-		logger:        logger,
-		infoSysLogger: infoSysLogger,
+		steno:  steno,
+		logger: log.New(os.Stdout, "", log.LstdFlags),
 	}
 }
 
@@ -51,5 +44,5 @@ func (logger *RealLogger) parseMessages(messages []map[string]string) string {
 
 func (logger *RealLogger) print(subject string, message string) {
 	logger.logger.Printf("%s%s", subject, message)
-	logger.infoSysLogger.Printf("%s%s", subject, message)
+	logger.steno.Info(subject + message)
 }

@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("[Integration] Simple Cases Test", func() {
+var _ = Describe("Simple Cases Test", func() {
 	var app1, app2 app.App
 
 	BeforeEach(func() {
@@ -18,7 +18,6 @@ var _ = Describe("[Integration] Simple Cases Test", func() {
 		BeforeEach(func() {
 			simulator.SetDesiredState(app1.DesiredState(1), app2.DesiredState(1))
 			simulator.Tick(simulator.TicksToAttainFreshness)
-			simulator.Tick(1)
 		})
 
 		It("should not send any messages", func() {
@@ -31,10 +30,7 @@ var _ = Describe("[Integration] Simple Cases Test", func() {
 		BeforeEach(func() {
 			simulator.SetCurrentHeartbeats(app1.Heartbeat(1), app2.Heartbeat(1))
 			simulator.SetDesiredState(app1.DesiredState(1), app2.DesiredState(2))
-			simulator.Tick(simulator.TicksToAttainFreshness)
-
-			//this tick will schedule a start
-			simulator.Tick(1)
+			simulator.Tick(simulator.TicksToAttainFreshness) //this tick will schedule a start
 
 			// no message is sent during the start send message delay
 			simulator.Tick(1)
@@ -87,7 +83,6 @@ var _ = Describe("[Integration] Simple Cases Test", func() {
 			simulator.SetDesiredState(app2.DesiredState(1))
 			simulator.SetCurrentHeartbeats(app2.Heartbeat(2))
 			simulator.Tick(simulator.TicksToAttainFreshness)
-			simulator.Tick(1)
 		})
 
 		Context("when the instance becomes desired", func() {
