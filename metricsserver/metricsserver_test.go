@@ -12,29 +12,29 @@ import (
 	"time"
 )
 
-var _ = Describe("Metricsserver", func() {
+var _ = Describe("Metrics Server", func() {
 	var (
-		store        *fakestore.FakeStore
-		timeProvider *faketimeprovider.FakeTimeProvider
-		metricServer *MetricServer
+		store         *fakestore.FakeStore
+		timeProvider  *faketimeprovider.FakeTimeProvider
+		metricsServer *MetricsServer
 	)
 
 	BeforeEach(func() {
 		store = fakestore.NewFakeStore()
 		timeProvider = &faketimeprovider.FakeTimeProvider{TimeToProvide: time.Unix(100, 0)}
 
-		metricServer = NewMetricServer(store, timeProvider)
+		metricsServer = New(store, timeProvider)
 	})
 
 	Describe("the returned context", func() {
 		It("should have a name", func() {
-			context := metricServer.Emit()
+			context := metricsServer.Emit()
 			Ω(context.Name).Should(Equal("HM9000"))
 		})
 
 		Context("when the store is not fresh", func() {
 			It("should emit -1 for all its metrics", func() {
-				context := metricServer.Emit()
+				context := metricsServer.Emit()
 				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: -1}))
 				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: -1}))
 				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: -1}))
@@ -66,7 +66,7 @@ var _ = Describe("Metricsserver", func() {
 				})
 
 				It("should report the app as 100 %% reporting", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))
@@ -91,7 +91,7 @@ var _ = Describe("Metricsserver", func() {
 				})
 
 				It("should report the app as 100 %% reporting", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))
@@ -117,7 +117,7 @@ var _ = Describe("Metricsserver", func() {
 					)
 				})
 				It("should report the app as 100 %% reporting", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))
@@ -142,7 +142,7 @@ var _ = Describe("Metricsserver", func() {
 					)
 				})
 				It("should report the app as 100 %% reporting", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))
@@ -166,7 +166,7 @@ var _ = Describe("Metricsserver", func() {
 				})
 
 				It("should report the app as 100 %% reporting", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))
@@ -188,7 +188,7 @@ var _ = Describe("Metricsserver", func() {
 				})
 
 				It("should not report the app as 100 %% reporting", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))
@@ -205,7 +205,7 @@ var _ = Describe("Metricsserver", func() {
 				})
 
 				It("should not report the app as 100 %% reporting", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))
@@ -228,7 +228,7 @@ var _ = Describe("Metricsserver", func() {
 				})
 
 				It("should report the app as an undesired app", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 2}))
@@ -248,7 +248,7 @@ var _ = Describe("Metricsserver", func() {
 				})
 
 				It("should report the app as an undesired app", func() {
-					context := metricServer.Emit()
+					context := metricsServer.Emit()
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))

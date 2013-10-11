@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestMetricsserver(t *testing.T) {
+func TestMetricsServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Metricsserver Suite")
+	RunSpecs(t, "Metrics Server Suite")
 }
