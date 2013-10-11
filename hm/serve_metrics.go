@@ -9,17 +9,20 @@ import (
 
 func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf config.Config) {
 	store := connectToStore(l, conf)
+	mbus := connectToMessageBus(l, conf)
 
 	metricsServer := metricsserver.New(
+		mbus,
 		steno,
 		store,
 		buildTimeProvider(l),
 		conf,
 	)
 
-	l.Info("Serving Metrics")
 	err := metricsServer.Start()
 	if err != nil {
 		l.Error("Failed to serve metrics", err)
 	}
+	l.Info("Serving Metrics")
+	select {}
 }

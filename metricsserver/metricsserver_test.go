@@ -25,7 +25,7 @@ var _ = Describe("Metrics Server", func() {
 		timeProvider = &faketimeprovider.FakeTimeProvider{TimeToProvide: time.Unix(100, 0)}
 
 		conf, _ := config.DefaultConfig()
-		metricsServer = New(nil, store, timeProvider, conf)
+		metricsServer = New(nil, nil, store, timeProvider, conf)
 	})
 
 	Describe("the returned context", func() {

@@ -1,6 +1,7 @@
 package metricsserver
 
 import (
+	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/storecache"
@@ -8,6 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 )
 
 type MetricsServer struct {
@@ -15,11 +17,13 @@ type MetricsServer struct {
 	steno        *gosteno.Logger
 	timeProvider timeprovider.TimeProvider
 	config       config.Config
+	messageBus   cfmessagebus.MessageBus
 }
 
-func New(steno *gosteno.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config) *MetricsServer {
+func New(messageBus cfmessagebus.MessageBus, steno *gosteno.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config) *MetricsServer {
 	storecache := storecache.New(store)
 	return &MetricsServer{
+		messageBus:   messageBus,
 		storecache:   storecache,
 		timeProvider: timeProvider,
 		steno:        steno,
@@ -126,6 +130,9 @@ func (s *MetricsServer) Start() error {
 		return err
 	}
 
-	component.StartMonitoringEndpoints()
-	return nil
+	go component.StartMonitoringEndpoints()
+
+	err = collectorregistrar.NewCollectorRegistrar(s.messageBus, s.steno).RegisterWithCollector(component)
+
+	return err
 }

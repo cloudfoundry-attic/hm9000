@@ -31,6 +31,15 @@ var _ = Describe("Serving Metrics", func() {
 		cliRunner.StopMetricsServer()
 	})
 
+	It("should register with the collector", func(done Done) {
+		cliRunner.StartMetricsServer(simulator.currentTimestamp)
+		natsRunner.MessageBus.Request("vcap.component.discover", []byte{}, func(msg []byte) {
+			Ω(string(msg)).Should(ContainSubstring("%s:%d", ip, metricsServerPort))
+			Ω(string(msg)).Should(ContainSubstring(`"bob","password"`))
+			close(done)
+		})
+	})
+
 	Context("when the store is fresh", func() {
 		BeforeEach(func() {
 			simulator.Tick(simulator.TicksToAttainFreshness)
