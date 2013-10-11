@@ -118,7 +118,7 @@ func (s *MetricsServer) Ok() bool {
 func (s *MetricsServer) Start() error {
 	component, err := cfcomponent.NewComponent(
 		s.steno,
-		"hm9000",
+		"HM9000",
 		0,
 		s,
 		uint32(s.config.MetricsServerPort),
