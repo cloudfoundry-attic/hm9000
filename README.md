@@ -104,6 +104,12 @@ will come up, compare the desired/actual state, and submit start and stop messag
 
 will come up, evaluate the pending starts and stops and publish them over NATS. You can optionally pass `-poll` to send messages periodically.
 
+### Serving metrics (varz)
+
+    hm9000 serve_metrics --config=./local_config.json
+
+will come up, register with the [collector](http://github.com/cloudfoundry/collector) and provide a `/varz` end-point with data.
+
 ### Dumping the contents of the store
 
 `etcd` has a very simple [curlable API](http://github.com/coreos/etcd).  For convenience:
@@ -170,6 +176,18 @@ HM9000 is configured using a JSON file.  Here are the available entries:
 
 - `analyzer_timeout_in_heartbeats`:  The timeout in heartbeat units for each analyzer invocation.  If an invocation of the analyzer takes longer than this the `hm9000 analyze --poll` command will fail.  Set to 10.
 
+- `number_of_crashes_before_backoff_begins`: When an instance crashes HM9000 immediately restarts it.  If, however, the number of crashes exceeds this number HM9000 will apply an increasing delay to the restart.
+
+- `starting_backoff_delay_in_heartbeats`: The initial delay (in heartbeat units) to apply to the restart message once an instance crashes more than `number_of_crashes_before_backoff_begins` times.
+
+- `maximum_backoff_delay_in_heartbeats`: The restart delay associated with crashes doubles with each crash but is not allowed to exceed this value (in heartbeat units).
+
+- `metrics_server_port`: The port on which to serve /varz metrics.  If set to 0 a random available port will be chosen.
+
+- `metrics_server_user`: The username that must be used to authenticate with /varz.  If set to "" a random username will be generated.
+
+- `metrics_server_password`: The password that must be used to authenticate with /varz.  If set to "" a random password will be generated.
+
 - `nats.host`: The NATS host.  Set by BOSH.
 
 - `nats.port`: The NATS host.  Set by BOSH.
@@ -196,14 +214,27 @@ The `desiredstatefetcher` requests the desired state from the cloud controller. 
 
 Desired state is stored under `/desired/APP_GUID-APP_VERSION
 
-
 ### analyzer`
 
-The `analyzer` comes up, analyzes the actual and desired state, and uses the `outbox` to put pending `start` and `stop` messages in the store.
+The `analyzer` comes up, analyzes the actual and desired state, and puts pending `start` and `stop` messages in the store.  If a `start` or `stop` message is *already* in the store, the analyzer will *not* override it.
 
 ### `sender`
 
 The `sender` runs periodically and pulls pending messages out of the store and sends them over `NATS`.  The `sender` verifies that the messages should be sent before sending them (i.e. missing instances are still missing, extra instances are still extra, etc...) The `sender` is also responsible for throttling the rate at which messages are sent over NATS.
+
+### `metricsserver`
+
+The `metricsserver` registers with the CF collector and aggregates and provides metrics via a /varz end-point.  These are the available metrics:
+
+- NumberOfAppsWithAllInstancesReporting: The number of desired applications for which all instances are reporting (the state of the instance is irrelevant: STARTING/RUNNING/CRASHED all count).
+- NumberOfAppsWithMissingInstances: The number of desired applications for which an instance is missing (i.e. the instance is simply not heartbeating at all).
+- NumberOfUndesiredRunningApps: The number of *undesired* applications with at least one instance reporting as STARTING or RUNNING.
+- NumberOfRunningInstances: The number of instances in the STARTING or RUNNING state.
+- NumberOfMissingIndices: The number of missing instances (these are instances that are desired but are simply not heartbeating at all).
+- NumberOfCrashedInstances: The number of instances reporting as crashed.
+- NumberOfCrashedIndices: The number of *indices* reporting as crashed.  Because of the restart policy an individual index may have very many crashes associated with it.
+
+If either the actual state or desired state are not *fresh* all of these metrics will have the value `-1`.
 
 ### WIP:`api`
 
@@ -235,10 +266,6 @@ Provides a `TimeProvider`.  Useful for injecting time dependencies in tests.
 
 Provides a worker pool with a configurable pool size.  Work scheduled on the pool will run concurrently, but no more `poolSize` workers can be running at any given moment.
 
-#### `outbox`
-
-`outbox` is used by the analyzer to add pending messages to the high-availability store.  The `outbox` guarantees that a message is only added once to the queue (i.e. if a `start` message for a given app guid, version guid, and index has not been sent yet, the `outbox` will prevent another identical `start` message from being inserted in the queue).
-
 ### `models`
 
 `models` encapsulates the various JSON structs that are sent/received over NATS/HTTP.  Simple serializing/deserializing behavior is attached to these structs.
@@ -269,15 +296,12 @@ Provides a fake implementation of the `helpers/timeprovider` interface.  Useful 
 
 Provdes a fake implementation of the `helpers/httpclient` interface that allows tests to have fine-grained control over the http request/response lifecycle.
 
-#### `fakeoutbox`
-
-Provides a fake implementation of the `helpers/outbox` interface that allows tests to inspect the scheduled start and stop messages.
 
 #### `fakestore`
 
 Provides a fake in-memory implementation of the `store` to allow for unit tests that do not need to spin up a database.
 
-### Fixtures
+### Fixtures & Misc.
 
 #### `app`
 
@@ -295,25 +319,25 @@ Some brief documentation -- look at the code and tests for more:
 app := NewApp()
 
 //Get the desired state for the app.  This can be passed into
-//the desired state server to simulate the APP's precense in 
+//the desired state server to simulate the APP's presence in 
 //the CC's DB.  By default the app is staged and started, to change
-//this, modify the return value.  Time is always injected.
-desiredState := app.DesiredState(UPDATED_AT_TIMESTAMP)
+//this, modify the return value.
+desiredState := app.DesiredState(NUMBER_OF_DESIRED_INSTANCES)
 
 //get an instance at index 0.  this getter will lazily create and memoize
 //instances and populate them with an INSTANCE_GUID and the correct
 //INDEX.
 instance0 := app.InstanceAtIndex(0)
 
-//fetch, for example, the exit message for the instance. Time is always injected
-exitedMessage := instance0.DropletExited(DropletExitReasonCrashed, TIMESTAMP)
-
-//generate a heartbeat for the app.  first argument is the # of instances,
-// second is a timestamp denoting *when the app transitioned into its current state*  
+//generate a heartbeat for the app.
 //note that the INSTANCE_GUID associated with the instance at index 0 will
 //match that provided by app.InstanceAtIndex(0)
-app.Heartbeat(2, TIMESTAMP)
+app.Heartbeat(NUMBER_OF_HEARTBEATING_INSTANCES)
 ```
+
+#### `custommatchers`
+
+Provides a collection of custom Gomega matchers.
 
 ### Infrastructure Helpers
 
@@ -344,6 +368,8 @@ The MCAT is comprised of two major integration test suites:
 ### The `MD` Test Suite
 
 The `MD` test suite excercises the HM 9000 components through a series of integration-level tests.  The individual components are designed to be simple and have comprehensive unit test coverage.  However, it's crucial that we have comprehensive test coverage for the *interactions* between these components.  That's what the `MD` suite is for.
+
+The `MD` suite uses a `simulator` to manage advancing time and run each of the individual HM components.
 
 ### The `PHD` Benchmark Suite
 
