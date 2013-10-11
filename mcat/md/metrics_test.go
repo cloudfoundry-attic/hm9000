@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-var _ = Describe("Simple Cases Test", func() {
+var _ = Describe("Serving Metrics", func() {
 	var (
 		a  app.App
 		ip string
@@ -47,6 +47,7 @@ var _ = Describe("Simple Cases Test", func() {
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(bodyAsString).Should(ContainSubstring(`"name":"NumberOfUndesiredRunningApps","value":0`))
 			Ω(bodyAsString).Should(ContainSubstring(`"name":"NumberOfAppsWithMissingInstances","value":1`))
+			Ω(bodyAsString).Should(ContainSubstring(`"name":"HM9000"`))
 		})
 	})
 
@@ -66,6 +67,7 @@ var _ = Describe("Simple Cases Test", func() {
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(bodyAsString).Should(ContainSubstring(`"name":"NumberOfUndesiredRunningApps","value":-1`))
 			Ω(bodyAsString).Should(ContainSubstring(`"name":"NumberOfAppsWithMissingInstances","value":-1`))
+			Ω(bodyAsString).Should(ContainSubstring(`"name":"HM9000"`))
 		})
 	})
 })
