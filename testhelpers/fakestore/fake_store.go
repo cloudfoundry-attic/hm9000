@@ -100,20 +100,12 @@ func (store *FakeStore) SaveDesiredState(desiredStates ...models.DesiredAppState
 	return store.SaveDesiredStateError
 }
 
-func (store *FakeStore) GetDesiredState() ([]models.DesiredAppState, error) {
+func (store *FakeStore) GetDesiredState() (map[string]models.DesiredAppState, error) {
 	if store.GetDesiredStateError != nil {
-		return []models.DesiredAppState{}, store.GetDesiredStateError
+		return map[string]models.DesiredAppState{}, store.GetDesiredStateError
 	}
 
-	desireds := make([]models.DesiredAppState, len(store.desiredState))
-
-	i := 0
-	for _, desired := range store.desiredState {
-		desireds[i] = desired
-		i++
-	}
-
-	return desireds, nil
+	return store.desiredState, nil
 }
 
 func (store *FakeStore) DeleteDesiredState(desiredStates ...models.DesiredAppState) error {
@@ -134,20 +126,12 @@ func (store *FakeStore) SaveActualState(actualStates ...models.InstanceHeartbeat
 	return store.SaveActualStateError
 }
 
-func (store *FakeStore) GetActualState() ([]models.InstanceHeartbeat, error) {
+func (store *FakeStore) GetActualState() (map[string]models.InstanceHeartbeat, error) {
 	if store.GetActualStateError != nil {
-		return []models.InstanceHeartbeat{}, store.GetActualStateError
+		return map[string]models.InstanceHeartbeat{}, store.GetActualStateError
 	}
 
-	actuals := make([]models.InstanceHeartbeat, len(store.actualState))
-
-	i := 0
-	for _, actual := range store.actualState {
-		actuals[i] = actual
-		i++
-	}
-
-	return actuals, nil
+	return store.actualState, nil
 }
 
 func (store *FakeStore) DeleteActualState(actualStates ...models.InstanceHeartbeat) error {
@@ -168,20 +152,11 @@ func (store *FakeStore) SavePendingStartMessages(messages ...models.PendingStart
 	return store.SaveStartMessagesError
 }
 
-func (store *FakeStore) GetPendingStartMessages() ([]models.PendingStartMessage, error) {
+func (store *FakeStore) GetPendingStartMessages() (map[string]models.PendingStartMessage, error) {
 	if store.GetStartMessagesError != nil {
-		return []models.PendingStartMessage{}, store.GetStartMessagesError
+		return map[string]models.PendingStartMessage{}, store.GetStartMessagesError
 	}
-
-	actuals := make([]models.PendingStartMessage, len(store.startMessages))
-
-	i := 0
-	for _, actual := range store.startMessages {
-		actuals[i] = actual
-		i++
-	}
-
-	return actuals, nil
+	return store.startMessages, nil
 }
 
 func (store *FakeStore) DeletePendingStartMessages(messages ...models.PendingStartMessage) error {
@@ -202,20 +177,11 @@ func (store *FakeStore) SavePendingStopMessages(messages ...models.PendingStopMe
 	return store.SaveStopMessagesError
 }
 
-func (store *FakeStore) GetPendingStopMessages() ([]models.PendingStopMessage, error) {
+func (store *FakeStore) GetPendingStopMessages() (map[string]models.PendingStopMessage, error) {
 	if store.GetStopMessagesError != nil {
-		return []models.PendingStopMessage{}, store.GetStopMessagesError
+		return map[string]models.PendingStopMessage{}, store.GetStopMessagesError
 	}
-
-	actuals := make([]models.PendingStopMessage, len(store.stopMessages))
-
-	i := 0
-	for _, actual := range store.stopMessages {
-		actuals[i] = actual
-		i++
-	}
-
-	return actuals, nil
+	return store.stopMessages, nil
 }
 
 func (store *FakeStore) DeletePendingStopMessages(messages ...models.PendingStopMessage) error {
@@ -236,20 +202,11 @@ func (store *FakeStore) SaveCrashCounts(crashCounts ...models.CrashCount) error 
 	return store.SaveCrashCountsError
 }
 
-func (store *FakeStore) GetCrashCounts() ([]models.CrashCount, error) {
+func (store *FakeStore) GetCrashCounts() (map[string]models.CrashCount, error) {
 	if store.GetCrashCountsError != nil {
-		return []models.CrashCount{}, store.GetCrashCountsError
+		return map[string]models.CrashCount{}, store.GetCrashCountsError
 	}
-
-	actuals := make([]models.CrashCount, len(store.crashCounts))
-
-	i := 0
-	for _, actual := range store.crashCounts {
-		actuals[i] = actual
-		i++
-	}
-
-	return actuals, nil
+	return store.crashCounts, nil
 }
 
 func (store *FakeStore) DeleteCrashCounts(crashCounts ...models.CrashCount) error {

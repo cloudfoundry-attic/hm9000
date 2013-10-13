@@ -23,23 +23,23 @@ type Store interface {
 	IsActualStateFresh(time.Time) (bool, error)
 
 	SaveDesiredState(desiredStates ...models.DesiredAppState) error
-	GetDesiredState() ([]models.DesiredAppState, error)
+	GetDesiredState() (map[string]models.DesiredAppState, error)
 	DeleteDesiredState(desiredStates ...models.DesiredAppState) error
 
 	SaveActualState(actualStates ...models.InstanceHeartbeat) error
-	GetActualState() ([]models.InstanceHeartbeat, error)
+	GetActualState() (map[string]models.InstanceHeartbeat, error)
 	DeleteActualState(actualStates ...models.InstanceHeartbeat) error
 
 	SavePendingStartMessages(startMessages ...models.PendingStartMessage) error
-	GetPendingStartMessages() ([]models.PendingStartMessage, error)
+	GetPendingStartMessages() (map[string]models.PendingStartMessage, error)
 	DeletePendingStartMessages(startMessages ...models.PendingStartMessage) error
 
 	SavePendingStopMessages(stopMessages ...models.PendingStopMessage) error
-	GetPendingStopMessages() ([]models.PendingStopMessage, error)
+	GetPendingStopMessages() (map[string]models.PendingStopMessage, error)
 	DeletePendingStopMessages(stopMessages ...models.PendingStopMessage) error
 
 	SaveCrashCounts(crashCounts ...models.CrashCount) error
-	GetCrashCounts() ([]models.CrashCount, error)
+	GetCrashCounts() (map[string]models.CrashCount, error)
 	DeleteCrashCounts(crashCounts ...models.CrashCount) error
 }
 
@@ -93,28 +93,29 @@ func (store *RealStore) save(stuff interface{}, root string, ttl uint64) error {
 	return err
 }
 
-func (store *RealStore) get(root string, sliceType reflect.Type, constructor reflect.Value) (reflect.Value, error) {
+func (store *RealStore) get(root string, mapType reflect.Type, constructor reflect.Value) (reflect.Value, error) {
 	t := time.Now()
 
 	nodes, err := store.fetchNodesUnderDir(root)
 	if err != nil {
-		return reflect.MakeSlice(sliceType, 0, 0), err
+		return reflect.MakeMap(mapType), err
 	}
 
-	slice := reflect.MakeSlice(sliceType, 0, 0)
+	mapToReturn := reflect.MakeMap(mapType)
 	for _, node := range nodes {
 		out := constructor.Call([]reflect.Value{reflect.ValueOf(node.Value)})
-		slice = reflect.Append(slice, out[0])
 		if !out[1].IsNil() {
-			return reflect.MakeSlice(sliceType, 0, 0), out[1].Interface().(error)
+			return reflect.MakeMap(mapType), out[1].Interface().(error)
 		}
+		item := out[0].Interface().(Storeable)
+		mapToReturn.SetMapIndex(reflect.ValueOf(item.StoreKey()), out[0])
 	}
 
 	store.logger.Info(fmt.Sprintf("Get Duration %s", root), map[string]string{
-		"Number of Items": fmt.Sprintf("%d", slice.Len()),
+		"Number of Items": fmt.Sprintf("%d", mapToReturn.Len()),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
-	return slice, nil
+	return mapToReturn, nil
 }
 
 func (store *RealStore) delete(stuff interface{}, root string) error {

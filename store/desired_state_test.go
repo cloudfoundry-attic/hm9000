@@ -81,9 +81,8 @@ var _ = Describe("Desired State", func() {
 			It("can fetch the desired state", func() {
 				desired, err := store.GetDesiredState()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(desired).Should(HaveLen(2))
-				Ω(desired).Should(ContainElement(EqualDesiredState(app1.DesiredState(1))))
-				Ω(desired).Should(ContainElement(EqualDesiredState(app2.DesiredState(1))))
+				Ω(desired[app1.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app1.DesiredState(1)))
+				Ω(desired[app2.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(1)))
 			})
 		})
 

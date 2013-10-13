@@ -41,12 +41,20 @@ var _ = Describe("Analyzer", func() {
 
 	startMessages := func() []models.PendingStartMessage {
 		messages, _ := store.GetPendingStartMessages()
-		return messages
+		messagesArr := []models.PendingStartMessage{}
+		for _, message := range messages {
+			messagesArr = append(messagesArr, message)
+		}
+		return messagesArr
 	}
 
 	stopMessages := func() []models.PendingStopMessage {
 		messages, _ := store.GetPendingStopMessages()
-		return messages
+		messagesArr := []models.PendingStopMessage{}
+		for _, message := range messages {
+			messagesArr = append(messagesArr, message)
+		}
+		return messagesArr
 	}
 
 	Describe("Handling store errors", func() {

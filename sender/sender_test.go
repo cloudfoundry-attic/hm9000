@@ -159,7 +159,10 @@ var _ = Describe("Sender", func() {
 
 				It("should update the sent on times", func() {
 					messages, _ := store.GetPendingStartMessages()
-					Ω(messages[0].SentOn).Should(Equal(timeProvider.Time().Unix()))
+					Ω(messages).Should(HaveLen(1))
+					for _, message := range messages {
+						Ω(message.SentOn).Should(Equal(timeProvider.Time().Unix()))
+					}
 				})
 			})
 
@@ -313,7 +316,10 @@ var _ = Describe("Sender", func() {
 
 				It("should update the sent on times", func() {
 					messages, _ := store.GetPendingStopMessages()
-					Ω(messages[0].SentOn).Should(Equal(timeProvider.Time().Unix()))
+					Ω(messages).Should(HaveLen(1))
+					for _, message := range messages {
+						Ω(message.SentOn).Should(Equal(timeProvider.Time().Unix()))
+					}
 				})
 			})
 
@@ -433,7 +439,9 @@ var _ = Describe("Sender", func() {
 			It("should honor the keep alive of the start message", func() {
 				messages, _ := store.GetPendingStartMessages()
 				Ω(messages).Should(HaveLen(1))
-				Ω(messages[0].SentOn).Should(BeNumerically("==", 130))
+				for _, message := range messages {
+					Ω(message.SentOn).Should(BeNumerically("==", 130))
+				}
 			})
 
 			It("should send the start message", func() {
@@ -545,7 +553,10 @@ var _ = Describe("Sender", func() {
 			It("should honor the keep alive of the stop message", func() {
 				messages, _ := store.GetPendingStopMessages()
 				Ω(messages).Should(HaveLen(1))
-				Ω(messages[0].SentOn).Should(BeNumerically("==", 130))
+				for _, message := range messages {
+					Ω(message.SentOn).Should(BeNumerically("==", 130))
+				}
+
 			})
 
 			It("should send the stop message", func() {

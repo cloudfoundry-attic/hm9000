@@ -148,7 +148,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 			It("should not store the desired state (yet)", func() {
 				desired, _ := store.GetDesiredState()
 				Ω(desired).Should(HaveLen(1))
-				Ω(desired[0]).Should(EqualDesiredState(deletedApp.DesiredState(1)))
+				Ω(desired[deletedApp.DesiredState(1).StoreKey()]).Should(EqualDesiredState(deletedApp.DesiredState(1)))
 			})
 
 			It("should request the next batch", func() {

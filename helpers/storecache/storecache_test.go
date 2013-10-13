@@ -79,8 +79,15 @@ var _ = Describe("Storecache", func() {
 			})
 
 			It("loads the actual and desired state", func() {
-				Ω(cache.ActualStates).Should(Equal(actualState))
-				Ω(cache.DesiredStates).Should(Equal(desiredState))
+				Ω(cache.ActualStates).Should(HaveLen(4))
+				for _, actual := range actualState {
+					Ω(cache.ActualStates).Should(ContainElement(actual))
+				}
+
+				Ω(cache.DesiredStates).Should(HaveLen(2))
+				for _, desired := range desiredState {
+					Ω(cache.DesiredStates).Should(ContainElement(desired))
+				}
 			})
 
 			It("should build the set of apps", func() {

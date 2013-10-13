@@ -9,9 +9,9 @@ func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error 
 	return store.save(crashCounts, "/crashes", uint64(store.config.MaximumBackoffDelay().Seconds())*2)
 }
 
-func (store *RealStore) GetCrashCounts() ([]models.CrashCount, error) {
-	slice, err := store.get("/crashes", reflect.TypeOf([]models.CrashCount{}), reflect.ValueOf(models.NewCrashCountFromJSON))
-	return slice.Interface().([]models.CrashCount), err
+func (store *RealStore) GetCrashCounts() (map[string]models.CrashCount, error) {
+	slice, err := store.get("/crashes", reflect.TypeOf(map[string]models.CrashCount{}), reflect.ValueOf(models.NewCrashCountFromJSON))
+	return slice.Interface().(map[string]models.CrashCount), err
 }
 
 func (store *RealStore) DeleteCrashCounts(crashCounts ...models.CrashCount) error {

@@ -134,7 +134,7 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 
 	statesToDelete := make([]models.DesiredAppState, 0)
 	for _, desiredState := range storedDesiredState {
-		_, present := fetcher.cache[desiredState.AppGuid]
+		_, present := fetcher.cache[desiredState.StoreKey()]
 		if !present {
 			statesToDelete = append(statesToDelete, desiredState)
 		}
@@ -144,9 +144,9 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 }
 
 func (fetcher *DesiredStateFetcher) cacheResponse(response DesiredStateServerResponse) {
-	for applicationGuid, desiredState := range response.Results {
+	for _, desiredState := range response.Results {
 		if desiredState.State == models.AppStateStarted {
-			fetcher.cache[applicationGuid] = desiredState
+			fetcher.cache[desiredState.StoreKey()] = desiredState
 		}
 	}
 }

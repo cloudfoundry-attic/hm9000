@@ -9,9 +9,9 @@ func (store *RealStore) SaveActualState(actualStates ...models.InstanceHeartbeat
 	return store.save(actualStates, "/actual", store.config.HeartbeatTTL())
 }
 
-func (store *RealStore) GetActualState() ([]models.InstanceHeartbeat, error) {
-	slice, err := store.get("/actual", reflect.TypeOf([]models.InstanceHeartbeat{}), reflect.ValueOf(models.NewInstanceHeartbeatFromJSON))
-	return slice.Interface().([]models.InstanceHeartbeat), err
+func (store *RealStore) GetActualState() (map[string]models.InstanceHeartbeat, error) {
+	slice, err := store.get("/actual", reflect.TypeOf(map[string]models.InstanceHeartbeat{}), reflect.ValueOf(models.NewInstanceHeartbeatFromJSON))
+	return slice.Interface().(map[string]models.InstanceHeartbeat), err
 }
 
 func (store *RealStore) DeleteActualState(actualStates ...models.InstanceHeartbeat) error {

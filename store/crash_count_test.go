@@ -48,7 +48,7 @@ var _ = Describe("CrashCount", func() {
 			Ω(results).Should(HaveLen(1))
 			Ω(results).Should(ContainElement(crashCount))
 
-			err = store.DeleteCrashCounts(results...)
+			err = store.DeleteCrashCounts(results["abc-xyz-1"])
 			Ω(err).ShouldNot(HaveOccured())
 
 			results, err = store.GetCrashCounts()

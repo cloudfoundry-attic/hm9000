@@ -10,14 +10,14 @@ import (
 type StoreCache struct {
 	store store.Store
 
-	DesiredStates []models.DesiredAppState
-	ActualStates  []models.InstanceHeartbeat
-	CrashCounts   []models.CrashCount
-
-	Apps                 map[string]*models.App
-	AppsByInstanceGuid   map[string]*models.App
+	DesiredStates        map[string]models.DesiredAppState
+	ActualStates         map[string]models.InstanceHeartbeat
+	CrashCounts          map[string]models.CrashCount
 	PendingStartMessages map[string]models.PendingStartMessage
 	PendingStopMessages  map[string]models.PendingStopMessage
+
+	Apps               map[string]*models.App
+	AppsByInstanceGuid map[string]*models.App
 }
 
 func New(store store.Store) (storecache *StoreCache) {
@@ -47,24 +47,18 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 		return err
 	}
 
-	pendingStartMessages, err := storecache.store.GetPendingStartMessages()
+	storecache.PendingStartMessages, err = storecache.store.GetPendingStartMessages()
 	if err != nil {
 		return err
 	}
 
-	pendingStopMessages, err := storecache.store.GetPendingStopMessages()
+	storecache.PendingStopMessages, err = storecache.store.GetPendingStopMessages()
 	if err != nil {
 		return err
 	}
 
 	heartbeatingInstancesByApp := make(map[string][]models.InstanceHeartbeat, 0)
-	desiredByApp := make(map[string]models.DesiredAppState, 0)
 	crashCounts := make(map[string]map[int]models.CrashCount)
-
-	for _, desired := range storecache.DesiredStates {
-		appKey := storecache.Key(desired.AppGuid, desired.AppVersion)
-		desiredByApp[appKey] = desired
-	}
 
 	for _, actual := range storecache.ActualStates {
 		appKey := storecache.Key(actual.AppGuid, actual.AppVersion)
@@ -82,7 +76,7 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 
 	storecache.Apps = make(map[string]*models.App, 0)
 
-	for key, desired := range desiredByApp {
+	for key, desired := range storecache.DesiredStates {
 		storecache.Apps[key] = models.NewApp(desired.AppGuid, desired.AppVersion, desired, heartbeatingInstancesByApp[key], crashCounts[key])
 	}
 
@@ -98,17 +92,6 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 		for _, heartbeat := range app.InstanceHeartbeats {
 			storecache.AppsByInstanceGuid[heartbeat.InstanceGuid] = app
 		}
-	}
-
-	storecache.PendingStartMessages = make(map[string]models.PendingStartMessage, 0)
-	storecache.PendingStopMessages = make(map[string]models.PendingStopMessage, 0)
-
-	for _, m := range pendingStartMessages {
-		storecache.PendingStartMessages[m.StoreKey()] = m
-	}
-
-	for _, m := range pendingStopMessages {
-		storecache.PendingStopMessages[m.StoreKey()] = m
 	}
 
 	return nil

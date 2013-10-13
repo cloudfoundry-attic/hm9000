@@ -76,11 +76,11 @@ var _ = Describe("Actual State", func() {
 			})
 
 			It("can fetch the actual state", func() {
-				desired, err := store.GetActualState()
+				actual, err := store.GetActualState()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(desired).Should(HaveLen(2))
-				Ω(desired).Should(ContainElement(heartbeat1))
-				Ω(desired).Should(ContainElement(heartbeat2))
+				Ω(actual).Should(HaveLen(2))
+				Ω(actual[heartbeat1.StoreKey()]).Should(Equal(heartbeat1))
+				Ω(actual[heartbeat2.StoreKey()]).Should(Equal(heartbeat2))
 			})
 		})
 
@@ -133,14 +133,14 @@ var _ = Describe("Actual State", func() {
 				err := store.DeleteActualState(toDelete...)
 				Ω(err).ShouldNot(HaveOccured())
 
-				desired, err := store.GetActualState()
+				actual, err := store.GetActualState()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(desired).Should(HaveLen(1))
-				Ω(desired).Should(ContainElement(heartbeat2))
+				Ω(actual).Should(HaveLen(1))
+				Ω(actual).Should(ContainElement(heartbeat2))
 			})
 		})
 
-		Context("When the desired state key is not present", func() {
+		Context("When the actual state key is not present", func() {
 			It("returns an error, but does leave things in a broken state... for now...", func() {
 				toDelete := []models.InstanceHeartbeat{
 					models.InstanceHeartbeat{InstanceGuid: heartbeat1.InstanceGuid},
