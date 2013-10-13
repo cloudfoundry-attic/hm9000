@@ -6,7 +6,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/sender"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
@@ -21,7 +21,7 @@ var _ = Describe("Sender", func() {
 		sender       *Sender
 		messageBus   *fake_cfmessagebus.FakeMessageBus
 		timeProvider *faketimeprovider.FakeTimeProvider
-		app1         app.App
+		app1         appfixture.AppFixture
 		conf         config.Config
 	)
 
@@ -29,7 +29,7 @@ var _ = Describe("Sender", func() {
 		store = fakestore.NewFakeStore()
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
 		timeProvider = &faketimeprovider.FakeTimeProvider{}
-		app1 = app.NewApp()
+		app1 = appfixture.NewAppFixture()
 		conf, _ = config.DefaultConfig()
 
 		sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
@@ -649,7 +649,7 @@ var _ = Describe("Sender", func() {
 			sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
 
 			for i := 0; i < 40; i += 1 {
-				a := app.NewApp()
+				a := appfixture.NewAppFixture()
 				store.SaveDesiredState(a.DesiredState(1))
 				store.SaveActualState(
 					a.InstanceAtIndex(1).Heartbeat(),

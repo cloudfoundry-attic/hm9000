@@ -4,7 +4,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/metricsserver"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -48,10 +48,10 @@ var _ = Describe("Metrics Server", func() {
 		})
 
 		Context("when the store is fresh", func() {
-			var a app.App
+			var a appfixture.AppFixture
 
 			BeforeEach(func() {
-				a = app.NewApp()
+				a = appfixture.NewAppFixture()
 				store.BumpDesiredFreshness(time.Unix(0, 0))
 				store.BumpActualFreshness(time.Unix(0, 0))
 			})
@@ -220,7 +220,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when there is an undesired app that is reporting as running", func() {
 				BeforeEach(func() {
-					b := app.NewApp()
+					b := appfixture.NewAppFixture()
 					store.SaveActualState(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(1),

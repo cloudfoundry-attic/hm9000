@@ -4,7 +4,7 @@ import (
 	"errors"
 	. "github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 	. "github.com/onsi/ginkgo"
@@ -20,31 +20,31 @@ var _ = Describe("Storecache", func() {
 		actualState  []models.InstanceHeartbeat
 		desiredState []models.DesiredAppState
 
-		app1         app.App
-		app2         app.App
-		app3         app.App
+		fixture1     appfixture.AppFixture
+		fixture2     appfixture.AppFixture
+		fixture3     appfixture.AppFixture
 		crashCount   models.CrashCount
 		startMessage models.PendingStartMessage
 		stopMessage  models.PendingStopMessage
 	)
 
 	BeforeEach(func() {
-		app1 = app.NewApp()
-		app2 = app.NewApp()
-		app3 = app.NewApp()
+		fixture1 = appfixture.NewAppFixture()
+		fixture2 = appfixture.NewAppFixture()
+		fixture3 = appfixture.NewAppFixture()
 
 		store = fakestore.NewFakeStore()
 		cache = New(store)
 
 		actualState = []models.InstanceHeartbeat{
-			app1.InstanceAtIndex(0).Heartbeat(),
-			app1.InstanceAtIndex(1).Heartbeat(),
-			app1.InstanceAtIndex(2).Heartbeat(),
-			app2.InstanceAtIndex(0).Heartbeat(),
+			fixture1.InstanceAtIndex(0).Heartbeat(),
+			fixture1.InstanceAtIndex(1).Heartbeat(),
+			fixture1.InstanceAtIndex(2).Heartbeat(),
+			fixture2.InstanceAtIndex(0).Heartbeat(),
 		}
 		desiredState = []models.DesiredAppState{
-			app1.DesiredState(1),
-			app3.DesiredState(1),
+			fixture1.DesiredState(1),
+			fixture3.DesiredState(1),
 		}
 
 		store.SaveActualState(actualState...)
@@ -52,8 +52,8 @@ var _ = Describe("Storecache", func() {
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
 		crashCount = models.CrashCount{
-			AppGuid:       "abc",
-			AppVersion:    "xyz",
+			AppGuid:       fixture1.AppGuid,
+			AppVersion:    fixture1.AppVersion,
 			InstanceIndex: 1,
 			CrashCount:    12,
 		}
@@ -84,56 +84,34 @@ var _ = Describe("Storecache", func() {
 			})
 
 			It("should build the set of apps", func() {
-				Ω(cache.SetOfApps).Should(HaveLen(3))
-				Ω(cache.SetOfApps).Should(HaveKey(app1.AppGuid + "-" + app1.AppVersion))
-				Ω(cache.SetOfApps).Should(HaveKey(app2.AppGuid + "-" + app2.AppVersion))
-				Ω(cache.SetOfApps).Should(HaveKey(app3.AppGuid + "-" + app3.AppVersion))
+				Ω(cache.Apps).Should(HaveLen(3))
+				Ω(cache.Apps).Should(HaveKey(fixture1.AppGuid + "-" + fixture1.AppVersion))
+				Ω(cache.Apps).Should(HaveKey(fixture2.AppGuid + "-" + fixture2.AppVersion))
+				Ω(cache.Apps).Should(HaveKey(fixture3.AppGuid + "-" + fixture3.AppVersion))
+
+				a1 := cache.Apps[fixture1.AppGuid+"-"+fixture1.AppVersion]
+				Ω(a1.Desired).Should(EqualDesiredState(fixture1.DesiredState(1)))
+				Ω(a1.InstanceHeartbeats).Should(HaveLen(3))
+				Ω(a1.InstanceHeartbeats).Should(ContainElement(fixture1.InstanceAtIndex(0).Heartbeat()))
+				Ω(a1.InstanceHeartbeats).Should(ContainElement(fixture1.InstanceAtIndex(1).Heartbeat()))
+				Ω(a1.InstanceHeartbeats).Should(ContainElement(fixture1.InstanceAtIndex(2).Heartbeat()))
+				Ω(a1.CrashCounts[1]).Should(Equal(crashCount))
+
+				a2 := cache.Apps[fixture2.AppGuid+"-"+fixture2.AppVersion]
+				Ω(a2.Desired).Should(BeZero())
+				Ω(a2.InstanceHeartbeats).Should(HaveLen(1))
+				Ω(a2.InstanceHeartbeats).Should(ContainElement(fixture2.InstanceAtIndex(0).Heartbeat()))
+				Ω(a2.CrashCounts).Should(BeEmpty())
+
+				a3 := cache.Apps[fixture3.AppGuid+"-"+fixture3.AppVersion]
+				Ω(a3.Desired).Should(EqualDesiredState(fixture3.DesiredState(1)))
+				Ω(a3.InstanceHeartbeats).Should(HaveLen(0))
+				Ω(a3.CrashCounts).Should(BeEmpty())
 			})
 
-			It("should index heartbeating instances by app/version guid", func() {
-				Ω(cache.HeartbeatingInstancesByApp).Should(HaveLen(2))
-				runningApp1 := cache.HeartbeatingInstancesByApp[app1.AppGuid+"-"+app1.AppVersion]
-				Ω(runningApp1).Should(HaveLen(3))
-				Ω(runningApp1).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
-				Ω(runningApp1).Should(ContainElement(app1.InstanceAtIndex(1).Heartbeat()))
-				Ω(runningApp1).Should(ContainElement(app1.InstanceAtIndex(2).Heartbeat()))
-				runningApp2 := cache.HeartbeatingInstancesByApp[app2.AppGuid+"-"+app2.AppVersion]
-				Ω(runningApp2).Should(HaveLen(1))
-				Ω(runningApp2).Should(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
-			})
-
-			It("should index desired state by app/version guid", func() {
-				Ω(cache.DesiredByApp).Should(HaveLen(2))
-				desiredApp1 := cache.DesiredByApp[app1.AppGuid+"-"+app1.AppVersion]
-				Ω(desiredApp1).Should(Equal(app1.DesiredState(1)))
-				desiredApp3 := cache.DesiredByApp[app3.AppGuid+"-"+app3.AppVersion]
-				Ω(desiredApp3).Should(Equal(app3.DesiredState(1)))
-			})
-
-			It("should index heartbeating instances by instance guid", func() {
-				Ω(cache.HeartbeatingInstancesByGuid).Should(HaveLen(4))
-				instance1 := app1.InstanceAtIndex(0)
-				Ω(cache.HeartbeatingInstancesByGuid[instance1.InstanceGuid]).Should(Equal(instance1.Heartbeat()))
-				instance2 := app1.InstanceAtIndex(1)
-				Ω(cache.HeartbeatingInstancesByGuid[instance2.InstanceGuid]).Should(Equal(instance2.Heartbeat()))
-				instance3 := app1.InstanceAtIndex(2)
-				Ω(cache.HeartbeatingInstancesByGuid[instance3.InstanceGuid]).Should(Equal(instance3.Heartbeat()))
-				instance4 := app2.InstanceAtIndex(0)
-				Ω(cache.HeartbeatingInstancesByGuid[instance4.InstanceGuid]).Should(Equal(instance4.Heartbeat()))
-			})
-
-			It("should index crash counts by app/version/index", func() {
-				Ω(cache.CrashCount(crashCount.AppGuid, crashCount.AppVersion, crashCount.InstanceIndex)).Should(Equal(crashCount))
-			})
-
-			It("should return a correctly configured crash count when the crash count is not in the cache", func() {
-				crashCount := cache.CrashCount("app-guid", "app-version", 17)
-				Ω(crashCount).Should(Equal(models.CrashCount{
-					AppGuid:       "app-guid",
-					AppVersion:    "app-version",
-					InstanceIndex: 17,
-					CrashCount:    0,
-				}))
+			It("should make the apps available by instance guid", func() {
+				Ω(cache.AppsByInstanceGuid[fixture1.InstanceAtIndex(1).InstanceGuid]).Should(Equal(cache.Apps[cache.Key(fixture1.AppGuid, fixture1.AppVersion)]))
+				Ω(cache.AppsByInstanceGuid[fixture2.InstanceAtIndex(0).InstanceGuid]).Should(Equal(cache.Apps[cache.Key(fixture2.AppGuid, fixture2.AppVersion)]))
 			})
 
 			It("should index pending start and stop messages by storekey", func() {

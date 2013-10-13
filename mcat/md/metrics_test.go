@@ -2,7 +2,7 @@ package md_test
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,12 +12,12 @@ import (
 
 var _ = Describe("Serving Metrics", func() {
 	var (
-		a  app.App
+		a  appfixture.AppFixture
 		ip string
 	)
 
 	BeforeEach(func() {
-		a = app.NewApp()
+		a = appfixture.NewAppFixture()
 
 		simulator.SetDesiredState(a.DesiredState(2))
 		simulator.SetCurrentHeartbeats(a.Heartbeat(1))

@@ -1,17 +1,17 @@
 package md_test
 
 import (
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Simple Cases Test", func() {
-	var app1, app2 app.App
+	var app1, app2 appfixture.AppFixture
 
 	BeforeEach(func() {
-		app1 = app.NewApp()
-		app2 = app.NewApp()
+		app1 = appfixture.NewAppFixture()
+		app2 = appfixture.NewAppFixture()
 	})
 
 	Context("when all running instances are desired", func() {

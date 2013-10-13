@@ -6,7 +6,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 
@@ -116,19 +116,19 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		Context("when a response with desired state is received", func() {
 			var (
-				a1         app.App
-				a2         app.App
-				stoppedApp app.App
-				deletedApp app.App
+				a1         appfixture.AppFixture
+				a2         appfixture.AppFixture
+				stoppedApp appfixture.AppFixture
+				deletedApp appfixture.AppFixture
 			)
 
 			BeforeEach(func() {
-				deletedApp = app.NewApp()
+				deletedApp = appfixture.NewAppFixture()
 				store.SaveDesiredState(deletedApp.DesiredState(1))
 
-				a1 = app.NewApp()
-				a2 = app.NewApp()
-				stoppedApp = app.NewApp()
+				a1 = appfixture.NewAppFixture()
+				a2 = appfixture.NewAppFixture()
+				stoppedApp = appfixture.NewAppFixture()
 				stoppedDesiredState := stoppedApp.DesiredState(1)
 				stoppedDesiredState.State = models.AppStateStopped
 				response = DesiredStateServerResponse{

@@ -1,17 +1,17 @@
-package app_test
+package appfixture_test
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
-	. "github.com/cloudfoundry/hm9000/testhelpers/app"
+	. "github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Dea", func() {
-	var dea Dea
+var _ = Describe("Dea Fixture", func() {
+	var dea DeaFixture
 
 	BeforeEach(func() {
-		dea = NewDea()
+		dea = NewDeaFixture()
 	})
 
 	It("should have a GUID", func() {

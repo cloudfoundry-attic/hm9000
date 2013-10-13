@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 )
 
@@ -18,9 +18,9 @@ var _ = Describe("Desired State", func() {
 		store       Store
 		etcdAdapter storeadapter.StoreAdapter
 		conf        config.Config
-		app1        app.App
-		app2        app.App
-		app3        app.App
+		app1        appfixture.AppFixture
+		app2        appfixture.AppFixture
+		app3        appfixture.AppFixture
 	)
 
 	BeforeEach(func() {
@@ -31,9 +31,9 @@ var _ = Describe("Desired State", func() {
 		err = etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		app1 = app.NewApp()
-		app2 = app.NewApp()
-		app3 = app.NewApp()
+		app1 = appfixture.NewAppFixture()
+		app2 = appfixture.NewAppFixture()
+		app3 = appfixture.NewAppFixture()
 
 		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
 	})

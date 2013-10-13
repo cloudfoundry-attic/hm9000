@@ -1,10 +1,10 @@
-package app
+package appfixture
 
 import (
 	. "github.com/cloudfoundry/hm9000/models"
 )
 
-type App struct {
+type AppFixture struct {
 	AppGuid    string
 	AppVersion string
 
@@ -19,12 +19,12 @@ type Instance struct {
 	AppVersion    string
 }
 
-func NewApp() App {
+func NewAppFixture() AppFixture {
 	return newAppForDeaGuid(Guid())
 }
 
-func newAppForDeaGuid(deaGuid string) App {
-	return App{
+func newAppForDeaGuid(deaGuid string) AppFixture {
+	return AppFixture{
 		AppGuid:    Guid(),
 		AppVersion: Guid(),
 		instances:  make(map[int]Instance, 0),
@@ -32,7 +32,7 @@ func newAppForDeaGuid(deaGuid string) App {
 	}
 }
 
-func (app App) CrashedInstanceHeartbeatAtIndex(index int) InstanceHeartbeat {
+func (app AppFixture) CrashedInstanceHeartbeatAtIndex(index int) InstanceHeartbeat {
 	return InstanceHeartbeat{
 		State:         InstanceStateCrashed,
 		CCPartition:   "default",
@@ -43,7 +43,7 @@ func (app App) CrashedInstanceHeartbeatAtIndex(index int) InstanceHeartbeat {
 	}
 }
 
-func (app App) InstanceAtIndex(index int) Instance {
+func (app AppFixture) InstanceAtIndex(index int) Instance {
 	_, ok := app.instances[index]
 	if !ok {
 		app.instances[index] = Instance{
@@ -57,7 +57,7 @@ func (app App) InstanceAtIndex(index int) Instance {
 	return app.instances[index]
 }
 
-func (app App) DesiredState(numberOfInstances int) DesiredAppState {
+func (app AppFixture) DesiredState(numberOfInstances int) DesiredAppState {
 	return DesiredAppState{
 		AppGuid:           app.AppGuid,
 		AppVersion:        app.AppVersion,
@@ -93,7 +93,7 @@ func (instance Instance) DropletExited(reason DropletExitedReason) DropletExited
 	return droplet_exited
 }
 
-func (app App) Heartbeat(instances int) Heartbeat {
+func (app AppFixture) Heartbeat(instances int) Heartbeat {
 	instanceHeartbeats := make([]InstanceHeartbeat, instances)
 	for i := 0; i < instances; i++ {
 		instanceHeartbeats[i] = app.InstanceAtIndex(i).Heartbeat()
@@ -105,7 +105,7 @@ func (app App) Heartbeat(instances int) Heartbeat {
 	}
 }
 
-func (app App) DropletUpdated() DropletUpdatedMessage {
+func (app AppFixture) DropletUpdated() DropletUpdatedMessage {
 	return DropletUpdatedMessage{
 		AppGuid: app.AppGuid,
 	}

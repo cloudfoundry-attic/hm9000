@@ -39,11 +39,8 @@ func (analyzer *Analyzer) Analyze() error {
 	allStopMessages := []models.PendingStopMessage{}
 	allCrashCounts := []models.CrashCount{}
 
-	for appVersionKey := range analyzer.storecache.SetOfApps {
-		desired := analyzer.storecache.DesiredByApp[appVersionKey]
-		heartbeatingInstances := analyzer.storecache.HeartbeatingInstancesByApp[appVersionKey]
-
-		startMessages, stopMessages, crashCounts := newAppAnalyzer(desired, heartbeatingInstances, analyzer.timeProvider.Time(), analyzer.storecache, analyzer.logger, analyzer.conf).analyzeApp()
+	for _, app := range analyzer.storecache.Apps {
+		startMessages, stopMessages, crashCounts := newAppAnalyzer(app, analyzer.timeProvider.Time(), analyzer.storecache, analyzer.logger, analyzer.conf).analyzeApp()
 		allStartMessages = append(allStartMessages, startMessages...)
 		allStopMessages = append(allStopMessages, stopMessages...)
 		allCrashCounts = append(allCrashCounts, crashCounts...)

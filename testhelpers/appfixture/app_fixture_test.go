@@ -1,17 +1,17 @@
-package app_test
+package appfixture_test
 
 import (
 	. "github.com/cloudfoundry/hm9000/models"
-	. "github.com/cloudfoundry/hm9000/testhelpers/app"
+	. "github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("App Model", func() {
-	var app App
+var _ = Describe("App Fixture", func() {
+	var app AppFixture
 
 	BeforeEach(func() {
-		app = NewApp()
+		app = NewAppFixture()
 	})
 
 	It("makes a reasonable app", func() {

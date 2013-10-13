@@ -1,22 +1,22 @@
-package app
+package appfixture
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
 )
 
-type Dea struct {
+type DeaFixture struct {
 	DeaGuid string
-	apps    map[int]App
+	apps    map[int]AppFixture
 }
 
-func NewDea() Dea {
-	return Dea{
+func NewDeaFixture() DeaFixture {
+	return DeaFixture{
 		DeaGuid: models.Guid(),
-		apps:    make(map[int]App, 0),
+		apps:    make(map[int]AppFixture, 0),
 	}
 }
 
-func (dea Dea) GetApp(index int) App {
+func (dea DeaFixture) GetApp(index int) AppFixture {
 	_, ok := dea.apps[index]
 	if !ok {
 		dea.apps[index] = newAppForDeaGuid(dea.DeaGuid)
@@ -25,7 +25,7 @@ func (dea Dea) GetApp(index int) App {
 	return dea.apps[index]
 }
 
-func (dea Dea) Heartbeat(numApps int) models.Heartbeat {
+func (dea DeaFixture) Heartbeat(numApps int) models.Heartbeat {
 	instanceHeartbeats := make([]models.InstanceHeartbeat, 0)
 	for i := 0; i < numApps; i++ {
 		instanceHeartbeats = append(instanceHeartbeats, dea.GetApp(i).InstanceAtIndex(0).Heartbeat())

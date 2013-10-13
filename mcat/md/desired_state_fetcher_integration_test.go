@@ -7,7 +7,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,17 +16,17 @@ import (
 var _ = Describe("Fetching from CC and storing the result in the Store", func() {
 	var (
 		fetcher    *desiredstatefetcher.DesiredStateFetcher
-		a1         app.App
-		a2         app.App
-		a3         app.App
+		a1         appfixture.AppFixture
+		a2         appfixture.AppFixture
+		a3         appfixture.AppFixture
 		resultChan chan desiredstatefetcher.DesiredStateFetcherResult
 	)
 
 	BeforeEach(func() {
 		resultChan = make(chan desiredstatefetcher.DesiredStateFetcherResult, 1)
-		a1 = app.NewApp()
-		a2 = app.NewApp()
-		a3 = app.NewApp()
+		a1 = appfixture.NewAppFixture()
+		a2 = appfixture.NewAppFixture()
+		a3 = appfixture.NewAppFixture()
 
 		stateServer.SetDesiredState([]models.DesiredAppState{
 			a1.DesiredState(1),

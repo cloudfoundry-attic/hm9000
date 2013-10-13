@@ -2,7 +2,7 @@ package md_test
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,7 +20,7 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 
 			lowPriorityAppGuids = make([]string, 0)
 			for i := 0; i < 8; i += 1 {
-				appToStart := app.NewApp()
+				appToStart := appfixture.NewAppFixture()
 				desiredState := appToStart.DesiredState(2)
 				desiredStates = append(desiredStates, desiredState)
 				lowPriorityAppGuids = append(lowPriorityAppGuids, appToStart.AppGuid)
@@ -29,14 +29,14 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 
 			highPriorityAppGuids = make([]string, 0)
 			for i := 0; i < 9; i += 1 {
-				appToStart := app.NewApp()
+				appToStart := appfixture.NewAppFixture()
 				desiredState := appToStart.DesiredState(1)
 				desiredStates = append(desiredStates, desiredState)
 				highPriorityAppGuids = append(highPriorityAppGuids, appToStart.AppGuid)
 			}
 
 			for i := 0; i < 40; i += 1 {
-				appToStop := app.NewApp()
+				appToStop := appfixture.NewAppFixture()
 				heartbeats = append(heartbeats, appToStop.Heartbeat(1))
 			}
 

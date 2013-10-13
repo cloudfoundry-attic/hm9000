@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 )
 
@@ -30,7 +30,7 @@ var _ = Describe("Actual State", func() {
 		err = etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		a := app.NewApp()
+		a := appfixture.NewAppFixture()
 		heartbeat1 = a.InstanceAtIndex(0).Heartbeat()
 		heartbeat2 = a.InstanceAtIndex(1).Heartbeat()
 		heartbeat3 = a.InstanceAtIndex(2).Heartbeat()

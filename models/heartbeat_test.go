@@ -143,4 +143,36 @@ var _ = Describe("InstanceHeartbeat", func() {
 			Ω(instance.StoreKey()).Should(Equal("def"))
 		})
 	})
+
+	Describe("Checking Heartbeat State", func() {
+		It("should return the correct answer to IsStarting", func() {
+			instance.State = InstanceStateStarting
+			Ω(instance.IsStarting()).Should(BeTrue())
+			instance.State = InstanceStateRunning
+			Ω(instance.IsStarting()).Should(BeFalse())
+		})
+
+		It("should return the correct answer to IsRunning", func() {
+			instance.State = InstanceStateRunning
+			Ω(instance.IsRunning()).Should(BeTrue())
+			instance.State = InstanceStateStarting
+			Ω(instance.IsRunning()).Should(BeFalse())
+		})
+
+		It("should return the correct answer to IsCrashed", func() {
+			instance.State = InstanceStateCrashed
+			Ω(instance.IsCrashed()).Should(BeTrue())
+			instance.State = InstanceStateRunning
+			Ω(instance.IsCrashed()).Should(BeFalse())
+		})
+
+		It("should return the correct answer to IsStartingOrRunning", func() {
+			instance.State = InstanceStateCrashed
+			Ω(instance.IsStartingOrRunning()).Should(BeFalse())
+			instance.State = InstanceStateRunning
+			Ω(instance.IsStartingOrRunning()).Should(BeTrue())
+			instance.State = InstanceStateStarting
+			Ω(instance.IsStartingOrRunning()).Should(BeTrue())
+		})
+	})
 })

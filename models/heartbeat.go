@@ -42,6 +42,22 @@ func (instance InstanceHeartbeat) StoreKey() string {
 	return instance.InstanceGuid
 }
 
+func (instance InstanceHeartbeat) IsStartingOrRunning() bool {
+	return instance.IsStarting() || instance.IsRunning()
+}
+
+func (instance InstanceHeartbeat) IsStarting() bool {
+	return instance.State == InstanceStateStarting
+}
+
+func (instance InstanceHeartbeat) IsRunning() bool {
+	return instance.State == InstanceStateRunning
+}
+
+func (instance InstanceHeartbeat) IsCrashed() bool {
+	return instance.State == InstanceStateCrashed
+}
+
 func (instance InstanceHeartbeat) LogDescription() map[string]string {
 	return map[string]string{
 		"AppGuid":        instance.AppGuid,

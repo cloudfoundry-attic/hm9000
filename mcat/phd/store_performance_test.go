@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
 
 	"fmt"
@@ -51,7 +51,7 @@ var _ = XDescribe("Store Performance (these are better covered in the new detail
 					Measure(fmt.Sprintf("Read/Write Performance With %d Apps", numApps), func(b Benchmarker) {
 						data := make([]storeadapter.StoreNode, numApps)
 
-						heartbeat := app.NewDea().Heartbeat(numApps)
+						heartbeat := appfixture.NewDeaFixture().Heartbeat(numApps)
 						for i, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
 							data[i] = storeadapter.StoreNode{
 								Key:   "/actual/" + instanceHeartbeat.InstanceGuid,

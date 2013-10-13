@@ -9,7 +9,7 @@ import (
 	"errors"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
@@ -21,7 +21,7 @@ var _ = Describe("Analyzer", func() {
 		analyzer     *Analyzer
 		store        *fakestore.FakeStore
 		timeProvider *faketimeprovider.FakeTimeProvider
-		a            app.App
+		a            appfixture.AppFixture
 	)
 
 	conf, _ := config.DefaultConfig()
@@ -31,7 +31,7 @@ var _ = Describe("Analyzer", func() {
 		timeProvider = &faketimeprovider.FakeTimeProvider{}
 		timeProvider.TimeToProvide = time.Unix(1000, 0)
 
-		a = app.NewApp()
+		a = appfixture.NewAppFixture()
 
 		store.BumpActualFreshness(time.Unix(100, 0))
 		store.BumpDesiredFreshness(time.Unix(100, 0))
@@ -272,9 +272,9 @@ var _ = Describe("Analyzer", func() {
 
 	Describe("Stopping duplicate instances (index < numDesired)", func() {
 		var (
-			duplicateInstance1 app.Instance
-			duplicateInstance2 app.Instance
-			duplicateInstance3 app.Instance
+			duplicateInstance1 appfixture.Instance
+			duplicateInstance2 appfixture.Instance
+			duplicateInstance3 appfixture.Instance
 		)
 
 		BeforeEach(func() {
@@ -365,8 +365,8 @@ var _ = Describe("Analyzer", func() {
 
 		Context("When the duplicated index is also an unwanted index", func() {
 			var (
-				duplicateExtraInstance1 app.Instance
-				duplicateExtraInstance2 app.Instance
+				duplicateExtraInstance1 appfixture.Instance
+				duplicateExtraInstance2 appfixture.Instance
 			)
 
 			BeforeEach(func() {
@@ -533,15 +533,15 @@ var _ = Describe("Analyzer", func() {
 
 	Describe("Processing multiple apps", func() {
 		var (
-			otherApp      app.App
-			yetAnotherApp app.App
-			undesiredApp  app.App
+			otherApp      appfixture.AppFixture
+			yetAnotherApp appfixture.AppFixture
+			undesiredApp  appfixture.AppFixture
 		)
 
 		BeforeEach(func() {
-			otherApp = app.NewApp()
-			undesiredApp = app.NewApp()
-			yetAnotherApp = app.NewApp()
+			otherApp = appfixture.NewAppFixture()
+			undesiredApp = appfixture.NewAppFixture()
+			yetAnotherApp = appfixture.NewAppFixture()
 			undesiredApp.AppGuid = a.AppGuid
 
 			store.SaveDesiredState(
@@ -593,7 +593,7 @@ var _ = Describe("Analyzer", func() {
 				desired,
 			)
 			store.SaveActualState(
-				app.NewApp().InstanceAtIndex(0).Heartbeat(),
+				appfixture.NewAppFixture().InstanceAtIndex(0).Heartbeat(),
 			)
 		})
 

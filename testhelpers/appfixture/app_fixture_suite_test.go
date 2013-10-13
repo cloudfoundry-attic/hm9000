@@ -1,4 +1,4 @@
-package app_test
+package appfixture_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestApp(t *testing.T) {
+func TestAppFixture(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "App Suite")
+	RunSpecs(t, "App Fixture Suite")
 }

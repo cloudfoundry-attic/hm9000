@@ -2,19 +2,19 @@ package md_test
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Crashes", func() {
 	var (
-		a                 app.App
+		a                 appfixture.AppFixture
 		crashingHeartbeat models.Heartbeat
 	)
 
 	BeforeEach(func() {
-		a = app.NewApp()
+		a = appfixture.NewAppFixture()
 	})
 
 	Describe("when all instances are crashed", func() {

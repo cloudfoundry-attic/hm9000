@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	storePackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	"time"
 )
@@ -17,14 +17,14 @@ import (
 var _ = Describe("FakeStore", func() {
 	var store *FakeStore
 	var storeType storePackage.Store
-	var app1 app.App
-	var app2 app.App
+	var app1 appfixture.AppFixture
+	var app2 appfixture.AppFixture
 
 	BeforeEach(func() {
 		store = NewFakeStore()
 		storeType = NewFakeStore() //use compiler to verify that we satisfy the store interface
-		app1 = app.NewApp()
-		app2 = app.NewApp()
+		app1 = appfixture.NewAppFixture()
+		app2 = appfixture.NewAppFixture()
 	})
 
 	It("should start off empty", func() {
@@ -123,7 +123,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(desired).Should(ContainElement(EqualDesiredState(desired2)))
 
 			desired2.NumberOfInstances = 17
-			desired3 := app.NewApp().DesiredState(1)
+			desired3 := appfixture.NewAppFixture().DesiredState(1)
 
 			err = store.SaveDesiredState(desired2, desired3)
 			Ω(err).ShouldNot(HaveOccured())

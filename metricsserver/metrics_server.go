@@ -91,21 +91,24 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		return
 	}
 
-	for key, _ := range s.storecache.SetOfApps {
-		appMetrics := NewAppMetrics(s.storecache.DesiredByApp[key], s.storecache.HeartbeatingInstancesByApp[key])
-		if appMetrics.HasAllInstancesReporting {
-			NumberOfAppsWithAllInstancesReporting++
+	for _, app := range s.storecache.Apps {
+		numberOfMissingIndicesForApp := app.NumberOfDesiredInstances() - app.NumberOfDesiredIndicesReporting()
+		if app.IsDesired() {
+			if numberOfMissingIndicesForApp == 0 {
+				NumberOfAppsWithAllInstancesReporting++
+			} else {
+				NumberOfAppsWithMissingInstances++
+			}
+		} else {
+			if app.HasStartingOrRunningInstances() {
+				NumberOfUndesiredRunningApps++
+			}
 		}
-		if appMetrics.HasMissingInstances {
-			NumberOfAppsWithMissingInstances++
-		}
-		if appMetrics.IsRunningButUndesired {
-			NumberOfUndesiredRunningApps++
-		}
-		NumberOfRunningInstances += appMetrics.NumberOfRunningInstances
-		NumberOfMissingIndices += appMetrics.NumberOfMissingIndices
-		NumberOfCrashedInstances += appMetrics.NumberOfCrashedInstances
-		NumberOfCrashedIndices += appMetrics.NumberOfCrashedIndices
+
+		NumberOfRunningInstances += app.NumberOfStartingOrRunningInstances()
+		NumberOfMissingIndices += numberOfMissingIndicesForApp
+		NumberOfCrashedInstances += app.NumberOfCrashedInstances()
+		NumberOfCrashedIndices += app.NumberOfCrashedIndices()
 	}
 
 	return

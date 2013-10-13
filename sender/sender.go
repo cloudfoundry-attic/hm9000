@@ -135,13 +135,12 @@ func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingSto
 			sender.logger.Info("Deleting expired stop message", stopMessage.LogDescription())
 			stopMessagesToDelete = append(stopMessagesToDelete, stopMessage)
 		} else if stopMessage.IsTimeToSend(sender.timeProvider.Time()) {
-			shouldSend, isDuplicate := sender.verifyStopMessageShouldBeSent(stopMessage)
+			shouldSend, isDuplicate, instanceToStop := sender.verifyStopMessageShouldBeSent(stopMessage)
 			if shouldSend {
-				actual := sender.storecache.HeartbeatingInstancesByGuid[stopMessage.InstanceGuid]
 				messageToSend := models.StopMessage{
-					AppGuid:       actual.AppGuid,
-					AppVersion:    actual.AppVersion,
-					InstanceIndex: actual.InstanceIndex,
+					AppGuid:       instanceToStop.AppGuid,
+					AppVersion:    instanceToStop.AppVersion,
+					InstanceIndex: instanceToStop.InstanceIndex,
 					InstanceGuid:  stopMessage.InstanceGuid,
 					IsDuplicate:   isDuplicate,
 					MessageId:     stopMessage.MessageId,
@@ -183,86 +182,57 @@ func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingSto
 
 func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStartMessage) bool {
 	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
-	desired, hasDesiredState := sender.storecache.DesiredByApp[appKey]
-	if !hasDesiredState {
-		//app is no longer desired, don't start the instance
+	app, found := sender.storecache.Apps[appKey]
+
+	if !found {
 		sender.logger.Info("Skipping sending start message: app is no longer desired", message.LogDescription())
 		return false
 	}
-	if desired.NumberOfInstances <= message.IndexToStart {
-		//instance index is beyond the desired # of instances, don't start the instance
-		sender.logger.Info("Skipping sending start message: instance index is beyond the desired # of instances",
-			message.LogDescription(), desired.LogDescription())
+
+	if !app.IsDesired() {
+		sender.logger.Info("Skipping sending start message: app is no longer desired", message.LogDescription(), app.LogDescription())
 		return false
 	}
-	allHeartbeatingInstances, hasHeartbeatingInstances := sender.storecache.HeartbeatingInstancesByApp[appKey]
-	if !hasHeartbeatingInstances {
-		//there are no running instances, start the instance
-		sender.logger.Info("Sending start message: instance is desired but not running",
-			message.LogDescription(), desired.LogDescription())
-		return true
+
+	if !app.IsIndexDesired(message.IndexToStart) {
+		sender.logger.Info("Skipping sending start message: instance index is beyond the desired # of instances", message.LogDescription(), app.LogDescription())
+		return false
 	}
 
-	for _, heartbeat := range allHeartbeatingInstances {
-		if heartbeat.InstanceIndex == message.IndexToStart && heartbeat.State != models.InstanceStateCrashed {
-			//there is already an instance running at that index, don't start another
-			sender.logger.Info("Skipping sending start message: instance is already running",
-				message.LogDescription(), desired.LogDescription(), heartbeat.LogDescription())
-			return false
-		}
+	if app.HasStartingOrRunningInstanceAtIndex(message.IndexToStart) {
+		sender.logger.Info("Skipping sending start message: instance is already running", message.LogDescription(), app.LogDescription())
+		return false
 	}
 
-	//there was no instance running at that index, start the instance
-	sender.logger.Info("Sending start message: instance is not running at desired index",
-		message.LogDescription(), desired.LogDescription())
+	sender.logger.Info("Sending start message: instance is not running at desired index", message.LogDescription(), app.LogDescription())
 	return true
 }
 
-func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMessage) (bool, isDuplicate bool) {
-	instanceToStop, found := sender.storecache.HeartbeatingInstancesByGuid[message.InstanceGuid]
+func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMessage) (bool, isDuplicate bool, instanceToStop models.InstanceHeartbeat) {
+	app, found := sender.storecache.AppsByInstanceGuid[message.InstanceGuid]
+
 	if !found {
-		//there was no running instance found with that guid, don't send a stop message
 		sender.logger.Info("Skipping sending stop message: instance is no longer running", message.LogDescription())
-		return false, false
-	}
-	appKey := sender.storecache.Key(instanceToStop.AppGuid, instanceToStop.AppVersion)
-	desired, found := sender.storecache.DesiredByApp[appKey]
-	if !found {
-		//there is no desired app for this instance, send the stop message
-		sender.logger.Info("Sending stop message: instance is running, app is no longer desired",
-			message.LogDescription(),
-			instanceToStop.LogDescription())
-		return true, false
-	}
-	if desired.NumberOfInstances <= instanceToStop.InstanceIndex {
-		//the instance index is beyond the desired # of instances, stop the app
-		sender.logger.Info("Sending stop message: index of instance to stop is beyond desired # of instances",
-			message.LogDescription(),
-			instanceToStop.LogDescription(),
-			desired.LogDescription())
-		return true, false
-	}
-	allRunningInstances, _ := sender.storecache.HeartbeatingInstancesByApp[appKey]
-	for _, heartbeat := range allRunningInstances {
-		if heartbeat.InstanceIndex == instanceToStop.InstanceIndex &&
-			heartbeat.InstanceGuid != instanceToStop.InstanceGuid &&
-			heartbeat.State != models.InstanceStateCrashed {
-			// there is *another* instance reporting at this index,
-			// so the instance-to-stop is an extra instance reporting on a desired index, stop it
-			sender.logger.Info("Sending stop message: instance is a duplicate running at a desired index",
-				message.LogDescription(),
-				instanceToStop.LogDescription(),
-				desired.LogDescription())
-			return true, true
-		}
+		return false, false, models.InstanceHeartbeat{}
 	}
 
-	//the instance index is within the desired # of instances
-	//there are no other instances running on this index
-	//don't stop the instance
-	sender.logger.Info("Skipping sending stop message: instance is running on a desired index (and there are no other instances running at that index)",
-		message.LogDescription(),
-		instanceToStop.LogDescription(),
-		desired.LogDescription())
-	return false, false
+	instanceToStop = app.InstanceWithGuid(message.InstanceGuid)
+
+	if !app.IsDesired() {
+		sender.logger.Info("Sending stop message: instance is running, app is no longer desired", message.LogDescription(), app.LogDescription())
+		return true, false, instanceToStop
+	}
+
+	if !app.IsIndexDesired(instanceToStop.InstanceIndex) {
+		sender.logger.Info("Sending stop message: index of instance to stop is beyond desired # of instances", message.LogDescription(), app.LogDescription())
+		return true, false, instanceToStop
+	}
+
+	if len(app.StartingOrRunningInstancesAtIndex(instanceToStop.InstanceIndex)) > 1 {
+		sender.logger.Info("Sending stop message: instance is a duplicate running at a desired index", message.LogDescription(), app.LogDescription())
+		return true, true, instanceToStop
+	}
+
+	sender.logger.Info("Skipping sending stop message: instance is running on a desired index (and there are no other instances running at that index)", message.LogDescription(), app.LogDescription())
+	return false, false, models.InstanceHeartbeat{}
 }

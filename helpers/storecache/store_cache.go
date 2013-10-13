@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
-	"strconv"
 	"time"
 )
 
@@ -15,24 +14,15 @@ type StoreCache struct {
 	ActualStates  []models.InstanceHeartbeat
 	CrashCounts   []models.CrashCount
 
-	SetOfApps                      map[string]bool
-	HeartbeatingInstancesByApp     map[string][]models.InstanceHeartbeat
-	DesiredByApp                   map[string]models.DesiredAppState
-	HeartbeatingInstancesByGuid    map[string]models.InstanceHeartbeat
-	crashCountByAppVersionIndexKey map[string]models.CrashCount
-	PendingStartMessages           map[string]models.PendingStartMessage
-	PendingStopMessages            map[string]models.PendingStopMessage
+	Apps                 map[string]*models.App
+	AppsByInstanceGuid   map[string]*models.App
+	PendingStartMessages map[string]models.PendingStartMessage
+	PendingStopMessages  map[string]models.PendingStopMessage
 }
 
 func New(store store.Store) (storecache *StoreCache) {
 	return &StoreCache{
-		store:                       store,
-		DesiredStates:               make([]models.DesiredAppState, 0),
-		ActualStates:                make([]models.InstanceHeartbeat, 0),
-		SetOfApps:                   make(map[string]bool, 0),
-		HeartbeatingInstancesByApp:  make(map[string][]models.InstanceHeartbeat, 0),
-		DesiredByApp:                make(map[string]models.DesiredAppState, 0),
-		HeartbeatingInstancesByGuid: make(map[string]models.InstanceHeartbeat, 0),
+		store: store,
 	}
 }
 
@@ -67,32 +57,51 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 		return err
 	}
 
-	storecache.SetOfApps = make(map[string]bool, 0)
-	storecache.HeartbeatingInstancesByApp = make(map[string][]models.InstanceHeartbeat, 0)
-	storecache.DesiredByApp = make(map[string]models.DesiredAppState, 0)
-	storecache.HeartbeatingInstancesByGuid = make(map[string]models.InstanceHeartbeat, 0)
-	storecache.crashCountByAppVersionIndexKey = make(map[string]models.CrashCount, 0)
-	storecache.PendingStartMessages = make(map[string]models.PendingStartMessage, 0)
-	storecache.PendingStopMessages = make(map[string]models.PendingStopMessage, 0)
+	heartbeatingInstancesByApp := make(map[string][]models.InstanceHeartbeat, 0)
+	desiredByApp := make(map[string]models.DesiredAppState, 0)
+	crashCounts := make(map[string]map[int]models.CrashCount)
 
 	for _, desired := range storecache.DesiredStates {
 		appKey := storecache.Key(desired.AppGuid, desired.AppVersion)
-		storecache.DesiredByApp[appKey] = desired
-		storecache.SetOfApps[appKey] = true
+		desiredByApp[appKey] = desired
 	}
 
 	for _, actual := range storecache.ActualStates {
 		appKey := storecache.Key(actual.AppGuid, actual.AppVersion)
-
-		storecache.HeartbeatingInstancesByGuid[actual.InstanceGuid] = actual
-		storecache.HeartbeatingInstancesByApp[appKey] = append(storecache.HeartbeatingInstancesByApp[appKey], actual)
-		storecache.SetOfApps[appKey] = true
+		heartbeatingInstancesByApp[appKey] = append(heartbeatingInstancesByApp[appKey], actual)
 	}
 
 	for _, crashCount := range storecache.CrashCounts {
-		key := crashCount.StoreKey()
-		storecache.crashCountByAppVersionIndexKey[key] = crashCount
+		key := storecache.Key(crashCount.AppGuid, crashCount.AppVersion)
+		_, present := crashCounts[key]
+		if !present {
+			crashCounts[key] = make(map[int]models.CrashCount)
+		}
+		crashCounts[key][crashCount.InstanceIndex] = crashCount
 	}
+
+	storecache.Apps = make(map[string]*models.App, 0)
+
+	for key, desired := range desiredByApp {
+		storecache.Apps[key] = models.NewApp(desired.AppGuid, desired.AppVersion, desired, heartbeatingInstancesByApp[key], crashCounts[key])
+	}
+
+	for key, instances := range heartbeatingInstancesByApp {
+		_, present := storecache.Apps[key]
+		if !present {
+			storecache.Apps[key] = models.NewApp(instances[0].AppGuid, instances[0].AppVersion, models.DesiredAppState{}, instances, crashCounts[key])
+		}
+	}
+
+	storecache.AppsByInstanceGuid = make(map[string]*models.App, 0)
+	for _, app := range storecache.Apps {
+		for _, heartbeat := range app.InstanceHeartbeats {
+			storecache.AppsByInstanceGuid[heartbeat.InstanceGuid] = app
+		}
+	}
+
+	storecache.PendingStartMessages = make(map[string]models.PendingStartMessage, 0)
+	storecache.PendingStopMessages = make(map[string]models.PendingStopMessage, 0)
 
 	for _, m := range pendingStartMessages {
 		storecache.PendingStartMessages[m.StoreKey()] = m
@@ -127,18 +136,4 @@ func (storecache *StoreCache) verifyFreshness(time time.Time) error {
 	}
 
 	return nil
-}
-
-func (storecache *StoreCache) CrashCount(appGuid string, appVersion string, instanceIndex int) models.CrashCount {
-	crashCount, found := storecache.crashCountByAppVersionIndexKey[appGuid+"-"+appVersion+"-"+strconv.Itoa(instanceIndex)]
-	if !found {
-		return models.CrashCount{
-			AppGuid:       appGuid,
-			AppVersion:    appVersion,
-			InstanceIndex: instanceIndex,
-		}
-	} else {
-		return crashCount
-	}
-
 }

@@ -2,19 +2,19 @@ package md_test
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Stopping Duplicate Instances", func() {
-	var a app.App
+	var a appfixture.AppFixture
 
 	Context("when there are multiple instances on the same index", func() {
-		var instance0, instance1, duplicateInstance1 app.Instance
+		var instance0, instance1, duplicateInstance1 appfixture.Instance
 		var heartbeat models.Heartbeat
 		BeforeEach(func() {
-			a = app.NewApp()
+			a = appfixture.NewAppFixture()
 
 			instance0 = a.InstanceAtIndex(0)
 			instance1 = a.InstanceAtIndex(1)
@@ -56,7 +56,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 					BeforeEach(func() {
 						instanceGuidThatShouldStop := startStopListener.Stops[0].InstanceGuid
 
-						var remainingInstance app.Instance
+						var remainingInstance appfixture.Instance
 						if instance1.InstanceGuid == instanceGuidThatShouldStop {
 							remainingInstance = duplicateInstance1
 						} else {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
-	"github.com/cloudfoundry/hm9000/testhelpers/app"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,11 +12,11 @@ import (
 
 var _ = Describe("Desired State Server Response JSON", func() {
 	var (
-		a        app.App
+		a        appfixture.AppFixture
 		response DesiredStateServerResponse
 	)
 	BeforeEach(func() {
-		a = app.NewApp()
+		a = appfixture.NewAppFixture()
 
 		desired, _ := json.Marshal(a.DesiredState(1))
 		responseJson := fmt.Sprintf(`

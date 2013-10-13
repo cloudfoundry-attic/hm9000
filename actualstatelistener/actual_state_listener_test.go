@@ -9,7 +9,7 @@ import (
 	"time"
 
 	. "github.com/cloudfoundry/hm9000/models"
-	. "github.com/cloudfoundry/hm9000/testhelpers/app"
+	. "github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
@@ -20,8 +20,8 @@ import (
 
 var _ = Describe("Actual state listener", func() {
 	var (
-		app          App
-		anotherApp   App
+		app          AppFixture
+		anotherApp   AppFixture
 		store        *fakestore.FakeStore
 		listener     *ActualStateListener
 		timeProvider *faketimeprovider.FakeTimeProvider
@@ -39,8 +39,8 @@ var _ = Describe("Actual state listener", func() {
 			TimeToProvide: time.Now(),
 		}
 
-		app = NewApp()
-		anotherApp = NewApp()
+		app = NewAppFixture()
+		anotherApp = NewAppFixture()
 
 		store = fakestore.NewFakeStore()
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
