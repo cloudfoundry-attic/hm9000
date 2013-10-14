@@ -4,29 +4,33 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	"strconv"
 )
 
 type MetricsServer struct {
 	storecache   *storecache.StoreCache
 	steno        *gosteno.Logger
+	logger       logger.Logger
 	timeProvider timeprovider.TimeProvider
 	config       config.Config
 	messageBus   cfmessagebus.MessageBus
 }
 
-func New(messageBus cfmessagebus.MessageBus, steno *gosteno.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config) *MetricsServer {
+func New(messageBus cfmessagebus.MessageBus, steno *gosteno.Logger, logger logger.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config) *MetricsServer {
 	storecache := storecache.New(store)
 	return &MetricsServer{
 		messageBus:   messageBus,
 		storecache:   storecache,
 		timeProvider: timeProvider,
 		steno:        steno,
+		logger:       logger,
 		config:       conf,
 	}
 }
@@ -132,6 +136,13 @@ func (s *MetricsServer) Start() error {
 	if err != nil {
 		return err
 	}
+
+	s.logger.Info("Serving Metrics", map[string]string{
+		"IP":       component.IpAddress,
+		"Port":     strconv.Itoa(int(component.StatusPort)),
+		"Username": component.StatusCredentials[0],
+		"Password": component.StatusCredentials[1],
+	})
 
 	go component.StartMonitoringEndpoints()
 

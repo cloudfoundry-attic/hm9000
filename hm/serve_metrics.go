@@ -14,6 +14,7 @@ func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf config.Config) {
 	metricsServer := metricsserver.New(
 		mbus,
 		steno,
+		l,
 		store,
 		buildTimeProvider(l),
 		conf,
