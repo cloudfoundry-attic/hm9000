@@ -253,7 +253,7 @@ var _ = Describe("Sender", func() {
 				app1.InstanceAtIndex(1).Heartbeat(),
 			)
 
-			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.InstanceAtIndex(0).InstanceGuid)
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, app1.InstanceAtIndex(0).InstanceGuid)
 			pendingMessage.SentOn = sentOn
 			store.SavePendingStopMessages(
 				pendingMessage,
@@ -525,7 +525,7 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app1.InstanceAtIndex(indexToStop).InstanceGuid)
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, app1.InstanceAtIndex(indexToStop).InstanceGuid)
 			pendingMessage.SentOn = 0
 			store.SavePendingStopMessages(
 				pendingMessage,
@@ -688,7 +688,7 @@ var _ = Describe("Sender", func() {
 					expiredStartMessage,
 				)
 
-				stopMessage := models.NewPendingStopMessage(time.Unix(100, 0), 30, 0, a.InstanceAtIndex(1).InstanceGuid)
+				stopMessage := models.NewPendingStopMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, a.InstanceAtIndex(1).InstanceGuid)
 				store.SavePendingStopMessages(
 					stopMessage,
 				)

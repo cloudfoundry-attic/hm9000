@@ -16,8 +16,7 @@ type StoreCache struct {
 	PendingStartMessages map[string]models.PendingStartMessage
 	PendingStopMessages  map[string]models.PendingStopMessage
 
-	Apps               map[string]*models.App
-	AppsByInstanceGuid map[string]*models.App
+	Apps map[string]*models.App
 }
 
 func New(store store.Store) (storecache *StoreCache) {
@@ -84,13 +83,6 @@ func (storecache *StoreCache) Load(time time.Time) (err error) {
 		_, present := storecache.Apps[key]
 		if !present {
 			storecache.Apps[key] = models.NewApp(instances[0].AppGuid, instances[0].AppVersion, models.DesiredAppState{}, instances, crashCounts[key])
-		}
-	}
-
-	storecache.AppsByInstanceGuid = make(map[string]*models.App, 0)
-	for _, app := range storecache.Apps {
-		for _, heartbeat := range app.InstanceHeartbeats {
-			storecache.AppsByInstanceGuid[heartbeat.InstanceGuid] = app
 		}
 	}
 

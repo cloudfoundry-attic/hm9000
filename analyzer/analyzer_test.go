@@ -208,13 +208,13 @@ var _ = Describe("Analyzer", func() {
 				Ω(startMessages()).Should(BeEmpty())
 				Ω(stopMessages()).Should(HaveLen(3))
 
-				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.InstanceAtIndex(0).InstanceGuid)
+				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(0).InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.InstanceAtIndex(1).InstanceGuid)
+				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(1).InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.InstanceAtIndex(2).InstanceGuid)
+				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(2).InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 			})
 		})
@@ -222,7 +222,7 @@ var _ = Describe("Analyzer", func() {
 		Context("when there is an existing stop message", func() {
 			var existingMessage models.PendingStopMessage
 			BeforeEach(func() {
-				existingMessage = models.NewPendingStopMessage(time.Unix(1, 0), 0, 0, a.InstanceAtIndex(0).InstanceGuid)
+				existingMessage = models.NewPendingStopMessage(time.Unix(1, 0), 0, 0, a.AppGuid, a.AppVersion, a.InstanceAtIndex(0).InstanceGuid)
 				store.SavePendingStopMessages(
 					existingMessage,
 				)
@@ -250,10 +250,10 @@ var _ = Describe("Analyzer", func() {
 
 					Ω(stopMessages()).Should(HaveLen(2))
 
-					expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.InstanceAtIndex(1).InstanceGuid)
+					expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(1).InstanceGuid)
 					Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-					expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.InstanceAtIndex(2).InstanceGuid)
+					expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(2).InstanceGuid)
 					Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 				})
 			})
@@ -344,20 +344,20 @@ var _ = Describe("Analyzer", func() {
 
 				Ω(stopMessages()).Should(HaveLen(3))
 
-				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod(), conf.GracePeriod(), a.InstanceAtIndex(2).InstanceGuid)
+				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod(), conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(2).InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod()*2, conf.GracePeriod(), duplicateInstance1.InstanceGuid)
+				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod()*2, conf.GracePeriod(), a.AppGuid, a.AppVersion, duplicateInstance1.InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod()*3, conf.GracePeriod(), duplicateInstance2.InstanceGuid)
+				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod()*3, conf.GracePeriod(), a.AppGuid, a.AppVersion, duplicateInstance2.InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 			})
 
 			Context("when there is an existing stop message", func() {
 				var existingMessage models.PendingStopMessage
 				BeforeEach(func() {
-					existingMessage = models.NewPendingStopMessage(time.Unix(1, 0), 0, 0, a.InstanceAtIndex(2).InstanceGuid)
+					existingMessage = models.NewPendingStopMessage(time.Unix(1, 0), 0, 0, a.AppGuid, a.AppVersion, a.InstanceAtIndex(2).InstanceGuid)
 					store.SavePendingStopMessages(
 						existingMessage,
 					)
@@ -401,13 +401,13 @@ var _ = Describe("Analyzer", func() {
 
 				Ω(stopMessages()).Should(HaveLen(3))
 
-				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.InstanceAtIndex(3).InstanceGuid)
+				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(3).InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), duplicateExtraInstance1.InstanceGuid)
+				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, duplicateExtraInstance1.InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), duplicateExtraInstance2.InstanceGuid)
+				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, duplicateExtraInstance2.InstanceGuid)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 			})
 		})
@@ -583,10 +583,10 @@ var _ = Describe("Analyzer", func() {
 
 			Ω(stopMessages()).Should(HaveLen(2))
 
-			expectedStopMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.InstanceAtIndex(1).InstanceGuid)
+			expectedStopMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(1).InstanceGuid)
 			Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedStopMessage)))
 
-			expectedStopMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), undesiredApp.InstanceAtIndex(0).InstanceGuid)
+			expectedStopMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), undesiredApp.AppGuid, undesiredApp.AppVersion, undesiredApp.InstanceAtIndex(0).InstanceGuid)
 			Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedStopMessage)))
 		})
 	})

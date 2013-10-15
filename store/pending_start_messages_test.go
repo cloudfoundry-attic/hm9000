@@ -128,8 +128,8 @@ var _ = Describe("Storing PendingStartMessages", func() {
 		Context("When the start message is present", func() {
 			It("can delete the start message (and only cares about the relevant fields)", func() {
 				toDelete := []models.PendingStartMessage{
-					models.PendingStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
-					models.PendingStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
+					models.NewPendingStartMessage(time.Time{}, 0, 0, message1.AppGuid, message1.AppVersion, message1.IndexToStart, 0),
+					models.NewPendingStartMessage(time.Time{}, 0, 0, message3.AppGuid, message3.AppVersion, message3.IndexToStart, 0),
 				}
 				err := store.DeletePendingStartMessages(toDelete...)
 				Ω(err).ShouldNot(HaveOccured())
@@ -144,9 +144,9 @@ var _ = Describe("Storing PendingStartMessages", func() {
 		Context("When the desired message key is not present", func() {
 			It("returns an error, but does leave things in a broken state... for now...", func() {
 				toDelete := []models.PendingStartMessage{
-					models.PendingStartMessage{AppGuid: message1.AppGuid, AppVersion: message1.AppVersion, IndexToStart: message1.IndexToStart},
-					models.PendingStartMessage{AppGuid: "floobedey", AppVersion: "abc"},
-					models.PendingStartMessage{AppGuid: message3.AppGuid, AppVersion: message3.AppVersion, IndexToStart: message3.IndexToStart},
+					models.NewPendingStartMessage(time.Time{}, 0, 0, message1.AppGuid, message1.AppVersion, message1.IndexToStart, 0),
+					models.NewPendingStartMessage(time.Time{}, 0, 0, "floobedey", "abc", 0, 0),
+					models.NewPendingStartMessage(time.Time{}, 0, 0, message3.AppGuid, message3.AppVersion, message3.IndexToStart, 0),
 				}
 				err := store.DeletePendingStartMessages(toDelete...)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))

@@ -92,13 +92,11 @@ func (a *appAnalyzer) generatePendingStartsForCrashedInstances(priority float64)
 
 func (a *appAnalyzer) generatePendingStopsForExtraInstances() {
 	for _, extraInstance := range a.app.ExtraStartingOrRunningInstances() {
-		message := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), extraInstance.InstanceGuid)
+		message := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, extraInstance.InstanceGuid)
 
 		a.appendStopMessageIfNotDuplicate(message)
 
 		a.logger.Info("Identified extra running instance", message.LogDescription(), map[string]string{
-			"AppGuid":                a.app.AppGuid,
-			"AppVersion":             a.app.AppVersion,
 			"InstanceIndex":          strconv.Itoa(extraInstance.InstanceIndex),
 			"Desired # of Instances": strconv.Itoa(a.app.NumberOfDesiredInstances()),
 		})
@@ -117,13 +115,11 @@ func (a *appAnalyzer) generatePendingStopsForDuplicateInstances() {
 		if len(instances) > 1 {
 			for i, instance := range instances {
 				delay := (i + 1) * a.conf.GracePeriod()
-				message := models.NewPendingStopMessage(a.currentTime, delay, a.conf.GracePeriod(), instance.InstanceGuid)
+				message := models.NewPendingStopMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, instance.InstanceGuid)
 
 				a.appendStopMessageIfNotDuplicate(message)
 
 				a.logger.Info("Identified duplicate running instance", message.LogDescription(), map[string]string{
-					"AppGuid":       instance.AppGuid,
-					"AppVersion":    instance.AppVersion,
 					"InstanceIndex": strconv.Itoa(instance.InstanceIndex),
 				})
 			}

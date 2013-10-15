@@ -61,7 +61,7 @@ var _ = Describe("Storecache", func() {
 
 		startMessage = models.NewPendingStartMessage(time.Unix(10, 0), 0, 0, models.Guid(), models.Guid(), 2, 1.0)
 		store.SavePendingStartMessages(startMessage)
-		stopMessage = models.NewPendingStopMessage(time.Unix(10, 0), 0, 0, models.Guid())
+		stopMessage = models.NewPendingStopMessage(time.Unix(10, 0), 0, 0, models.Guid(), models.Guid(), models.Guid())
 		store.SavePendingStopMessages(stopMessage)
 	})
 
@@ -114,11 +114,6 @@ var _ = Describe("Storecache", func() {
 				Ω(a3.Desired).Should(EqualDesiredState(fixture3.DesiredState(1)))
 				Ω(a3.InstanceHeartbeats).Should(HaveLen(0))
 				Ω(a3.CrashCounts).Should(BeEmpty())
-			})
-
-			It("should make the apps available by instance guid", func() {
-				Ω(cache.AppsByInstanceGuid[fixture1.InstanceAtIndex(1).InstanceGuid]).Should(Equal(cache.Apps[cache.Key(fixture1.AppGuid, fixture1.AppVersion)]))
-				Ω(cache.AppsByInstanceGuid[fixture2.InstanceAtIndex(0).InstanceGuid]).Should(Equal(cache.Apps[cache.Key(fixture2.AppGuid, fixture2.AppVersion)]))
 			})
 
 			It("should index pending start and stop messages by storekey", func() {

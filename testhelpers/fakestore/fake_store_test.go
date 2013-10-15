@@ -314,8 +314,8 @@ var _ = Describe("FakeStore", func() {
 
 	Describe("Setting, getting, and deleting stop messages", func() {
 		It("should set, get, and delete the stop messages state", func() {
-			message1 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC")
-			message2 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF")
+			message1 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC", "123", "XYZ")
+			message2 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF", "456", "ALPHA")
 
 			err := store.SavePendingStopMessages(message1, message1, message2)
 			Ω(err).ShouldNot(HaveOccured())
@@ -327,7 +327,7 @@ var _ = Describe("FakeStore", func() {
 			Ω(actual).Should(ContainElement(message2))
 
 			message2.SendOn = 12310
-			message3 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI")
+			message3 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI", "789", "BETA")
 
 			err = store.SavePendingStopMessages(message2, message3)
 			Ω(err).ShouldNot(HaveOccured())
@@ -358,7 +358,7 @@ var _ = Describe("FakeStore", func() {
 		})
 
 		It("should support returning errors", func() {
-			message1 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC")
+			message1 := models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC", "123", "XYZ")
 			store.SavePendingStopMessages(message1)
 
 			errIn := errors.New("foo")

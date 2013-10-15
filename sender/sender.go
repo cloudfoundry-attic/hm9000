@@ -209,7 +209,8 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStart
 }
 
 func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMessage) (bool, isDuplicate bool, instanceToStop models.InstanceHeartbeat) {
-	app, found := sender.storecache.AppsByInstanceGuid[message.InstanceGuid]
+	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
+	app, found := sender.storecache.Apps[appKey]
 
 	if !found {
 		sender.logger.Info("Skipping sending stop message: instance is no longer running", message.LogDescription())
