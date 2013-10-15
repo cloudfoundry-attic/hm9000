@@ -105,6 +105,17 @@ var _ = Describe("App", func() {
 		})
 	})
 
+	Describe("ToJSON", func() {
+		It("should generate a JSON representation correctly", func() {
+			jsonRepresentation := string(app().ToJSON())
+			Ω(jsonRepresentation).Should(ContainSubstring(`"droplet":"%s"`, appGuid))
+			Ω(jsonRepresentation).Should(ContainSubstring(`"version":"%s"`, appVersion))
+			Ω(jsonRepresentation).Should(ContainSubstring(`"desired":{`))
+			Ω(jsonRepresentation).Should(ContainSubstring(`"instance_heartbeats":[`))
+			Ω(jsonRepresentation).Should(ContainSubstring(`"crash_counts":[`))
+		})
+	})
+
 	Describe("IsDesired", func() {
 		It("should be desired only if the desired state is non-zero", func() {
 			Ω(app().IsDesired()).Should(BeFalse())

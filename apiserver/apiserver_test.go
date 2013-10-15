@@ -1,0 +1,157 @@
+package apiserver_test
+
+import (
+	"fmt"
+	"github.com/cloudfoundry/hm9000/apiserver"
+	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
+	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"io/ioutil"
+	"net/http"
+	"time"
+)
+
+var didSetup bool
+
+const port = 8090
+
+var _ = Describe("Apiserver", func() {
+	//create the server
+	//(eventually) passing it whatever depenencies it needs
+	//start the server
+
+	var store *fakestore.FakeStore
+	var timeProvider *faketimeprovider.FakeTimeProvider
+
+	BeforeEach(func() {
+		if !didSetup {
+			store = fakestore.NewFakeStore()
+			timeProvider = &faketimeprovider.FakeTimeProvider{
+				TimeToProvide: time.Unix(100, 0),
+			}
+			server := apiserver.New(port, store, timeProvider)
+			go server.Start()
+			didSetup = true
+		}
+		timeProvider.TimeToProvide = time.Unix(100, 0)
+		store.Reset()
+	})
+
+	makeGetRequest := func(url string) (statusCode int, body string) {
+		resp, err := http.Get(url)
+		Ω(err).ShouldNot(HaveOccured())
+
+		defer resp.Body.Close()
+
+		statusCode = resp.StatusCode
+
+		bodyAsBytes, err := ioutil.ReadAll(resp.Body)
+		Ω(err).ShouldNot(HaveOccured())
+		body = string(bodyAsBytes)
+		return
+	}
+
+	// XIt("should panic when the http server fails to come up", func() {
+	// 	server := apiserver.New(80) //80 is denied
+	// 	Ω(func() {
+	// 		server.Start()
+	// 	}).Should(Panic())
+	// })
+
+	Context("when serving /app", func() {
+		Context("when there are no query parameters", func() {
+			It("should return a 400 with no data", func() {
+				statusCode, body := makeGetRequest(fmt.Sprintf("http://localhost:%d/app", port))
+				Ω(statusCode).Should(Equal(http.StatusBadRequest))
+				Ω(body).Should(BeEmpty())
+			})
+		})
+
+		Context("when the app query parameters are present", func() {
+			var app appfixture.AppFixture
+			var expectedApp *models.App
+
+			BeforeEach(func() {
+				app = appfixture.NewAppFixture()
+				instanceHeartbeats := []models.InstanceHeartbeat{
+					app.InstanceAtIndex(0).Heartbeat(),
+					app.InstanceAtIndex(1).Heartbeat(),
+					app.InstanceAtIndex(2).Heartbeat(),
+				}
+				crashCount := models.CrashCount{
+					AppGuid:       app.AppGuid,
+					AppVersion:    app.AppVersion,
+					InstanceIndex: 1,
+					CrashCount:    2,
+				}
+				expectedApp = models.NewApp(
+					app.AppGuid,
+					app.AppVersion,
+					app.DesiredState(3),
+					instanceHeartbeats,
+					map[int]models.CrashCount{1: crashCount},
+				)
+
+				store.SaveDesiredState(app.DesiredState(3))
+				store.SaveActualState(instanceHeartbeats...)
+				store.SaveCrashCounts(crashCount)
+			})
+
+			Context("when the app query parameters do not correspond to an existing app", func() {
+				It("should return a 404 not found response", func() {
+					statusCode, body := makeGetRequest(
+						fmt.Sprintf("http://localhost:%d/app?app-guid=elephant&app-version=pink-flamingo", port),
+					)
+					Ω(statusCode).Should(Equal(http.StatusNotFound))
+					Ω(body).Should(BeEmpty())
+				})
+			})
+
+			Context("when the app query parameters correspond to an existing app", func() {
+				Context("when the store is fresh", func() {
+					BeforeEach(func() {
+						store.BumpDesiredFreshness(time.Unix(0, 0))
+						store.BumpActualFreshness(time.Unix(0, 0))
+					})
+
+					It("should return the actual instances and crashes of the app", func() {
+						statusCode, body := makeGetRequest(
+							fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion),
+						)
+						Ω(statusCode).Should(Equal(http.StatusOK))
+
+						Ω(body).Should(Equal(string(expectedApp.ToJSON())))
+
+					})
+
+					Context("when something else goes wrong with the store", func() {
+						BeforeEach(func() {
+							store.GetDesiredStateError = fmt.Errorf("No desired state for you!")
+						})
+
+						It("should 500", func() {
+							statusCode, body := makeGetRequest(
+								fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion),
+							)
+							Ω(statusCode).Should(Equal(http.StatusInternalServerError))
+							Ω(body).Should(BeEmpty())
+						})
+					})
+				})
+
+				Context("when the store is not fresh", func() {
+					It("should return a 404", func() {
+						statusCode, body := makeGetRequest(
+							fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion),
+						)
+						Ω(statusCode).Should(Equal(http.StatusNotFound))
+						Ω(body).Should(BeEmpty())
+					})
+				})
+			})
+		})
+	})
+})

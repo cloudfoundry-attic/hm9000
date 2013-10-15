@@ -170,7 +170,7 @@ var _ = Describe("Storecache", func() {
 
 			It("should return an error", func() {
 				err := cache.Load(time.Unix(30, 0))
-				Ω(err.Error()).Should(Equal("Desired state is not fresh"))
+				Ω(err).Should(Equal(cache.DesiredIsNotFreshError))
 				Ω(cache.ActualStates).Should(BeEmpty())
 				Ω(cache.DesiredStates).Should(BeEmpty())
 			})
@@ -189,7 +189,7 @@ var _ = Describe("Storecache", func() {
 
 			It("should not send any start or stop messages", func() {
 				err := cache.Load(time.Unix(30, 0))
-				Ω(err.Error()).Should(Equal("Actual state is not fresh"))
+				Ω(err).Should(Equal(cache.ActualIsNotFreshError))
 				Ω(cache.ActualStates).Should(BeEmpty())
 				Ω(cache.DesiredStates).Should(BeEmpty())
 			})

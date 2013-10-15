@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -25,6 +26,33 @@ func NewApp(appGuid string, appVersion string, desired DesiredAppState, instance
 		CrashCounts:               crashCounts,
 		instanceHeartbeatsByIndex: nil,
 	}
+}
+
+func (a *App) ToJSON() []byte {
+	crashCounts := make([]CrashCount, len(a.CrashCounts))
+	i := 0
+	for _, crashCount := range a.CrashCounts {
+		crashCounts[i] = crashCount
+		i++
+	}
+
+	appForJson := struct {
+		AppGuid    string `json:"droplet"`
+		AppVersion string `json:"version"`
+
+		Desired            DesiredAppState     `json:"desired"`
+		InstanceHeartbeats []InstanceHeartbeat `json:"instance_heartbeats"`
+		CrashCounts        []CrashCount        `json:"crash_counts"`
+	}{
+		a.AppGuid,
+		a.AppVersion,
+		a.Desired,
+		a.InstanceHeartbeats,
+		crashCounts,
+	}
+
+	result, _ := json.Marshal(appForJson)
+	return result
 }
 
 func (a *App) LogDescription() map[string]string {

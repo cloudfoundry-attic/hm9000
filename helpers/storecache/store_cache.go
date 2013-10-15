@@ -17,11 +17,16 @@ type StoreCache struct {
 	PendingStopMessages  map[string]models.PendingStopMessage
 
 	Apps map[string]*models.App
+
+	ActualIsNotFreshError  error
+	DesiredIsNotFreshError error
 }
 
 func New(store store.Store) (storecache *StoreCache) {
 	return &StoreCache{
 		store: store,
+		ActualIsNotFreshError:  errors.New("Actual state is not fresh"),
+		DesiredIsNotFreshError: errors.New("Desired state is not fresh"),
 	}
 }
 
@@ -99,7 +104,7 @@ func (storecache *StoreCache) verifyFreshness(time time.Time) error {
 		return err
 	}
 	if !fresh {
-		return errors.New("Desired state is not fresh")
+		return storecache.DesiredIsNotFreshError
 	}
 
 	fresh, err = storecache.store.IsActualStateFresh(time)
@@ -107,7 +112,7 @@ func (storecache *StoreCache) verifyFreshness(time time.Time) error {
 		return err
 	}
 	if !fresh {
-		return errors.New("Actual state is not fresh")
+		return storecache.ActualIsNotFreshError
 	}
 
 	return nil
