@@ -2,11 +2,14 @@ package storecache_test
 
 import (
 	"errors"
+	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/models"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
@@ -14,8 +17,9 @@ import (
 
 var _ = Describe("Storecache", func() {
 	var (
-		cache *StoreCache
-		store *fakestore.FakeStore
+		cache        *StoreCache
+		store        storepackage.Store
+		storeAdapter *fakestoreadapter.FakeStoreAdapter
 
 		actualState  []models.InstanceHeartbeat
 		desiredState []models.DesiredAppState
@@ -26,6 +30,9 @@ var _ = Describe("Storecache", func() {
 		crashCount   models.CrashCount
 		startMessage models.PendingStartMessage
 		stopMessage  models.PendingStopMessage
+		conf         config.Config
+
+		freshByTime time.Time
 	)
 
 	BeforeEach(func() {
@@ -33,7 +40,10 @@ var _ = Describe("Storecache", func() {
 		fixture2 = appfixture.NewAppFixture()
 		fixture3 = appfixture.NewAppFixture()
 
-		store = fakestore.NewFakeStore()
+		conf, _ = config.DefaultConfig()
+		storeAdapter = fakestoreadapter.New()
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
+
 		cache = New(store)
 
 		actualState = []models.InstanceHeartbeat{
@@ -51,6 +61,8 @@ var _ = Describe("Storecache", func() {
 		store.SaveDesiredState(desiredState...)
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
+		freshByTime = time.Unix(int64(10+conf.ActualFreshnessTTL()), 0)
+
 		crashCount = models.CrashCount{
 			AppGuid:       fixture1.AppGuid,
 			AppVersion:    fixture1.AppVersion,
@@ -74,7 +86,7 @@ var _ = Describe("Storecache", func() {
 	Describe("Load", func() {
 		Context("when all is well", func() {
 			BeforeEach(func() {
-				err := cache.Load(time.Unix(30, 0))
+				err := cache.Load(freshByTime)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -86,7 +98,7 @@ var _ = Describe("Storecache", func() {
 
 				Ω(cache.DesiredStates).Should(HaveLen(2))
 				for _, desired := range desiredState {
-					Ω(cache.DesiredStates).Should(ContainElement(desired))
+					Ω(cache.DesiredStates).Should(ContainElement(EqualDesiredState(desired)))
 				}
 			})
 
@@ -124,52 +136,52 @@ var _ = Describe("Storecache", func() {
 
 		Context("when there is an error getting desired state", func() {
 			It("should return an error", func() {
-				store.GetDesiredStateError = errors.New("oops")
-				err := cache.Load(time.Unix(30, 0))
+				storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("desired", errors.New("oops"))
+				err := cache.Load(freshByTime)
 				Ω(err).Should(Equal(errors.New("oops")))
 			})
 		})
 
 		Context("when there is an error getting actual state", func() {
 			It("should return an error", func() {
-				store.GetActualStateError = errors.New("oops")
-				err := cache.Load(time.Unix(30, 0))
+				storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("actual", errors.New("oops"))
+				err := cache.Load(freshByTime)
 				Ω(err).Should(Equal(errors.New("oops")))
 			})
 		})
 
 		Context("when there is an error getting the crash counts", func() {
 			It("should return an error", func() {
-				store.GetCrashCountsError = errors.New("oops")
-				err := cache.Load(time.Unix(30, 0))
+				storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("crash", errors.New("oops"))
+				err := cache.Load(freshByTime)
 				Ω(err).Should(Equal(errors.New("oops")))
 			})
 		})
 
 		Context("When there is an error getting pending start messages", func() {
 			It("should return an error", func() {
-				store.GetStartMessagesError = errors.New("oops")
-				err := cache.Load(time.Unix(30, 0))
+				storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("start", errors.New("oops"))
+				err := cache.Load(freshByTime)
 				Ω(err).Should(Equal(errors.New("oops")))
 			})
 		})
 
 		Context("When there is an error getting pending stop messages", func() {
 			It("should return an error", func() {
-				store.GetStopMessagesError = errors.New("oops")
-				err := cache.Load(time.Unix(30, 0))
+				storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("stop", errors.New("oops"))
+				err := cache.Load(freshByTime)
 				Ω(err).Should(Equal(errors.New("oops")))
 			})
 		})
 
 		Context("when the desired state is not fresh", func() {
 			BeforeEach(func() {
-				store.DesiredFreshnessTimestamp = time.Time{}
+				storeAdapter.Delete(conf.DesiredFreshnessKey)
 				store.BumpActualFreshness(time.Unix(10, 0))
 			})
 
 			It("should return an error", func() {
-				err := cache.Load(time.Unix(30, 0))
+				err := cache.Load(freshByTime)
 				Ω(err).Should(Equal(cache.DesiredIsNotFreshError))
 				Ω(cache.ActualStates).Should(BeEmpty())
 				Ω(cache.DesiredStates).Should(BeEmpty())
@@ -178,17 +190,12 @@ var _ = Describe("Storecache", func() {
 
 		Context("when the actual state is not fresh", func() {
 			BeforeEach(func() {
-				store.ActualFreshnessTimestamp = time.Time{}
+				storeAdapter.Delete(conf.ActualFreshnessKey)
 				store.BumpDesiredFreshness(time.Unix(10, 0))
 			})
 
-			It("should pass in the correct timestamp to the actual state", func() {
-				cache.Load(time.Unix(30, 0))
-				Ω(store.ActualFreshnessComparisonTimestamp).Should(Equal(time.Unix(30, 0)))
-			})
-
 			It("should not send any start or stop messages", func() {
-				err := cache.Load(time.Unix(30, 0))
+				err := cache.Load(freshByTime)
 				Ω(err).Should(Equal(cache.ActualIsNotFreshError))
 				Ω(cache.ActualStates).Should(BeEmpty())
 				Ω(cache.DesiredStates).Should(BeEmpty())

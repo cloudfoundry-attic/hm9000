@@ -6,9 +6,10 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/sender"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +18,8 @@ import (
 
 var _ = Describe("Sender", func() {
 	var (
-		store        *fakestore.FakeStore
+		storeAdapter *fakestoreadapter.FakeStoreAdapter
+		store        storepackage.Store
 		sender       *Sender
 		messageBus   *fake_cfmessagebus.FakeMessageBus
 		timeProvider *faketimeprovider.FakeTimeProvider
@@ -26,12 +28,16 @@ var _ = Describe("Sender", func() {
 	)
 
 	BeforeEach(func() {
-		store = fakestore.NewFakeStore()
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
-		timeProvider = &faketimeprovider.FakeTimeProvider{}
 		app1 = appfixture.NewAppFixture()
 		conf, _ = config.DefaultConfig()
 
+		timeProvider = &faketimeprovider.FakeTimeProvider{
+			TimeToProvide: time.Unix(int64(10+conf.ActualFreshnessTTL()), 0),
+		}
+
+		storeAdapter = fakestoreadapter.New()
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 		sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
@@ -39,7 +45,7 @@ var _ = Describe("Sender", func() {
 
 	Context("when the sender fails to pull messages out of the start queue", func() {
 		BeforeEach(func() {
-			store.GetStartMessagesError = errors.New("oops")
+			storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("start", errors.New("oops"))
 		})
 
 		It("should return an error and not send any messages", func() {
@@ -51,7 +57,7 @@ var _ = Describe("Sender", func() {
 
 	Context("when the sender fails to pull messages out of the stop queue", func() {
 		BeforeEach(func() {
-			store.GetStopMessagesError = errors.New("oops")
+			storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("stop", errors.New("oops"))
 		})
 
 		It("should return an error and not send any messages", func() {
@@ -63,7 +69,7 @@ var _ = Describe("Sender", func() {
 
 	Context("when the sender fails to fetch the actual state", func() {
 		BeforeEach(func() {
-			store.GetActualStateError = errors.New("oops")
+			storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("actual", errors.New("oops"))
 		})
 
 		It("should return an error and not send any messages", func() {
@@ -94,16 +100,16 @@ var _ = Describe("Sender", func() {
 		var sentOn int64
 		var err error
 		var pendingMessage models.PendingStartMessage
+		var storeSetErrInjector *fakestoreadapter.FakeStoreAdapterErrorInjector
 
 		JustBeforeEach(func() {
 			store.SaveDesiredState(app1.DesiredState(1))
-
 			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0)
 			pendingMessage.SentOn = sentOn
 			store.SavePendingStartMessages(
 				pendingMessage,
 			)
-
+			storeAdapter.SetErrInjector = storeSetErrInjector
 			err = sender.Send()
 		})
 
@@ -111,6 +117,7 @@ var _ = Describe("Sender", func() {
 			keepAliveTime = 0
 			sentOn = 0
 			err = nil
+			storeSetErrInjector = nil
 		})
 
 		Context("and it is not time to send the message yet", func() {
@@ -164,6 +171,16 @@ var _ = Describe("Sender", func() {
 						Ω(message.SentOn).Should(Equal(timeProvider.Time().Unix()))
 					}
 				})
+
+				Context("when saving the start messages fails", func() {
+					BeforeEach(func() {
+						storeSetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("start", errors.New("oops"))
+					})
+
+					It("should return an error", func() {
+						Ω(err).Should(Equal(errors.New("oops")))
+					})
+				})
 			})
 
 			Context("when the KeepAlive = 0", func() {
@@ -175,31 +192,21 @@ var _ = Describe("Sender", func() {
 					messages, _ := store.GetPendingStartMessages()
 					Ω(messages).Should(BeEmpty())
 				})
+
+				Context("when deleting the start messages fails", func() {
+					BeforeEach(func() {
+						storeAdapter.DeleteErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("start", errors.New("oops"))
+					})
+
+					It("should return an error", func() {
+						Ω(err).Should(Equal(errors.New("oops")))
+					})
+				})
 			})
 
 			Context("when the message fails to send", func() {
 				BeforeEach(func() {
 					messageBus.PublishError = errors.New("oops")
-				})
-
-				It("should return an error", func() {
-					Ω(err).Should(Equal(errors.New("oops")))
-				})
-			})
-
-			Context("when the queue update fails", func() {
-				BeforeEach(func() {
-					store.SaveStartMessagesError = errors.New("oops")
-				})
-
-				It("should return an error", func() {
-					Ω(err).Should(Equal(errors.New("oops")))
-				})
-			})
-
-			Context("when the delete fails", func() {
-				BeforeEach(func() {
-					store.DeleteStartMessagesError = errors.New("oops")
 				})
 
 				It("should return an error", func() {
@@ -246,6 +253,7 @@ var _ = Describe("Sender", func() {
 		var sentOn int64
 		var err error
 		var pendingMessage models.PendingStopMessage
+		var storeSetErrInjector *fakestoreadapter.FakeStoreAdapterErrorInjector
 
 		JustBeforeEach(func() {
 			store.SaveActualState(
@@ -259,6 +267,7 @@ var _ = Describe("Sender", func() {
 				pendingMessage,
 			)
 
+			storeAdapter.SetErrInjector = storeSetErrInjector
 			err = sender.Send()
 		})
 
@@ -266,6 +275,7 @@ var _ = Describe("Sender", func() {
 			keepAliveTime = 0
 			sentOn = 0
 			err = nil
+			storeSetErrInjector = nil
 		})
 
 		Context("and it is not time to send the message yet", func() {
@@ -321,6 +331,16 @@ var _ = Describe("Sender", func() {
 						Ω(message.SentOn).Should(Equal(timeProvider.Time().Unix()))
 					}
 				})
+
+				Context("when saving the stop message fails", func() {
+					BeforeEach(func() {
+						storeSetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("stop", errors.New("oops"))
+					})
+
+					It("should return an error", func() {
+						Ω(err).Should(Equal(errors.New("oops")))
+					})
+				})
 			})
 
 			Context("when the KeepAlive = 0", func() {
@@ -331,6 +351,16 @@ var _ = Describe("Sender", func() {
 				It("should just delete the message after sending it", func() {
 					messages, _ := store.GetPendingStopMessages()
 					Ω(messages).Should(BeEmpty())
+				})
+
+				Context("when deleting the message fails", func() {
+					BeforeEach(func() {
+						storeAdapter.DeleteErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("stop", errors.New("oops"))
+					})
+
+					It("should return an error", func() {
+						Ω(err).Should(Equal(errors.New("oops")))
+					})
 				})
 			})
 
@@ -343,27 +373,6 @@ var _ = Describe("Sender", func() {
 					Ω(err).Should(Equal(errors.New("oops")))
 				})
 			})
-
-			Context("when the queue update fails", func() {
-				BeforeEach(func() {
-					store.SaveStopMessagesError = errors.New("oops")
-				})
-
-				It("should return an error", func() {
-					Ω(err).Should(Equal(errors.New("oops")))
-				})
-			})
-
-			Context("when the delete fails", func() {
-				BeforeEach(func() {
-					store.DeleteStopMessagesError = errors.New("oops")
-				})
-
-				It("should return an error", func() {
-					Ω(err).Should(Equal(errors.New("oops")))
-				})
-			})
-
 		})
 
 		Context("When the message has already been sent", func() {

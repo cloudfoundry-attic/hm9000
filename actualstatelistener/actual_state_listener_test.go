@@ -13,8 +13,9 @@ import (
 
 	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 )
 
@@ -22,12 +23,14 @@ var _ = Describe("Actual state listener", func() {
 	var (
 		app          AppFixture
 		anotherApp   AppFixture
-		store        *fakestore.FakeStore
+		store        storepackage.Store
+		storeAdapter *fakestoreadapter.FakeStoreAdapter
 		listener     *ActualStateListener
 		timeProvider *faketimeprovider.FakeTimeProvider
 		messageBus   *fake_cfmessagebus.FakeMessageBus
 		logger       *fakelogger.FakeLogger
 		conf         config.Config
+		freshByTime  time.Time
 	)
 
 	BeforeEach(func() {
@@ -36,13 +39,15 @@ var _ = Describe("Actual state listener", func() {
 		Ω(err).ShouldNot(HaveOccured())
 
 		timeProvider = &faketimeprovider.FakeTimeProvider{
-			TimeToProvide: time.Now(),
+			TimeToProvide: time.Unix(100, 0),
 		}
+		freshByTime = time.Unix(int64(100+conf.ActualFreshnessTTL()), 0)
 
 		app = NewAppFixture()
 		anotherApp = NewAppFixture()
 
-		store = fakestore.NewFakeStore()
+		storeAdapter = fakestoreadapter.New()
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 		messageBus = fake_cfmessagebus.NewFakeMessageBus()
 		logger = fakelogger.NewFakeLogger()
 
@@ -62,12 +67,14 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a dea advertisement over the message bus", func() {
 		BeforeEach(func() {
-			Ω(store.ActualFreshnessTimestamp).Should(BeZero())
+			isFresh, _ := store.IsActualStateFresh(freshByTime)
+			Ω(isFresh).Should(BeFalse())
 			messageBus.Subscriptions["dea.advertise"][0].Callback([]byte("doesn't matter"))
 		})
 
 		It("Bumps the actual state freshness", func() {
-			Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
+			isFresh, _ := store.IsActualStateFresh(freshByTime)
+			Ω(isFresh).Should(BeTrue())
 		})
 	})
 
@@ -84,7 +91,8 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a complex heartbeat with multiple apps and instances", func() {
 		JustBeforeEach(func() {
-			Ω(store.ActualFreshnessTimestamp).Should(BeZero())
+			isFresh, _ := store.IsActualStateFresh(freshByTime)
+			Ω(isFresh).Should(BeFalse())
 
 			heartbeat := Heartbeat{
 				DeaGuid: Guid(),
@@ -107,12 +115,13 @@ var _ = Describe("Actual state listener", func() {
 
 		Context("when the save succeeds", func() {
 			It("bumps the freshness", func() {
-				Ω(store.ActualFreshnessTimestamp).Should(Equal(timeProvider.Time()))
+				isFresh, _ := store.IsActualStateFresh(freshByTime)
+				Ω(isFresh).Should(BeTrue())
 			})
 
 			Context("when the freshness bump fails", func() {
 				BeforeEach(func() {
-					store.BumpActualFreshnessError = errors.New("oops")
+					storeAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("actual-fresh", errors.New("oops"))
 				})
 
 				It("logs about the failed freshness bump", func() {
@@ -123,11 +132,12 @@ var _ = Describe("Actual state listener", func() {
 
 		Context("when the save fails", func() {
 			BeforeEach(func() {
-				store.SaveActualStateError = errors.New("oops")
+				storeAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector(app.InstanceAtIndex(0).InstanceGuid, errors.New("oops"))
 			})
 
 			It("does not bump the freshness", func() {
-				Ω(store.ActualFreshnessTimestamp).Should(BeZero())
+				isFresh, _ := store.IsActualStateFresh(freshByTime)
+				Ω(isFresh).Should(BeFalse())
 			})
 
 			It("logs about the failed save", func() {
@@ -147,7 +157,8 @@ var _ = Describe("Actual state listener", func() {
 		})
 
 		It("does not bump the freshness", func() {
-			Ω(store.ActualFreshnessTimestamp).Should(BeZero())
+			isFresh, _ := store.IsActualStateFresh(freshByTime)
+			Ω(isFresh).Should(BeFalse())
 		})
 
 		It("logs about the failed parse", func() {

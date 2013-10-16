@@ -6,9 +6,11 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/models"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 
 	"github.com/cloudfoundry/hm9000/testhelpers/fakehttpclient"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
@@ -35,7 +37,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 		fetcher      *DesiredStateFetcher
 		httpClient   *fakehttpclient.FakeHttpClient
 		timeProvider *faketimeprovider.FakeTimeProvider
-		store        *fakestore.FakeStore
+		store        storepackage.Store
+		storeAdapter *fakestoreadapter.FakeStoreAdapter
 		resultChan   chan DesiredStateFetcherResult
 	)
 
@@ -46,11 +49,12 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		resultChan = make(chan DesiredStateFetcherResult, 1)
 		timeProvider = &faketimeprovider.FakeTimeProvider{
-			TimeToProvide: time.Now(),
+			TimeToProvide: time.Unix(100, 0),
 		}
 
 		httpClient = fakehttpclient.NewFakeHttpClient()
-		store = fakestore.NewFakeStore()
+		storeAdapter = fakestoreadapter.New()
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
 		fetcher = New(conf, store, httpClient, timeProvider)
 		fetcher.Fetch(resultChan)
@@ -102,7 +106,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should not bump the freshness", func() {
-				Ω(store.DesiredFreshnessTimestamp).Should(BeZero())
+				fresh, _ := store.IsDesiredStateFresh()
+				Ω(fresh).Should(BeFalse())
 			})
 
 			It("should send an error down the result channel", func(done Done) {
@@ -157,7 +162,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 			})
 
 			It("should not bump the freshness yet", func() {
-				Ω(store.DesiredFreshnessTimestamp).Should(BeZero())
+				fresh, _ := store.IsDesiredStateFresh()
+				Ω(fresh).Should(BeFalse())
 			})
 
 			It("should not send a result down the resultChan yet", func() {
@@ -181,7 +187,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 				})
 
 				It("should bump the freshness", func() {
-					Ω(store.DesiredFreshnessTimestamp).Should(Equal(timeProvider.Time()))
+					fresh, _ := store.IsDesiredStateFresh()
+					Ω(fresh).Should(BeTrue())
 				})
 
 				It("should store any desired state that is in the STARTED appstate, and delete any stale data", func() {
@@ -201,7 +208,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 				Context("and it fails to write to the store", func() {
 					BeforeEach(func() {
-						store.SaveDesiredStateError = errors.New("oops!")
+						storeAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("desired", errors.New("oops!"))
 					})
 
 					assertFailure("Failed to sync desired state to the store", 2)
@@ -209,7 +216,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 				Context("and it fails to read from the store", func() {
 					BeforeEach(func() {
-						store.GetDesiredStateError = errors.New("oops!")
+						storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("desired", errors.New("oops!"))
 					})
 
 					assertFailure("Failed to sync desired state to the store", 2)

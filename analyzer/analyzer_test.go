@@ -9,9 +9,10 @@ import (
 	"errors"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"time"
 )
@@ -19,7 +20,8 @@ import (
 var _ = Describe("Analyzer", func() {
 	var (
 		analyzer     *Analyzer
-		store        *fakestore.FakeStore
+		storeAdapter *fakestoreadapter.FakeStoreAdapter
+		store        storepackage.Store
 		timeProvider *faketimeprovider.FakeTimeProvider
 		a            appfixture.AppFixture
 	)
@@ -27,7 +29,9 @@ var _ = Describe("Analyzer", func() {
 	conf, _ := config.DefaultConfig()
 
 	BeforeEach(func() {
-		store = fakestore.NewFakeStore()
+		storeAdapter = fakestoreadapter.New()
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
+
 		timeProvider = &faketimeprovider.FakeTimeProvider{}
 		timeProvider.TimeToProvide = time.Unix(1000, 0)
 
@@ -56,34 +60,6 @@ var _ = Describe("Analyzer", func() {
 		}
 		return messagesArr
 	}
-
-	Describe("Handling store errors", func() {
-		Context("When fetching desired state fails with an error", func() {
-			BeforeEach(func() {
-				store.GetDesiredStateError = errors.New("oops!")
-			})
-
-			It("should not send any start or stop messages", func() {
-				err := analyzer.Analyze()
-				Ω(err).Should(Equal(errors.New("oops!")))
-				Ω(startMessages()).Should(BeEmpty())
-				Ω(stopMessages()).Should(BeEmpty())
-			})
-		})
-
-		Context("When fetching actual state fails with an error", func() {
-			BeforeEach(func() {
-				store.GetActualStateError = errors.New("oops!")
-			})
-
-			It("should not send any start or stop messages", func() {
-				err := analyzer.Analyze()
-				Ω(err).Should(Equal(errors.New("oops!")))
-				Ω(startMessages()).Should(BeEmpty())
-				Ω(stopMessages()).Should(BeEmpty())
-			})
-		})
-	})
 
 	Describe("The steady state", func() {
 		Context("When there are no desired or running apps", func() {
@@ -344,14 +320,20 @@ var _ = Describe("Analyzer", func() {
 
 				Ω(stopMessages()).Should(HaveLen(3))
 
-				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod(), conf.GracePeriod(), a.AppGuid, a.AppVersion, a.InstanceAtIndex(2).InstanceGuid)
-				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
+				instanceGuids := []string{}
+				sendOns := []int{}
+				for _, message := range stopMessages() {
+					instanceGuids = append(instanceGuids, message.InstanceGuid)
+					sendOns = append(sendOns, int(message.SendOn))
+				}
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod()*2, conf.GracePeriod(), a.AppGuid, a.AppVersion, duplicateInstance1.InstanceGuid)
-				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
+				Ω(instanceGuids).Should(ContainElement(a.InstanceAtIndex(2).InstanceGuid))
+				Ω(instanceGuids).Should(ContainElement(duplicateInstance1.InstanceGuid))
+				Ω(instanceGuids).Should(ContainElement(duplicateInstance2.InstanceGuid))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), conf.GracePeriod()*3, conf.GracePeriod(), a.AppGuid, a.AppVersion, duplicateInstance2.InstanceGuid)
-				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
+				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()))
+				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()*2))
+				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()*3))
 			})
 
 			Context("when there is an existing stop message", func() {
@@ -591,9 +573,9 @@ var _ = Describe("Analyzer", func() {
 		})
 	})
 
-	Context("When the store is not fresh", func() {
+	Context("When the store is not fresh and/or fails to fetch data", func() {
 		BeforeEach(func() {
-			store.Reset()
+			storeAdapter.Reset()
 
 			desired := a.DesiredState(1)
 			//this setup would, ordinarily, trigger a start and a stop
@@ -622,12 +604,12 @@ var _ = Describe("Analyzer", func() {
 			BeforeEach(func() {
 				store.BumpActualFreshness(time.Unix(10, 0))
 				store.BumpDesiredFreshness(time.Unix(10, 0))
-				store.IsDesiredStateFreshError = errors.New("foo")
+				storeAdapter.GetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("desired", errors.New("oops!"))
 			})
 
 			It("should return the store's error and not send any start/stop messages", func() {
 				err := analyzer.Analyze()
-				Ω(err).Should(Equal(store.IsDesiredStateFreshError))
+				Ω(err).Should(Equal(errors.New("oops!")))
 				Ω(startMessages()).Should(BeEmpty())
 				Ω(stopMessages()).Should(BeEmpty())
 			})
@@ -636,11 +618,6 @@ var _ = Describe("Analyzer", func() {
 		Context("when the actual state is not fresh", func() {
 			BeforeEach(func() {
 				store.BumpDesiredFreshness(time.Unix(10, 0))
-			})
-
-			It("should pass in the correct timestamp to the actual state", func() {
-				analyzer.Analyze()
-				Ω(store.ActualFreshnessComparisonTimestamp).Should(Equal(timeProvider.TimeToProvide))
 			})
 
 			It("should not send any start or stop messages", func() {
@@ -655,12 +632,12 @@ var _ = Describe("Analyzer", func() {
 			BeforeEach(func() {
 				store.BumpActualFreshness(time.Unix(10, 0))
 				store.BumpDesiredFreshness(time.Unix(10, 0))
-				store.IsActualStateFreshError = errors.New("foo")
+				storeAdapter.GetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("actual", errors.New("oops!"))
 			})
 
 			It("should return the store's error and not send any start/stop messages", func() {
 				err := analyzer.Analyze()
-				Ω(err).Should(Equal(store.IsActualStateFreshError))
+				Ω(err).Should(Equal(errors.New("oops!")))
 				Ω(startMessages()).Should(BeEmpty())
 				Ω(stopMessages()).Should(BeEmpty())
 			})

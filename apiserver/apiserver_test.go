@@ -3,9 +3,12 @@ package apiserver_test
 import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/apiserver"
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,12 +26,16 @@ var _ = Describe("Apiserver", func() {
 	//(eventually) passing it whatever depenencies it needs
 	//start the server
 
-	var store *fakestore.FakeStore
+	var store storepackage.Store
+	var storeAdapter *fakestoreadapter.FakeStoreAdapter
 	var timeProvider *faketimeprovider.FakeTimeProvider
+
+	conf, _ := config.DefaultConfig()
 
 	BeforeEach(func() {
 		if !didSetup {
-			store = fakestore.NewFakeStore()
+			storeAdapter = fakestoreadapter.New()
+			store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 			timeProvider = &faketimeprovider.FakeTimeProvider{
 				TimeToProvide: time.Unix(100, 0),
 			}
@@ -37,7 +44,7 @@ var _ = Describe("Apiserver", func() {
 			didSetup = true
 		}
 		timeProvider.TimeToProvide = time.Unix(100, 0)
-		store.Reset()
+		storeAdapter.Reset()
 	})
 
 	makeGetRequest := func(url string) (statusCode int, body string) {
@@ -73,6 +80,7 @@ var _ = Describe("Apiserver", func() {
 		Context("when the app query parameters are present", func() {
 			var app appfixture.AppFixture
 			var expectedApp *models.App
+			var validRequestURL string
 
 			BeforeEach(func() {
 				app = appfixture.NewAppFixture()
@@ -98,58 +106,53 @@ var _ = Describe("Apiserver", func() {
 				store.SaveDesiredState(app.DesiredState(3))
 				store.SaveActualState(instanceHeartbeats...)
 				store.SaveCrashCounts(crashCount)
+				validRequestURL = fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion)
 			})
 
-			Context("when the app query parameters do not correspond to an existing app", func() {
-				It("should return a 404 not found response", func() {
-					statusCode, body := makeGetRequest(
-						fmt.Sprintf("http://localhost:%d/app?app-guid=elephant&app-version=pink-flamingo", port),
-					)
-					Ω(statusCode).Should(Equal(http.StatusNotFound))
-					Ω(body).Should(BeEmpty())
+			Context("when the store is fresh", func() {
+				BeforeEach(func() {
+					store.BumpDesiredFreshness(time.Unix(0, 0))
+					store.BumpActualFreshness(time.Unix(0, 0))
 				})
-			})
 
-			Context("when the app query parameters correspond to an existing app", func() {
-				Context("when the store is fresh", func() {
-					BeforeEach(func() {
-						store.BumpDesiredFreshness(time.Unix(0, 0))
-						store.BumpActualFreshness(time.Unix(0, 0))
-					})
-
-					It("should return the actual instances and crashes of the app", func() {
+				Context("when the app query parameters do not correspond to an existing app", func() {
+					It("should return a 404 not found response", func() {
 						statusCode, body := makeGetRequest(
-							fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion),
+							fmt.Sprintf("http://localhost:%d/app?app-guid=elephant&app-version=pink-flamingo", port),
 						)
+						Ω(statusCode).Should(Equal(http.StatusNotFound))
+						Ω(body).Should(BeEmpty())
+					})
+				})
+
+				Context("when the app query parameters correspond to an existing app", func() {
+					It("should return the actual instances and crashes of the app", func() {
+						statusCode, body := makeGetRequest(validRequestURL)
 						Ω(statusCode).Should(Equal(http.StatusOK))
 
 						Ω(body).Should(Equal(string(expectedApp.ToJSON())))
 
 					})
-
-					Context("when something else goes wrong with the store", func() {
-						BeforeEach(func() {
-							store.GetDesiredStateError = fmt.Errorf("No desired state for you!")
-						})
-
-						It("should 500", func() {
-							statusCode, body := makeGetRequest(
-								fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion),
-							)
-							Ω(statusCode).Should(Equal(http.StatusInternalServerError))
-							Ω(body).Should(BeEmpty())
-						})
-					})
 				})
 
-				Context("when the store is not fresh", func() {
-					It("should return a 404", func() {
-						statusCode, body := makeGetRequest(
-							fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion),
-						)
-						Ω(statusCode).Should(Equal(http.StatusNotFound))
+				Context("when something else goes wrong with the store", func() {
+					BeforeEach(func() {
+						storeAdapter.GetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("desired", fmt.Errorf("No desired state for you!"))
+					})
+
+					It("should 500", func() {
+						statusCode, body := makeGetRequest(validRequestURL)
+						Ω(statusCode).Should(Equal(http.StatusInternalServerError))
 						Ω(body).Should(BeEmpty())
 					})
+				})
+			})
+
+			Context("when the store is not fresh", func() {
+				It("should return a 404", func() {
+					statusCode, body := makeGetRequest(validRequestURL)
+					Ω(statusCode).Should(Equal(http.StatusNotFound))
+					Ω(body).Should(BeEmpty())
 				})
 			})
 		})

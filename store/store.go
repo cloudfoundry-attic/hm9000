@@ -30,6 +30,10 @@ type Store interface {
 	GetActualState() (map[string]models.InstanceHeartbeat, error)
 	DeleteActualState(actualStates ...models.InstanceHeartbeat) error
 
+	SaveCrashCounts(crashCounts ...models.CrashCount) error
+	GetCrashCounts() (map[string]models.CrashCount, error)
+	DeleteCrashCounts(crashCounts ...models.CrashCount) error
+
 	SavePendingStartMessages(startMessages ...models.PendingStartMessage) error
 	GetPendingStartMessages() (map[string]models.PendingStartMessage, error)
 	DeletePendingStartMessages(startMessages ...models.PendingStartMessage) error
@@ -37,10 +41,6 @@ type Store interface {
 	SavePendingStopMessages(stopMessages ...models.PendingStopMessage) error
 	GetPendingStopMessages() (map[string]models.PendingStopMessage, error)
 	DeletePendingStopMessages(stopMessages ...models.PendingStopMessage) error
-
-	SaveCrashCounts(crashCounts ...models.CrashCount) error
-	GetCrashCounts() (map[string]models.CrashCount, error)
-	DeleteCrashCounts(crashCounts ...models.CrashCount) error
 }
 
 type RealStore struct {

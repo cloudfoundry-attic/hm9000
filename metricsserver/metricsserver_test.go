@@ -4,9 +4,10 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/metricsserver"
 	"github.com/cloudfoundry/hm9000/models"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakestore"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	. "github.com/onsi/ginkgo"
@@ -16,16 +17,18 @@ import (
 
 var _ = Describe("Metrics Server", func() {
 	var (
-		store         *fakestore.FakeStore
+		store         storepackage.Store
+		storeAdapter  *fakestoreadapter.FakeStoreAdapter
 		timeProvider  *faketimeprovider.FakeTimeProvider
 		metricsServer *MetricsServer
 	)
 
 	BeforeEach(func() {
-		store = fakestore.NewFakeStore()
+		conf, _ := config.DefaultConfig()
+		storeAdapter = fakestoreadapter.New()
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 		timeProvider = &faketimeprovider.FakeTimeProvider{TimeToProvide: time.Unix(100, 0)}
 
-		conf, _ := config.DefaultConfig()
 		metricsServer = New(nil, nil, fakelogger.NewFakeLogger(), store, timeProvider, conf)
 	})
 
