@@ -40,6 +40,7 @@ var _ = Describe("Config", func() {
         "metrics_server_port": 7879,
         "metrics_server_user": "metrics_server_user",
         "metrics_server_password": "canHazMetrics?",
+        "api_server_port": 1812,
         "nats": {
             "host": "127.0.0.1",
             "port": 4222,
@@ -87,6 +88,8 @@ var _ = Describe("Config", func() {
 			Ω(config.MetricsServerPort).Should(Equal(7879))
 			Ω(config.MetricsServerUser).Should(Equal("metrics_server_user"))
 			Ω(config.MetricsServerPassword).Should(Equal("canHazMetrics?"))
+
+			Ω(config.APIServerPort).Should(Equal(1812))
 
 			Ω(config.NATS.Host).Should(Equal("127.0.0.1"))
 			Ω(config.NATS.Port).Should(Equal(4222))

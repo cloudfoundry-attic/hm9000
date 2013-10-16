@@ -88,6 +88,17 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "serve_api",
+			Description: "Serve app API over http",
+			Usage:       "hm serve_api --config=/path/to/config",
+			Flags: []cli.Flag{
+				cli.StringFlag{"config", "", "Path to config file"},
+			},
+			Action: func(c *cli.Context) {
+				hm.ServeAPI(l, loadConfig(l, c))
+			},
+		},
+		cli.Command{
 			Name:        "dump",
 			Description: "Dumps contents of the data store",
 			Usage:       "hm dump --config=/path/to/config",

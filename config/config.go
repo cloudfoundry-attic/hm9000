@@ -45,6 +45,8 @@ type Config struct {
 	MetricsServerUser     string `json:"metrics_server_user"`
 	MetricsServerPassword string `json:"metrics_server_password"`
 
+	APIServerPort int `json:"api_server_port"`
+
 	NATS struct {
 		Host     string `json:"host"`
 		Port     int    `json:"port"`

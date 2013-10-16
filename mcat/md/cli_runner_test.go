@@ -19,6 +19,7 @@ type CLIRunner struct {
 	listenerCmd          *exec.Cmd
 	listenerStdoutBuffer *bytes.Buffer
 	metricsServerCmd     *exec.Cmd
+	apiServerCmd         *exec.Cmd
 	verbose              bool
 }
 
@@ -47,6 +48,7 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.MetricsServerPort = metricsServerPort
 	conf.MetricsServerUser = "bob"
 	conf.MetricsServerPassword = "password"
+	conf.APIServerPort = apiServerPort
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccured())
@@ -66,6 +68,14 @@ func (runner *CLIRunner) StartMetricsServer(timestamp int) {
 
 func (runner *CLIRunner) StopMetricsServer() {
 	runner.metricsServerCmd.Process.Kill()
+}
+
+func (runner *CLIRunner) StartAPIServer(timestamp int) {
+	runner.apiServerCmd, _ = runner.start("serve_api", timestamp)
+}
+
+func (runner *CLIRunner) StopAPIServer() {
+	runner.apiServerCmd.Process.Kill()
 }
 
 func (runner *CLIRunner) Cleanup() {
