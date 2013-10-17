@@ -39,7 +39,7 @@ var _ = Describe("Apiserver", func() {
 			timeProvider = &faketimeprovider.FakeTimeProvider{
 				TimeToProvide: time.Unix(100, 0),
 			}
-			server := apiserver.New(port, store, timeProvider)
+			server := apiserver.New(port, store, timeProvider, conf, fakelogger.NewFakeLogger())
 			go server.Start()
 			didSetup = true
 		}
@@ -71,7 +71,7 @@ var _ = Describe("Apiserver", func() {
 	Context("when serving /app", func() {
 		Context("when there are no query parameters", func() {
 			It("should return a 400 with no data", func() {
-				statusCode, body := makeGetRequest(fmt.Sprintf("http://localhost:%d/app", port))
+				statusCode, body := makeGetRequest(fmt.Sprintf("http://magnet:orangutan4sale@localhost:%d/app", port))
 				Ω(statusCode).Should(Equal(http.StatusBadRequest))
 				Ω(body).Should(BeEmpty())
 			})
@@ -106,7 +106,7 @@ var _ = Describe("Apiserver", func() {
 				store.SaveDesiredState(app.DesiredState(3))
 				store.SaveActualState(instanceHeartbeats...)
 				store.SaveCrashCounts(crashCount)
-				validRequestURL = fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion)
+				validRequestURL = fmt.Sprintf("http://magnet:orangutan4sale@localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion)
 			})
 
 			Context("when the store is fresh", func() {
@@ -118,7 +118,7 @@ var _ = Describe("Apiserver", func() {
 				Context("when the app query parameters do not correspond to an existing app", func() {
 					It("should return a 404 not found response", func() {
 						statusCode, body := makeGetRequest(
-							fmt.Sprintf("http://localhost:%d/app?app-guid=elephant&app-version=pink-flamingo", port),
+							fmt.Sprintf("http://magnet:orangutan4sale@localhost:%d/app?app-guid=elephant&app-version=pink-flamingo", port),
 						)
 						Ω(statusCode).Should(Equal(http.StatusNotFound))
 						Ω(body).Should(BeEmpty())
@@ -131,7 +131,22 @@ var _ = Describe("Apiserver", func() {
 						Ω(statusCode).Should(Equal(http.StatusOK))
 
 						Ω(body).Should(Equal(string(expectedApp.ToJSON())))
+					})
+				})
 
+				Context("when the auth credentials are wrong", func() {
+					It("should 401", func() {
+						statusCode, body := makeGetRequest(fmt.Sprintf("http://solenoid:chimpanzee8toad@localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion))
+						Ω(statusCode).Should(Equal(http.StatusUnauthorized))
+						Ω(body).Should(BeEmpty())
+					})
+				})
+
+				Context("when the auth credentials are missing", func() {
+					It("should 401", func() {
+						statusCode, body := makeGetRequest(fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion))
+						Ω(statusCode).Should(Equal(http.StatusUnauthorized))
+						Ω(body).Should(BeEmpty())
 					})
 				})
 

@@ -32,7 +32,7 @@ var _ = Describe("Serving API", func() {
 		})
 
 		It("should return the app", func() {
-			resp, err := http.Get(fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", apiServerPort, a.AppGuid, a.AppVersion))
+			resp, err := http.Get(fmt.Sprintf("http://%s:%s@localhost:%d/app?app-guid=%s&app-version=%s", conf.APIServerUser, conf.APIServerPassword, apiServerPort, a.AppGuid, a.AppVersion))
 			Ω(err).ShouldNot(HaveOccured())
 
 			Ω(resp.StatusCode).Should(Equal(http.StatusOK))
@@ -55,7 +55,7 @@ var _ = Describe("Serving API", func() {
 		})
 
 		It("should return -1 for all metrics", func() {
-			resp, err := http.Get(fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", apiServerPort, a.AppGuid, a.AppVersion))
+			resp, err := http.Get(fmt.Sprintf("http://%s:%s@localhost:%d/app?app-guid=%s&app-version=%s", conf.APIServerUser, conf.APIServerPassword, apiServerPort, a.AppGuid, a.AppVersion))
 			Ω(err).ShouldNot(HaveOccured())
 
 			Ω(resp.StatusCode).Should(Equal(http.StatusNotFound))

@@ -41,6 +41,8 @@ var _ = Describe("Config", func() {
         "metrics_server_user": "metrics_server_user",
         "metrics_server_password": "canHazMetrics?",
         "api_server_port": 1812,
+        "api_server_user": "magnet",
+        "api_server_password": "orangutan4sale",
         "nats": {
             "host": "127.0.0.1",
             "port": 4222,
@@ -90,6 +92,8 @@ var _ = Describe("Config", func() {
 			Ω(config.MetricsServerPassword).Should(Equal("canHazMetrics?"))
 
 			Ω(config.APIServerPort).Should(Equal(1812))
+			Ω(config.APIServerUser).Should(Equal("magnet"))
+			Ω(config.APIServerPassword).Should(Equal("orangutan4sale"))
 
 			Ω(config.NATS.Host).Should(Equal("127.0.0.1"))
 			Ω(config.NATS.Port).Should(Equal(4222))

@@ -14,6 +14,8 @@ func ServeAPI(l logger.Logger, conf config.Config) {
 		conf.APIServerPort,
 		store,
 		buildTimeProvider(l),
+		conf,
+		l,
 	)
 
 	go apiServer.Start()
