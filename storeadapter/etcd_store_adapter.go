@@ -44,6 +44,16 @@ func (adapter *ETCDStoreAdapter) isMissingKeyError(err error) bool {
 	return false
 }
 
+func (adapter *ETCDStoreAdapter) isNotAFileError(err error) bool {
+	if err != nil {
+		etcdError, ok := err.(etcd.EtcdError)
+		if ok && etcdError.ErrorCode == 102 { //yup.  102.
+			return true
+		}
+	}
+	return false
+}
+
 func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 	results := make(chan error, len(nodes))
 
@@ -65,6 +75,10 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 		}
 	}
 
+	if adapter.isNotAFileError(err) {
+		return ErrorNodeIsDirectory
+	}
+
 	if adapter.isTimeoutError(err) {
 		return ErrorTimeout
 	}
@@ -84,6 +98,7 @@ func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 	if err != nil {
 		return StoreNode{}, err
 	}
+
 	if len(responses) > 1 || responses[0].Key != key {
 		return StoreNode{}, ErrorNodeIsDirectory
 	}

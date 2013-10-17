@@ -7,8 +7,23 @@ import (
 )
 
 var _ = Describe("ETCD Store Adapter", func() {
-	var adapter StoreAdapter
+	var (
+		adapter       StoreAdapter
+		breakfastNode StoreNode
+		lunchNode     StoreNode
+	)
+
 	BeforeEach(func() {
+		breakfastNode = StoreNode{
+			Key:   "/menu/breakfast",
+			Value: []byte("waffles"),
+		}
+
+		lunchNode = StoreNode{
+			Key:   "/menu/lunch",
+			Value: []byte("burgers"),
+		}
+
 		adapter = NewETCDStoreAdapter(etcdRunner.NodeURLS(), 100)
 		err := adapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
@@ -18,163 +33,224 @@ var _ = Describe("ETCD Store Adapter", func() {
 		adapter.Disconnect()
 	})
 
-	Context("With something in the adapter", func() {
-		var key string
-		var value []byte
-		var dir_key string
-		var dir_entry_key string
-
-		var expectedLeafNode StoreNode
-		var expectedDirNode StoreNode
-
+	Describe("Get", func() {
 		BeforeEach(func() {
-			value = []byte("my_stuff")
-
-			key = "/foo/bar"
-			err := adapter.Set([]StoreNode{StoreNode{Key: key, Value: value, TTL: 0}})
+			err := adapter.Set([]StoreNode{breakfastNode, lunchNode})
 			Ω(err).ShouldNot(HaveOccured())
-
-			dir_key = "/foo/baz"
-			dir_entry_key = "/bar"
-			err = adapter.Set([]StoreNode{StoreNode{Key: dir_key + dir_entry_key, Value: value, TTL: 0}})
-			Ω(err).ShouldNot(HaveOccured())
-
-			expectedLeafNode = StoreNode{
-				Key:   key,
-				Value: value,
-				Dir:   false,
-				TTL:   0,
-			}
-
-			expectedDirNode = StoreNode{
-				Key:   dir_key,
-				Value: []byte(""),
-				Dir:   true,
-				TTL:   0,
-			}
 		})
 
-		It("should be able to set and get things from the adapter", func() {
-			value, err := adapter.Get("/foo/bar")
-			Ω(err).ShouldNot(HaveOccured())
-			Ω(value).Should(Equal(expectedLeafNode))
+		Context("when getting a key", func() {
+			It("should return the appropriate store breakfastNode", func() {
+				value, err := adapter.Get("/menu/breakfast")
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(value).Should(Equal(breakfastNode))
+			})
 		})
 
-		It("Should list directory contents", func() {
-			value, err := adapter.List("/foo")
-			Ω(err).ShouldNot(HaveOccured())
-			Ω(value).Should(HaveLen(2))
-			Ω(value).Should(ContainElement(expectedLeafNode))
-			Ω(value).Should(ContainElement(expectedDirNode))
-		})
-
-		It("should be able to delete things from the adapter", func() {
-			err := adapter.Delete("/foo/bar")
-			_, err = adapter.Get("/foo/bar")
-			Ω(err).Should(HaveOccured())
-			Ω(err).Should(Equal(ErrorKeyNotFound))
-		})
-
-		Context("when we call List on an entry", func() {
+		Context("When getting a non-existent key", func() {
 			It("should return an error", func() {
-				_, err := adapter.List(key)
+				value, err := adapter.Get("/not_a_key")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+				Ω(value).Should(BeZero())
+			})
+		})
+
+		Context("when getting a directory", func() {
+			It("should return an error", func() {
+				value, err := adapter.Get("/menu")
+				Ω(err).Should(Equal(ErrorNodeIsDirectory))
+				Ω(value).Should(BeZero())
+			})
+		})
+
+		Context("when the store is down", func() {
+			BeforeEach(func() {
+				etcdRunner.Stop()
+			})
+
+			AfterEach(func() {
+				etcdRunner.Start()
+			})
+
+			It("should return a timeout error", func() {
+				value, err := adapter.Get("/foo/bar")
+				Ω(err).Should(Equal(ErrorTimeout))
+				Ω(value).Should(BeZero())
+			})
+		})
+	})
+
+	Describe("Set", func() {
+		It("should be able to set multiple things to the store at once", func() {
+			err := adapter.Set([]StoreNode{breakfastNode, lunchNode})
+			Ω(err).ShouldNot(HaveOccured())
+
+			values, err := adapter.List("/menu")
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(values).Should(HaveLen(2))
+			Ω(values).Should(ContainElement(breakfastNode))
+			Ω(values).Should(ContainElement(lunchNode))
+		})
+
+		Context("Setting to an existing node", func() {
+			BeforeEach(func() {
+				err := adapter.Set([]StoreNode{breakfastNode, lunchNode})
+				Ω(err).ShouldNot(HaveOccured())
+			})
+
+			It("should be able to update existing entries", func() {
+				lunchNode.Value = []byte("steak")
+				err := adapter.Set([]StoreNode{breakfastNode, lunchNode})
+				Ω(err).ShouldNot(HaveOccured())
+
+				values, err := adapter.List("/menu")
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(values).Should(HaveLen(2))
+				Ω(values).Should(ContainElement(breakfastNode))
+				Ω(values).Should(ContainElement(lunchNode))
+			})
+
+			It("should error when attempting to set to a directory", func() {
+				dirNode := StoreNode{
+					Key:   "/menu",
+					Value: []byte("oops!"),
+				}
+
+				err := adapter.Set([]StoreNode{dirNode})
+				Ω(err).Should(Equal(ErrorNodeIsDirectory))
+			})
+		})
+
+		Context("when the store is down", func() {
+			BeforeEach(func() {
+				etcdRunner.Stop()
+			})
+
+			AfterEach(func() {
+				etcdRunner.Start()
+			})
+
+			It("should return a timeout error", func() {
+				err := adapter.Set([]StoreNode{breakfastNode})
+				Ω(err).Should(Equal(ErrorTimeout))
+			})
+		})
+	})
+
+	Describe("List", func() {
+		BeforeEach(func() {
+			err := adapter.Set([]StoreNode{breakfastNode, lunchNode})
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		Context("When listing a directory", func() {
+			It("Should list directory contents", func() {
+				values, err := adapter.List("/menu")
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(values).Should(HaveLen(2))
+				Ω(values).Should(ContainElement(breakfastNode))
+				Ω(values).Should(ContainElement(lunchNode))
+			})
+		})
+
+		Context("when listing an empty directory", func() {
+			It("should return an empty list of breakfastNodes, and not error", func() {
+				err := adapter.Delete("/menu/breakfast")
+				Ω(err).ShouldNot(HaveOccured())
+				err = adapter.Delete("/menu/lunch")
+				Ω(err).ShouldNot(HaveOccured())
+
+				values, err := adapter.List("/menu")
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(values).Should(HaveLen(0))
+			})
+		})
+
+		Context("when listing a non-existent key", func() {
+			It("should return an error", func() {
+				values, err := adapter.List("/nothing-here")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+				Ω(values).Should(BeEmpty())
+			})
+		})
+
+		Context("When listing an entry", func() {
+			It("should return an error", func() {
+				_, err := adapter.List("/menu/breakfast")
 				Ω(err).Should(HaveOccured())
 				Ω(err).Should(Equal(ErrorNodeIsNotDirectory))
 			})
 		})
 
-		Context("when we call Get on a directory", func() {
-			It("should return an error", func() {
-				_, err := adapter.Get(dir_key)
-				Ω(err).Should(HaveOccured())
-				Ω(err).Should(Equal(ErrorNodeIsDirectory))
+		Context("when the store is down", func() {
+			BeforeEach(func() {
+				etcdRunner.Stop()
 			})
-		})
 
-		Context("when listing an empty directory", func() {
-			It("should return an empty list of nodes and no error", func() {
-				adapter.Set([]StoreNode{StoreNode{Key: "/menu/waffles", Value: []byte("tasty"), TTL: 0}})
-				adapter.Delete("/menu/waffles")
-				results, err := adapter.List("/menu")
-				Ω(results).Should(BeEmpty())
-				Ω(err).ShouldNot(HaveOccured())
+			AfterEach(func() {
+				etcdRunner.Start()
 			})
-		})
 
-		Context("when listing a non-existent directory", func() {
-			It("should return a key not found error", func() {
-				results, err := adapter.List("/gobbledygook")
-				Ω(results).Should(BeEmpty())
-				Ω(err).Should(Equal(ErrorKeyNotFound))
-			})
-		})
-
-		Context("when deleting a nonexistent key", func() {
-			It("should return a key not found error", func() {
-				err := adapter.Delete("/gobbledygook")
-				Ω(err).Should(Equal(ErrorKeyNotFound))
+			It("should return a timeout error", func() {
+				_, err := adapter.List("/menu")
+				Ω(err).Should(Equal(ErrorTimeout))
 			})
 		})
 	})
 
-	Context("when the adapter is down", func() {
+	Describe("Delete", func() {
 		BeforeEach(func() {
-			etcdRunner.Stop()
+			err := adapter.Set([]StoreNode{breakfastNode})
+			Ω(err).ShouldNot(HaveOccured())
 		})
 
-		AfterEach(func() {
-			etcdRunner.Start()
-		})
+		Context("when deleting an existing key", func() {
+			It("should delete the key", func() {
+				err := adapter.Delete("/menu/breakfast")
+				Ω(err).ShouldNot(HaveOccured())
 
-		Context("when we get", func() {
-			It("should return a timeout error", func() {
-				_, err := adapter.Get("/foo/bar")
-				Ω(err).Should(Equal(ErrorTimeout))
+				value, err := adapter.Get("/menu/breakfat")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+				Ω(value).Should(BeZero())
 			})
 		})
 
-		Context("when we set", func() {
-			It("should return a timeout error", func() {
-				err := adapter.Set([]StoreNode{StoreNode{Key: "/foo/bar", Value: []byte("baz"), TTL: 0}})
-				Ω(err).Should(Equal(ErrorTimeout))
+		Context("when deleting a non-existing key", func() {
+			It("should error", func() {
+				err := adapter.Delete("/not-a-key")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
 			})
 		})
 
-		Context("when we list", func() {
+		Context("when the store is down", func() {
+			BeforeEach(func() {
+				etcdRunner.Stop()
+			})
+
+			AfterEach(func() {
+				etcdRunner.Start()
+			})
+
 			It("should return a timeout error", func() {
-				_, err := adapter.List("/foo/bar")
+				err := adapter.Delete("/menu/breakfast")
 				Ω(err).Should(Equal(ErrorTimeout))
 			})
-		})
-
-		Context("when we delete", func() {
-			It("should return a timeout error", func() {
-				err := adapter.Delete("/foo/bar")
-				Ω(err).Should(Equal(ErrorTimeout))
-			})
-		})
-	})
-
-	Context("When fetching a non-existent key", func() {
-		It("should return an error", func() {
-			_, err := adapter.Get("/not_a_key")
-			Ω(err).Should(HaveOccured())
-			Ω(err).Should(Equal(ErrorKeyNotFound))
 		})
 	})
 
 	Context("When setting a key with a non-zero TTL", func() {
 		It("should stay in the adapter for its TTL and then disappear", func() {
-			err := adapter.Set([]StoreNode{StoreNode{Key: "/floop", Value: []byte("bar"), TTL: 1}})
+			breakfastNode.TTL = 1
+			err := adapter.Set([]StoreNode{breakfastNode})
 			Ω(err).ShouldNot(HaveOccured())
 
-			_, err = adapter.Get("/floop")
+			_, err = adapter.Get("/menu/breakfast")
 			Ω(err).ShouldNot(HaveOccured())
 
 			Eventually(func() interface{} {
-				_, err = adapter.Get("/floop")
+				_, err = adapter.Get("/menu/breakfast")
 				return err
-			}, 1.05, 0.01).Should(HaveOccured())
+			}, 1.05, 0.01).Should(Equal(ErrorKeyNotFound))
 		})
 	})
 })
