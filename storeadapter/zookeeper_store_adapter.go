@@ -13,6 +13,12 @@ import (
 	"time"
 )
 
+type fetchedNode struct {
+	node      StoreNode
+	err       error
+	isExpired bool
+}
+
 type ZookeeperStoreAdapter struct {
 	urls              []string
 	client            *zk.Conn
@@ -87,42 +93,26 @@ func (adapter *ZookeeperStoreAdapter) Set(nodes []StoreNode) error {
 	return err
 }
 
-func (adapter *ZookeeperStoreAdapter) Get(key string) (StoreNode, error) {
-	node, err, isExpired := adapter.getWithTTLPolicy(key)
+func (adapter *ZookeeperStoreAdapter) Get(key string) (node StoreNode, err error) {
+	fetchedNode := adapter.getWithTTLPolicy(key)
 
-	if err != nil {
-		return StoreNode{}, err
+	if fetchedNode.err != nil {
+		return StoreNode{}, fetchedNode.err
 	}
 
-	if isExpired {
+	if fetchedNode.isExpired {
 		return StoreNode{}, ErrorKeyNotFound
 	}
 
-	if node.Dir {
+	if fetchedNode.node.Dir {
 		return StoreNode{}, ErrorNodeIsDirectory
 	}
 
-	return node, nil
-}
-
-type nodeErrPair struct {
-	node      StoreNode
-	err       error
-	isExpired bool
+	return fetchedNode.node, nil
 }
 
 func (adapter *ZookeeperStoreAdapter) ListRecursively(key string) (StoreNode, error) {
 	nodeKeys, _, err := adapter.client.Children(key)
-
-	if key == "/" {
-		filteredNodeKeys := make([]string, 0)
-		for _, nodeKey := range nodeKeys {
-			if nodeKey != "zookeeper" {
-				filteredNodeKeys = append(filteredNodeKeys, nodeKey)
-			}
-		}
-		nodeKeys = filteredNodeKeys
-	}
 
 	if adapter.isTimeoutError(err) {
 		return StoreNode{}, ErrorTimeout
@@ -136,50 +126,28 @@ func (adapter *ZookeeperStoreAdapter) ListRecursively(key string) (StoreNode, er
 		return StoreNode{}, err
 	}
 
+	if key == "/" {
+		nodeKeys = adapter.pruneZookeepersInternalNodeKeys(nodeKeys)
+	}
+
 	if len(nodeKeys) == 0 {
-		err := adapter.assertNodeIsDirectory(key)
-		if err == nil {
+		if adapter.isNodeDirectory(key) {
 			return StoreNode{Key: key, Dir: true}, nil
 		} else {
-			return StoreNode{}, err
+			return StoreNode{}, ErrorNodeIsNotDirectory
 		}
 	}
 
-	results := make(chan nodeErrPair, len(nodeKeys))
-	for _, nodeKey := range nodeKeys {
-		nodeKey := nodeKey
-		if key == "/" {
-			nodeKey = "/" + nodeKey
-		} else {
-			nodeKey = key + "/" + nodeKey
-		}
-		adapter.workerPool.ScheduleWork(func() {
-			node, err, isExpired := adapter.getWithTTLPolicy(nodeKey)
-			results <- nodeErrPair{node: node, err: err, isExpired: isExpired}
-		})
-	}
-
-	childNodes := make([]StoreNode, 0)
-	numReceived := 0
-	for numReceived < len(nodeKeys) {
-		result := <-results
-		numReceived++
-		if result.isExpired {
-			continue
-		}
-		if result.err != nil {
-			if err == nil {
-				err = result.err
-			}
-			continue
-		}
-		childNodes = append(childNodes, result.node)
-	}
+	childNodes, err := adapter.getMultipleNodesSimultaneously(key, nodeKeys)
 
 	if err != nil {
 		return StoreNode{}, err
 	}
 
+	//This could be done concurrently too
+	//if zookeeper's recursive read performance proves to be slow
+	//we could simply launch each of these ListRecursively's in a map-reduce
+	//fashion
 	for i, node := range childNodes {
 		if node.Dir == true {
 			listedNode, err := adapter.ListRecursively(node.Key)
@@ -239,33 +207,32 @@ func (adapter *ZookeeperStoreAdapter) decode(input []byte) (data []byte, TTL uin
 	return []byte(arr[1]), TTL, err
 }
 
-func (adapter *ZookeeperStoreAdapter) getWithTTLPolicy(key string) (node StoreNode, err error, isExpired bool) {
+func (adapter *ZookeeperStoreAdapter) getWithTTLPolicy(key string) fetchedNode {
 	data, stat, err := adapter.client.Get(key)
 
 	if adapter.isTimeoutError(err) {
-		return StoreNode{}, ErrorTimeout, false
+		return fetchedNode{err: ErrorTimeout}
 	}
 
 	if adapter.isMissingKeyError(err) {
-		return StoreNode{}, ErrorKeyNotFound, false
+		return fetchedNode{err: ErrorKeyNotFound}
 	}
 
 	if err != nil {
-		return StoreNode{}, err, false
+		return fetchedNode{err: err}
 	}
 
 	if len(data) == 0 {
-		return StoreNode{
+		return fetchedNode{node: StoreNode{
 			Key:   key,
 			Value: data,
-			TTL:   0,
 			Dir:   true,
-		}, nil, false
+		}}
 	}
 
 	value, TTL, err := adapter.decode(data)
 	if err != nil {
-		return StoreNode{}, ErrorInvalidFormat, false
+		return fetchedNode{err: ErrorInvalidFormat}
 	}
 
 	if TTL > 0 {
@@ -278,17 +245,15 @@ func (adapter *ZookeeperStoreAdapter) getWithTTLPolicy(key string) (node StoreNo
 			}
 		} else {
 			adapter.client.Delete(key, -1)
-			return StoreNode{}, nil, true
+			return fetchedNode{isExpired: true}
 		}
 	}
 
-	return StoreNode{
+	return fetchedNode{node: StoreNode{
 		Key:   key,
 		Value: value,
 		TTL:   TTL,
-		Dir:   false,
-	}, nil, false
-
+	}}
 }
 
 func (adapter *ZookeeperStoreAdapter) createNode(node StoreNode) error {
@@ -324,14 +289,59 @@ func (adapter *ZookeeperStoreAdapter) createNode(node StoreNode) error {
 	return err
 }
 
-func (adapter *ZookeeperStoreAdapter) assertNodeIsDirectory(key string) error {
-	node, err, _ := adapter.getWithTTLPolicy(key)
-	if err != nil {
-		return err
-	}
-	if !node.Dir {
-		return ErrorNodeIsNotDirectory
+func (adapter *ZookeeperStoreAdapter) getMultipleNodesSimultaneously(rootKey string, nodeKeys []string) (results []StoreNode, err error) {
+	fetchedNodes := make(chan fetchedNode, len(nodeKeys))
+	for _, nodeKey := range nodeKeys {
+		nodeKey := adapter.combineKeys(rootKey, nodeKey)
+		adapter.workerPool.ScheduleWork(func() {
+			fetchedNodes <- adapter.getWithTTLPolicy(nodeKey)
+		})
 	}
 
-	return nil
+	numReceived := 0
+	for numReceived < len(nodeKeys) {
+		fetchedNode := <-fetchedNodes
+		numReceived++
+		if fetchedNode.isExpired {
+			continue
+		}
+		if fetchedNode.err != nil {
+			err = fetchedNode.err
+			continue
+		}
+		results = append(results, fetchedNode.node)
+	}
+
+	if err != nil {
+		return []StoreNode{}, err
+	}
+
+	return results, nil
+}
+
+func (adapter *ZookeeperStoreAdapter) pruneZookeepersInternalNodeKeys(keys []string) (prunedNodeKeys []string) {
+	for _, key := range keys {
+		if key != "zookeeper" {
+			prunedNodeKeys = append(prunedNodeKeys, key)
+		}
+	}
+	return prunedNodeKeys
+}
+
+func (adapter *ZookeeperStoreAdapter) combineKeys(root string, key string) string {
+	if root == "/" {
+		return "/" + key
+	} else {
+		return root + "/" + key
+	}
+}
+
+func (adapter *ZookeeperStoreAdapter) isNodeDirectory(key string) bool {
+	fetchedNode := adapter.getWithTTLPolicy(key)
+
+	if fetchedNode.err != nil {
+		return false
+	}
+
+	return fetchedNode.node.Dir
 }
