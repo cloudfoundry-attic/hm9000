@@ -52,15 +52,15 @@ var _ = Describe("Desired State", func() {
 		})
 
 		It("can stores the passed in desired state", func() {
-			nodes, err := etcdAdapter.List("/desired")
+			node, err := etcdAdapter.ListRecursively("/desired")
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(nodes).Should(HaveLen(2))
-			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
+			Ω(node.ChildNodes).Should(HaveLen(2))
+			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/desired/" + app1.AppGuid + "-" + app1.AppVersion,
 				Value: app1.DesiredState(1).ToJSON(),
 				TTL:   conf.DesiredStateTTL() - 1,
 			}))
-			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
+			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/desired/" + app2.AppGuid + "-" + app2.AppVersion,
 				Value: app2.DesiredState(1).ToJSON(),
 				TTL:   conf.DesiredStateTTL() - 1,
@@ -105,7 +105,7 @@ var _ = Describe("Desired State", func() {
 
 		Context("When the desired state key is missing", func() {
 			BeforeEach(func() {
-				_, err := etcdAdapter.List("/desired")
+				_, err := etcdAdapter.ListRecursively("/desired")
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 

@@ -34,47 +34,6 @@ var _ = Describe("Store", func() {
 		etcdStoreAdapter.Set(nodes)
 	})
 
-	Describe("Walk", func() {
-		It("can recurse through keys in the store", func() {
-			visited := make(map[string]string)
-			Walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
-				visited[node.Key] = string(node.Value)
-			})
-
-			Ω(visited).Should(Equal(map[string]string{
-				"/desired-fresh":           "123",
-				"/actual-fresh":            "456",
-				"/desired/guid1":           "guid1",
-				"/desired/guid2":           "guid2",
-				"/menu/oj":                 "sweet",
-				"/menu/breakfast/pancakes": "tasty",
-				"/menu/breakfast/waffles":  "delish",
-			}))
-		})
-
-		It("can recurse through keys in the store at an arbitrary level", func() {
-			visited := make(map[string]string)
-			Walk(etcdStoreAdapter, "/menu", func(node storeadapter.StoreNode) {
-				visited[node.Key] = string(node.Value)
-			})
-
-			Ω(visited).Should(Equal(map[string]string{
-				"/menu/oj":                 "sweet",
-				"/menu/breakfast/pancakes": "tasty",
-				"/menu/breakfast/waffles":  "delish",
-			}))
-		})
-
-		It("doesn't call the callback when passed a non-directory", func() {
-			called := false
-			Walk(etcdStoreAdapter, "/desired-fresh", func(node storeadapter.StoreNode) {
-				called = true
-			})
-
-			Ω(called).Should(BeFalse())
-		})
-	})
-
 	Describe("Clear", func() {
 		It("deletes all entries from store", func() {
 			conf.StoreURLs = etcdRunner.NodeURLS()

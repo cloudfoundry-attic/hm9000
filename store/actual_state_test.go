@@ -49,15 +49,15 @@ var _ = Describe("Actual State", func() {
 		})
 
 		It("can stores the passed in actual state", func() {
-			nodes, err := etcdAdapter.List("/actual")
+			node, err := etcdAdapter.ListRecursively("/actual")
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(nodes).Should(HaveLen(2))
-			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
+			Ω(node.ChildNodes).Should(HaveLen(2))
+			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/actual/" + heartbeat1.InstanceGuid,
 				Value: heartbeat1.ToJSON(),
 				TTL:   conf.HeartbeatTTL() - 1,
 			}))
-			Ω(nodes).Should(ContainElement(storeadapter.StoreNode{
+			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
 				Key:   "/actual/" + heartbeat2.InstanceGuid,
 				Value: heartbeat2.ToJSON(),
 				TTL:   conf.HeartbeatTTL() - 1,
@@ -102,7 +102,7 @@ var _ = Describe("Actual State", func() {
 
 		Context("When the actual state key is missing", func() {
 			BeforeEach(func() {
-				_, err := etcdAdapter.List("/actual")
+				_, err := etcdAdapter.ListRecursively("/actual")
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 

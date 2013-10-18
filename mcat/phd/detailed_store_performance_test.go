@@ -89,9 +89,9 @@ var _ = Describe("Detailed Store Performance", func() {
 							})
 
 							b.Time("reading from the store", func() {
-								values, err := storeAdapter.List("/record")
+								node, err := storeAdapter.ListRecursively("/record")
 								Ω(err).ShouldNot(HaveOccured())
-								Ω(len(values)).Should(Equal(numRecords), "Didn't find the correct number of entries in the store")
+								Ω(len(node.ChildNodes)).Should(Equal(numRecords), "Didn't find the correct number of entries in the store")
 							}, StorePerformanceReport{
 								Subject:       "read",
 								StoreType:     storeType,

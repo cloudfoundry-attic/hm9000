@@ -16,7 +16,12 @@ func Dump(l logger.Logger, conf config.Config) {
 	fmt.Printf("Dump - Current timestamp %d\n", time.Now().Unix())
 
 	entries := sort.StringSlice{}
-	Walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
+
+	node, err := etcdStoreAdapter.ListRecursively("/")
+	if err != nil {
+		panic(err)
+	}
+	walk(node, func(node storeadapter.StoreNode) {
 		ttl := fmt.Sprintf("[TTL:%ds]", node.TTL)
 		if node.TTL == 0 {
 			ttl = "[TTL: ∞]"
@@ -40,23 +45,19 @@ func Clear(l logger.Logger, conf config.Config) {
 	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
 	l.Info(fmt.Sprintf("Clear - Current timestamp %d\n", time.Now().Unix()))
 
-	Walk(etcdStoreAdapter, "/", func(node storeadapter.StoreNode) {
+	node, err := etcdStoreAdapter.ListRecursively("/")
+	if err != nil {
+		panic(err)
+	}
+	walk(node, func(node storeadapter.StoreNode) {
 		etcdStoreAdapter.Delete(node.Key)
 	})
 }
 
-func Walk(store storeadapter.StoreAdapter, dirKey string, callback func(storeadapter.StoreNode)) {
-	nodes, err := store.List(dirKey)
-	if err != nil {
-		return
-	}
-
-	for _, node := range nodes {
-		if node.Key == "/_etcd" {
-			continue
-		}
+func walk(node storeadapter.StoreNode, callback func(storeadapter.StoreNode)) {
+	for _, node := range node.ChildNodes {
 		if node.Dir {
-			Walk(store, node.Key, callback)
+			walk(node, callback)
 		} else {
 			callback(node)
 		}

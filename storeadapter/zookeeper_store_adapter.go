@@ -88,10 +88,14 @@ func (adapter *ZookeeperStoreAdapter) Set(nodes []StoreNode) error {
 }
 
 func (adapter *ZookeeperStoreAdapter) Get(key string) (StoreNode, error) {
-	node, err := adapter.getWithTTLPolicy(key)
+	node, err, isExpired := adapter.getWithTTLPolicy(key)
 
 	if err != nil {
 		return StoreNode{}, err
+	}
+
+	if isExpired {
+		return StoreNode{}, ErrorKeyNotFound
 	}
 
 	if node.Dir {
@@ -102,57 +106,95 @@ func (adapter *ZookeeperStoreAdapter) Get(key string) (StoreNode, error) {
 }
 
 type nodeErrPair struct {
-	node StoreNode
-	err  error
+	node      StoreNode
+	err       error
+	isExpired bool
 }
 
-func (adapter *ZookeeperStoreAdapter) List(key string) ([]StoreNode, error) {
+func (adapter *ZookeeperStoreAdapter) ListRecursively(key string) (StoreNode, error) {
 	nodeKeys, _, err := adapter.client.Children(key)
 
+	if key == "/" {
+		filteredNodeKeys := make([]string, 0)
+		for _, nodeKey := range nodeKeys {
+			if nodeKey != "zookeeper" {
+				filteredNodeKeys = append(filteredNodeKeys, nodeKey)
+			}
+		}
+		nodeKeys = filteredNodeKeys
+	}
+
 	if adapter.isTimeoutError(err) {
-		return []StoreNode{}, ErrorTimeout
+		return StoreNode{}, ErrorTimeout
 	}
 
 	if adapter.isMissingKeyError(err) {
-		return []StoreNode{}, ErrorKeyNotFound
+		return StoreNode{}, ErrorKeyNotFound
 	}
 
 	if err != nil {
-		return []StoreNode{}, err
+		return StoreNode{}, err
 	}
 
 	if len(nodeKeys) == 0 {
-		return []StoreNode{}, adapter.assertNodeIsDirectory(key)
+		err := adapter.assertNodeIsDirectory(key)
+		if err == nil {
+			return StoreNode{Key: key, Dir: true}, nil
+		} else {
+			return StoreNode{}, err
+		}
 	}
 
 	results := make(chan nodeErrPair, len(nodeKeys))
 	for _, nodeKey := range nodeKeys {
 		nodeKey := nodeKey
+		if key == "/" {
+			nodeKey = "/" + nodeKey
+		} else {
+			nodeKey = key + "/" + nodeKey
+		}
 		adapter.workerPool.ScheduleWork(func() {
-			node, err := adapter.getWithTTLPolicy(key + "/" + nodeKey)
-			results <- nodeErrPair{node: node, err: err}
+			node, err, isExpired := adapter.getWithTTLPolicy(nodeKey)
+			results <- nodeErrPair{node: node, err: err, isExpired: isExpired}
 		})
 	}
 
-	nodes := make([]StoreNode, 0)
+	childNodes := make([]StoreNode, 0)
 	numReceived := 0
 	for numReceived < len(nodeKeys) {
 		result := <-results
 		numReceived++
-		if result.err == nil {
-			nodes = append(nodes, result.node)
-		} else if result.err != ErrorKeyNotFound { //we skip KeyNotFound since it corresponds to an expired node
+		if result.isExpired {
+			continue
+		}
+		if result.err != nil {
 			if err == nil {
 				err = result.err
 			}
+			continue
 		}
+		childNodes = append(childNodes, result.node)
 	}
 
 	if err != nil {
-		return []StoreNode{}, err
+		return StoreNode{}, err
 	}
 
-	return nodes, nil
+	for i, node := range childNodes {
+		if node.Dir == true {
+			listedNode, err := adapter.ListRecursively(node.Key)
+			if err != nil {
+				return StoreNode{}, err
+			}
+			childNodes[i] = listedNode
+		}
+	}
+
+	return StoreNode{
+		Key:        key,
+		Dir:        true,
+		ChildNodes: childNodes,
+	}, nil
 }
 
 func (adapter *ZookeeperStoreAdapter) Delete(key string) error {
@@ -197,19 +239,19 @@ func (adapter *ZookeeperStoreAdapter) decode(input []byte) (data []byte, TTL uin
 	return []byte(arr[1]), TTL, err
 }
 
-func (adapter *ZookeeperStoreAdapter) getWithTTLPolicy(key string) (StoreNode, error) {
+func (adapter *ZookeeperStoreAdapter) getWithTTLPolicy(key string) (node StoreNode, err error, isExpired bool) {
 	data, stat, err := adapter.client.Get(key)
 
 	if adapter.isTimeoutError(err) {
-		return StoreNode{}, ErrorTimeout
+		return StoreNode{}, ErrorTimeout, false
 	}
 
 	if adapter.isMissingKeyError(err) {
-		return StoreNode{}, ErrorKeyNotFound
+		return StoreNode{}, ErrorKeyNotFound, false
 	}
 
 	if err != nil {
-		return StoreNode{}, err
+		return StoreNode{}, err, false
 	}
 
 	if len(data) == 0 {
@@ -218,12 +260,12 @@ func (adapter *ZookeeperStoreAdapter) getWithTTLPolicy(key string) (StoreNode, e
 			Value: data,
 			TTL:   0,
 			Dir:   true,
-		}, nil
+		}, nil, false
 	}
 
 	value, TTL, err := adapter.decode(data)
 	if err != nil {
-		return StoreNode{}, ErrorInvalidFormat
+		return StoreNode{}, ErrorInvalidFormat, false
 	}
 
 	if TTL > 0 {
@@ -236,7 +278,7 @@ func (adapter *ZookeeperStoreAdapter) getWithTTLPolicy(key string) (StoreNode, e
 			}
 		} else {
 			adapter.client.Delete(key, -1)
-			return StoreNode{}, ErrorKeyNotFound
+			return StoreNode{}, nil, true
 		}
 	}
 
@@ -245,7 +287,7 @@ func (adapter *ZookeeperStoreAdapter) getWithTTLPolicy(key string) (StoreNode, e
 		Value: value,
 		TTL:   TTL,
 		Dir:   false,
-	}, nil
+	}, nil, false
 
 }
 
@@ -283,7 +325,7 @@ func (adapter *ZookeeperStoreAdapter) createNode(node StoreNode) error {
 }
 
 func (adapter *ZookeeperStoreAdapter) assertNodeIsDirectory(key string) error {
-	node, err := adapter.getWithTTLPolicy(key)
+	node, err, _ := adapter.getWithTTLPolicy(key)
 	if err != nil {
 		return err
 	}

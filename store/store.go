@@ -58,14 +58,14 @@ func NewStore(config config.Config, adapter storeadapter.StoreAdapter, logger lo
 }
 
 func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
-	nodes, err := store.adapter.List(dir)
+	node, err := store.adapter.ListRecursively(dir)
 	if err != nil {
 		if err == storeadapter.ErrorKeyNotFound {
 			return []storeadapter.StoreNode{}, nil
 		}
 		return []storeadapter.StoreNode{}, err
 	}
-	return nodes, nil
+	return node.ChildNodes, nil
 }
 
 // buckle up, here be dragons...

@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+type containerNode struct {
+	dir   bool
+	nodes map[string]*containerNode
+
+	storeNode storeadapter.StoreNode
+}
+
 type FakeStoreAdapterErrorInjector struct {
 	KeyRegexp *regexp.Regexp
 	Error     error
@@ -29,7 +36,7 @@ type FakeStoreAdapter struct {
 	ListErrInjector   *FakeStoreAdapterErrorInjector
 	DeleteErrInjector *FakeStoreAdapterErrorInjector
 
-	store map[string]storeadapter.StoreNode
+	rootNode *containerNode
 }
 
 func New() *FakeStoreAdapter {
@@ -49,7 +56,10 @@ func (adapter *FakeStoreAdapter) Reset() {
 	adapter.ListErrInjector = nil
 	adapter.DeleteErrInjector = nil
 
-	adapter.store = make(map[string]storeadapter.StoreNode)
+	adapter.rootNode = &containerNode{
+		dir:   true,
+		nodes: make(map[string]*containerNode),
+	}
 }
 
 func (adapter *FakeStoreAdapter) Connect() error {
@@ -67,7 +77,30 @@ func (adapter *FakeStoreAdapter) Set(nodes []storeadapter.StoreNode) error {
 		if adapter.SetErrInjector != nil && adapter.SetErrInjector.KeyRegexp.MatchString(node.Key) {
 			return adapter.SetErrInjector.Error
 		}
-		adapter.store[node.Key] = node
+		components := adapter.keyComponents(node.Key)
+
+		container := adapter.rootNode
+		for i, component := range components {
+			if i == len(components)-1 {
+				existingNode, exists := container.nodes[component]
+				if exists && existingNode.dir {
+					return storeadapter.ErrorNodeIsDirectory
+				}
+				container.nodes[component] = &containerNode{storeNode: node}
+			} else {
+				existingNode, exists := container.nodes[component]
+				if exists {
+					if !existingNode.dir {
+						return storeadapter.ErrorNodeIsNotDirectory
+					}
+					container = existingNode
+				} else {
+					newContainer := &containerNode{dir: true, nodes: make(map[string]*containerNode)}
+					container.nodes[component] = newContainer
+					container = newContainer
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -76,25 +109,68 @@ func (adapter *FakeStoreAdapter) Get(key string) (storeadapter.StoreNode, error)
 	if adapter.GetErrInjector != nil && adapter.GetErrInjector.KeyRegexp.MatchString(key) {
 		return storeadapter.StoreNode{}, adapter.GetErrInjector.Error
 	}
-	node, present := adapter.store[key]
-	if !present {
-		return storeadapter.StoreNode{}, storeadapter.ErrorKeyNotFound
-	}
-	return node, nil
-}
 
-func (adapter *FakeStoreAdapter) List(key string) (results []storeadapter.StoreNode, err error) {
-	if adapter.ListErrInjector != nil && adapter.ListErrInjector.KeyRegexp.MatchString(key) {
-		return []storeadapter.StoreNode{}, adapter.ListErrInjector.Error
-	}
-
-	for nodeKey, node := range adapter.store {
-		if strings.HasPrefix(nodeKey, key+"/") {
-			results = append(results, node)
+	components := adapter.keyComponents(key)
+	container := adapter.rootNode
+	for _, component := range components {
+		var exists bool
+		container, exists = container.nodes[component]
+		if !exists {
+			return storeadapter.StoreNode{}, storeadapter.ErrorKeyNotFound
 		}
 	}
 
-	return results, nil
+	if container.dir {
+		return storeadapter.StoreNode{}, storeadapter.ErrorNodeIsDirectory
+	} else {
+		return container.storeNode, nil
+	}
+}
+
+func (adapter *FakeStoreAdapter) ListRecursively(key string) (storeadapter.StoreNode, error) {
+	if adapter.ListErrInjector != nil && adapter.ListErrInjector.KeyRegexp.MatchString(key) {
+		return storeadapter.StoreNode{}, adapter.ListErrInjector.Error
+	}
+
+	container := adapter.rootNode
+
+	components := adapter.keyComponents(key)
+	for _, component := range components {
+		var exists bool
+		container, exists = container.nodes[component]
+		if !exists {
+			return storeadapter.StoreNode{}, storeadapter.ErrorKeyNotFound
+		}
+	}
+
+	if !container.dir {
+		return storeadapter.StoreNode{}, storeadapter.ErrorNodeIsNotDirectory
+	}
+
+	return adapter.listContainerNode(key, container), nil
+}
+
+func (adapter *FakeStoreAdapter) listContainerNode(key string, container *containerNode) storeadapter.StoreNode {
+	childNodes := []storeadapter.StoreNode{}
+
+	for nodeKey, node := range container.nodes {
+		if node.dir {
+			if key == "/" {
+				nodeKey = "/" + nodeKey
+			} else {
+				nodeKey = key + "/" + nodeKey
+			}
+			childNodes = append(childNodes, adapter.listContainerNode(nodeKey, node))
+		} else {
+			childNodes = append(childNodes, node.storeNode)
+		}
+	}
+
+	return storeadapter.StoreNode{
+		Key:        key,
+		Dir:        true,
+		ChildNodes: childNodes,
+	}
 }
 
 func (adapter *FakeStoreAdapter) Delete(key string) error {
@@ -102,10 +178,32 @@ func (adapter *FakeStoreAdapter) Delete(key string) error {
 		return adapter.DeleteErrInjector.Error
 	}
 
-	_, present := adapter.store[key]
-	if !present {
-		return storeadapter.ErrorKeyNotFound
+	components := adapter.keyComponents(key)
+	container := adapter.rootNode
+	parentNode := adapter.rootNode
+	for _, component := range components {
+		var exists bool
+		parentNode = container
+		container, exists = container.nodes[component]
+		if !exists {
+			return storeadapter.ErrorKeyNotFound
+		}
 	}
-	delete(adapter.store, key)
-	return nil
+
+	if container.dir {
+		return storeadapter.ErrorNodeIsDirectory
+	} else {
+		delete(parentNode.nodes, components[len(components)-1])
+		return nil
+	}
+}
+
+func (adapter *FakeStoreAdapter) keyComponents(key string) (components []string) {
+	for _, s := range strings.Split(key, "/") {
+		if s != "" {
+			components = append(components, s)
+		}
+	}
+
+	return components
 }

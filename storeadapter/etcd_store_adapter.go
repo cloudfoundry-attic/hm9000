@@ -111,40 +111,52 @@ func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 	}, nil
 }
 
-func (adapter *ETCDStoreAdapter) List(key string) ([]StoreNode, error) {
+func (adapter *ETCDStoreAdapter) ListRecursively(key string) (StoreNode, error) {
 	responses, err := adapter.client.Get(key)
 	if adapter.isTimeoutError(err) {
-		return []StoreNode{}, ErrorTimeout
+		return StoreNode{}, ErrorTimeout
 	}
 
 	if adapter.isMissingKeyError(err) {
-		return []StoreNode{}, ErrorKeyNotFound
+		return StoreNode{}, ErrorKeyNotFound
 	}
 
 	if err != nil {
-		return []StoreNode{}, err
+		return StoreNode{}, err
 	}
 
 	if len(responses) == 0 {
-		return []StoreNode{}, nil
+		return StoreNode{Key: key, Dir: true}, nil
 	}
 
 	if responses[0].Key == key {
-		return []StoreNode{}, ErrorNodeIsNotDirectory
+		return StoreNode{}, ErrorNodeIsNotDirectory
 	}
 
-	values := make([]StoreNode, len(responses))
+	childNodes := make([]StoreNode, 0)
 
-	for i, response := range responses {
-		values[i] = StoreNode{
-			Key:   response.Key,
-			Value: []byte(response.Value),
-			Dir:   response.Dir,
-			TTL:   uint64(response.TTL),
+	for _, response := range responses {
+		if response.Key == "/_etcd" {
+			continue
+		}
+
+		if response.Dir {
+			node, err := adapter.ListRecursively(response.Key)
+			if err != nil {
+				return StoreNode{}, err
+			}
+			childNodes = append(childNodes, node)
+		} else {
+			childNodes = append(childNodes, StoreNode{
+				Key:   response.Key,
+				Value: []byte(response.Value),
+				Dir:   response.Dir,
+				TTL:   uint64(response.TTL),
+			})
 		}
 	}
 
-	return values, nil
+	return StoreNode{Key: key, Dir: true, ChildNodes: childNodes}, nil
 }
 
 func (adapter *ETCDStoreAdapter) Delete(key string) error {

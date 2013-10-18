@@ -32,21 +32,6 @@ var _ = Describe("Apiserver", func() {
 
 	conf, _ := config.DefaultConfig()
 
-	BeforeEach(func() {
-		if !didSetup {
-			storeAdapter = fakestoreadapter.New()
-			store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-			timeProvider = &faketimeprovider.FakeTimeProvider{
-				TimeToProvide: time.Unix(100, 0),
-			}
-			server := apiserver.New(port, store, timeProvider, conf, fakelogger.NewFakeLogger())
-			go server.Start()
-			didSetup = true
-		}
-		timeProvider.TimeToProvide = time.Unix(100, 0)
-		storeAdapter.Reset()
-	})
-
 	makeGetRequest := func(url string) (statusCode int, body string) {
 		resp, err := http.Get(url)
 		Ω(err).ShouldNot(HaveOccured())
@@ -61,12 +46,26 @@ var _ = Describe("Apiserver", func() {
 		return
 	}
 
-	// XIt("should panic when the http server fails to come up", func() {
-	// 	server := apiserver.New(80) //80 is denied
-	// 	Ω(func() {
-	// 		server.Start()
-	// 	}).Should(Panic())
-	// })
+	BeforeEach(func() {
+		if !didSetup {
+			storeAdapter = fakestoreadapter.New()
+			store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
+			timeProvider = &faketimeprovider.FakeTimeProvider{
+				TimeToProvide: time.Unix(100, 0),
+			}
+			server := apiserver.New(port, store, timeProvider, conf, fakelogger.NewFakeLogger())
+			go server.Start()
+
+			Eventually(func() int {
+				statusCode, _ := makeGetRequest(fmt.Sprintf("http://magnet:orangutan4sale@localhost:%d/app", port))
+				return statusCode
+			}, 2, 0.01).Should(Equal(http.StatusBadRequest))
+
+			didSetup = true
+		}
+		timeProvider.TimeToProvide = time.Unix(100, 0)
+		storeAdapter.Reset()
+	})
 
 	Context("when serving /app", func() {
 		Context("when there are no query parameters", func() {
