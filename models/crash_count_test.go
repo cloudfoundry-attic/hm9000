@@ -15,6 +15,7 @@ var _ = Describe("CrashCount", func() {
 			AppVersion:    "123",
 			InstanceIndex: 1,
 			CrashCount:    12,
+			CreatedAt:     172,
 		}
 	})
 
@@ -25,6 +26,7 @@ var _ = Describe("CrashCount", func() {
 			Ω(json).Should(ContainSubstring(`"version":"123"`))
 			Ω(json).Should(ContainSubstring(`"instance_index":1`))
 			Ω(json).Should(ContainSubstring(`"crash_count":12`))
+			Ω(json).Should(ContainSubstring(`"created_at":172`))
 		})
 	})
 

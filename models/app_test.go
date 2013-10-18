@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"time"
 	. "github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
@@ -275,21 +276,23 @@ var _ = Describe("App", func() {
 				AppVersion:    fixture.AppVersion,
 				InstanceIndex: 1,
 				CrashCount:    2,
+				CreatedAt:     17,
 			}
 		})
 		Context("when there is a crash count for the passed in index", func() {
 			It("should return that crash count", func() {
-				Ω(app().CrashCountAtIndex(1)).Should(Equal(crashCounts[1]))
+				Ω(app().CrashCountAtIndex(1, time.Unix(120, 0))).Should(Equal(crashCounts[1]))
 			})
 		})
 
 		Context("when there is no crash count", func() {
 			It("should return a correctly configured crash count", func() {
-				Ω(app().CrashCountAtIndex(2)).Should(Equal(CrashCount{
+				Ω(app().CrashCountAtIndex(2, time.Unix(120, 0))).Should(Equal(CrashCount{
 					AppGuid:       fixture.AppGuid,
 					AppVersion:    fixture.AppVersion,
 					InstanceIndex: 2,
 					CrashCount:    0,
+					CreatedAt:     120,
 				}))
 			})
 		})

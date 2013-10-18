@@ -70,7 +70,7 @@ func (a *appAnalyzer) generatePendingStartsForCrashedInstances(priority float64)
 				continue
 			}
 
-			crashCount := a.app.CrashCountAtIndex(index)
+			crashCount := a.app.CrashCountAtIndex(index, a.currentTime)
 			delay := a.computeDelayForCrashCount(crashCount)
 			message := models.NewPendingStartMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, index, priority)
 

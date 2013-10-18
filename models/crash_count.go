@@ -10,6 +10,7 @@ type CrashCount struct {
 	AppVersion    string `json:"version"`
 	InstanceIndex int    `json:"instance_index"`
 	CrashCount    int    `json:"crash_count"`
+	CreatedAt     int64  `json:"created_at"`
 }
 
 func NewCrashCountFromJSON(encoded []byte) (CrashCount, error) {

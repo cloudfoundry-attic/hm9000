@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 type App struct {
@@ -163,13 +164,14 @@ func (a *App) HasCrashedInstanceAtIndex(index int) bool {
 	return false
 }
 
-func (a *App) CrashCountAtIndex(instanceIndex int) CrashCount {
+func (a *App) CrashCountAtIndex(instanceIndex int, currentTime time.Time) CrashCount {
 	crashCount, found := a.CrashCounts[instanceIndex]
 	if !found {
 		return CrashCount{
 			AppGuid:       a.AppGuid,
 			AppVersion:    a.AppVersion,
 			InstanceIndex: instanceIndex,
+			CreatedAt:     currentTime.Unix(),
 		}
 	} else {
 		return crashCount
