@@ -3,8 +3,8 @@ package phd
 import (
 	"encoding/csv"
 	"fmt"
-	g "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/types"
 	"os"
 	"strconv"
 	"strings"
@@ -32,17 +32,17 @@ type DataReporter struct {
 	timestamp               string
 }
 
-func (reporter *DataReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *g.SuiteSummary) {
+func (reporter *DataReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
 	reporter.timestamp = fmt.Sprintf("%d", time.Now().Unix())
 	reporter.writePerformanceReports = make(
 		[]StorePerformanceReport, 0)
 	reporter.readPerformanceReports = make([]StorePerformanceReport, 0)
 }
 
-func (reporter *DataReporter) ExampleWillRun(exampleSummary *g.ExampleSummary) {
+func (reporter *DataReporter) ExampleWillRun(exampleSummary *types.ExampleSummary) {
 }
 
-func (reporter *DataReporter) ExampleDidComplete(exampleSummary *g.ExampleSummary) {
+func (reporter *DataReporter) ExampleDidComplete(exampleSummary *types.ExampleSummary) {
 	for _, measurement := range exampleSummary.Measurements {
 		if measurement.Info != nil {
 			info := measurement.Info.(StorePerformanceReport)
@@ -59,7 +59,7 @@ func (reporter *DataReporter) ExampleDidComplete(exampleSummary *g.ExampleSummar
 	reporter.generateCSV(false)
 }
 
-func (reporter *DataReporter) SpecSuiteDidEnd(summary *g.SuiteSummary) {
+func (reporter *DataReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 	reporter.generateCSV(true)
 }
 
