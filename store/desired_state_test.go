@@ -42,7 +42,7 @@ var _ = Describe("Desired State", func() {
 		etcdAdapter.Disconnect()
 	})
 
-	Describe("Saving desired state ", func() {
+	Describe("Saving desired state", func() {
 		BeforeEach(func() {
 			err := store.SaveDesiredState(
 				app1.DesiredState(1),
@@ -51,17 +51,18 @@ var _ = Describe("Desired State", func() {
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
-		It("can stores the passed in desired state", func() {
-			node, err := etcdAdapter.ListRecursively("/desired")
+		It("stores the passed in desired state", func() {
+			node, err := etcdAdapter.Get("/apps/" + app1.AppGuid + "-" + app1.AppVersion + "/desired")
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(node.ChildNodes).Should(HaveLen(2))
-			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
-				Key:   "/desired/" + app1.AppGuid + "-" + app1.AppVersion,
+			Ω(node).Should(Equal(storeadapter.StoreNode{
+				Key:   "/apps/" + app1.AppGuid + "-" + app1.AppVersion + "/desired",
 				Value: app1.DesiredState(1).ToJSON(),
 				TTL:   conf.DesiredStateTTL() - 1,
 			}))
-			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
-				Key:   "/desired/" + app2.AppGuid + "-" + app2.AppVersion,
+			node, err = etcdAdapter.Get("/apps/" + app2.AppGuid + "-" + app2.AppVersion + "/desired")
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(node).Should(Equal(storeadapter.StoreNode{
+				Key:   "/apps/" + app2.AppGuid + "-" + app2.AppVersion + "/desired",
 				Value: app2.DesiredState(1).ToJSON(),
 				TTL:   conf.DesiredStateTTL() - 1,
 			}))
@@ -100,19 +101,6 @@ var _ = Describe("Desired State", func() {
 				desired, err := store.GetDesiredState()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(desired).Should(BeEmpty())
-			})
-		})
-
-		Context("When the desired state key is missing", func() {
-			BeforeEach(func() {
-				_, err := etcdAdapter.ListRecursively("/desired")
-				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-			})
-
-			It("returns an empty array and no error", func() {
-				desired, err := store.GetDesiredState()
-				Ω(err).ShouldNot(HaveOccured())
-				Ω(desired).Should(HaveLen(0))
 			})
 		})
 	})

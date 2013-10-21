@@ -83,9 +83,10 @@ var _ = Describe("Actual state listener", func() {
 			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1).ToJSON())
 		})
 
-		It("Stores it in the store", func() {
-			actual, _ := store.GetActualState()
-			Ω(actual).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
+		It("puts it in the store", func() {
+			foundApp, err := store.GetApp(app.AppGuid, app.AppVersion)
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(foundApp.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
 		})
 	})
 
@@ -106,11 +107,17 @@ var _ = Describe("Actual state listener", func() {
 			messageBus.Subscriptions["dea.heartbeat"][0].Callback(heartbeat.ToJSON())
 		})
 
-		It("Stores it in the store", func() {
-			actual, _ := store.GetActualState()
-			Ω(actual).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
-			Ω(actual).Should(ContainElement(app.InstanceAtIndex(1).Heartbeat()))
-			Ω(actual).Should(ContainElement(anotherApp.InstanceAtIndex(0).Heartbeat()))
+		It("puts it in the store", func() {
+			foundApp1, err := store.GetApp(app.AppGuid, app.AppVersion)
+			Ω(err).ShouldNot(HaveOccured())
+
+			Ω(foundApp1.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
+			Ω(foundApp1.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(1).Heartbeat()))
+
+			foundApp2, err := store.GetApp(anotherApp.AppGuid, anotherApp.AppVersion)
+			Ω(err).ShouldNot(HaveOccured())
+
+			Ω(foundApp2.InstanceHeartbeats).Should(ContainElement(anotherApp.InstanceAtIndex(0).Heartbeat()))
 		})
 
 		Context("when the save succeeds", func() {
@@ -152,8 +159,8 @@ var _ = Describe("Actual state listener", func() {
 		})
 
 		It("Stores nothing in the store", func() {
-			actual, _ := store.GetActualState()
-			Ω(actual).Should(BeEmpty())
+			apps, _ := store.GetApps()
+			Ω(apps).Should(BeEmpty())
 		})
 
 		It("does not bump the freshness", func() {

@@ -114,6 +114,19 @@ var _ = Describe("Apps", func() {
 				Ω(a3.CrashCounts).Should(BeEmpty())
 			})
 		})
+
+		Context("when there is an empty app directory", func() {
+			It("should ignore that app directory", func() {
+				etcdAdapter.Set([]storeadapter.StoreNode{storeadapter.StoreNode{
+					Key:   "/apps/foo-bar/empty",
+					Value: []byte("foo"),
+				}})
+
+				apps, err := store.GetApps()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(apps).Should(HaveLen(3))
+			})
+		})
 	})
 
 	Describe("GetApp", func() {
@@ -139,6 +152,20 @@ var _ = Describe("Apps", func() {
 					Ω(app).Should(BeZero())
 				})
 			})
+
+			Context("when the app directory is empty", func() {
+				It("should return the app not found error", func() {
+					etcdAdapter.Set([]storeadapter.StoreNode{storeadapter.StoreNode{
+						Key:   "/apps/foo-bar/empty",
+						Value: []byte("foo"),
+					}})
+
+					app, err := store.GetApp("foo", "bar")
+					Ω(err).Should(Equal(AppNotFoundError))
+					Ω(app).Should(BeZero())
+				})
+			})
+
 		})
 	})
 })

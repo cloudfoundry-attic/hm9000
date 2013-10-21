@@ -216,7 +216,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 				Context("and it fails to read from the store", func() {
 					BeforeEach(func() {
-						storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("desired", errors.New("oops!"))
+						storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("apps", errors.New("oops!"))
 					})
 
 					assertFailure("Failed to sync desired state to the store", 2)

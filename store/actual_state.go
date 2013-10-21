@@ -1,19 +1,33 @@
 package store
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
-	"reflect"
+	"github.com/cloudfoundry/hm9000/storeadapter"
+	"time"
 )
 
+func (store *RealStore) actualStateStoreKey(actualState models.InstanceHeartbeat) string {
+	return "/apps/" + store.AppKey(actualState.AppGuid, actualState.AppVersion) + "/actual/" + actualState.StoreKey()
+}
+
 func (store *RealStore) SaveActualState(actualStates ...models.InstanceHeartbeat) error {
-	return store.save(actualStates, "/actual", store.config.HeartbeatTTL())
-}
+	t := time.Now()
 
-func (store *RealStore) GetActualState() (map[string]models.InstanceHeartbeat, error) {
-	slice, err := store.get("/actual", reflect.TypeOf(map[string]models.InstanceHeartbeat{}), reflect.ValueOf(models.NewInstanceHeartbeatFromJSON))
-	return slice.Interface().(map[string]models.InstanceHeartbeat), err
-}
+	nodes := make([]storeadapter.StoreNode, len(actualStates))
+	for i, actualState := range actualStates {
+		nodes[i] = storeadapter.StoreNode{
+			Key:   store.actualStateStoreKey(actualState),
+			Value: actualState.ToJSON(),
+			TTL:   store.config.HeartbeatTTL(),
+		}
+	}
 
-func (store *RealStore) DeleteActualState(actualStates ...models.InstanceHeartbeat) error {
-	return store.delete(actualStates, "/actual")
+	err := store.adapter.Set(nodes)
+
+	store.logger.Info(fmt.Sprintf("Save Duration Actual"), map[string]string{
+		"Number of Items": fmt.Sprintf("%d", len(actualStates)),
+		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+	})
+	return err
 }

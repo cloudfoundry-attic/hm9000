@@ -236,7 +236,7 @@ var _ = Describe("Analyzer", func() {
 
 			Context("and desired instances are missing", func() {
 				BeforeEach(func() {
-					store.DeleteActualState(a.InstanceAtIndex(0).Heartbeat())
+					storeAdapter.Delete("/apps/" + a.AppGuid + "-" + a.AppVersion + "/actual/" + a.InstanceAtIndex(0).InstanceGuid)
 				})
 
 				It("should return a start message containing the missing indices and no stop messages", func() {
@@ -600,21 +600,6 @@ var _ = Describe("Analyzer", func() {
 			})
 		})
 
-		Context("when the desired state fails to fetch", func() {
-			BeforeEach(func() {
-				store.BumpActualFreshness(time.Unix(10, 0))
-				store.BumpDesiredFreshness(time.Unix(10, 0))
-				storeAdapter.GetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("desired", errors.New("oops!"))
-			})
-
-			It("should return the store's error and not send any start/stop messages", func() {
-				err := analyzer.Analyze()
-				Ω(err).Should(Equal(errors.New("oops!")))
-				Ω(startMessages()).Should(BeEmpty())
-				Ω(stopMessages()).Should(BeEmpty())
-			})
-		})
-
 		Context("when the actual state is not fresh", func() {
 			BeforeEach(func() {
 				store.BumpDesiredFreshness(time.Unix(10, 0))
@@ -628,11 +613,11 @@ var _ = Describe("Analyzer", func() {
 			})
 		})
 
-		Context("when the actual state fails to fetch", func() {
+		Context("when the apps fail to fetch", func() {
 			BeforeEach(func() {
 				store.BumpActualFreshness(time.Unix(10, 0))
 				store.BumpDesiredFreshness(time.Unix(10, 0))
-				storeAdapter.GetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("actual", errors.New("oops!"))
+				storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("apps", errors.New("oops!"))
 			})
 
 			It("should return the store's error and not send any start/stop messages", func() {

@@ -2,6 +2,8 @@ package store
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/storeadapter"
+	"strings"
 )
 
 func (store *RealStore) AppKey(appGuid string, appVersion string) string {
@@ -9,64 +11,86 @@ func (store *RealStore) AppKey(appGuid string, appVersion string) string {
 }
 
 func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, error) {
-	apps, err := store.GetApps()
-	if err != nil {
+	node, err := store.adapter.ListRecursively("/apps/" + store.AppKey(appGuid, appVersion))
+
+	if err == storeadapter.ErrorKeyNotFound {
+		return nil, AppNotFoundError
+	} else if err != nil {
 		return nil, err
 	}
 
-	app, found := apps[store.AppKey(appGuid, appVersion)]
-	if !found {
+	app, err := store.appNodeToApp(node)
+	if app == nil {
 		return nil, AppNotFoundError
 	}
-
-	return app, nil
+	return app, err
 }
 
-func (store *RealStore) GetApps() (map[string]*models.App, error) {
-	apps := make(map[string]*models.App)
+func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
+	results = make(map[string]*models.App)
 
-	desireds, err := store.GetDesiredState()
-	if err != nil {
-		return apps, err
+	node, err := store.adapter.ListRecursively("/apps")
+
+	if err == storeadapter.ErrorKeyNotFound {
+		return results, nil
+	} else if err != nil {
+		return results, err
 	}
 
-	actuals, err := store.GetActualState()
-	if err != nil {
-		return apps, err
-	}
-
-	crashCounts, err := store.GetCrashCounts()
-	if err != nil {
-		return apps, err
-	}
-
-	actualsByApp := make(map[string][]models.InstanceHeartbeat, 0)
-	crashCountsLookup := make(map[string]map[int]models.CrashCount)
-
-	for _, actual := range actuals {
-		appKey := store.AppKey(actual.AppGuid, actual.AppVersion)
-		actualsByApp[appKey] = append(actualsByApp[appKey], actual)
-	}
-
-	for _, crashCount := range crashCounts {
-		key := store.AppKey(crashCount.AppGuid, crashCount.AppVersion)
-		_, present := crashCountsLookup[key]
-		if !present {
-			crashCountsLookup[key] = make(map[int]models.CrashCount)
+	for _, appNode := range node.ChildNodes {
+		app, err := store.appNodeToApp(appNode)
+		if err != nil {
+			return make(map[string]*models.App), err
 		}
-		crashCountsLookup[key][crashCount.InstanceIndex] = crashCount
-	}
-
-	for key, desired := range desireds {
-		apps[key] = models.NewApp(desired.AppGuid, desired.AppVersion, desired, actualsByApp[key], crashCountsLookup[key])
-	}
-
-	for key, instances := range actualsByApp {
-		_, present := apps[key]
-		if !present {
-			apps[key] = models.NewApp(instances[0].AppGuid, instances[0].AppVersion, models.DesiredAppState{}, instances, crashCountsLookup[key])
+		if app != nil {
+			results[store.AppKey(app.AppGuid, app.AppVersion)] = app
 		}
 	}
 
-	return apps, nil
+	return results, nil
+}
+
+func (store *RealStore) appNodeToApp(appNode storeadapter.StoreNode) (*models.App, error) {
+	desiredState := models.DesiredAppState{}
+	actualState := []models.InstanceHeartbeat{}
+	crashCounts := make(map[int]models.CrashCount)
+
+	appGuid := ""
+	appVersion := ""
+
+	for _, childNode := range appNode.ChildNodes {
+		if strings.HasSuffix(childNode.Key, "desired") {
+			desired, err := models.NewDesiredAppStateFromJSON(childNode.Value)
+			if err != nil {
+				return nil, err
+			}
+			desiredState = desired
+			appGuid = desired.AppGuid
+			appVersion = desired.AppVersion
+		} else if strings.HasSuffix(childNode.Key, "actual") {
+			for _, actualNode := range childNode.ChildNodes {
+				actual, err := models.NewInstanceHeartbeatFromJSON(actualNode.Value)
+				if err != nil {
+					return nil, err
+				}
+				actualState = append(actualState, actual)
+				appGuid = actual.AppGuid
+				appVersion = actual.AppVersion
+			}
+		} else if strings.HasSuffix(childNode.Key, "crashes") {
+			for _, crashNode := range childNode.ChildNodes {
+				crashCount, err := models.NewCrashCountFromJSON(crashNode.Value)
+				if err != nil {
+					return nil, err
+				}
+				crashCounts[crashCount.InstanceIndex] = crashCount
+			}
+		}
+	}
+
+	if appGuid == "" || appVersion == "" {
+		return nil, nil
+	}
+
+	return models.NewApp(appGuid, appVersion, desiredState, actualState, crashCounts), nil
 }

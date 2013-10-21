@@ -1,19 +1,33 @@
 package store
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
-	"reflect"
+	"github.com/cloudfoundry/hm9000/storeadapter"
+	"time"
 )
 
+func (store *RealStore) crashCountStoreKey(crashCount models.CrashCount) string {
+	return "/apps/" + store.AppKey(crashCount.AppGuid, crashCount.AppVersion) + "/crashes/" + crashCount.StoreKey()
+}
+
 func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error {
-	return store.save(crashCounts, "/crashes", uint64(store.config.MaximumBackoffDelay().Seconds())*2)
-}
+	t := time.Now()
 
-func (store *RealStore) GetCrashCounts() (map[string]models.CrashCount, error) {
-	slice, err := store.get("/crashes", reflect.TypeOf(map[string]models.CrashCount{}), reflect.ValueOf(models.NewCrashCountFromJSON))
-	return slice.Interface().(map[string]models.CrashCount), err
-}
+	nodes := make([]storeadapter.StoreNode, len(crashCounts))
+	for i, crashCount := range crashCounts {
+		nodes[i] = storeadapter.StoreNode{
+			Key:   store.crashCountStoreKey(crashCount),
+			Value: crashCount.ToJSON(),
+			TTL:   uint64(store.config.MaximumBackoffDelay().Seconds()) * 2,
+		}
+	}
 
-func (store *RealStore) DeleteCrashCounts(crashCounts ...models.CrashCount) error {
-	return store.delete(crashCounts, "/crashes")
+	err := store.adapter.Set(nodes)
+
+	store.logger.Info(fmt.Sprintf("Save Duration Crash Counts"), map[string]string{
+		"Number of Items": fmt.Sprintf("%d", len(crashCounts)),
+		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+	})
+	return err
 }

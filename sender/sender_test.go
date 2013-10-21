@@ -67,9 +67,9 @@ var _ = Describe("Sender", func() {
 		})
 	})
 
-	Context("when the sender fails to fetch the actual state", func() {
+	Context("when the sender fails to fetch from the store", func() {
 		BeforeEach(func() {
-			storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("actual", errors.New("oops"))
+			storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("apps", errors.New("oops"))
 		})
 
 		It("should return an error and not send any messages", func() {

@@ -39,12 +39,8 @@ type Store interface {
 	DeleteDesiredState(desiredStates ...models.DesiredAppState) error
 
 	SaveActualState(actualStates ...models.InstanceHeartbeat) error
-	GetActualState() (map[string]models.InstanceHeartbeat, error)
-	DeleteActualState(actualStates ...models.InstanceHeartbeat) error
 
 	SaveCrashCounts(crashCounts ...models.CrashCount) error
-	GetCrashCounts() (map[string]models.CrashCount, error)
-	DeleteCrashCounts(crashCounts ...models.CrashCount) error
 
 	SavePendingStartMessages(startMessages ...models.PendingStartMessage) error
 	GetPendingStartMessages() (map[string]models.PendingStartMessage, error)

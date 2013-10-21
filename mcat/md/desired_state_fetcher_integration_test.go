@@ -5,8 +5,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/store"
-	"github.com/cloudfoundry/hm9000/storeadapter"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	. "github.com/onsi/ginkgo"
@@ -19,6 +18,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		a1         appfixture.AppFixture
 		a2         appfixture.AppFixture
 		a3         appfixture.AppFixture
+		store      storepackage.Store
 		resultChan chan desiredstatefetcher.DesiredStateFetcherResult
 	)
 
@@ -36,39 +36,23 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 
 		conf.CCBaseURL = desiredStateServerBaseUrl
 
-		fetcher = desiredstatefetcher.New(conf, store.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger()), httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{})
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
+
+		fetcher = desiredstatefetcher.New(conf, store, httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
 	})
 
 	It("requests for the first set of data from the CC and stores the response", func() {
-		var node storeadapter.StoreNode
+		var desired map[string]models.DesiredAppState
 		var err error
-		Eventually(func() error {
-			node, err = storeAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
-			return err
-		}, 1, 0.1).ShouldNot(HaveOccured())
+		Eventually(func() interface{} {
+			desired, err = store.GetDesiredState()
+			return desired
+		}, 1, 0.1).ShouldNot(BeEmpty())
 
-		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
-		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
-
-		Ω(node.Value).Should(Equal(a1.DesiredState(1).ToJSON()))
-
-		node, err = storeAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
-		Ω(err).ShouldNot(HaveOccured())
-
-		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
-		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
-
-		Ω(node.Value).Should(Equal(a2.DesiredState(1).ToJSON()))
-
-		node, err = storeAdapter.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
-		Ω(err).ShouldNot(HaveOccured())
-
-		Ω(node.TTL).Should(BeNumerically("<=", 10*60))
-		Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
-
-		Ω(node.Value).Should(Equal(a3.DesiredState(1).ToJSON()))
-
+		Ω(desired).Should(HaveKey(a1.AppGuid + "-" + a1.AppVersion))
+		Ω(desired).Should(HaveKey(a2.AppGuid + "-" + a2.AppVersion))
+		Ω(desired).Should(HaveKey(a3.AppGuid + "-" + a3.AppVersion))
 	})
 
 	It("bumps the freshness", func() {
@@ -104,19 +88,10 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		It("should remove those apps from the store", func() {
 			<-resultChan
 
-			_, err := storeAdapter.Get("/desired/" + a1.AppGuid + "-" + a1.AppVersion)
-			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-
-			_, err = storeAdapter.Get("/desired/" + a2.AppGuid + "-" + a2.AppVersion)
-			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-
-			node, err := storeAdapter.Get("/desired/" + a3.AppGuid + "-" + a3.AppVersion)
+			desired, err := store.GetDesiredState()
 			Ω(err).ShouldNot(HaveOccured())
-
-			Ω(node.TTL).Should(BeNumerically("<=", 10*60))
-			Ω(node.TTL).Should(BeNumerically(">=", 10*60-1))
-
-			Ω(node.Value).Should(Equal(a3.DesiredState(1).ToJSON()))
+			Ω(desired).Should(HaveLen(1))
+			Ω(desired).Should(HaveKey(a3.AppGuid + "-" + a3.AppVersion))
 		})
 	})
 })
