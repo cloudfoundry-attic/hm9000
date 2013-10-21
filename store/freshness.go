@@ -63,3 +63,29 @@ func (store *RealStore) IsActualStateFresh(currentTime time.Time) (bool, error) 
 	isUpToDate := currentTime.Sub(time.Unix(freshnessTimestamp.Timestamp, 0)) >= time.Duration(store.config.ActualFreshnessTTL())*time.Second
 	return isUpToDate, nil
 }
+
+func (store *RealStore) VerifyFreshness(time time.Time) error {
+	desiredFresh, err := store.IsDesiredStateFresh()
+	if err != nil {
+		return err
+	}
+
+	actualFresh, err := store.IsActualStateFresh(time)
+	if err != nil {
+		return err
+	}
+
+	if !desiredFresh && !actualFresh {
+		return ActualAndDesiredAreNotFreshError
+	}
+
+	if !desiredFresh {
+		return DesiredIsNotFreshError
+	}
+
+	if !actualFresh {
+		return ActualIsNotFreshError
+	}
+
+	return nil
+}

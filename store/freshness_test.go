@@ -94,6 +94,40 @@ var _ = Describe("Freshness", func() {
 		})
 	})
 
+	Describe("Verifying the store's freshness", func() {
+		Context("when neither the desired or actual state is fresh", func() {
+			It("should return the appropriate error", func() {
+				err := store.VerifyFreshness(time.Unix(100, 0))
+				Ω(err).Should(Equal(ActualAndDesiredAreNotFreshError))
+			})
+		})
+
+		Context("when only the desired state is not fresh", func() {
+			It("should return the appropriate error", func() {
+				store.BumpActualFreshness(time.Unix(100, 0))
+				err := store.VerifyFreshness(time.Unix(int64(100+conf.ActualFreshnessTTL()), 0))
+				Ω(err).Should(Equal(DesiredIsNotFreshError))
+			})
+		})
+
+		Context("when only the actual state is not fresh", func() {
+			It("should return the appropriate error", func() {
+				store.BumpDesiredFreshness(time.Unix(100, 0))
+				err := store.VerifyFreshness(time.Unix(100, 0))
+				Ω(err).Should(Equal(ActualIsNotFreshError))
+			})
+		})
+
+		Context("when both are fresh", func() {
+			It("should not error", func() {
+				store.BumpActualFreshness(time.Unix(100, 0))
+				store.BumpDesiredFreshness(time.Unix(100, 0))
+				err := store.VerifyFreshness(time.Unix(int64(100+conf.ActualFreshnessTTL()), 0))
+				Ω(err).ShouldNot(HaveOccured())
+			})
+		})
+	})
+
 	Describe("Checking desired state freshness", func() {
 		Context("if the freshness key is not present", func() {
 			It("returns that the state is not fresh", func() {

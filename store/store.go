@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
@@ -9,6 +10,11 @@ import (
 	"reflect"
 	"time"
 )
+
+var ActualIsNotFreshError = errors.New("Actual state is not fresh")
+var DesiredIsNotFreshError = errors.New("Desired state is not fresh")
+var ActualAndDesiredAreNotFreshError = errors.New("Actual and desired state are not fresh")
+var AppNotFoundError = errors.New("App not found")
 
 type Storeable interface {
 	StoreKey() string
@@ -21,6 +27,12 @@ type Store interface {
 
 	IsDesiredStateFresh() (bool, error)
 	IsActualStateFresh(time.Time) (bool, error)
+
+	VerifyFreshness(time.Time) error
+
+	AppKey(appGuid string, appVersion string) string
+	GetApps() (map[string]*models.App, error)
+	GetApp(appGuid string, appVersion string) (*models.App, error)
 
 	SaveDesiredState(desiredStates ...models.DesiredAppState) error
 	GetDesiredState() (map[string]models.DesiredAppState, error)
