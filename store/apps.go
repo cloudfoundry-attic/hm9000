@@ -1,9 +1,11 @@
 package store
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"strings"
+	"time"
 )
 
 func (store *RealStore) AppKey(appGuid string, appVersion string) string {
@@ -11,6 +13,7 @@ func (store *RealStore) AppKey(appGuid string, appVersion string) string {
 }
 
 func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, error) {
+	t := time.Now()
 	node, err := store.adapter.ListRecursively("/apps/" + store.AppKey(appGuid, appVersion))
 
 	if err == storeadapter.ErrorKeyNotFound {
@@ -23,10 +26,17 @@ func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, 
 	if app == nil {
 		return nil, AppNotFoundError
 	}
+
+	store.logger.Info(fmt.Sprintf("Get Duration App"), map[string]string{
+		"Duration": fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+	})
+
 	return app, err
 }
 
 func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
+	t := time.Now()
+
 	results = make(map[string]*models.App)
 
 	node, err := store.adapter.ListRecursively("/apps")
@@ -46,6 +56,11 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 			results[store.AppKey(app.AppGuid, app.AppVersion)] = app
 		}
 	}
+
+	store.logger.Info(fmt.Sprintf("Get Duration Apps"), map[string]string{
+		"Number of Items": fmt.Sprintf("%d", len(results)),
+		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+	})
 
 	return results, nil
 }
