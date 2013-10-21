@@ -3,34 +3,35 @@ package analyzer
 import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/models"
 	"strconv"
 	"time"
 )
 
 type appAnalyzer struct {
-	app         *models.App
-	conf        config.Config
-	storecache  *storecache.StoreCache
-	currentTime time.Time
-	logger      logger.Logger
+	app                          *models.App
+	conf                         config.Config
+	existingPendingStartMessages map[string]models.PendingStartMessage
+	existingPendingStopMessages  map[string]models.PendingStopMessage
+	currentTime                  time.Time
+	logger                       logger.Logger
 
 	startMessages []models.PendingStartMessage
 	stopMessages  []models.PendingStopMessage
 	crashCounts   []models.CrashCount
 }
 
-func newAppAnalyzer(app *models.App, currentTime time.Time, storecache *storecache.StoreCache, logger logger.Logger, conf config.Config) *appAnalyzer {
+func newAppAnalyzer(app *models.App, currentTime time.Time, existingPendingStartMessages map[string]models.PendingStartMessage, existingPendingStopMessages map[string]models.PendingStopMessage, logger logger.Logger, conf config.Config) *appAnalyzer {
 	return &appAnalyzer{
-		app:           app,
-		conf:          conf,
-		storecache:    storecache,
-		currentTime:   currentTime,
-		logger:        logger,
-		startMessages: make([]models.PendingStartMessage, 0),
-		stopMessages:  make([]models.PendingStopMessage, 0),
-		crashCounts:   make([]models.CrashCount, 0),
+		app:  app,
+		conf: conf,
+		existingPendingStartMessages: existingPendingStartMessages,
+		existingPendingStopMessages:  existingPendingStopMessages,
+		currentTime:                  currentTime,
+		logger:                       logger,
+		startMessages:                make([]models.PendingStartMessage, 0),
+		stopMessages:                 make([]models.PendingStopMessage, 0),
+		crashCounts:                  make([]models.CrashCount, 0),
 	}
 }
 
@@ -130,7 +131,7 @@ func (a *appAnalyzer) generatePendingStopsForDuplicateInstances() {
 }
 
 func (a *appAnalyzer) appendStartMessageIfNotDuplicate(message models.PendingStartMessage) (didAppend bool) {
-	_, alreadyQueued := a.storecache.PendingStartMessages[message.StoreKey()]
+	_, alreadyQueued := a.existingPendingStartMessages[message.StoreKey()]
 	if !alreadyQueued {
 		a.logger.Info("Enqueuing Start Message", message.LogDescription())
 		a.startMessages = append(a.startMessages, message)
@@ -142,7 +143,7 @@ func (a *appAnalyzer) appendStartMessageIfNotDuplicate(message models.PendingSta
 }
 
 func (a *appAnalyzer) appendStopMessageIfNotDuplicate(message models.PendingStopMessage) {
-	_, alreadyQueued := a.storecache.PendingStopMessages[message.StoreKey()]
+	_, alreadyQueued := a.existingPendingStopMessages[message.StoreKey()]
 	if !alreadyQueued {
 		a.logger.Info("Enqueuing Stop Message", message.LogDescription())
 		a.stopMessages = append(a.stopMessages, message)

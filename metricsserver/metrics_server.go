@@ -5,7 +5,6 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -15,8 +14,8 @@ import (
 )
 
 type MetricsServer struct {
-	storecache   *storecache.StoreCache
 	steno        *gosteno.Logger
+	store        store.Store
 	logger       logger.Logger
 	timeProvider timeprovider.TimeProvider
 	config       config.Config
@@ -24,10 +23,9 @@ type MetricsServer struct {
 }
 
 func New(messageBus cfmessagebus.MessageBus, steno *gosteno.Logger, logger logger.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config) *MetricsServer {
-	storecache := storecache.New(store)
 	return &MetricsServer{
 		messageBus:   messageBus,
-		storecache:   storecache,
+		store:        store,
 		timeProvider: timeProvider,
 		steno:        steno,
 		logger:       logger,
@@ -83,8 +81,9 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		})
 	}()
 
-	err := s.storecache.Load(s.timeProvider.Time())
+	err := s.store.VerifyFreshness(s.timeProvider.Time())
 	if err != nil {
+		s.logger.Error("Failed to server metrics: store is not fresh", err)
 		NumberOfAppsWithAllInstancesReporting = -1
 		NumberOfAppsWithMissingInstances = -1
 		NumberOfUndesiredRunningApps = -1
@@ -95,7 +94,20 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		return
 	}
 
-	for _, app := range s.storecache.Apps {
+	apps, err := s.store.GetApps()
+	if err != nil {
+		s.logger.Error("Failed to fetch apps: store is not fresh", err)
+		NumberOfAppsWithAllInstancesReporting = -1
+		NumberOfAppsWithMissingInstances = -1
+		NumberOfUndesiredRunningApps = -1
+		NumberOfRunningInstances = -1
+		NumberOfMissingIndices = -1
+		NumberOfCrashedInstances = -1
+		NumberOfCrashedIndices = -1
+		return
+	}
+
+	for _, app := range apps {
 		numberOfMissingIndicesForApp := app.NumberOfDesiredInstances() - app.NumberOfDesiredIndicesReporting()
 		if app.IsDesired() {
 			if numberOfMissingIndicesForApp == 0 {

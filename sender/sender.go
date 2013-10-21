@@ -4,7 +4,6 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
@@ -12,11 +11,11 @@ import (
 )
 
 type Sender struct {
-	store      store.Store
-	conf       config.Config
-	storecache *storecache.StoreCache
-	logger     logger.Logger
+	store  store.Store
+	conf   config.Config
+	logger logger.Logger
 
+	apps         map[string]*models.App
 	messageBus   cfmessagebus.MessageBus
 	timeProvider timeprovider.TimeProvider
 }
@@ -28,23 +27,40 @@ func New(store store.Store, conf config.Config, messageBus cfmessagebus.MessageB
 		logger:       logger,
 		messageBus:   messageBus,
 		timeProvider: timeProvider,
-		storecache:   storecache.New(store),
 	}
 }
 
 func (sender *Sender) Send() error {
-	err := sender.storecache.Load(sender.timeProvider.Time())
+	err := sender.store.VerifyFreshness(sender.timeProvider.Time())
 	if err != nil {
-		sender.logger.Error("Failed to load desired and actual states", err)
+		sender.logger.Error("Store is not fresh", err)
 		return err
 	}
 
-	err = sender.sendStartMessages(sender.storecache.PendingStartMessages)
+	pendingStartMessages, err := sender.store.GetPendingStartMessages()
+	if err != nil {
+		sender.logger.Error("Failed to fetch pending start messages", err)
+		return err
+	}
+
+	pendingStopMessages, err := sender.store.GetPendingStopMessages()
+	if err != nil {
+		sender.logger.Error("Failed to fetch pending stop messages", err)
+		return err
+	}
+
+	sender.apps, err = sender.store.GetApps()
+	if err != nil {
+		sender.logger.Error("Failed to fetch apps", err)
+		return err
+	}
+
+	err = sender.sendStartMessages(pendingStartMessages)
 	if err != nil {
 		return err
 	}
 
-	err = sender.sendStopMessages(sender.storecache.PendingStopMessages)
+	err = sender.sendStopMessages(pendingStopMessages)
 	if err != nil {
 		return err
 	}
@@ -181,8 +197,8 @@ func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingSto
 }
 
 func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStartMessage) bool {
-	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
-	app, found := sender.storecache.Apps[appKey]
+	appKey := sender.store.AppKey(message.AppGuid, message.AppVersion)
+	app, found := sender.apps[appKey]
 
 	if !found {
 		sender.logger.Info("Skipping sending start message: app is no longer desired", message.LogDescription())
@@ -209,8 +225,8 @@ func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStart
 }
 
 func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMessage) (bool, isDuplicate bool, instanceToStop models.InstanceHeartbeat) {
-	appKey := sender.storecache.Key(message.AppGuid, message.AppVersion)
-	app, found := sender.storecache.Apps[appKey]
+	appKey := sender.store.AppKey(message.AppGuid, message.AppVersion)
+	app, found := sender.apps[appKey]
 
 	if !found {
 		sender.logger.Info("Skipping sending stop message: instance is no longer running", message.LogDescription())

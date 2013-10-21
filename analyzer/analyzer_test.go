@@ -594,7 +594,7 @@ var _ = Describe("Analyzer", func() {
 
 			It("should not send any start or stop messages", func() {
 				err := analyzer.Analyze()
-				Ω(err.Error()).Should(Equal("Desired state is not fresh"))
+				Ω(err).Should(Equal(storepackage.DesiredIsNotFreshError))
 				Ω(startMessages()).Should(BeEmpty())
 				Ω(stopMessages()).Should(BeEmpty())
 			})
@@ -622,7 +622,7 @@ var _ = Describe("Analyzer", func() {
 
 			It("should not send any start or stop messages", func() {
 				err := analyzer.Analyze()
-				Ω(err.Error()).Should(Equal("Actual state is not fresh"))
+				Ω(err).Should(Equal(storepackage.ActualIsNotFreshError))
 				Ω(startMessages()).Should(BeEmpty())
 				Ω(stopMessages()).Should(BeEmpty())
 			})

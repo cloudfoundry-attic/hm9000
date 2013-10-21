@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/helpers/storecache"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
@@ -58,29 +57,28 @@ func (server *ApiServer) Start() {
 			return
 		}
 
-		getValues := r.URL.Query()
-		if len(getValues["app-guid"]) > 0 && len(getValues["app-version"]) > 0 {
-			cache := storecache.New(server.store)
-			err := cache.Load(server.timeProvider.Time())
-			if err != nil {
-				if err == cache.ActualIsNotFreshError || err == cache.DesiredIsNotFreshError {
-					responseCode = http.StatusNotFound
-					return
-				} else {
-					responseCode = http.StatusInternalServerError
-					return
-				}
+		queryParams := r.URL.Query()
+		if len(queryParams["app-guid"]) > 0 && len(queryParams["app-version"]) > 0 {
+			err := server.store.VerifyFreshness(server.timeProvider.Time())
+			if err == store.ActualAndDesiredAreNotFreshError || err == store.ActualIsNotFreshError || err == store.DesiredIsNotFreshError {
+				responseCode = http.StatusNotFound
+				return
+			} else if err != nil {
+				responseCode = http.StatusInternalServerError
+				return
 			}
 
-			appKey := cache.Key(getValues["app-guid"][0], getValues["app-version"][0])
+			app, err := server.store.GetApp(queryParams["app-guid"][0], queryParams["app-version"][0])
 
-			app, present := cache.Apps[appKey]
-			if present {
-				responseCode = http.StatusOK
-				responseBody = app.ToJSON()
+			if err == store.AppNotFoundError {
+				responseCode = http.StatusNotFound
+				return
+			} else if err != nil {
+				responseCode = http.StatusInternalServerError
 				return
 			} else {
-				responseCode = http.StatusNotFound
+				responseCode = http.StatusOK
+				responseBody = app.ToJSON()
 				return
 			}
 		} else {
