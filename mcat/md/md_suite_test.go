@@ -33,7 +33,6 @@ var (
 	desiredStateServerBaseUrl string
 	natsPort                  int
 	metricsServerPort         int
-	apiServerPort             int
 )
 
 func TestMd(t *testing.T) {
@@ -53,8 +52,6 @@ func TestMd(t *testing.T) {
 	natsPort = 4223 + ginkgoConfig.GinkgoConfig.ParallelNode
 
 	metricsServerPort = 7879 + ginkgoConfig.GinkgoConfig.ParallelNode
-
-	apiServerPort = 1810 + ginkgoConfig.GinkgoConfig.ParallelNode
 
 	natsRunner = natsrunner.NewNATSRunner(natsPort)
 	natsRunner.Start()

@@ -91,10 +91,6 @@ var _ = Describe("Config", func() {
 			Ω(config.MetricsServerUser).Should(Equal("metrics_server_user"))
 			Ω(config.MetricsServerPassword).Should(Equal("canHazMetrics?"))
 
-			Ω(config.APIServerPort).Should(Equal(1812))
-			Ω(config.APIServerUser).Should(Equal("magnet"))
-			Ω(config.APIServerPassword).Should(Equal("orangutan4sale"))
-
 			Ω(config.NATS.Host).Should(Equal("127.0.0.1"))
 			Ω(config.NATS.Port).Should(Equal(4222))
 			Ω(config.NATS.User).Should(Equal(""))

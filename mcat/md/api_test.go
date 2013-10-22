@@ -2,20 +2,22 @@ package md_test
 
 import (
 	"fmt"
+	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
+	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
-	"net/http"
 )
 
 var _ = Describe("Serving API", func() {
 	var (
-		a appfixture.AppFixture
+		a            appfixture.AppFixture
+		validRequest string
 	)
 
 	BeforeEach(func() {
 		a = appfixture.NewAppFixture()
+		validRequest = fmt.Sprintf(`{"droplet":"%s","version":"%s"}`, a.AppGuid, a.AppVersion)
 
 		simulator.SetDesiredState(a.DesiredState(2))
 		simulator.SetCurrentHeartbeats(a.Heartbeat(1))
@@ -31,20 +33,19 @@ var _ = Describe("Serving API", func() {
 			cliRunner.StartAPIServer(simulator.currentTimestamp)
 		})
 
-		It("should return the app", func() {
-			resp, err := http.Get(fmt.Sprintf("http://%s:%s@localhost:%d/app?app-guid=%s&app-version=%s", conf.APIServerUser, conf.APIServerPassword, apiServerPort, a.AppGuid, a.AppVersion))
+		It("should return the app", func(done Done) {
+			replyTo := models.Guid()
+			_, err := natsRunner.MessageBus.Subscribe(replyTo, func(message *yagnats.Message) {
+				Ω(message.Payload).Should(ContainSubstring(`"droplet":"%s"`, a.AppGuid))
+				Ω(message.Payload).Should(ContainSubstring(`"instances":2`))
+				Ω(message.Payload).Should(ContainSubstring(`"instance":"%s"`, a.InstanceAtIndex(0).InstanceGuid))
+
+				close(done)
+			})
 			Ω(err).ShouldNot(HaveOccured())
 
-			Ω(resp.StatusCode).Should(Equal(http.StatusOK))
-
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			bodyAsString := string(body)
+			err = natsRunner.MessageBus.PublishWithReplyTo("app.state", validRequest, replyTo)
 			Ω(err).ShouldNot(HaveOccured())
-
-			Ω(bodyAsString).Should(ContainSubstring(`"droplet":"%s"`, a.AppGuid))
-			Ω(bodyAsString).Should(ContainSubstring(`"instances":2`))
-			Ω(bodyAsString).Should(ContainSubstring(`"instance":"%s"`, a.InstanceAtIndex(0).InstanceGuid))
 		})
 	})
 
@@ -54,13 +55,17 @@ var _ = Describe("Serving API", func() {
 			cliRunner.StartAPIServer(simulator.currentTimestamp)
 		})
 
-		It("should return -1 for all metrics", func() {
-			resp, err := http.Get(fmt.Sprintf("http://%s:%s@localhost:%d/app?app-guid=%s&app-version=%s", conf.APIServerUser, conf.APIServerPassword, apiServerPort, a.AppGuid, a.AppVersion))
+		It("should return -1 for all metrics", func(done Done) {
+			replyTo := models.Guid()
+			_, err := natsRunner.MessageBus.Subscribe(replyTo, func(message *yagnats.Message) {
+				Ω(message.Payload).Should(Equal(`{}`))
+
+				close(done)
+			})
 			Ω(err).ShouldNot(HaveOccured())
 
-			Ω(resp.StatusCode).Should(Equal(http.StatusNotFound))
-
-			defer resp.Body.Close()
+			err = natsRunner.MessageBus.PublishWithReplyTo("app.state", validRequest, replyTo)
+			Ω(err).ShouldNot(HaveOccured())
 		})
 	})
 })

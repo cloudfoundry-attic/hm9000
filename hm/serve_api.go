@@ -9,16 +9,16 @@ import (
 
 func ServeAPI(l logger.Logger, conf config.Config) {
 	store := connectToStore(l, conf)
+	messageBus := connectToMessageBus(l, conf)
 
 	apiServer := apiserver.New(
-		conf.APIServerPort,
+		messageBus,
 		store,
 		buildTimeProvider(l),
-		conf,
 		l,
 	)
 
-	go apiServer.Start()
-	l.Info(fmt.Sprintf("Serving API on port %d", conf.APIServerPort))
+	apiServer.Listen()
+	l.Info(fmt.Sprintf("Serving API over NATS (subject: app.state)"))
 	select {}
 }

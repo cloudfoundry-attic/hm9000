@@ -10,76 +10,79 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
+	"github.com/cloudfoundry/yagnats"
+	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
-	"net/http"
 	"time"
 )
 
-var didSetup bool
-
-const port = 8090
-
 var _ = Describe("Apiserver", func() {
-	//create the server
-	//(eventually) passing it whatever depenencies it needs
-	//start the server
-
 	var store storepackage.Store
 	var storeAdapter *fakestoreadapter.FakeStoreAdapter
 	var timeProvider *faketimeprovider.FakeTimeProvider
+	var messageBus *fakeyagnats.FakeYagnats
 
 	conf, _ := config.DefaultConfig()
 
-	makeGetRequest := func(url string) (statusCode int, body string) {
-		resp, err := http.Get(url)
-		Ω(err).ShouldNot(HaveOccured())
+	makeRequest := func(request string) (response string) {
+		replyToGuid := models.Guid()
+		messageBus.Subscriptions["app.state"][0].Callback(&yagnats.Message{
+			Payload: request,
+			ReplyTo: replyToGuid,
+		})
 
-		defer resp.Body.Close()
-
-		statusCode = resp.StatusCode
-
-		bodyAsBytes, err := ioutil.ReadAll(resp.Body)
-		Ω(err).ShouldNot(HaveOccured())
-		body = string(bodyAsBytes)
-		return
+		Ω(messageBus.PublishedMessages[replyToGuid]).Should(HaveLen(1))
+		return messageBus.PublishedMessages[replyToGuid][0].Payload
 	}
 
 	BeforeEach(func() {
-		if !didSetup {
-			storeAdapter = fakestoreadapter.New()
-			store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-			timeProvider = &faketimeprovider.FakeTimeProvider{
-				TimeToProvide: time.Unix(100, 0),
-			}
-			server := apiserver.New(port, store, timeProvider, conf, fakelogger.NewFakeLogger())
-			go server.Start()
-
-			Eventually(func() int {
-				statusCode, _ := makeGetRequest(fmt.Sprintf("http://magnet:orangutan4sale@localhost:%d/app", port))
-				return statusCode
-			}, 2, 0.01).Should(Equal(http.StatusBadRequest))
-
-			didSetup = true
+		messageBus = fakeyagnats.New()
+		storeAdapter = fakestoreadapter.New()
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
+		timeProvider = &faketimeprovider.FakeTimeProvider{
+			TimeToProvide: time.Unix(100, 0),
 		}
-		timeProvider.TimeToProvide = time.Unix(100, 0)
-		storeAdapter.Reset()
+
+		server := apiserver.New(messageBus, store, timeProvider, fakelogger.NewFakeLogger())
+		server.Listen()
 	})
 
-	Context("when serving /app", func() {
-		Context("when there are no query parameters", func() {
-			It("should return a 400 with no data", func() {
-				statusCode, body := makeGetRequest(fmt.Sprintf("http://magnet:orangutan4sale@localhost:%d/app", port))
-				Ω(statusCode).Should(Equal(http.StatusBadRequest))
-				Ω(body).Should(BeEmpty())
+	It("should subscribe on a queue", func() {
+		Ω(messageBus.Subscriptions["app.state"]).ShouldNot(BeEmpty())
+		subscription := messageBus.Subscriptions["app.state"][0]
+		Ω(subscription.Queue).Should(Equal("hm9000"))
+	})
+
+	Context("responding to app.state", func() {
+		Context("when the request is empty", func() {
+			It("should return an empty hash", func() {
+				body := makeRequest("{}")
+				Ω(body).Should(Equal("{}"))
 			})
 		})
 
-		Context("when the app query parameters are present", func() {
+		Context("when the request payload is invalid JSON", func() {
+			It("responds with an empty hash", func() {
+				body := makeRequest("ß")
+				Ω(body).Should(Equal("{}"))
+			})
+		})
+
+		Context("when no reply-to is given", func() {
+			It("should drop the request on the floor", func() {
+				messageBus.Subscriptions["app.state"][0].Callback(&yagnats.Message{
+					Payload: "{}",
+				})
+
+				Ω(messageBus.PublishedMessages).Should(BeEmpty())
+			})
+		})
+
+		Context("when the request contains the droplet and version", func() {
 			var app appfixture.AppFixture
 			var expectedApp *models.App
-			var validRequestURL string
+			var validRequestPayload string
 
 			BeforeEach(func() {
 				app = appfixture.NewAppFixture()
@@ -105,7 +108,7 @@ var _ = Describe("Apiserver", func() {
 				store.SaveDesiredState(app.DesiredState(3))
 				store.SaveActualState(instanceHeartbeats...)
 				store.SaveCrashCounts(crashCount)
-				validRequestURL = fmt.Sprintf("http://magnet:orangutan4sale@localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion)
+				validRequestPayload = fmt.Sprintf(`{"droplet":"%s","version":"%s"}`, app.AppGuid, app.AppVersion)
 			})
 
 			Context("when the store is fresh", func() {
@@ -115,37 +118,16 @@ var _ = Describe("Apiserver", func() {
 				})
 
 				Context("when the app query parameters do not correspond to an existing app", func() {
-					It("should return a 404 not found response", func() {
-						statusCode, body := makeGetRequest(
-							fmt.Sprintf("http://magnet:orangutan4sale@localhost:%d/app?app-guid=elephant&app-version=pink-flamingo", port),
-						)
-						Ω(statusCode).Should(Equal(http.StatusNotFound))
-						Ω(body).Should(BeEmpty())
+					It("should respond with an empty hash", func() {
+						response := makeRequest(`{"droplet":"elephant","version":"pink-flamingo"}`)
+						Ω(response).Should(Equal("{}"))
 					})
 				})
 
 				Context("when the app query parameters correspond to an existing app", func() {
 					It("should return the actual instances and crashes of the app", func() {
-						statusCode, body := makeGetRequest(validRequestURL)
-						Ω(statusCode).Should(Equal(http.StatusOK))
-
-						Ω(body).Should(Equal(string(expectedApp.ToJSON())))
-					})
-				})
-
-				Context("when the auth credentials are wrong", func() {
-					It("should 401", func() {
-						statusCode, body := makeGetRequest(fmt.Sprintf("http://solenoid:chimpanzee8toad@localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion))
-						Ω(statusCode).Should(Equal(http.StatusUnauthorized))
-						Ω(body).Should(BeEmpty())
-					})
-				})
-
-				Context("when the auth credentials are missing", func() {
-					It("should 401", func() {
-						statusCode, body := makeGetRequest(fmt.Sprintf("http://localhost:%d/app?app-guid=%s&app-version=%s", port, app.AppGuid, app.AppVersion))
-						Ω(statusCode).Should(Equal(http.StatusUnauthorized))
-						Ω(body).Should(BeEmpty())
+						response := makeRequest(validRequestPayload)
+						Ω(response).Should(Equal(string(expectedApp.ToJSON())))
 					})
 				})
 
@@ -155,18 +137,16 @@ var _ = Describe("Apiserver", func() {
 					})
 
 					It("should 500", func() {
-						statusCode, body := makeGetRequest(validRequestURL)
-						Ω(statusCode).Should(Equal(http.StatusInternalServerError))
-						Ω(body).Should(BeEmpty())
+						response := makeRequest(validRequestPayload)
+						Ω(response).Should(Equal("{}"))
 					})
 				})
 			})
 
 			Context("when the store is not fresh", func() {
 				It("should return a 404", func() {
-					statusCode, body := makeGetRequest(validRequestURL)
-					Ω(statusCode).Should(Equal(http.StatusNotFound))
-					Ω(body).Should(BeEmpty())
+					response := makeRequest(validRequestPayload)
+					Ω(response).Should(Equal("{}"))
 				})
 			})
 		})

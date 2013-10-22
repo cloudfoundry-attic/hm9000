@@ -48,7 +48,6 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.MetricsServerPort = metricsServerPort
 	conf.MetricsServerUser = "bob"
 	conf.MetricsServerPassword = "password"
-	conf.APIServerPort = apiServerPort
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccured())

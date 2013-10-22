@@ -1,91 +1,81 @@
 package apiserver
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
-	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
-	"net/http"
-	"strconv"
+	"github.com/cloudfoundry/yagnats"
+	"time"
 )
 
 type ApiServer struct {
-	port         int
+	messageBus   yagnats.NATSClient
 	store        store.Store
 	timeProvider timeprovider.TimeProvider
-	conf         config.Config
 	logger       logger.Logger
 }
 
-func New(port int, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config, logger logger.Logger) *ApiServer {
+type AppStateRequest struct {
+	AppGuid    string `json:"droplet"`
+	AppVersion string `json:"version"`
+}
+
+func New(messageBus yagnats.NATSClient, store store.Store, timeProvider timeprovider.TimeProvider, logger logger.Logger) *ApiServer {
 	return &ApiServer{
-		port:         port,
+		messageBus:   messageBus,
 		store:        store,
 		timeProvider: timeProvider,
-		conf:         conf,
 		logger:       logger,
 	}
 }
 
-func (server *ApiServer) Start() {
-	http.HandleFunc("/app", func(w http.ResponseWriter, r *http.Request) {
-		var responseCode int
-		var responseBody []byte
+func (server *ApiServer) Listen() {
+	server.messageBus.SubscribeWithQueue("app.state", "hm9000", func(message *yagnats.Message) {
+		if message.ReplyTo == "" {
+			return
+		}
+
+		t := time.Now()
+
+		var err error
+		var response string
 
 		defer func() {
-			w.WriteHeader(responseCode)
-			w.Write(responseBody)
-			server.logger.Info("Handling API Request", map[string]string{
-				"URL":          r.URL.String(),
-				"ResponseCode": strconv.Itoa(responseCode),
-			})
-		}()
-
-		auth, authIsPresent := r.Header["Authorization"]
-
-		if !authIsPresent {
-			responseCode = http.StatusUnauthorized
-			return
-		}
-
-		basicAuth, err := models.DecodeBasicAuthInfo(auth[0])
-
-		if !(err == nil && basicAuth.User == server.conf.APIServerUser && basicAuth.Password == server.conf.APIServerPassword) {
-			responseCode = http.StatusUnauthorized
-			return
-		}
-
-		queryParams := r.URL.Query()
-		if len(queryParams["app-guid"]) > 0 && len(queryParams["app-version"]) > 0 {
-			err := server.store.VerifyFreshness(server.timeProvider.Time())
-			if err == store.ActualAndDesiredAreNotFreshError || err == store.ActualIsNotFreshError || err == store.DesiredIsNotFreshError {
-				responseCode = http.StatusNotFound
-				return
-			} else if err != nil {
-				responseCode = http.StatusInternalServerError
-				return
-			}
-
-			app, err := server.store.GetApp(queryParams["app-guid"][0], queryParams["app-version"][0])
-
-			if err == store.AppNotFoundError {
-				responseCode = http.StatusNotFound
-				return
-			} else if err != nil {
-				responseCode = http.StatusInternalServerError
+			if err != nil {
+				server.messageBus.Publish(message.ReplyTo, "{}")
+				server.logger.Error("Failed to handle app.state request", err, map[string]string{
+					"payload":      message.Payload,
+					"elapsed time": fmt.Sprintf("%s", time.Since(t)),
+				})
 				return
 			} else {
-				responseCode = http.StatusOK
-				responseBody = app.ToJSON()
-				return
+				server.messageBus.Publish(message.ReplyTo, response)
+				server.logger.Info("Responded succesfully to app.state request", map[string]string{
+					"payload":      message.Payload,
+					"elapsed time": fmt.Sprintf("%s", time.Since(t)),
+				})
 			}
-		} else {
-			responseCode = http.StatusBadRequest
+		}()
+
+		var request AppStateRequest
+		err = json.Unmarshal([]byte(message.Payload), &request)
+		if err != nil {
 			return
 		}
+
+		err = server.store.VerifyFreshness(server.timeProvider.Time())
+		if err != nil {
+			return
+		}
+
+		app, err := server.store.GetApp(request.AppGuid, request.AppVersion)
+		if err != nil {
+			return
+		}
+
+		response = string(app.ToJSON())
+		return
 	})
-	err := http.ListenAndServe(fmt.Sprintf(":%d", server.port), nil)
-	panic(err)
 }
