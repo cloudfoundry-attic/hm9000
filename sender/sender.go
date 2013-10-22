@@ -1,12 +1,12 @@
 package sender
 
 import (
-	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/yagnats"
 	"sort"
 )
 
@@ -16,11 +16,11 @@ type Sender struct {
 	logger logger.Logger
 
 	apps         map[string]*models.App
-	messageBus   cfmessagebus.MessageBus
+	messageBus   yagnats.NATSClient
 	timeProvider timeprovider.TimeProvider
 }
 
-func New(store store.Store, conf config.Config, messageBus cfmessagebus.MessageBus, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
+func New(store store.Store, conf config.Config, messageBus yagnats.NATSClient, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
 	return &Sender{
 		store:        store,
 		conf:         conf,
@@ -103,7 +103,7 @@ func (sender *Sender) sendStartMessages(startMessages map[string]models.PendingS
 						MessageId:     startMessage.MessageId,
 					}
 					sender.logger.Info("Sending message", startMessage.LogDescription())
-					err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, messageToSend.ToJSON())
+					err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, string(messageToSend.ToJSON()))
 					if err != nil {
 						sender.logger.Error("Failed to send start message", err, startMessage.LogDescription())
 						return err
@@ -161,7 +161,7 @@ func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingSto
 					IsDuplicate:   isDuplicate,
 					MessageId:     stopMessage.MessageId,
 				}
-				err := sender.messageBus.Publish(sender.conf.SenderNatsStopSubject, messageToSend.ToJSON())
+				err := sender.messageBus.Publish(sender.conf.SenderNatsStopSubject, string(messageToSend.ToJSON()))
 				if err != nil {
 					sender.logger.Error("Failed to send stop message", err, stopMessage.LogDescription())
 					return err

@@ -1,12 +1,12 @@
 package hm
 
 import (
-	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/yagnats"
 
 	"os"
 )
@@ -34,7 +34,7 @@ func Send(l logger.Logger, conf config.Config, poll bool) {
 	}
 }
 
-func send(l logger.Logger, conf config.Config, messageBus cfmessagebus.MessageBus, etcdStoreAdapter storeadapter.StoreAdapter) error {
+func send(l logger.Logger, conf config.Config, messageBus yagnats.NATSClient, etcdStoreAdapter storeadapter.StoreAdapter) error {
 	store := store.NewStore(conf, etcdStoreAdapter, l)
 	l.Info("Sending...")
 

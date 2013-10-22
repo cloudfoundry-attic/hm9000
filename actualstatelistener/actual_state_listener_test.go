@@ -3,6 +3,7 @@ package actualstatelistener_test
 import (
 	"errors"
 	. "github.com/cloudfoundry/hm9000/actualstatelistener"
+	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -11,12 +12,12 @@ import (
 	. "github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 
-	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
+	"github.com/cloudfoundry/yagnats/fakeyagnats"
 )
 
 var _ = Describe("Actual state listener", func() {
@@ -27,7 +28,7 @@ var _ = Describe("Actual state listener", func() {
 		storeAdapter *fakestoreadapter.FakeStoreAdapter
 		listener     *ActualStateListener
 		timeProvider *faketimeprovider.FakeTimeProvider
-		messageBus   *fake_cfmessagebus.FakeMessageBus
+		messageBus   *fakeyagnats.FakeYagnats
 		logger       *fakelogger.FakeLogger
 		conf         config.Config
 		freshByTime  time.Time
@@ -48,7 +49,7 @@ var _ = Describe("Actual state listener", func() {
 
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		messageBus = fake_cfmessagebus.NewFakeMessageBus()
+		messageBus = fakeyagnats.New()
 		logger = fakelogger.NewFakeLogger()
 
 		listener = New(conf, messageBus, store, timeProvider, logger)
@@ -69,7 +70,9 @@ var _ = Describe("Actual state listener", func() {
 		BeforeEach(func() {
 			isFresh, _ := store.IsActualStateFresh(freshByTime)
 			Ω(isFresh).Should(BeFalse())
-			messageBus.Subscriptions["dea.advertise"][0].Callback([]byte("doesn't matter"))
+			messageBus.Subscriptions["dea.advertise"][0].Callback(&yagnats.Message{
+				Payload: "doesn't matter",
+			})
 		})
 
 		It("Bumps the actual state freshness", func() {
@@ -80,7 +83,9 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a simple heartbeat over the message bus", func() {
 		BeforeEach(func() {
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(app.Heartbeat(1).ToJSON())
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
+				Payload: string(app.Heartbeat(1).ToJSON()),
+			})
 		})
 
 		It("puts it in the store", func() {
@@ -104,7 +109,9 @@ var _ = Describe("Actual state listener", func() {
 				},
 			}
 
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(heartbeat.ToJSON())
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
+				Payload: string(heartbeat.ToJSON()),
+			})
 		})
 
 		It("puts it in the store", func() {
@@ -155,7 +162,9 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it fails to parse the heartbeat message", func() {
 		BeforeEach(func() {
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback([]byte("ß"))
+			messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
+				Payload: "ß",
+			})
 		})
 
 		It("Stores nothing in the store", func() {

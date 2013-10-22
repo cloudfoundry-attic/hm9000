@@ -5,14 +5,17 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/metricsserver"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 )
 
 func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf config.Config) {
 	store := connectToStore(l, conf)
-	mbus := connectToMessageBus(l, conf)
+	cfMessageBus := connectToCFMessageBus(l, conf)
+
+	collectorRegistrar := collectorregistrar.NewCollectorRegistrar(cfMessageBus, steno)
 
 	metricsServer := metricsserver.New(
-		mbus,
+		collectorRegistrar,
 		steno,
 		l,
 		store,

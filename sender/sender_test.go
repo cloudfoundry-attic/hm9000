@@ -2,7 +2,6 @@ package sender_test
 
 import (
 	"errors"
-	"github.com/cloudfoundry/go_cfmessagebus/fake_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/sender"
@@ -11,6 +10,7 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
+	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
@@ -21,14 +21,14 @@ var _ = Describe("Sender", func() {
 		storeAdapter *fakestoreadapter.FakeStoreAdapter
 		store        storepackage.Store
 		sender       *Sender
-		messageBus   *fake_cfmessagebus.FakeMessageBus
+		messageBus   *fakeyagnats.FakeYagnats
 		timeProvider *faketimeprovider.FakeTimeProvider
 		app1         appfixture.AppFixture
 		conf         config.Config
 	)
 
 	BeforeEach(func() {
-		messageBus = fake_cfmessagebus.NewFakeMessageBus()
+		messageBus = fakeyagnats.New()
 		app1 = appfixture.NewAppFixture()
 		conf, _ = config.DefaultConfig()
 
@@ -146,7 +146,7 @@ var _ = Describe("Sender", func() {
 
 			It("should send the message", func() {
 				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
-				message, _ := models.NewStartMessageFromJSON(messageBus.PublishedMessages["hm9000.start"][0])
+				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.start"][0].Payload))
 				Ω(message).Should(Equal(models.StartMessage{
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
@@ -308,7 +308,7 @@ var _ = Describe("Sender", func() {
 
 			It("should send the message", func() {
 				Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(1))
-				message, _ := models.NewStopMessageFromJSON(messageBus.PublishedMessages["hm9000.stop"][0])
+				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.stop"][0].Payload))
 				Ω(message).Should(Equal(models.StopMessage{
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
@@ -455,7 +455,7 @@ var _ = Describe("Sender", func() {
 
 			It("should send the start message", func() {
 				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
-				message, _ := models.NewStartMessageFromJSON(messageBus.PublishedMessages["hm9000.start"][0])
+				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.start"][0].Payload))
 				Ω(message).Should(Equal(models.StartMessage{
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,
@@ -570,7 +570,7 @@ var _ = Describe("Sender", func() {
 
 			It("should send the stop message", func() {
 				Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(1))
-				message, _ := models.NewStopMessageFromJSON(messageBus.PublishedMessages["hm9000.stop"][0])
+				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.stop"][0].Payload))
 				Ω(message).Should(Equal(models.StopMessage{
 					AppGuid:       app1.AppGuid,
 					AppVersion:    app1.AppVersion,

@@ -7,19 +7,19 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 
-	"github.com/cloudfoundry/go_cfmessagebus"
+	"github.com/cloudfoundry/yagnats"
 )
 
 type ActualStateListener struct {
 	logger       logger.Logger
 	config       config.Config
-	messageBus   cfmessagebus.MessageBus
+	messageBus   yagnats.NATSClient
 	store        store.Store
 	timeProvider timeprovider.TimeProvider
 }
 
 func New(config config.Config,
-	messageBus cfmessagebus.MessageBus,
+	messageBus yagnats.NATSClient,
 	store store.Store,
 	timeProvider timeprovider.TimeProvider,
 	logger logger.Logger) *ActualStateListener {
@@ -34,17 +34,17 @@ func New(config config.Config,
 }
 
 func (listener *ActualStateListener) Start() {
-	listener.messageBus.Subscribe("dea.advertise", func(messageBody []byte) {
+	listener.messageBus.Subscribe("dea.advertise", func(message *yagnats.Message) {
 		listener.logger.Info("Received dea.advertise, bumping freshness.")
 		listener.bumpFreshness()
 	})
 
-	listener.messageBus.Subscribe("dea.heartbeat", func(messageBody []byte) {
-		heartbeat, err := models.NewHeartbeatFromJSON(messageBody)
+	listener.messageBus.Subscribe("dea.heartbeat", func(message *yagnats.Message) {
+		heartbeat, err := models.NewHeartbeatFromJSON([]byte(message.Payload))
 		if err != nil {
 			listener.logger.Error("Could not unmarshal heartbeat", err,
 				map[string]string{
-					"MessageBody": string(messageBody),
+					"MessageBody": message.Payload,
 				})
 			return
 		}

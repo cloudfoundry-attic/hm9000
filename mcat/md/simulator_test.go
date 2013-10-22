@@ -4,8 +4,8 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
-	"github.com/cloudfoundry/hm9000/testhelpers/messagepublisher"
 	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
+	"github.com/cloudfoundry/yagnats"
 )
 
 type Simulator struct {
@@ -18,10 +18,10 @@ type Simulator struct {
 	TicksToAttainFreshness int
 	TicksToExpireHeartbeat int
 	GracePeriod            int
-	publisher              *messagepublisher.MessagePublisher
+	messageBus             yagnats.NATSClient
 }
 
-func NewSimulator(conf config.Config, storeRunner storerunner.StoreRunner, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, publisher *messagepublisher.MessagePublisher) *Simulator {
+func NewSimulator(conf config.Config, storeRunner storerunner.StoreRunner, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.NATSClient) *Simulator {
 	desiredStateServer.Reset()
 
 	return &Simulator{
@@ -33,7 +33,7 @@ func NewSimulator(conf config.Config, storeRunner storerunner.StoreRunner, desir
 		TicksToAttainFreshness: int(conf.ActualFreshnessTTLInHeartbeats) + 1,
 		TicksToExpireHeartbeat: int(conf.HeartbeatTTLInHeartbeats),
 		GracePeriod:            int(conf.GracePeriodInHeartbeats),
-		publisher:              publisher,
+		messageBus:             messageBus,
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *Simulator) Tick(numTicks int) {
 func (s *Simulator) sendHeartbeats() {
 	s.cliRunner.StartListener(s.currentTimestamp)
 	for _, heartbeat := range s.currentHeartbeats {
-		s.publisher.PublishHeartbeat(heartbeat)
+		s.messageBus.Publish("dea.heartbeat", string(heartbeat.ToJSON()))
 	}
 	s.cliRunner.WaitForHeartbeats(len(s.currentHeartbeats))
 	s.cliRunner.StopListener()

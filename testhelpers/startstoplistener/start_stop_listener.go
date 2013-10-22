@@ -1,32 +1,35 @@
 package startstoplistener
 
 import (
-	"encoding/json"
-	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/yagnats"
 )
 
 type StartStopListener struct {
 	Starts     []models.StartMessage
 	Stops      []models.StopMessage
-	messageBus cfmessagebus.MessageBus
+	messageBus yagnats.NATSClient
 }
 
-func NewStartStopListener(messageBus cfmessagebus.MessageBus, conf config.Config) *StartStopListener {
+func NewStartStopListener(messageBus yagnats.NATSClient, conf config.Config) *StartStopListener {
 	listener := &StartStopListener{
 		messageBus: messageBus,
 	}
 
-	messageBus.Subscribe(conf.SenderNatsStartSubject, func(payload []byte) {
-		startMessage := models.StartMessage{}
-		json.Unmarshal(payload, &startMessage)
+	messageBus.Subscribe(conf.SenderNatsStartSubject, func(message *yagnats.Message) {
+		startMessage, err := models.NewStartMessageFromJSON([]byte(message.Payload))
+		if err != nil {
+			panic(err)
+		}
 		listener.Starts = append(listener.Starts, startMessage)
 	})
 
-	messageBus.Subscribe(conf.SenderNatsStopSubject, func(payload []byte) {
-		stopMessage := models.StopMessage{}
-		json.Unmarshal(payload, &stopMessage)
+	messageBus.Subscribe(conf.SenderNatsStopSubject, func(message *yagnats.Message) {
+		stopMessage, err := models.NewStopMessageFromJSON([]byte(message.Payload))
+		if err != nil {
+			panic(err)
+		}
 		listener.Stops = append(listener.Stops, stopMessage)
 	})
 

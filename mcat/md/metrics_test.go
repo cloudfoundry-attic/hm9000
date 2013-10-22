@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
+	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"
@@ -33,11 +34,14 @@ var _ = Describe("Serving Metrics", func() {
 
 	It("should register with the collector", func(done Done) {
 		cliRunner.StartMetricsServer(simulator.currentTimestamp)
-		natsRunner.MessageBus.Request("vcap.component.discover", []byte{}, func(msg []byte) {
-			Ω(string(msg)).Should(ContainSubstring("%s:%d", ip, metricsServerPort))
-			Ω(string(msg)).Should(ContainSubstring(`"bob","password"`))
+
+		natsRunner.MessageBus.Subscribe("reply-to", func(message *yagnats.Message) {
+			Ω(message.Payload).Should(ContainSubstring("%s:%d", ip, metricsServerPort))
+			Ω(message.Payload).Should(ContainSubstring(`"bob","password"`))
 			close(done)
 		})
+
+		natsRunner.MessageBus.PublishWithReplyTo("vcap.component.discover", "", "reply-to")
 	})
 
 	Context("when the store is fresh", func() {

@@ -1,6 +1,7 @@
 package hm
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
@@ -8,6 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
+	"github.com/cloudfoundry/yagnats"
 	"strconv"
 	"time"
 
@@ -29,17 +31,38 @@ func buildTimeProvider(l logger.Logger) timeprovider.TimeProvider {
 	}
 }
 
-func connectToMessageBus(l logger.Logger, conf config.Config) cfmessagebus.MessageBus {
+func connectToMessageBus(l logger.Logger, conf config.Config) yagnats.NATSClient {
+	connectionInfo := &yagnats.ConnectionInfo{
+		Addr: fmt.Sprintf("%s:%d", conf.NATS.Host, conf.NATS.Port),
+
+		Username: conf.NATS.User,
+		Password: conf.NATS.Password,
+	}
+
+	natsClient := yagnats.NewClient()
+
+	err := natsClient.Connect(connectionInfo)
+
+	if err != nil {
+		l.Error("Failed to connect to the message bus", err)
+		os.Exit(1)
+	}
+
+	return natsClient
+}
+
+func connectToCFMessageBus(l logger.Logger, conf config.Config) cfmessagebus.MessageBus {
 	messageBus, err := cfmessagebus.NewMessageBus("NATS")
 	if err != nil {
-		l.Info("Failed to initialize the message bus", map[string]string{"Error": err.Error()})
+		l.Error("Failed to initialize the CF message bus", err)
 		os.Exit(1)
 	}
 
 	messageBus.Configure(conf.NATS.Host, conf.NATS.Port, conf.NATS.User, conf.NATS.Password)
 	err = messageBus.Connect()
+
 	if err != nil {
-		l.Info("Failed to connect to the message bus", map[string]string{"Error": err.Error()})
+		l.Error("Failed to connect to the CF message bus", err)
 		os.Exit(1)
 	}
 
@@ -50,7 +73,7 @@ func connectToETCDStoreAdapter(l logger.Logger, conf config.Config) storeadapter
 	etcdStoreAdapter := storeadapter.NewETCDStoreAdapter(conf.StoreURLs, conf.StoreMaxConcurrentRequests)
 	err := etcdStoreAdapter.Connect()
 	if err != nil {
-		l.Info("Failed to connect to the store", map[string]string{"Error": err.Error()})
+		l.Error("Failed to connect to the store", err)
 		os.Exit(1)
 	}
 

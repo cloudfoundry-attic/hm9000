@@ -2,8 +2,6 @@ package md_test
 
 import (
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
-	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/testhelpers/messagepublisher"
 	"github.com/cloudfoundry/hm9000/testhelpers/startstoplistener"
 	. "github.com/onsi/ginkgo"
 	ginkgoConfig "github.com/onsi/ginkgo/config"
@@ -29,7 +27,6 @@ var (
 	natsRunner                *natsrunner.NATSRunner
 	conf                      config.Config
 	cliRunner                 *CLIRunner
-	publisher                 *messagepublisher.MessagePublisher
 	startStopListener         *startstoplistener.StartStopListener
 	simulator                 *Simulator
 	desiredStateServerPort    int
@@ -70,7 +67,6 @@ func TestMd(t *testing.T) {
 
 	//for now, run the suite for ETCD...
 	startEtcd()
-	publisher = messagepublisher.NewMessagePublisher(natsRunner.MessageBus)
 	startStopListener = startstoplistener.NewStartStopListener(natsRunner.MessageBus, conf)
 
 	cliRunner = NewCLIRunner(storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
@@ -92,7 +88,7 @@ func TestMd(t *testing.T) {
 var _ = BeforeEach(func() {
 	storeRunner.Reset()
 	startStopListener.Reset()
-	simulator = NewSimulator(conf, storeRunner, stateServer, cliRunner, publisher)
+	simulator = NewSimulator(conf, storeRunner, stateServer, cliRunner, natsRunner.MessageBus)
 })
 
 func stopAllExternalProcesses() {
@@ -119,20 +115,6 @@ func startZookeeper() {
 	storeAdapter = storeadapter.NewZookeeperStoreAdapter(storeRunner.NodeURLS(), conf.StoreMaxConcurrentRequests, &timeprovider.RealTimeProvider{}, time.Second)
 	err := storeAdapter.Connect()
 	Ω(err).ShouldNot(HaveOccured())
-}
-
-func expireHeartbeat(heartbeat models.InstanceHeartbeat) {
-	err := storeAdapter.Delete("/actual/" + heartbeat.InstanceGuid)
-	Ω(err).ShouldNot(HaveOccured())
-}
-
-func sendHeartbeats(timestamp int, heartbeats ...models.Heartbeat) {
-	cliRunner.StartListener(timestamp)
-	for _, heartbeat := range heartbeats {
-		publisher.PublishHeartbeat(heartbeat)
-	}
-	cliRunner.WaitForHeartbeats(len(heartbeats))
-	cliRunner.StopListener()
 }
 
 func registerSignalHandler() {
