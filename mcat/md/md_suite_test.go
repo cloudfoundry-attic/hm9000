@@ -68,7 +68,7 @@ func TestMd(t *testing.T) {
 
 	cliRunner = NewCLIRunner("etcd", storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
 
-	RunSpecs(t, "MCAT Md Suite (ETCD)")
+	RunSpecs(t, "MCAT ETCD MD Suite")
 
 	storeAdapter.Disconnect()
 	storeRunner.Stop()
@@ -78,7 +78,7 @@ func TestMd(t *testing.T) {
 
 	cliRunner = NewCLIRunner("ZooKeeper", storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
 
-	RunSpecs(t, "MCAT Md Suite (Zookeeper)")
+	RunSpecs(t, "MCAT ZooKeeper MD Suite")
 
 	storeAdapter.Disconnect()
 
