@@ -33,6 +33,7 @@ var (
 	desiredStateServerBaseUrl string
 	natsPort                  int
 	metricsServerPort         int
+	currentStoreType          string
 )
 
 func TestMd(t *testing.T) {
@@ -64,9 +65,10 @@ func TestMd(t *testing.T) {
 	startStopListener = startstoplistener.NewStartStopListener(natsRunner.MessageBus, conf)
 
 	//run the suite for ETCD...
-	startEtcd()
+	currentStoreType = "etcd"
+	startStore()
 
-	cliRunner = NewCLIRunner("etcd", storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
+	cliRunner = NewCLIRunner(currentStoreType, storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
 
 	RunSpecs(t, "MCAT ETCD MD Suite")
 
@@ -74,9 +76,10 @@ func TestMd(t *testing.T) {
 	storeRunner.Stop()
 
 	//...and then for zookeeper
-	startZookeeper()
+	currentStoreType = "ZooKeeper"
+	startStore()
 
-	cliRunner = NewCLIRunner("ZooKeeper", storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
+	cliRunner = NewCLIRunner(currentStoreType, storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
 
 	RunSpecs(t, "MCAT ZooKeeper MD Suite")
 
@@ -86,7 +89,13 @@ func TestMd(t *testing.T) {
 }
 
 var _ = BeforeEach(func() {
-	storeRunner.Reset()
+	if currentStoreType == "etcd" {
+		//etcd's reset sucks.  once we get etcd 0.2 this can go away.
+		storeRunner.Stop()
+		storeRunner.Start()
+	} else if currentStoreType == "ZooKeeper" {
+		storeRunner.Reset()
+	}
 	startStopListener.Reset()
 	simulator = NewSimulator(conf, storeRunner, stateServer, cliRunner, natsRunner.MessageBus)
 })
@@ -97,24 +106,24 @@ func stopAllExternalProcesses() {
 	cliRunner.Cleanup()
 }
 
-func startEtcd() {
-	etcdPort := 5000 + (ginkgoConfig.GinkgoConfig.ParallelNode-1)*10
-	storeRunner = storerunner.NewETCDClusterRunner(etcdPort, 1)
-	storeRunner.Start()
+func startStore() {
+	if currentStoreType == "etcd" {
+		etcdPort := 5000 + (ginkgoConfig.GinkgoConfig.ParallelNode-1)*10
+		storeRunner = storerunner.NewETCDClusterRunner(etcdPort, 1)
+		storeRunner.Start()
 
-	storeAdapter = storeadapter.NewETCDStoreAdapter(storeRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-	err := storeAdapter.Connect()
-	Ω(err).ShouldNot(HaveOccured())
-}
+		storeAdapter = storeadapter.NewETCDStoreAdapter(storeRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err := storeAdapter.Connect()
+		Ω(err).ShouldNot(HaveOccured())
+	} else if currentStoreType == "ZooKeeper" {
+		zookeeperPort := 2181 + (ginkgoConfig.GinkgoConfig.ParallelNode-1)*10
+		storeRunner = storerunner.NewZookeeperClusterRunner(zookeeperPort, 1)
+		storeRunner.Start()
 
-func startZookeeper() {
-	zookeeperPort := 2181 + (ginkgoConfig.GinkgoConfig.ParallelNode-1)*10
-	storeRunner = storerunner.NewZookeeperClusterRunner(zookeeperPort, 1)
-	storeRunner.Start()
-
-	storeAdapter = storeadapter.NewZookeeperStoreAdapter(storeRunner.NodeURLS(), conf.StoreMaxConcurrentRequests, &timeprovider.RealTimeProvider{}, time.Second)
-	err := storeAdapter.Connect()
-	Ω(err).ShouldNot(HaveOccured())
+		storeAdapter = storeadapter.NewZookeeperStoreAdapter(storeRunner.NodeURLS(), conf.StoreMaxConcurrentRequests, &timeprovider.RealTimeProvider{}, time.Second)
+		err := storeAdapter.Connect()
+		Ω(err).ShouldNot(HaveOccured())
+	}
 }
 
 func registerSignalHandler() {

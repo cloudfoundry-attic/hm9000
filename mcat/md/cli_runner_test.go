@@ -100,7 +100,7 @@ func (runner *CLIRunner) start(command string, timestamp int) (*exec.Cmd, *bytes
 	cmd.Start()
 	Eventually(func() int {
 		return buffer.Len()
-	}).ShouldNot(BeZero())
+	}, 5.0).ShouldNot(BeZero())
 
 	return cmd, buffer
 }
@@ -110,7 +110,7 @@ func (runner *CLIRunner) WaitForHeartbeats(num int) {
 		var validHeartbeat = regexp.MustCompile(`Received dea.heartbeat`)
 		heartbeats := validHeartbeat.FindAll(runner.listenerStdoutBuffer.Bytes(), -1)
 		return len(heartbeats)
-	}).Should(BeNumerically("==", num))
+	}, 5.0).Should(BeNumerically("==", num))
 }
 
 func (runner *CLIRunner) Run(command string, timestamp int) {
