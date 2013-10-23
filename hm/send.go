@@ -13,7 +13,7 @@ import (
 
 func Send(l logger.Logger, conf config.Config, poll bool) {
 	messageBus := connectToMessageBus(l, conf)
-	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
+	etcdStoreAdapter := connectToStoreAdapter(l, conf)
 
 	if poll {
 		l.Info("Starting Sender Daemon...")

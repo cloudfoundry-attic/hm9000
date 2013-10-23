@@ -11,7 +11,7 @@ import (
 )
 
 func Analyze(l logger.Logger, conf config.Config, poll bool) {
-	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
+	etcdStoreAdapter := connectToStoreAdapter(l, conf)
 
 	if poll {
 		l.Info("Starting Analyze Daemon...")

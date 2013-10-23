@@ -12,7 +12,7 @@ import (
 )
 
 func FetchDesiredState(l logger.Logger, conf config.Config, poll bool) {
-	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
+	etcdStoreAdapter := connectToStoreAdapter(l, conf)
 
 	if poll {
 		l.Info("Starting Desired State Daemon...")

@@ -12,7 +12,7 @@ import (
 )
 
 func Dump(l logger.Logger, conf config.Config) {
-	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
+	etcdStoreAdapter := connectToStoreAdapter(l, conf)
 	fmt.Printf("Dump - Current timestamp %d\n", time.Now().Unix())
 
 	entries := sort.StringSlice{}
@@ -42,7 +42,7 @@ func Dump(l logger.Logger, conf config.Config) {
 }
 
 func Clear(l logger.Logger, conf config.Config) {
-	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
+	etcdStoreAdapter := connectToStoreAdapter(l, conf)
 	l.Info(fmt.Sprintf("Clear - Current timestamp %d\n", time.Now().Unix()))
 
 	node, err := etcdStoreAdapter.ListRecursively("/")

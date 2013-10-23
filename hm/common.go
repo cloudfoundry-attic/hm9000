@@ -69,18 +69,25 @@ func connectToCFMessageBus(l logger.Logger, conf config.Config) cfmessagebus.Mes
 	return messageBus
 }
 
-func connectToETCDStoreAdapter(l logger.Logger, conf config.Config) storeadapter.StoreAdapter {
-	etcdStoreAdapter := storeadapter.NewETCDStoreAdapter(conf.StoreURLs, conf.StoreMaxConcurrentRequests)
-	err := etcdStoreAdapter.Connect()
+func connectToStoreAdapter(l logger.Logger, conf config.Config) (adapter storeadapter.StoreAdapter) {
+	if conf.StoreType == "etcd" {
+		adapter = storeadapter.NewETCDStoreAdapter(conf.StoreURLs, conf.StoreMaxConcurrentRequests)
+	} else if conf.StoreType == "ZooKeeper" {
+		adapter = storeadapter.NewZookeeperStoreAdapter(conf.StoreURLs, conf.StoreMaxConcurrentRequests, buildTimeProvider(l), time.Second)
+	} else {
+		l.Info(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd' or 'ZooKeeper'", conf.StoreType))
+		os.Exit(1)
+	}
+	err := adapter.Connect()
 	if err != nil {
 		l.Error("Failed to connect to the store", err)
 		os.Exit(1)
 	}
 
-	return etcdStoreAdapter
+	return adapter
 }
 
 func connectToStore(l logger.Logger, conf config.Config) store.Store {
-	etcdStoreAdapter := connectToETCDStoreAdapter(l, conf)
+	etcdStoreAdapter := connectToStoreAdapter(l, conf)
 	return store.NewStore(conf, etcdStoreAdapter, l)
 }

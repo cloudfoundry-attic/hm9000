@@ -50,7 +50,6 @@ func TestMd(t *testing.T) {
 	desiredStateServerPort = 6001 + ginkgoConfig.GinkgoConfig.ParallelNode
 	desiredStateServerBaseUrl = "http://127.0.0.1:" + strconv.Itoa(desiredStateServerPort)
 	natsPort = 4223 + ginkgoConfig.GinkgoConfig.ParallelNode
-
 	metricsServerPort = 7879 + ginkgoConfig.GinkgoConfig.ParallelNode
 
 	natsRunner = natsrunner.NewNATSRunner(natsPort)
@@ -62,24 +61,28 @@ func TestMd(t *testing.T) {
 	conf, err = config.DefaultConfig()
 	Ω(err).ShouldNot(HaveOccured())
 
-	//for now, run the suite for ETCD...
-	startEtcd()
 	startStopListener = startstoplistener.NewStartStopListener(natsRunner.MessageBus, conf)
 
-	cliRunner = NewCLIRunner(storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
+	//run the suite for ETCD...
+	startEtcd()
+
+	cliRunner = NewCLIRunner("etcd", storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
 
 	RunSpecs(t, "MCAT Md Suite (ETCD)")
 
 	storeAdapter.Disconnect()
-	stopAllExternalProcesses()
+	storeRunner.Stop()
 
 	//...and then for zookeeper
-	// startZookeeper()
+	startZookeeper()
 
-	// RunSpecs(t, "Md Suite (Zookeeper)")
+	cliRunner = NewCLIRunner("ZooKeeper", storeRunner.NodeURLS(), desiredStateServerBaseUrl, natsPort, metricsServerPort, ginkgoConfig.DefaultReporterConfig.Verbose)
 
-	// storeAdapter.Disconnect()
-	// storeRunner.Stop()
+	RunSpecs(t, "MCAT Md Suite (Zookeeper)")
+
+	storeAdapter.Disconnect()
+
+	stopAllExternalProcesses()
 }
 
 var _ = BeforeEach(func() {

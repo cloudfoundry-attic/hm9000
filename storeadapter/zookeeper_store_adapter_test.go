@@ -7,9 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/samuel/go-zookeeper/zk"
-	"io/ioutil"
-	"log"
-	"os"
 
 	"time"
 )
@@ -34,7 +31,7 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 		err = adapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		creationTime = time.Now()
+		creationTime = time.Unix(100, 0)
 		timeProvider.TimeToProvide = creationTime
 
 		nodeArr = make([]StoreNode, 1)
@@ -58,7 +55,7 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 
 			It("should be able to set the key", func() {
 				data, stat, err := client.Get("/foo")
-				Ω(string(data)).Should(Equal("0,bar"))
+				Ω(string(data)).Should(Equal("100,0,bar"))
 				Ω(stat.NumChildren).Should(BeNumerically("==", 0))
 				Ω(stat.Version).Should(BeNumerically("==", 0))
 				Ω(err).ShouldNot(HaveOccured())
@@ -78,7 +75,7 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 
 				It("should be able to overwrite the key", func() {
 					data, stat, err := client.Get("/foo")
-					Ω(string(data)).Should(Equal("20,baz"))
+					Ω(string(data)).Should(Equal("100,20,baz"))
 					Ω(stat.NumChildren).Should(BeNumerically("==", 0))
 					Ω(stat.Version).Should(BeNumerically("==", 1))
 					Ω(err).ShouldNot(HaveOccured())
@@ -99,7 +96,7 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 
 			It("should be able to set the key", func() {
 				data, stat, err := client.Get("/menu/breakfast")
-				Ω(string(data)).Should(Equal("0,waffle"))
+				Ω(string(data)).Should(Equal("100,0,waffle"))
 				Ω(stat.NumChildren).Should(BeNumerically("==", 0))
 				Ω(stat.Version).Should(BeNumerically("==", 0))
 				Ω(err).ShouldNot(HaveOccured())
@@ -122,7 +119,7 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 
 				It("should be able to overwrite the key", func() {
 					data, stat, err := client.Get("/menu/breakfast")
-					Ω(string(data)).Should(Equal("0,pancake"))
+					Ω(string(data)).Should(Equal("100,0,pancake"))
 					Ω(stat.NumChildren).Should(BeNumerically("==", 0))
 					Ω(stat.Version).Should(BeNumerically("==", 1))
 					Ω(err).ShouldNot(HaveOccured())
@@ -159,28 +156,6 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 					Ω(kiddos).Should(ContainElement("lunch"))
 					Ω(err).ShouldNot(HaveOccured())
 				})
-			})
-		})
-
-		Context("when the store is down", func() {
-			BeforeEach(func() {
-				log.SetOutput(ioutil.Discard)
-				zookeeperRunner.Stop()
-			})
-
-			AfterEach(func() {
-				zookeeperRunner.Start()
-				log.SetOutput(os.Stdout)
-			})
-
-			It("should return a timeout error", func() {
-				nodeArr[0] = StoreNode{
-					Key:   "/foo",
-					Value: []byte("bar"),
-					TTL:   0,
-				}
-				err := adapter.Set(nodeArr)
-				Ω(err).Should(Equal(ErrorTimeout), "Expected a timeout error")
 			})
 		})
 	})
