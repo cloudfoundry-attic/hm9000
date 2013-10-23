@@ -197,6 +197,11 @@ func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingSto
 }
 
 func (sender *Sender) verifyStartMessageShouldBeSent(message models.PendingStartMessage) bool {
+	if message.SkipVerification {
+		sender.logger.Info("Sending start message: message is marked with SkipVerification", message.LogDescription())
+		return true
+	}
+
 	appKey := sender.store.AppKey(message.AppGuid, message.AppVersion)
 	app, found := sender.apps[appKey]
 

@@ -416,11 +416,13 @@ var _ = Describe("Sender", func() {
 		var err error
 		var indexToStart int
 		var pendingMessage models.PendingStartMessage
+		var skipVerification bool
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
 			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart, 1.0)
 			pendingMessage.SentOn = 0
+			pendingMessage.SkipVerification = skipVerification
 			store.SavePendingStartMessages(
 				pendingMessage,
 			)
@@ -431,6 +433,7 @@ var _ = Describe("Sender", func() {
 		BeforeEach(func() {
 			err = nil
 			indexToStart = 0
+			skipVerification = false
 		})
 
 		assertMessageWasNotSent := func() {
@@ -524,6 +527,18 @@ var _ = Describe("Sender", func() {
 
 		Context("When the app is no longer desired", func() {
 			assertMessageWasNotSent()
+		})
+
+		Context("when the message fails verification", func() {
+			assertMessageWasNotSent()
+
+			Context("but the message is marked with SkipVerification", func() {
+				BeforeEach(func() {
+					skipVerification = true
+				})
+
+				assertMessageWasSent()
+			})
 		})
 	})
 

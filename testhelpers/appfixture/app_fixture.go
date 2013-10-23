@@ -79,8 +79,8 @@ func (instance Instance) Heartbeat() InstanceHeartbeat {
 	}
 }
 
-func (instance Instance) DropletExited(reason DropletExitedReason) DropletExitedMessage {
-	droplet_exited := DropletExitedMessage{
+func (instance Instance) DropletExited(reason DropletExitedReason) DropletExited {
+	droplet_exited := DropletExited{
 		CCPartition:     "default",
 		AppGuid:         instance.AppGuid,
 		AppVersion:      instance.AppVersion,

@@ -20,7 +20,9 @@ type CLIRunner struct {
 	listenerStdoutBuffer *bytes.Buffer
 	metricsServerCmd     *exec.Cmd
 	apiServerCmd         *exec.Cmd
-	verbose              bool
+	evacuatorCmd         *exec.Cmd
+
+	verbose bool
 }
 
 func NewCLIRunner(storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int, verbose bool) *CLIRunner {
@@ -77,6 +79,14 @@ func (runner *CLIRunner) StopAPIServer() {
 	runner.apiServerCmd.Process.Kill()
 }
 
+func (runner *CLIRunner) StartEvacuator(timestamp int) {
+	runner.evacuatorCmd, _ = runner.start("evacuator", timestamp)
+}
+
+func (runner *CLIRunner) StopEvacuator() {
+	runner.evacuatorCmd.Process.Kill()
+}
+
 func (runner *CLIRunner) Cleanup() {
 	os.Remove(runner.configPath)
 }
@@ -113,6 +123,5 @@ func (runner *CLIRunner) Run(command string, timestamp int) {
 
 		fmt.Printf("\n")
 	}
-	// Ω(err).ShouldNot(HaveOccured(), "%s command failed", command)
-	time.Sleep(50 * time.Millisecond) //give NATS a chance to send messages around, if necessary
+	time.Sleep(50 * time.Millisecond)
 }

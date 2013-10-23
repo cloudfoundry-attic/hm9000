@@ -19,6 +19,10 @@ var _ = Describe("Pending Messages", func() {
 			Ω(message.MessageId).ShouldNot(BeZero())
 		})
 
+		It("should not skip verification", func() {
+			Ω(message.SkipVerification).Should(BeFalse())
+		})
+
 		Describe("Creating new start messages programatically", func() {
 			It("should populate the start message correctly, and compute the correct SendOn time", func() {
 				Ω(message.SendOn).Should(BeNumerically("==", 130))
@@ -42,7 +46,8 @@ var _ = Describe("Pending Messages", func() {
                         "version": "app-version",
                         "index": 1,
                         "message_id": "abc",
-                        "priority": 0.3
+                        "priority": 0.3,
+                        "skip_verification": false
                     }`))
 					Ω(err).ShouldNot(HaveOccured())
 					message.MessageId = "abc"
@@ -76,13 +81,14 @@ var _ = Describe("Pending Messages", func() {
 		Describe("LogDescription", func() {
 			It("should generate an appropriate map", func() {
 				Ω(message.LogDescription()).Should(Equal(map[string]string{
-					"SendOn":       time.Unix(130, 0).String(),
-					"SentOn":       time.Unix(0, 0).String(),
-					"KeepAlive":    "10",
-					"AppGuid":      "app-guid",
-					"AppVersion":   "app-version",
-					"IndexToStart": "1",
-					"MessageId":    message.MessageId,
+					"SendOn":           time.Unix(130, 0).String(),
+					"SentOn":           time.Unix(0, 0).String(),
+					"KeepAlive":        "10",
+					"AppGuid":          "app-guid",
+					"AppVersion":       "app-version",
+					"IndexToStart":     "1",
+					"MessageId":        message.MessageId,
+					"SkipVerification": "false",
 				}))
 			})
 		})
@@ -118,6 +124,10 @@ var _ = Describe("Pending Messages", func() {
 
 				mutatedMessage = anotherMessage
 				mutatedMessage.Priority = 3.141
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.SkipVerification = true
 				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
 			})
 		})

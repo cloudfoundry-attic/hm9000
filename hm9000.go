@@ -77,6 +77,17 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "evacuator",
+			Description: "Listens for Varz calls to serve metrics",
+			Usage:       "hm evacuator --config=/path/to/config",
+			Flags: []cli.Flag{
+				cli.StringFlag{"config", "", "Path to config file"},
+			},
+			Action: func(c *cli.Context) {
+				hm.StartEvacuator(l, loadConfig(l, c))
+			},
+		},
+		cli.Command{
 			Name:        "serve_metrics",
 			Description: "Listens for Varz calls to serve metrics",
 			Usage:       "hm serve_metrics --config=/path/to/config",

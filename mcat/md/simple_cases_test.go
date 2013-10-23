@@ -16,8 +16,10 @@ var _ = Describe("Simple Cases Test", func() {
 
 	Context("when all running instances are desired", func() {
 		BeforeEach(func() {
+			simulator.SetCurrentHeartbeats(app1.Heartbeat(1), app2.Heartbeat(1))
 			simulator.SetDesiredState(app1.DesiredState(1), app2.DesiredState(1))
 			simulator.Tick(simulator.TicksToAttainFreshness)
+			simulator.Tick(1)
 		})
 
 		It("should not send any messages", func() {

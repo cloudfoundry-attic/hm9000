@@ -17,8 +17,9 @@ type PendingMessage struct {
 
 type PendingStartMessage struct {
 	PendingMessage
-	IndexToStart int     `json:"index"`
-	Priority     float64 `json:"priority"`
+	IndexToStart     int     `json:"index"`
+	Priority         float64 `json:"priority"`
+	SkipVerification bool    `json:"skip_verification"` //This only exists to allow the evacuator to specify that a message *must* be sent, regardless of verification status
 }
 
 type PendingStopMessage struct {
@@ -97,13 +98,15 @@ func (message PendingStartMessage) ToJSON() []byte {
 func (message PendingStartMessage) LogDescription() map[string]string {
 	base := message.pendingLogDescription()
 	base["IndexToStart"] = strconv.Itoa(message.IndexToStart)
+	base["SkipVerification"] = strconv.FormatBool(message.SkipVerification)
 	return base
 }
 
 func (message PendingStartMessage) Equal(another PendingStartMessage) bool {
 	return message.pendingEqual(another.PendingMessage) &&
 		message.IndexToStart == another.IndexToStart &&
-		message.Priority == another.Priority
+		message.Priority == another.Priority &&
+		message.SkipVerification == another.SkipVerification
 }
 
 func NewPendingStopMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int, appGuid string, appVersion string, instanceGuid string) PendingStopMessage {
