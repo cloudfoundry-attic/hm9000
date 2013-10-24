@@ -115,9 +115,10 @@ func main() {
 			Usage:       "hm dump --config=/path/to/config",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
+				cli.BoolFlag{"raw", "If set, dump the unstructured contents of the database"},
 			},
 			Action: func(c *cli.Context) {
-				hm.Dump(l, loadConfig(l, c))
+				hm.Dump(l, loadConfig(l, c), c.Bool("raw"))
 			},
 		},
 		cli.Command{
