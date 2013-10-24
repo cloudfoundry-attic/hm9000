@@ -37,13 +37,13 @@ var _ = Describe("Serving Metrics", func() {
 		cliRunner.StartMetricsServer(simulator.currentTimestamp)
 		guid := models.Guid()
 
-		natsRunner.MessageBus.Subscribe(guid, func(message *yagnats.Message) {
-			Ω(message.Payload).Should(ContainSubstring("%s:%d", ip, metricsServerPort))
+		coordinator.MessageBus.Subscribe(guid, func(message *yagnats.Message) {
+			Ω(message.Payload).Should(ContainSubstring("%s:%d", ip, coordinator.MetricsServerPort))
 			Ω(message.Payload).Should(ContainSubstring(`"bob","password"`))
 			close(done)
 		})
 
-		natsRunner.MessageBus.PublishWithReplyTo("vcap.component.discover", "", guid)
+		coordinator.MessageBus.PublishWithReplyTo("vcap.component.discover", "", guid)
 	})
 
 	Context("when the store is fresh", func() {
@@ -53,7 +53,7 @@ var _ = Describe("Serving Metrics", func() {
 		})
 
 		It("should return the metrics", func() {
-			resp, err := http.Get(fmt.Sprintf("http://bob:password@%s:%d/varz", ip, metricsServerPort))
+			resp, err := http.Get(fmt.Sprintf("http://bob:password@%s:%d/varz", ip, coordinator.MetricsServerPort))
 			Ω(err).ShouldNot(HaveOccured())
 
 			defer resp.Body.Close()
@@ -73,7 +73,7 @@ var _ = Describe("Serving Metrics", func() {
 		})
 
 		It("should return -1 for all metrics", func() {
-			resp, err := http.Get(fmt.Sprintf("http://bob:password@%s:%d/varz", ip, metricsServerPort))
+			resp, err := http.Get(fmt.Sprintf("http://bob:password@%s:%d/varz", ip, coordinator.MetricsServerPort))
 			Ω(err).ShouldNot(HaveOccured())
 
 			defer resp.Body.Close()

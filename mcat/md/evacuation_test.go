@@ -20,7 +20,7 @@ var _ = Describe("Evacuation", func() {
 	Context("when an evacuation message comes in", func() {
 		BeforeEach(func() {
 			cliRunner.StartEvacuator(simulator.currentTimestamp)
-			natsRunner.MessageBus.Publish("droplet.exited", string(app.InstanceAtIndex(0).DropletExited(models.DropletExitedReasonDEAEvacuation).ToJSON()))
+			coordinator.MessageBus.Publish("droplet.exited", string(app.InstanceAtIndex(0).DropletExited(models.DropletExitedReasonDEAEvacuation).ToJSON()))
 		})
 
 		AfterEach(func() {

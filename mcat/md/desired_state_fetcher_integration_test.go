@@ -1,6 +1,7 @@
 package md_test
 
 import (
+	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
@@ -20,6 +21,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		a3         appfixture.AppFixture
 		store      storepackage.Store
 		resultChan chan desiredstatefetcher.DesiredStateFetcherResult
+		conf       config.Config
 	)
 
 	BeforeEach(func() {
@@ -28,15 +30,16 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		a2 = appfixture.NewAppFixture()
 		a3 = appfixture.NewAppFixture()
 
-		stateServer.SetDesiredState([]models.DesiredAppState{
+		coordinator.StateServer.SetDesiredState([]models.DesiredAppState{
 			a1.DesiredState(1),
 			a2.DesiredState(1),
 			a3.DesiredState(1),
 		})
 
-		conf.CCBaseURL = desiredStateServerBaseUrl
+		conf = coordinator.Conf
+		conf.CCBaseURL = coordinator.DesiredStateServerBaseUrl
 
-		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
+		store = storepackage.NewStore(conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
 
 		fetcher = desiredstatefetcher.New(conf, store, httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
@@ -57,7 +60,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 
 	It("bumps the freshness", func() {
 		Eventually(func() error {
-			_, err := storeAdapter.Get(conf.DesiredFreshnessKey)
+			_, err := coordinator.StoreAdapter.Get(conf.DesiredFreshnessKey)
 			return err
 		}, 1, 0.1).ShouldNot(HaveOccured())
 	})
@@ -77,7 +80,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			desired1 := a1.DesiredState(1)
 			desired1.State = models.AppStateStopped
 
-			stateServer.SetDesiredState([]models.DesiredAppState{
+			coordinator.StateServer.SetDesiredState([]models.DesiredAppState{
 				desired1,
 				a3.DesiredState(1),
 			})
