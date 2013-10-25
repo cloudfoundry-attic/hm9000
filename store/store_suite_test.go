@@ -14,11 +14,15 @@ import (
 
 var etcdRunner *storerunner.ETCDClusterRunner
 
+//TODO: FIX // TTL comments when bumping goetcd
+
 func TestStore(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
 	etcdRunner = storerunner.NewETCDClusterRunner(5001+config.GinkgoConfig.ParallelNode, 1)
+
+	etcdRunner.Start()
 
 	RunSpecs(t, "Store Suite")
 
@@ -26,8 +30,7 @@ func TestStore(t *testing.T) {
 }
 
 var _ = BeforeEach(func() {
-	etcdRunner.Stop()
-	etcdRunner.Start()
+	etcdRunner.Reset()
 })
 
 func registerSignalHandler() {

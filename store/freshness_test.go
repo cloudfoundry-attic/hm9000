@@ -56,7 +56,7 @@ var _ = Describe("Freshness", func() {
 					json.Unmarshal(value.Value, &freshnessTimestamp)
 
 					Ω(freshnessTimestamp.Timestamp).Should(Equal(timestamp.Unix()))
-					Ω(value.TTL).Should(BeNumerically("==", ttl-1))
+					Ω(value.TTL).Should(BeNumerically("==", ttl))
 					Ω(value.Key).Should(Equal(key))
 				})
 			})
@@ -74,7 +74,7 @@ var _ = Describe("Freshness", func() {
 
 					Ω(err).ShouldNot(HaveOccured())
 
-					Ω(value.TTL).Should(BeNumerically("==", ttl-1))
+					Ω(value.TTL).Should(BeNumerically("==", ttl))
 
 					var freshnessTimestamp models.FreshnessTimestamp
 					json.Unmarshal(value.Value, &freshnessTimestamp)

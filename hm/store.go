@@ -147,7 +147,7 @@ func dumpRaw(l logger.Logger, conf config.Config) {
 
 	entries := sort.StringSlice{}
 
-	node, err := storeAdapter.ListRecursively("/")
+	node, err := storeAdapter.ListRecursively("/?recursive=true&garbage=") //TODO:FIXME WHEN GOETCD UPDATES
 	if err != nil {
 		panic(err)
 	}
@@ -175,7 +175,7 @@ func Clear(l logger.Logger, conf config.Config) {
 	storeAdapter := connectToStoreAdapter(l, conf)
 	l.Info(fmt.Sprintf("Clear - Current timestamp %d\n", time.Now().Unix()))
 
-	node, err := storeAdapter.ListRecursively("/")
+	node, err := storeAdapter.ListRecursively("/?recursive=true&garbage=") //TODO:FIXME WHEN GOETCD UPDATES
 	if err != nil {
 		panic(err)
 	}

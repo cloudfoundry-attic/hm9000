@@ -62,13 +62,7 @@ func (coordinator *MDCoordinator) computePorts() {
 }
 
 func (coordinator *MDCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *startstoplistener.StartStopListener) {
-	if coordinator.CurrentStoreType == "etcd" {
-		//etcd's reset sucks.  once we get etcd 0.2 this can go away.
-		coordinator.StoreRunner.Stop()
-		coordinator.StoreRunner.Start()
-	} else if coordinator.CurrentStoreType == "ZooKeeper" {
-		coordinator.StoreRunner.Reset()
-	}
+	coordinator.StoreRunner.Reset()
 	coordinator.startStopListener.Reset()
 	coordinator.StateServer.Reset()
 
@@ -126,5 +120,8 @@ func (coordinator *MDCoordinator) StopStore() {
 func (coordinator *MDCoordinator) StopAllExternalProcesses() {
 	coordinator.StoreRunner.Stop()
 	coordinator.natsRunner.Stop()
-	coordinator.currentCLIRunner.Cleanup()
+
+	if coordinator.currentCLIRunner != nil {
+		coordinator.currentCLIRunner.Cleanup()
+	}
 }

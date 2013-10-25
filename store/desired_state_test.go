@@ -57,14 +57,14 @@ var _ = Describe("Desired State", func() {
 			Ω(node).Should(Equal(storeadapter.StoreNode{
 				Key:   "/apps/" + app1.AppGuid + "-" + app1.AppVersion + "/desired",
 				Value: app1.DesiredState(1).ToJSON(),
-				TTL:   conf.DesiredStateTTL() - 1,
+				TTL:   conf.DesiredStateTTL(),
 			}))
 			node, err = etcdAdapter.Get("/apps/" + app2.AppGuid + "-" + app2.AppVersion + "/desired")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(node).Should(Equal(storeadapter.StoreNode{
 				Key:   "/apps/" + app2.AppGuid + "-" + app2.AppVersion + "/desired",
 				Value: app2.DesiredState(1).ToJSON(),
-				TTL:   conf.DesiredStateTTL() - 1,
+				TTL:   conf.DesiredStateTTL(),
 			}))
 		})
 	})

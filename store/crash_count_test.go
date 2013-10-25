@@ -54,7 +54,7 @@ var _ = Describe("Crash Count", func() {
 			Ω(node).Should(Equal(storeadapter.StoreNode{
 				Key:   "/apps/" + crashCount1.AppGuid + "-" + crashCount1.AppVersion + "/crashes/" + crashCount1.StoreKey(),
 				Value: crashCount1.ToJSON(),
-				TTL:   expectedTTL - 1,
+				TTL:   expectedTTL,
 			}))
 
 			node, err = etcdAdapter.Get("/apps/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/crashes/" + crashCount2.StoreKey())
@@ -62,7 +62,7 @@ var _ = Describe("Crash Count", func() {
 			Ω(node).Should(Equal(storeadapter.StoreNode{
 				Key:   "/apps/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/crashes/" + crashCount2.StoreKey(),
 				Value: crashCount2.ToJSON(),
-				TTL:   expectedTTL - 1,
+				TTL:   expectedTTL,
 			}))
 		})
 	})

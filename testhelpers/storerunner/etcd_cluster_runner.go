@@ -81,8 +81,11 @@ func (etcd *ETCDClusterRunner) DiskUsage() (bytes int64, err error) {
 func (etcd *ETCDClusterRunner) Reset() {
 	if etcd.running {
 		client := etcdclient.NewClient(etcd.NodeURLS())
-
-		etcd.deleteDir(client, "/")
+		response, err := client.Get("/?please=true", false) //TODO: Ugly hack, fix when goetcd merges our pull request.
+		Ω(err).ShouldNot(HaveOccured())
+		for _, doomed := range response.Kvs {
+			client.DeleteAll(doomed.Key)
+		}
 	}
 }
 
@@ -90,44 +93,29 @@ func (etcd *ETCDClusterRunner) FastForwardTime(seconds int) {
 	if etcd.running {
 		client := etcdclient.NewClient(etcd.NodeURLS())
 
-		etcd.fastForwardTime(client, "/", seconds)
+		//TODO: can't do a recursive get (YET!) because etcd does not return TTLs when getting recursively.  This should be fixed in 0.2 soon.  For now we do a (slower) manual fetch.
+
+		etcd.fastForwardTime(client, "/?garbage=true", seconds) //TODO: Ugly hack, fix when goetcd merges our pull request.
 	}
 }
 
-func (etcd *ETCDClusterRunner) deleteDir(client *etcdclient.Client, dir string) {
-	responses, err := client.Get(dir)
+func (etcd *ETCDClusterRunner) fastForwardTime(client *etcdclient.Client, key string, seconds int) {
+	response, err := client.Get(key, false)
 	Ω(err).ShouldNot(HaveOccured())
-	for _, response := range responses {
-		if response.Key != "/_etcd" {
-			if response.Dir == true {
-				etcd.deleteDir(client, response.Key)
-			} else {
-				_, err := client.Delete(response.Key)
-				Ω(err).ShouldNot(HaveOccured())
-			}
+	if response.Dir == true {
+		for _, child := range response.Kvs {
+			etcd.fastForwardTime(client, child.Key, seconds)
 		}
-	}
-}
-
-func (etcd *ETCDClusterRunner) fastForwardTime(client *etcdclient.Client, dir string, seconds int) {
-	responses, err := client.Get(dir)
-	Ω(err).ShouldNot(HaveOccured())
-	for _, response := range responses {
-		if response.Key != "/_etcd" {
-			if response.Dir == true {
-				etcd.fastForwardTime(client, response.Key, seconds)
-			} else {
-				if response.TTL == 0 {
-					continue
-				}
-				if response.TTL < int64(seconds) {
-					_, err := client.Delete(response.Key)
-					Ω(err).ShouldNot(HaveOccured())
-				} else {
-					_, err := client.Set(response.Key, response.Value, uint64(response.TTL-int64(seconds)+1))
-					Ω(err).ShouldNot(HaveOccured())
-				}
-			}
+	} else {
+		if response.TTL == 0 {
+			return
+		}
+		if response.TTL <= int64(seconds) {
+			_, err := client.Delete(response.Key)
+			Ω(err).ShouldNot(HaveOccured())
+		} else {
+			_, err := client.Set(response.Key, response.Value, uint64(response.TTL-int64(seconds)))
+			Ω(err).ShouldNot(HaveOccured())
 		}
 	}
 }

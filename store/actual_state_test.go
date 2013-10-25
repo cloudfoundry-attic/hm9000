@@ -50,19 +50,20 @@ var _ = Describe("Actual State", func() {
 		})
 
 		It("can stores the passed in actual state", func() {
-			node, err := etcdAdapter.ListRecursively("/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual")
-
+			heartbeatNode, err := etcdAdapter.Get("/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual/" + heartbeat1.InstanceGuid)
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(node.ChildNodes).Should(HaveLen(2))
-			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
+
+			Ω(heartbeatNode).Should(Equal(storeadapter.StoreNode{
 				Key:   "/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual/" + heartbeat1.InstanceGuid,
 				Value: heartbeat1.ToJSON(),
-				TTL:   conf.HeartbeatTTL() - 1,
+				TTL:   conf.HeartbeatTTL(),
 			}))
-			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
+
+			heartbeatNode, err = etcdAdapter.Get("/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual/" + heartbeat2.InstanceGuid)
+			Ω(heartbeatNode).Should(Equal(storeadapter.StoreNode{
 				Key:   "/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual/" + heartbeat2.InstanceGuid,
 				Value: heartbeat2.ToJSON(),
-				TTL:   conf.HeartbeatTTL() - 1,
+				TTL:   conf.HeartbeatTTL(),
 			}))
 		})
 	})

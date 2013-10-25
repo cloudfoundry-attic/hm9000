@@ -177,7 +177,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 
 			Context("when listing the root directory", func() {
 				It("should list the contents recursively", func() {
-					value, err := adapter.ListRecursively("/")
+					value, err := adapter.ListRecursively("/?recursive=true&garbage=") //TODO: FIX ME WHEN WE GET NEW GOETCD
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(value.Key).Should(Equal("/"))
 					Ω(value.Dir).Should(BeTrue())

@@ -149,7 +149,7 @@ var _ = Describe("Crashes", func() {
 			Context("when it starts crashing again *before* the crash count expires", func() {
 				It("should continue the backoff policy where it left off", func() {
 					simulator.SetCurrentHeartbeats(crashingHeartbeat)
-					simulator.Tick(simulator.TicksToExpireHeartbeat) //kill off the running heartbeat and then schedule a start
+					simulator.Tick(simulator.TicksToExpireHeartbeat) //kill off the running heartbeat schedule a start
 					Ω(startStopListener.Starts).Should(HaveLen(0))
 					simulator.Tick(simulator.GracePeriod)
 					Ω(startStopListener.Starts).Should(HaveLen(1))
