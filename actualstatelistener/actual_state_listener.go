@@ -40,6 +40,7 @@ func (listener *ActualStateListener) Start() {
 	})
 
 	listener.messageBus.Subscribe("dea.heartbeat", func(message *yagnats.Message) {
+		listener.logger.Info("Got a heartbeat")
 		heartbeat, err := models.NewHeartbeatFromJSON([]byte(message.Payload))
 		if err != nil {
 			listener.logger.Error("Could not unmarshal heartbeat", err,
@@ -49,12 +50,13 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
+		listener.logger.Info("Decoded the heartbeat")
 		err = listener.store.SaveActualState(heartbeat.InstanceHeartbeats...)
 		if err != nil {
 			listener.logger.Error("Could not put instance heartbeats in store:", err)
 			return
 		}
-
+		listener.logger.Info("Saved the heartbeat")
 		listener.logger.Info("Received dea.heartbeat, bumping freshness.")
 		listener.bumpFreshness()
 	})
@@ -64,5 +66,7 @@ func (listener *ActualStateListener) bumpFreshness() {
 	err := listener.store.BumpActualFreshness(listener.timeProvider.Time())
 	if err != nil {
 		listener.logger.Error("Could not update actual freshness", err)
+	} else {
+		listener.logger.Info("Succesfully bumped freshness")
 	}
 }
