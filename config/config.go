@@ -20,6 +20,8 @@ type Config struct {
 	SenderTimeoutInHeartbeats           int `json:"sender_timeout_in_heartbeats"`
 	FetcherPollingIntervalInHeartbeats  int `json:"fetcher_polling_interval_in_heartbeats"`
 	FetcherTimeoutInHeartbeats          int `json:"fetcher_timeout_in_heartbeats"`
+	ShredderPollingIntervalInHeartbeats int `json:"shredder_polling_interval_in_heartbeats"`
+	ShredderTimeoutInHeartbeats         int `json:"shredder_timeout_in_heartbeats"`
 	AnalyzerPollingIntervalInHeartbeats int `json:"analyzer_polling_interval_in_heartbeats"`
 	AnalyzerTimeoutInHeartbeats         int `json:"analyzer_timeout_in_heartbeats"`
 
@@ -92,6 +94,14 @@ func (conf *Config) FetcherPollingInterval() time.Duration {
 
 func (conf *Config) FetcherTimeout() time.Duration {
 	return time.Duration(conf.FetcherTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) ShredderPollingInterval() time.Duration {
+	return time.Duration(conf.ShredderPollingIntervalInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) ShredderTimeout() time.Duration {
+	return time.Duration(conf.ShredderTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
 }
 
 func (conf *Config) AnalyzerPollingInterval() time.Duration {

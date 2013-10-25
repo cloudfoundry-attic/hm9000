@@ -81,7 +81,7 @@ func (etcd *ETCDClusterRunner) DiskUsage() (bytes int64, err error) {
 func (etcd *ETCDClusterRunner) Reset() {
 	if etcd.running {
 		client := etcdclient.NewClient(etcd.NodeURLS())
-		response, err := client.Get("/?please=true", false) //TODO: Ugly hack, fix when goetcd merges our pull request.
+		response, err := client.Get("/?garbage=foo", false) //TODO: remove this terribleness when we upgrade go-etcd
 		Ω(err).ShouldNot(HaveOccured())
 		for _, doomed := range response.Kvs {
 			client.DeleteAll(doomed.Key)
@@ -95,7 +95,7 @@ func (etcd *ETCDClusterRunner) FastForwardTime(seconds int) {
 
 		//TODO: can't do a recursive get (YET!) because etcd does not return TTLs when getting recursively.  This should be fixed in 0.2 soon.  For now we do a (slower) manual fetch.
 
-		etcd.fastForwardTime(client, "/?garbage=true", seconds) //TODO: Ugly hack, fix when goetcd merges our pull request.
+		etcd.fastForwardTime(client, "/?recursive=true&", seconds)
 	}
 }
 

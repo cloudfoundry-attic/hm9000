@@ -14,8 +14,6 @@ import (
 
 var etcdRunner *storerunner.ETCDClusterRunner
 
-//TODO: FIX // TTL comments when bumping goetcd
-
 func TestStore(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)

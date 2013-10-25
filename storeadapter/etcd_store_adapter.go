@@ -94,6 +94,11 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 
 func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 	fmt.Printf("[STORE] Getting %s\n", key)
+	//TODO: remove this terribleness when we upgrade go-etcd
+	if key == "/" {
+		key = "/?garbage=foo&"
+	}
+
 	response, err := adapter.client.Get(key, false)
 	if adapter.isTimeoutError(err) {
 		fmt.Printf("[STORE]   Timed out getting %s\n", key)
@@ -124,6 +129,10 @@ func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 }
 
 func (adapter *ETCDStoreAdapter) ListRecursively(key string) (StoreNode, error) {
+	//TODO: remove this terribleness when we upgrade go-etcd
+	if key == "/" {
+		key = "/?recursive=true&garbage=foo&"
+	}
 	response, err := adapter.client.GetAll(key, false)
 	if adapter.isTimeoutError(err) {
 		return StoreNode{}, ErrorTimeout
@@ -178,7 +187,7 @@ func (adapter *ETCDStoreAdapter) makeStoreNode(kvPair etcd.KeyValuePair) StoreNo
 }
 
 func (adapter *ETCDStoreAdapter) Delete(key string) error {
-	_, err := adapter.client.Delete(key)
+	_, err := adapter.client.DeleteAll(key)
 	if adapter.isTimeoutError(err) {
 		return ErrorTimeout
 	}

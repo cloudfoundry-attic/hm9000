@@ -177,7 +177,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 
 			Context("when listing the root directory", func() {
 				It("should list the contents recursively", func() {
-					value, err := adapter.ListRecursively("/?recursive=true&garbage=") //TODO: FIX ME WHEN WE GET NEW GOETCD
+					value, err := adapter.ListRecursively("/")
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(value.Key).Should(Equal("/"))
 					Ω(value.Dir).Should(BeTrue())
@@ -294,7 +294,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 				err := adapter.Delete("/menu/breakfast")
 				Ω(err).ShouldNot(HaveOccured())
 
-				value, err := adapter.Get("/menu/breakfat")
+				value, err := adapter.Get("/menu/breakfast")
 				Ω(err).Should(Equal(ErrorKeyNotFound))
 				Ω(value).Should(BeZero())
 			})
@@ -303,6 +303,19 @@ var _ = Describe("ETCD Store Adapter", func() {
 		Context("when deleting a non-existing key", func() {
 			It("should error", func() {
 				err := adapter.Delete("/not-a-key")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+			})
+		})
+
+		Context("when deleting a directory", func() {
+			It("deletes the key and its contents", func() {
+				err := adapter.Delete("/menu")
+				Ω(err).ShouldNot(HaveOccured())
+
+				_, err = adapter.Get("/menu/breakfast")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+
+				_, err = adapter.Get("/menu")
 				Ω(err).Should(Equal(ErrorKeyNotFound))
 			})
 		})

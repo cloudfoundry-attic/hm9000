@@ -253,9 +253,13 @@ var _ = Describe("Fakestoreadapter", func() {
 		})
 
 		Context("when the key is a directory", func() {
-			It("should return the key not found error", func() {
+			It("should kaboom the directory", func() {
 				err := adapter.Delete("/menu")
-				Ω(err).Should(Equal(storeadapter.ErrorNodeIsDirectory))
+				Ω(err).ShouldNot(HaveOccured())
+
+				_, err = adapter.Get("/menu")
+				_, err = adapter.Get("/menu")
+				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 		})
 

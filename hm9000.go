@@ -110,6 +110,18 @@ func main() {
 			},
 		},
 		cli.Command{
+			Name:        "shred",
+			Description: "Deletes empty directories from the store",
+			Usage:       "hm shred --config=/path/to/config --poll",
+			Flags: []cli.Flag{
+				cli.StringFlag{"config", "", "Path to config file"},
+				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
+			},
+			Action: func(c *cli.Context) {
+				hm.Shred(l, loadConfig(l, c), c.Bool("poll"))
+			},
+		},
+		cli.Command{
 			Name:        "dump",
 			Description: "Dumps contents of the data store",
 			Usage:       "hm dump --config=/path/to/config",

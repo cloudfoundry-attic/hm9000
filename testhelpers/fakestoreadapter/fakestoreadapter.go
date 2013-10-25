@@ -190,12 +190,9 @@ func (adapter *FakeStoreAdapter) Delete(key string) error {
 		}
 	}
 
-	if container.dir {
-		return storeadapter.ErrorNodeIsDirectory
-	} else {
-		delete(parentNode.nodes, components[len(components)-1])
-		return nil
-	}
+	delete(parentNode.nodes, components[len(components)-1])
+
+	return nil
 }
 
 func (adapter *FakeStoreAdapter) keyComponents(key string) (components []string) {

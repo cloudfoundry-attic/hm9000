@@ -472,11 +472,15 @@ var _ = Describe("ZookeeperStoreAdapter", func() {
 		})
 
 		Context("when the key is a directory", func() {
-			It("should not delete the key and should return an is directory error", func() {
+			It("deletes the key and its contents", func() {
 				err := adapter.Delete("/menu")
-				Ω(err).Should(Equal(ErrorNodeIsDirectory))
-				_, err = adapter.Get("/menu/breakfast")
 				Ω(err).ShouldNot(HaveOccured())
+
+				_, err = adapter.Get("/menu/breakfast")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+
+				_, err = adapter.Get("/menu")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
 			})
 		})
 

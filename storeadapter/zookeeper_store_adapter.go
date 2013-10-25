@@ -180,7 +180,18 @@ func (adapter *ZookeeperStoreAdapter) Delete(key string) error {
 	}
 
 	if stat.NumChildren > 0 {
-		return ErrorNodeIsDirectory
+		nodeKeys, _, err := adapter.client.Children(key)
+
+		if err != nil {
+			return err
+		}
+
+		for _, child := range nodeKeys {
+			err := adapter.Delete(adapter.combineKeys(key, child))
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return adapter.client.Delete(key, -1)

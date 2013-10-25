@@ -33,6 +33,8 @@ var _ = Describe("Config", func() {
         "sender_timeout_in_heartbeats": 10,
         "fetcher_polling_interval_in_heartbeats": 6,
         "fetcher_timeout_in_heartbeats": 60,        
+        "shredder_polling_interval_in_heartbeats": 360,
+        "shredder_timeout_in_heartbeats": 6,
         "analyzer_polling_interval_in_heartbeats": 1,
         "analyzer_timeout_in_heartbeats": 10,
         "number_of_crashes_before_backoff_begins": 3,
@@ -68,6 +70,8 @@ var _ = Describe("Config", func() {
 			Ω(config.SenderTimeout().Seconds()).Should(BeNumerically("==", 100))
 			Ω(config.FetcherPollingInterval().Seconds()).Should(BeNumerically("==", 60))
 			Ω(config.FetcherTimeout().Seconds()).Should(BeNumerically("==", 600))
+			Ω(config.ShredderPollingInterval().Hours()).Should(BeNumerically("==", 1))
+			Ω(config.ShredderTimeout().Minutes()).Should(BeNumerically("==", 1))
 			Ω(config.AnalyzerPollingInterval().Seconds()).Should(BeNumerically("==", 10))
 			Ω(config.AnalyzerTimeout().Seconds()).Should(BeNumerically("==", 100))
 
