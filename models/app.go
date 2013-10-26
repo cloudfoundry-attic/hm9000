@@ -154,14 +154,14 @@ func (a *App) HeartbeatsByIndex() (heartbeatsByIndex map[int][]InstanceHeartbeat
 	return
 }
 
-func (a *App) EvacuatingInstanceAtIndex(index int) (instance InstanceHeartbeat, found bool) {
+func (a *App) EvacuatingInstancesAtIndex(index int) (instances []InstanceHeartbeat) {
 	for _, heartbeat := range a.InstanceHeartbeats {
 		if heartbeat.IsEvacuating() && heartbeat.InstanceIndex == index {
-			return heartbeat, true
+			instances = append(instances, heartbeat)
 		}
 	}
 
-	return InstanceHeartbeat{}, false
+	return
 }
 
 func (a *App) HasRunningInstanceAtIndex(index int) bool {

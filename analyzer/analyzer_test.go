@@ -461,7 +461,7 @@ var _ = Describe("Analyzer", func() {
 				})
 			})
 
-			Context("and a RUNNING instance", func() {
+			Context("when there is a RUNNING instance on the evacuating index", func() {
 				BeforeEach(func() {
 					heartbeat := app.InstanceAtIndex(1).Heartbeat()
 					heartbeat.InstanceGuid = models.Guid()
@@ -479,9 +479,34 @@ var _ = Describe("Analyzer", func() {
 					expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid)
 					Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
 				})
+
+				Context("when there are multiple evacuating instances on the evacuating index", func() {
+					var otherEvacuatingHeartbeat models.InstanceHeartbeat
+
+					BeforeEach(func() {
+						otherEvacuatingHeartbeat = app.InstanceAtIndex(1).Heartbeat()
+						otherEvacuatingHeartbeat.InstanceGuid = models.Guid()
+						otherEvacuatingHeartbeat.State = models.InstanceStateEvacuating
+						store.SaveActualState(otherEvacuatingHeartbeat)
+					})
+
+					It("should schedule an immediate stop for both EVACUATING instances", func() {
+						err := analyzer.Analyze()
+						Ω(err).ShouldNot(HaveOccured())
+
+						Ω(startMessages()).Should(BeEmpty())
+
+						Ω(stopMessages()).Should(HaveLen(2))
+
+						expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid)
+						Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
+						expectedMessageForOtherEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, otherEvacuatingHeartbeat.InstanceGuid)
+						Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForOtherEvacuatingInstance)))
+					})
+				})
 			})
 
-			Context("and a STARTING instance", func() {
+			Context("when there is a STARTING instance on the evacuating index", func() {
 				BeforeEach(func() {
 					heartbeat := app.InstanceAtIndex(1).Heartbeat()
 					heartbeat.InstanceGuid = models.Guid()
@@ -498,7 +523,7 @@ var _ = Describe("Analyzer", func() {
 				})
 			})
 
-			Context("and the index's crash count exceeds NumberOfCrashesBeforeBackoffBegins", func() {
+			Context("and the evacuating index's crash count exceeds NumberOfCrashesBeforeBackoffBegins", func() {
 				BeforeEach(func() {
 					store.SaveCrashCounts(models.CrashCount{
 						AppGuid:       app.AppGuid,

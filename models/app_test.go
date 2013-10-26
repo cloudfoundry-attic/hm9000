@@ -313,26 +313,27 @@ var _ = Describe("App", func() {
 		})
 	})
 
-	Describe("EvacuatingInstanceAtIndex", func() {
+	Describe("EvacuatingInstancesAtIndex", func() {
 		It("should return true if there are evacuating instances at the passed in index", func() {
-			instance, found := app().EvacuatingInstanceAtIndex(1)
-			Ω(found).Should(BeFalse())
-			Ω(instance).Should(BeZero())
+			instances := app().EvacuatingInstancesAtIndex(1)
+			Ω(instances).Should(BeEmpty())
 
 			instanceHeartbeats = []InstanceHeartbeat{
 				heartbeat(0, InstanceStateCrashed),
 				heartbeat(1, InstanceStateRunning),
 				heartbeat(1, InstanceStateEvacuating),
+				heartbeat(1, InstanceStateEvacuating),
 				heartbeat(2, InstanceStateStarting),
 				heartbeat(2, InstanceStateCrashed),
 			}
-			instance, found = app().EvacuatingInstanceAtIndex(0)
-			Ω(found).Should(BeFalse())
-			Ω(instance).Should(BeZero())
 
-			instance, found = app().EvacuatingInstanceAtIndex(1)
-			Ω(found).Should(BeTrue())
-			Ω(instance).Should(Equal(heartbeat(1, InstanceStateEvacuating)))
+			instances = app().EvacuatingInstancesAtIndex(0)
+			Ω(instances).Should(BeEmpty())
+
+			instances = app().EvacuatingInstancesAtIndex(1)
+			Ω(instances).Should(HaveLen(2))
+			Ω(instances[0]).Should(Equal(heartbeat(1, InstanceStateEvacuating)))
+			Ω(instances[1]).Should(Equal(heartbeat(1, InstanceStateEvacuating)))
 		})
 	})
 

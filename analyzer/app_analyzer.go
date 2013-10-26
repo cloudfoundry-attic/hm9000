@@ -135,21 +135,25 @@ func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
 	heartbeatsByIndex := a.app.HeartbeatsByIndex()
 
 	for index, _ := range heartbeatsByIndex {
-		evacuatingInstance, hasEvacuatingInstance := a.app.EvacuatingInstanceAtIndex(index)
+		evacuatingInstances := a.app.EvacuatingInstancesAtIndex(index)
 
-		if hasEvacuatingInstance {
-			stopMessage := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, evacuatingInstance.InstanceGuid)
+		if len(evacuatingInstances) > 0 {
 			startMessage := models.NewPendingStartMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, index, 2.0)
+			addStopMessages := func(reason string) {
+				for _, evacuatingInstance := range evacuatingInstances {
+					stopMessage := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, evacuatingInstance.InstanceGuid)
+					a.logger.Info(reason, stopMessage.LogDescription())
+					a.appendStopMessageIfNotDuplicate(stopMessage)
+				}
+			}
 
 			if !a.app.IsIndexDesired(index) {
-				a.logger.Info("Identified undesired evacuating instance.", stopMessage.LogDescription())
-				a.appendStopMessageIfNotDuplicate(stopMessage)
+				addStopMessages("Identified undesired evacuating instance.")
 				continue
 			}
 
 			if a.app.HasRunningInstanceAtIndex(index) {
-				a.logger.Info("Stopping an evacuating instance that has started running elsewhere.", stopMessage.LogDescription())
-				a.appendStopMessageIfNotDuplicate(stopMessage)
+				addStopMessages("Stopping an evacuating instance that has started running elsewhere.")
 				continue
 			}
 
@@ -161,8 +165,7 @@ func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
 			a.appendStartMessageIfNotDuplicate(startMessage)
 
 			if a.app.CrashCountAtIndex(index, a.currentTime).CrashCount >= a.conf.NumberOfCrashesBeforeBackoffBegins {
-				a.logger.Info("Stopping an unstable evacuating instance.", stopMessage.LogDescription())
-				a.appendStopMessageIfNotDuplicate(stopMessage)
+				addStopMessages("Stopping an unstable evacuating instance.")
 			}
 		}
 	}
