@@ -1,11 +1,11 @@
 package models_test
 
 import (
-	"time"
 	. "github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("App", func() {
@@ -236,6 +236,34 @@ var _ = Describe("App", func() {
 		})
 	})
 
+	Describe("HeartbeatsByIndex", func() {
+		It("returns all of the heartbeats grouped by index", func() {
+			Ω(app().HeartbeatsByIndex()).Should(BeEmpty())
+
+			instanceHeartbeats = []InstanceHeartbeat{
+				heartbeat(0, InstanceStateCrashed),
+				heartbeat(1, InstanceStateRunning),
+				heartbeat(1, InstanceStateCrashed),
+				heartbeat(2, InstanceStateStarting),
+				heartbeat(2, InstanceStateCrashed),
+			}
+
+			Ω(app().HeartbeatsByIndex()).Should(Equal(map[int][]InstanceHeartbeat{
+				0: []InstanceHeartbeat{
+					heartbeat(0, InstanceStateCrashed),
+				},
+				1: []InstanceHeartbeat{
+					heartbeat(1, InstanceStateRunning),
+					heartbeat(1, InstanceStateCrashed),
+				},
+				2: []InstanceHeartbeat{
+					heartbeat(2, InstanceStateStarting),
+					heartbeat(2, InstanceStateCrashed),
+				},
+			}))
+		})
+	})
+
 	Describe("HasStartingOrRunningInstanceAtIndex", func() {
 		It("should return true if there are starting or running instances at the passed in index", func() {
 			Ω(app().HasStartingOrRunningInstanceAtIndex(1)).Should(BeFalse())
@@ -250,6 +278,61 @@ var _ = Describe("App", func() {
 			Ω(app().HasStartingOrRunningInstanceAtIndex(0)).Should(BeFalse())
 			Ω(app().HasStartingOrRunningInstanceAtIndex(1)).Should(BeTrue())
 			Ω(app().HasStartingOrRunningInstanceAtIndex(2)).Should(BeTrue())
+		})
+	})
+
+	Describe("HasStartingInstanceAtIndex", func() {
+		It("should return true if there are starting instances at the passed in index", func() {
+			Ω(app().HasStartingInstanceAtIndex(1)).Should(BeFalse())
+			instanceHeartbeats = []InstanceHeartbeat{
+				heartbeat(0, InstanceStateCrashed),
+				heartbeat(1, InstanceStateRunning),
+				heartbeat(1, InstanceStateCrashed),
+				heartbeat(2, InstanceStateStarting),
+				heartbeat(2, InstanceStateCrashed),
+			}
+			Ω(app().HasStartingInstanceAtIndex(0)).Should(BeFalse())
+			Ω(app().HasStartingInstanceAtIndex(1)).Should(BeFalse())
+			Ω(app().HasStartingInstanceAtIndex(2)).Should(BeTrue())
+		})
+	})
+
+	Describe("HasRunningInstanceAtIndex", func() {
+		It("should return true if there are running instances at the passed in index", func() {
+			Ω(app().HasRunningInstanceAtIndex(1)).Should(BeFalse())
+			instanceHeartbeats = []InstanceHeartbeat{
+				heartbeat(0, InstanceStateCrashed),
+				heartbeat(1, InstanceStateRunning),
+				heartbeat(1, InstanceStateCrashed),
+				heartbeat(2, InstanceStateStarting),
+				heartbeat(2, InstanceStateCrashed),
+			}
+			Ω(app().HasRunningInstanceAtIndex(0)).Should(BeFalse())
+			Ω(app().HasRunningInstanceAtIndex(1)).Should(BeTrue())
+			Ω(app().HasRunningInstanceAtIndex(2)).Should(BeFalse())
+		})
+	})
+
+	Describe("EvacuatingInstanceAtIndex", func() {
+		It("should return true if there are evacuating instances at the passed in index", func() {
+			instance, found := app().EvacuatingInstanceAtIndex(1)
+			Ω(found).Should(BeFalse())
+			Ω(instance).Should(BeZero())
+
+			instanceHeartbeats = []InstanceHeartbeat{
+				heartbeat(0, InstanceStateCrashed),
+				heartbeat(1, InstanceStateRunning),
+				heartbeat(1, InstanceStateEvacuating),
+				heartbeat(2, InstanceStateStarting),
+				heartbeat(2, InstanceStateCrashed),
+			}
+			instance, found = app().EvacuatingInstanceAtIndex(0)
+			Ω(found).Should(BeFalse())
+			Ω(instance).Should(BeZero())
+
+			instance, found = app().EvacuatingInstanceAtIndex(1)
+			Ω(found).Should(BeTrue())
+			Ω(instance).Should(Equal(heartbeat(1, InstanceStateEvacuating)))
 		})
 	})
 

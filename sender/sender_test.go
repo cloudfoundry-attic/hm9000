@@ -602,7 +602,7 @@ var _ = Describe("Sender", func() {
 				store.SaveDesiredState(app1.DesiredState(1))
 			})
 
-			Context("When index is still running", func() {
+			Context("When instance is still running", func() {
 				BeforeEach(func() {
 					store.SaveActualState(
 						app1.InstanceAtIndex(0).Heartbeat(),
@@ -628,7 +628,7 @@ var _ = Describe("Sender", func() {
 						assertMessageWasSent(0, true)
 					})
 
-					Context("when there are other, crashed, instances on the index", func() {
+					Context("when there are other, crashed, instances on the index, and no running instances", func() {
 						BeforeEach(func() {
 							store.SaveActualState(
 								app1.CrashedInstanceHeartbeatAtIndex(0),
@@ -652,7 +652,20 @@ var _ = Describe("Sender", func() {
 				})
 			})
 
-			Context("When index is not running", func() {
+			Context("When the instance-to-stop is evacuating", func() {
+				BeforeEach(func() {
+					heartbeat := app1.InstanceAtIndex(0).Heartbeat()
+					heartbeat.State = models.InstanceStateEvacuating
+					store.SaveActualState(
+						heartbeat,
+						app1.InstanceAtIndex(1).Heartbeat(),
+					)
+				})
+
+				assertMessageWasSent(0, true)
+			})
+
+			Context("When instance is not running", func() {
 				assertMessageWasNotSent()
 			})
 		})

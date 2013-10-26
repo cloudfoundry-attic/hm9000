@@ -8,10 +8,11 @@ import (
 type InstanceState string
 
 const (
-	InstanceStateInvalid  InstanceState = ""
-	InstanceStateStarting InstanceState = "STARTING"
-	InstanceStateRunning  InstanceState = "RUNNING"
-	InstanceStateCrashed  InstanceState = "CRASHED"
+	InstanceStateInvalid    InstanceState = ""
+	InstanceStateStarting   InstanceState = "STARTING"
+	InstanceStateRunning    InstanceState = "RUNNING"
+	InstanceStateCrashed    InstanceState = "CRASHED"
+	InstanceStateEvacuating InstanceState = "EVACUATING"
 )
 
 type InstanceHeartbeat struct {
@@ -56,6 +57,10 @@ func (instance InstanceHeartbeat) IsRunning() bool {
 
 func (instance InstanceHeartbeat) IsCrashed() bool {
 	return instance.State == InstanceStateCrashed
+}
+
+func (instance InstanceHeartbeat) IsEvacuating() bool {
+	return instance.State == InstanceStateEvacuating
 }
 
 func (instance InstanceHeartbeat) LogDescription() map[string]string {

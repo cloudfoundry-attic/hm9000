@@ -166,6 +166,13 @@ var _ = Describe("InstanceHeartbeat", func() {
 			Ω(instance.IsCrashed()).Should(BeFalse())
 		})
 
+		It("should return the correct answer to IsEvacuating", func() {
+			instance.State = InstanceStateEvacuating
+			Ω(instance.IsEvacuating()).Should(BeTrue())
+			instance.State = InstanceStateRunning
+			Ω(instance.IsEvacuating()).Should(BeFalse())
+		})
+
 		It("should return the correct answer to IsStartingOrRunning", func() {
 			instance.State = InstanceStateCrashed
 			Ω(instance.IsStartingOrRunning()).Should(BeFalse())

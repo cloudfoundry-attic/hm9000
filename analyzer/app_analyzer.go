@@ -16,8 +16,8 @@ type appAnalyzer struct {
 	currentTime                  time.Time
 	logger                       logger.Logger
 
-	startMessages []models.PendingStartMessage
-	stopMessages  []models.PendingStopMessage
+	startMessages map[string]models.PendingStartMessage
+	stopMessages  map[string]models.PendingStopMessage
 	crashCounts   []models.CrashCount
 }
 
@@ -29,16 +29,17 @@ func newAppAnalyzer(app *models.App, currentTime time.Time, existingPendingStart
 		existingPendingStopMessages:  existingPendingStopMessages,
 		currentTime:                  currentTime,
 		logger:                       logger,
-		startMessages:                make([]models.PendingStartMessage, 0),
-		stopMessages:                 make([]models.PendingStopMessage, 0),
+		startMessages:                make(map[string]models.PendingStartMessage, 0),
+		stopMessages:                 make(map[string]models.PendingStopMessage, 0),
 		crashCounts:                  make([]models.CrashCount, 0),
 	}
 }
 
-func (a *appAnalyzer) analyzeApp() ([]models.PendingStartMessage, []models.PendingStopMessage, []models.CrashCount) {
+func (a *appAnalyzer) analyzeApp() (map[string]models.PendingStartMessage, map[string]models.PendingStopMessage, []models.CrashCount) {
 	priority := a.computePendingStartMessagePriority()
 	a.generatePendingStartsForMissingInstances(priority)
 	a.generatePendingStartsForCrashedInstances(priority)
+	a.generatePendingStartsAndStopsForEvacuatingInstances()
 
 	if len(a.startMessages) == 0 {
 		a.generatePendingStopsForExtraInstances()
@@ -130,11 +131,48 @@ func (a *appAnalyzer) generatePendingStopsForDuplicateInstances() {
 	return
 }
 
+func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
+	heartbeatsByIndex := a.app.HeartbeatsByIndex()
+
+	for index, _ := range heartbeatsByIndex {
+		evacuatingInstance, hasEvacuatingInstance := a.app.EvacuatingInstanceAtIndex(index)
+
+		if hasEvacuatingInstance {
+			stopMessage := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, evacuatingInstance.InstanceGuid)
+			startMessage := models.NewPendingStartMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, index, 2.0)
+
+			if !a.app.IsIndexDesired(index) {
+				a.logger.Info("Identified undesired evacuating instance.", stopMessage.LogDescription())
+				a.appendStopMessageIfNotDuplicate(stopMessage)
+				continue
+			}
+
+			if a.app.HasRunningInstanceAtIndex(index) {
+				a.logger.Info("Stopping an evacuating instance that has started running elsewhere.", stopMessage.LogDescription())
+				a.appendStopMessageIfNotDuplicate(stopMessage)
+				continue
+			}
+
+			if a.app.HasStartingInstanceAtIndex(index) {
+				continue
+			}
+
+			a.logger.Info("An instance is evacuating.  Starting it elsewhere.", startMessage.LogDescription())
+			a.appendStartMessageIfNotDuplicate(startMessage)
+
+			if a.app.CrashCountAtIndex(index, a.currentTime).CrashCount >= a.conf.NumberOfCrashesBeforeBackoffBegins {
+				a.logger.Info("Stopping an unstable evacuating instance.", stopMessage.LogDescription())
+				a.appendStopMessageIfNotDuplicate(stopMessage)
+			}
+		}
+	}
+}
+
 func (a *appAnalyzer) appendStartMessageIfNotDuplicate(message models.PendingStartMessage) (didAppend bool) {
 	_, alreadyQueued := a.existingPendingStartMessages[message.StoreKey()]
 	if !alreadyQueued {
 		a.logger.Info("Enqueuing Start Message", message.LogDescription())
-		a.startMessages = append(a.startMessages, message)
+		a.startMessages[message.StoreKey()] = message
 		return true
 	} else {
 		a.logger.Info("Skipping Already Enqueued Start Message", message.LogDescription())
@@ -146,7 +184,7 @@ func (a *appAnalyzer) appendStopMessageIfNotDuplicate(message models.PendingStop
 	_, alreadyQueued := a.existingPendingStopMessages[message.StoreKey()]
 	if !alreadyQueued {
 		a.logger.Info("Enqueuing Stop Message", message.LogDescription())
-		a.stopMessages = append(a.stopMessages, message)
+		a.stopMessages[message.StoreKey()] = message
 	} else {
 		a.logger.Info("Skipping Already Enqueued Stop Message", message.LogDescription())
 	}

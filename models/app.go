@@ -144,6 +144,46 @@ func (a *App) StartingOrRunningInstancesAtIndex(index int) (instances []Instance
 	return instances
 }
 
+func (a *App) HeartbeatsByIndex() (heartbeatsByIndex map[int][]InstanceHeartbeat) {
+	heartbeatsByIndex = make(map[int][]InstanceHeartbeat)
+
+	for _, heartbeat := range a.InstanceHeartbeats {
+		heartbeatsByIndex[heartbeat.InstanceIndex] = append(heartbeatsByIndex[heartbeat.InstanceIndex], heartbeat)
+	}
+
+	return
+}
+
+func (a *App) EvacuatingInstanceAtIndex(index int) (instance InstanceHeartbeat, found bool) {
+	for _, heartbeat := range a.InstanceHeartbeats {
+		if heartbeat.IsEvacuating() && heartbeat.InstanceIndex == index {
+			return heartbeat, true
+		}
+	}
+
+	return InstanceHeartbeat{}, false
+}
+
+func (a *App) HasRunningInstanceAtIndex(index int) bool {
+	for _, heartbeat := range a.InstanceHeartbeatsAtIndex(index) {
+		if heartbeat.IsRunning() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (a *App) HasStartingInstanceAtIndex(index int) bool {
+	for _, heartbeat := range a.InstanceHeartbeatsAtIndex(index) {
+		if heartbeat.IsStarting() {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (a *App) HasStartingOrRunningInstanceAtIndex(index int) bool {
 	for _, heartbeat := range a.InstanceHeartbeatsAtIndex(index) {
 		if heartbeat.IsStartingOrRunning() {

@@ -250,6 +250,11 @@ func (sender *Sender) verifyStopMessageShouldBeSent(message models.PendingStopMe
 		return true, false, instanceToStop
 	}
 
+	if instanceToStop.State == models.InstanceStateEvacuating {
+		sender.logger.Info("Sending stop message for evacuating app", message.LogDescription(), app.LogDescription())
+		return true, true, instanceToStop
+	}
+
 	if len(app.StartingOrRunningInstancesAtIndex(instanceToStop.InstanceIndex)) > 1 {
 		sender.logger.Info("Sending stop message: instance is a duplicate running at a desired index", message.LogDescription(), app.LogDescription())
 		return true, true, instanceToStop
