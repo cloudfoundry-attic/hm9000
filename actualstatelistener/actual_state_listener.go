@@ -35,8 +35,8 @@ func New(config config.Config,
 
 func (listener *ActualStateListener) Start() {
 	listener.messageBus.Subscribe("dea.advertise", func(message *yagnats.Message) {
-		listener.logger.Info("Received dea.advertise, bumping freshness.")
 		listener.bumpFreshness()
+		listener.logger.Info("Received dea.advertise")
 	})
 
 	listener.messageBus.Subscribe("dea.heartbeat", func(message *yagnats.Message) {
@@ -57,8 +57,8 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 		listener.logger.Info("Saved the heartbeat")
-		listener.logger.Info("Received dea.heartbeat, bumping freshness.")
 		listener.bumpFreshness()
+		listener.logger.Info("Received dea.heartbeat")
 	})
 }
 

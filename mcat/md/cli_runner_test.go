@@ -1,26 +1,26 @@
 package md_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/onsi/gomega"
+	"github.com/vito/cmdtest"
+	. "github.com/vito/cmdtest/matchers"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"time"
 )
 
 type CLIRunner struct {
-	configPath           string
-	listenerCmd          *exec.Cmd
-	listenerStdoutBuffer *bytes.Buffer
-	metricsServerCmd     *exec.Cmd
-	apiServerCmd         *exec.Cmd
-	evacuatorCmd         *exec.Cmd
+	configPath       string
+	listenerCmd      *exec.Cmd
+	listenerSession  *cmdtest.Session
+	metricsServerCmd *exec.Cmd
+	apiServerCmd     *exec.Cmd
+	evacuatorCmd     *exec.Cmd
 
 	verbose bool
 }
@@ -57,7 +57,7 @@ func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, cc
 }
 
 func (runner *CLIRunner) StartListener(timestamp int) {
-	runner.listenerCmd, runner.listenerStdoutBuffer = runner.start("listen", timestamp)
+	runner.listenerCmd, runner.listenerSession = runner.start("listen", timestamp)
 }
 
 func (runner *CLIRunner) StopListener() {
@@ -92,25 +92,25 @@ func (runner *CLIRunner) Cleanup() {
 	os.Remove(runner.configPath)
 }
 
-func (runner *CLIRunner) start(command string, timestamp int) (*exec.Cmd, *bytes.Buffer) {
+func (runner *CLIRunner) start(command string, timestamp int) (*exec.Cmd, *cmdtest.Session) {
 	cmd := exec.Command("hm9000", command, fmt.Sprintf("--config=%s", runner.configPath))
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
-	buffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = buffer
-	cmd.Start()
-	Eventually(func() int {
-		return buffer.Len()
-	}, 5.0).ShouldNot(BeZero())
 
-	return cmd, buffer
+	session, err := cmdtest.Start(cmd)
+	Ω(err).ShouldNot(HaveOccured())
+
+	Ω(session).Should(SayWithTimeout(".", 5*time.Second))
+
+	return cmd, session
 }
 
 func (runner *CLIRunner) WaitForHeartbeats(num int) {
-	Eventually(func() int {
-		var validHeartbeat = regexp.MustCompile(`Received dea.heartbeat`)
-		heartbeats := validHeartbeat.FindAll(runner.listenerStdoutBuffer.Bytes(), -1)
-		return len(heartbeats)
-	}, 5.0).Should(BeNumerically("==", num))
+	for i := 0; i < num; i++ {
+		receivedHeartbeat := Ω(runner.listenerSession).Should(SayWithTimeout("Received dea.heartbeat", 5*time.Second), "Failed to see heartbeat %d of %d", i, num)
+		if !receivedHeartbeat {
+			break
+		}
+	}
 }
 
 func (runner *CLIRunner) Run(command string, timestamp int) {
