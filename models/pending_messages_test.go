@@ -131,6 +131,21 @@ var _ = Describe("Pending Messages", func() {
 				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
 			})
 		})
+
+		Describe("Sorting start messages", func() {
+			It("should sort the passed in hash in order of decreasing priority", func() {
+				startMessages := make(map[string]PendingStartMessage)
+				startMessages["A"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.7)
+				startMessages["B"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.5)
+				startMessages["C"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 1.0)
+
+				sortedStartMessage := SortStartMessagesByPriority(startMessages)
+				Ω(sortedStartMessage).Should(HaveLen(3))
+				Ω(sortedStartMessage[0].Priority).Should(Equal(1.0))
+				Ω(sortedStartMessage[1].Priority).Should(Equal(0.7))
+				Ω(sortedStartMessage[2].Priority).Should(Equal(0.5))
+			})
+		})
 	})
 
 	Describe("Stop Message", func() {

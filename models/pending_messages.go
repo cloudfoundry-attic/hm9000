@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -84,6 +85,25 @@ func NewPendingStartMessageFromJSON(encoded []byte) (PendingStartMessage, error)
 		return PendingStartMessage{}, err
 	}
 	return message, nil
+}
+
+type sortablePendingStartMessagesByPriority []PendingStartMessage
+
+func (s sortablePendingStartMessagesByPriority) Len() int      { return len(s) }
+func (s sortablePendingStartMessagesByPriority) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s sortablePendingStartMessagesByPriority) Less(i, j int) bool {
+	return s[i].Priority < s[j].Priority
+}
+
+func SortStartMessagesByPriority(messages map[string]PendingStartMessage) []PendingStartMessage {
+	sortedStartMessages := make(sortablePendingStartMessagesByPriority, len(messages))
+	i := 0
+	for _, message := range messages {
+		sortedStartMessages[i] = message
+		i++
+	}
+	sort.Sort(sort.Reverse(sortedStartMessages))
+	return sortedStartMessages
 }
 
 func (message PendingStartMessage) StoreKey() string {

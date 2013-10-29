@@ -178,7 +178,7 @@ var _ = Describe("Sender", func() {
 					})
 
 					It("should return an error", func() {
-						Ω(err).Should(Equal(errors.New("oops")))
+						Ω(err).Should(HaveOccured())
 					})
 				})
 			})
@@ -199,7 +199,7 @@ var _ = Describe("Sender", func() {
 					})
 
 					It("should return an error", func() {
-						Ω(err).Should(Equal(errors.New("oops")))
+						Ω(err).Should(HaveOccured())
 					})
 				})
 			})
@@ -210,7 +210,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should return an error", func() {
-					Ω(err).Should(Equal(errors.New("oops")))
+					Ω(err).Should(HaveOccured())
 				})
 			})
 		})
@@ -241,7 +241,6 @@ var _ = Describe("Sender", func() {
 				It("should neither delete the message nor send it", func() {
 					messages, _ := store.GetPendingStartMessages()
 					Ω(messages).Should(HaveLen(1))
-
 					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
 				})
 			})
@@ -338,7 +337,7 @@ var _ = Describe("Sender", func() {
 					})
 
 					It("should return an error", func() {
-						Ω(err).Should(Equal(errors.New("oops")))
+						Ω(err).Should(HaveOccured())
 					})
 				})
 			})
@@ -359,7 +358,7 @@ var _ = Describe("Sender", func() {
 					})
 
 					It("should return an error", func() {
-						Ω(err).Should(Equal(errors.New("oops")))
+						Ω(err).Should(HaveOccured())
 					})
 				})
 			})
@@ -370,7 +369,7 @@ var _ = Describe("Sender", func() {
 				})
 
 				It("should return an error", func() {
-					Ω(err).Should(Equal(errors.New("oops")))
+					Ω(err).Should(HaveOccured())
 				})
 			})
 		})
