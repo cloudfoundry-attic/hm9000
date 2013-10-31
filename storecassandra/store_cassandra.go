@@ -363,6 +363,10 @@ func (s *StoreCassandra) GetActualState() (map[string]models.InstanceHeartbeat, 
 	return result, err
 }
 
+func (s *StoreCassandra) TruncateActualState() error {
+	return s.session.Query(`TRUNCATE ActualStates`).Exec()
+}
+
 func (s *StoreCassandra) SaveCrashCounts(crashCounts ...models.CrashCount) error {
 	for _, crashCount := range crashCounts {
 		err := s.session.Query(`INSERT INTO CrashCounts (app_guid, app_version, instance_index, crash_count, created_at, expires) VALUES (?, ?, ?, ?, ?, ?)`,
