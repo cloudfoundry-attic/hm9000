@@ -3,6 +3,8 @@ package storerunner
 import (
 	"fmt"
 	. "github.com/onsi/gomega"
+	"io"
+	"os"
 	"os/exec"
 	"tux21b.org/v1/gocql"
 )
@@ -20,6 +22,13 @@ func NewCassandraClusterRunner(port int) *CassandraClusterRunner {
 
 func (c *CassandraClusterRunner) Start() {
 	c.cassandraCommand = exec.Command("cassandra", "-f")
+
+	stdout, _ := c.cassandraCommand.StdoutPipe()
+	stderr, _ := c.cassandraCommand.StderrPipe()
+
+	go io.Copy(os.Stdout, stdout)
+	go io.Copy(os.Stderr, stderr)
+
 	err := c.cassandraCommand.Start()
 	Ω(err).ShouldNot(HaveOccured())
 
