@@ -62,7 +62,8 @@ func (runner *CLIRunner) StartListener(timestamp int) {
 }
 
 func (runner *CLIRunner) StopListener() {
-	runner.listenerCmd.Process.Kill()
+	runner.listenerCmd.Process.Signal(os.Interrupt)
+	runner.listenerCmd.Wait()
 }
 
 func (runner *CLIRunner) StartMetricsServer(timestamp int) {
@@ -70,7 +71,8 @@ func (runner *CLIRunner) StartMetricsServer(timestamp int) {
 }
 
 func (runner *CLIRunner) StopMetricsServer() {
-	runner.metricsServerCmd.Process.Kill()
+	runner.metricsServerCmd.Process.Signal(os.Interrupt)
+	runner.metricsServerCmd.Wait()
 }
 
 func (runner *CLIRunner) StartAPIServer(timestamp int) {
@@ -78,7 +80,8 @@ func (runner *CLIRunner) StartAPIServer(timestamp int) {
 }
 
 func (runner *CLIRunner) StopAPIServer() {
-	runner.apiServerCmd.Process.Kill()
+	runner.apiServerCmd.Process.Signal(os.Interrupt)
+	runner.apiServerCmd.Wait()
 }
 
 func (runner *CLIRunner) StartEvacuator(timestamp int) {
@@ -86,7 +89,8 @@ func (runner *CLIRunner) StartEvacuator(timestamp int) {
 }
 
 func (runner *CLIRunner) StopEvacuator() {
-	runner.evacuatorCmd.Process.Kill()
+	runner.evacuatorCmd.Process.Signal(os.Interrupt)
+	runner.evacuatorCmd.Process.Wait()
 }
 
 func (runner *CLIRunner) Cleanup() {

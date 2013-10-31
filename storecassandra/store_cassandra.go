@@ -15,14 +15,13 @@ type StoreCassandra struct {
 	timeProvider timeprovider.TimeProvider
 }
 
-func New(conf config.Config, timeProvider timeprovider.TimeProvider) (*StoreCassandra, error) {
+func New(clusterURLs []string, conf config.Config, timeProvider timeprovider.TimeProvider) (*StoreCassandra, error) {
 	s := &StoreCassandra{
 		conf:         conf,
 		timeProvider: timeProvider,
 	}
 
-	cluster := gocql.NewCluster("127.0.0.1")
-	cluster.DefaultPort = 9042
+	cluster := gocql.NewCluster(clusterURLs...)
 	cluster.Consistency = gocql.One
 	cluster.NumConns = 1
 	cluster.NumStreams = 1

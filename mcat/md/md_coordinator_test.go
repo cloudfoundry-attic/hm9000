@@ -101,6 +101,15 @@ func (coordinator *MDCoordinator) StartETCD() {
 	Ω(err).ShouldNot(HaveOccured())
 }
 
+func (coordinator *MDCoordinator) StartCassandra() {
+	coordinator.CurrentStoreType = "Cassandra"
+	cassandraPort := 9042
+	coordinator.StoreRunner = storerunner.NewCassandraClusterRunner(cassandraPort)
+	coordinator.StoreRunner.Start()
+
+	coordinator.StoreAdapter = nil
+}
+
 func (coordinator *MDCoordinator) StartZooKeeper() {
 	coordinator.CurrentStoreType = "ZooKeeper"
 	zookeeperPort := 2181 + (coordinator.ParallelNode-1)*10
@@ -114,7 +123,9 @@ func (coordinator *MDCoordinator) StartZooKeeper() {
 
 func (coordinator *MDCoordinator) StopStore() {
 	coordinator.StoreRunner.Stop()
-	coordinator.StoreAdapter.Disconnect()
+	if coordinator.StoreAdapter != nil {
+		coordinator.StoreAdapter.Disconnect()
+	}
 }
 
 func (coordinator *MDCoordinator) StopAllExternalProcesses() {

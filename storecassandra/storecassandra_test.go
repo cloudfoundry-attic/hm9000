@@ -11,20 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
-	"tux21b.org/v1/gocql"
 )
-
-//this should move to a store runner eventually
-func ResetCassandra() {
-	cluster := gocql.NewCluster("127.0.0.1")
-	cluster.DefaultPort = 9042
-	cluster.Consistency = gocql.One
-	session, err := cluster.CreateSession()
-	Ω(err).ShouldNot(HaveOccured())
-	defer session.Close()
-	err = session.Query(`DROP KEYSPACE IF EXISTS hm9000`).Exec()
-	Ω(err).ShouldNot(HaveOccured())
-}
 
 var _ = Describe("Storecassandra", func() {
 	var store *StoreCassandra
@@ -44,14 +31,12 @@ var _ = Describe("Storecassandra", func() {
 	conf, _ := config.DefaultConfig()
 
 	BeforeEach(func() {
-		ResetCassandra()
-
 		timeProvider = &faketimeprovider.FakeTimeProvider{
 			TimeToProvide: time.Unix(100, 0),
 		}
 
 		var err error
-		store, err = New(conf, timeProvider)
+		store, err = New(cassandraRunner.NodeURLS(), conf, timeProvider)
 		Ω(err).ShouldNot(HaveOccured())
 
 		app1 = appfixture.NewAppFixture()

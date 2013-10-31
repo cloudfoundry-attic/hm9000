@@ -5,7 +5,6 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/yagnats"
 
 	"os"
@@ -13,19 +12,19 @@ import (
 
 func Send(l logger.Logger, conf config.Config, poll bool) {
 	messageBus := connectToMessageBus(l, conf)
-	etcdStoreAdapter := connectToStoreAdapter(l, conf)
+	store := connectToStore(l, conf)
 
 	if poll {
 		l.Info("Starting Sender Daemon...")
 		err := Daemonize("Sender", func() error {
-			return send(l, conf, messageBus, etcdStoreAdapter)
+			return send(l, conf, messageBus, store)
 		}, conf.SenderPollingInterval(), conf.SenderTimeout(), l)
 		if err != nil {
 			l.Error("Sender Daemon Errored", err)
 		}
 		l.Info("Sender Daemon is Down")
 	} else {
-		err := send(l, conf, messageBus, etcdStoreAdapter)
+		err := send(l, conf, messageBus, store)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -34,8 +33,7 @@ func Send(l logger.Logger, conf config.Config, poll bool) {
 	}
 }
 
-func send(l logger.Logger, conf config.Config, messageBus yagnats.NATSClient, etcdStoreAdapter storeadapter.StoreAdapter) error {
-	store := store.NewStore(conf, etcdStoreAdapter, l)
+func send(l logger.Logger, conf config.Config, messageBus yagnats.NATSClient, store store.Store) error {
 	l.Info("Sending...")
 
 	sender := sender.New(store, conf, messageBus, buildTimeProvider(l), l)

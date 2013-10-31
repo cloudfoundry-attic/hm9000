@@ -142,6 +142,11 @@ func dumpApp(app *models.App, starts map[string]models.PendingStartMessage, stop
 }
 
 func dumpRaw(l logger.Logger, conf config.Config) {
+	if conf.StoreType == "Cassandra" {
+		fmt.Printf("Cannot perform a raw dump for Cassandra")
+		os.Exit(1)
+	}
+
 	storeAdapter := connectToStoreAdapter(l, conf)
 	fmt.Printf("Raw Dump - Current timestamp %d\n", time.Now().Unix())
 
@@ -172,6 +177,11 @@ func dumpRaw(l logger.Logger, conf config.Config) {
 }
 
 func Clear(l logger.Logger, conf config.Config) {
+	if conf.StoreType == "Cassandra" {
+		fmt.Printf("Cannot clear Cassandra")
+		os.Exit(1)
+	}
+
 	storeAdapter := connectToStoreAdapter(l, conf)
 	l.Info(fmt.Sprintf("Clear - Current timestamp %d\n", time.Now().Unix()))
 

@@ -1,4 +1,4 @@
-package md_test
+package desiredstatefetcher_test
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
@@ -9,37 +9,39 @@ import (
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Fetching from CC and storing the result in the Store", func() {
 	var (
-		fetcher    *desiredstatefetcher.DesiredStateFetcher
-		a1         appfixture.AppFixture
-		a2         appfixture.AppFixture
-		a3         appfixture.AppFixture
-		store      storepackage.Store
-		resultChan chan desiredstatefetcher.DesiredStateFetcherResult
-		conf       config.Config
+		fetcher      *desiredstatefetcher.DesiredStateFetcher
+		a1           appfixture.AppFixture
+		a2           appfixture.AppFixture
+		a3           appfixture.AppFixture
+		store        storepackage.Store
+		resultChan   chan desiredstatefetcher.DesiredStateFetcherResult
+		conf         config.Config
+		storeAdapter *fakestoreadapter.FakeStoreAdapter
 	)
 
 	BeforeEach(func() {
+		storeAdapter = fakestoreadapter.New()
 		resultChan = make(chan desiredstatefetcher.DesiredStateFetcherResult, 1)
 		a1 = appfixture.NewAppFixture()
 		a2 = appfixture.NewAppFixture()
 		a3 = appfixture.NewAppFixture()
 
-		coordinator.StateServer.SetDesiredState([]models.DesiredAppState{
+		stateServer.SetDesiredState([]models.DesiredAppState{
 			a1.DesiredState(1),
 			a2.DesiredState(1),
 			a3.DesiredState(1),
 		})
 
-		conf = coordinator.Conf
-		conf.CCBaseURL = coordinator.DesiredStateServerBaseUrl
+		conf, _ = config.DefaultConfig()
 
-		store = storepackage.NewStore(conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
+		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
 		fetcher = desiredstatefetcher.New(conf, store, httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{})
 		fetcher.Fetch(resultChan)
@@ -60,7 +62,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 
 	It("bumps the freshness", func() {
 		Eventually(func() error {
-			_, err := coordinator.StoreAdapter.Get(conf.DesiredFreshnessKey)
+			_, err := storeAdapter.Get(conf.DesiredFreshnessKey)
 			return err
 		}, 1, 0.1).ShouldNot(HaveOccured())
 	})
@@ -80,7 +82,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			desired1 := a1.DesiredState(1)
 			desired1.State = models.AppStateStopped
 
-			coordinator.StateServer.SetDesiredState([]models.DesiredAppState{
+			stateServer.SetDesiredState([]models.DesiredAppState{
 				desired1,
 				a3.DesiredState(1),
 			})

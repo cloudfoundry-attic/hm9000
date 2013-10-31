@@ -9,6 +9,10 @@ import (
 )
 
 func Shred(l logger.Logger, conf config.Config, poll bool) {
+	if conf.StoreType == "Cassandra" {
+		l.Info("No Shredder neccessary for Cassandra")
+		select {}
+	}
 	adapter := connectToStoreAdapter(l, conf)
 
 	if poll {

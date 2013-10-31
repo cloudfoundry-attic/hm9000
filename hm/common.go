@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/storecassandra"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"github.com/cloudfoundry/yagnats"
 	"strconv"
@@ -88,6 +89,20 @@ func connectToStoreAdapter(l logger.Logger, conf config.Config) (adapter storead
 }
 
 func connectToStore(l logger.Logger, conf config.Config) store.Store {
-	etcdStoreAdapter := connectToStoreAdapter(l, conf)
-	return store.NewStore(conf, etcdStoreAdapter, l)
+	if conf.StoreType == "etcd" || conf.StoreType == "ZooKeeper" {
+		adapter := connectToStoreAdapter(l, conf)
+		return store.NewStore(conf, adapter, l)
+	} else if conf.StoreType == "Cassandra" {
+		store, err := storecassandra.New(conf.StoreURLs, conf, buildTimeProvider(l))
+		if err != nil {
+			l.Error("Failed to connect to the store", err)
+			os.Exit(1)
+		}
+		return store
+	} else {
+		l.Info(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd', 'ZooKeeper' or 'Cassandra'", conf.StoreType))
+		os.Exit(1)
+	}
+
+	return nil
 }
