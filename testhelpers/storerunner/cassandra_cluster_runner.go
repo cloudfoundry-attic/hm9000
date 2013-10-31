@@ -26,6 +26,9 @@ func (c *CassandraClusterRunner) Start() {
 	cluster := gocql.NewCluster("127.0.0.1")
 	cluster.DefaultPort = c.port
 	cluster.Consistency = gocql.One
+	cluster.NumConns = 1
+	cluster.NumStreams = 1
+
 	session, err := cluster.CreateSession()
 	defer session.Close()
 
@@ -53,9 +56,23 @@ func (c *CassandraClusterRunner) Reset() {
 	cluster := gocql.NewCluster(c.NodeURLS()...)
 	cluster.DefaultPort = c.port
 	cluster.Consistency = gocql.One
+	cluster.NumConns = 1
+	cluster.NumStreams = 1
 	session, err := cluster.CreateSession()
 	Ω(err).ShouldNot(HaveOccured())
 	defer session.Close()
-	err = session.Query(`DROP KEYSPACE IF EXISTS hm9000`).Exec()
+
+	iter := session.Query(`select keyspace_name, columnfamily_name from system.schema_columnfamilies`).Iter()
+
+	var keyspaceName, columnfamilyName string
+
+	for iter.Scan(&keyspaceName, &columnfamilyName) {
+		if keyspaceName == "hm9000" {
+			err = session.Query(fmt.Sprintf(`TRUNCATE hm9000.%s`, columnfamilyName)).Exec()
+			Ω(err).ShouldNot(HaveOccured())
+		}
+	}
+	err = iter.Close()
+
 	Ω(err).ShouldNot(HaveOccured())
 }
