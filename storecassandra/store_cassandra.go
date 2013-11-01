@@ -25,6 +25,7 @@ func New(clusterURLs []string, consistency gocql.Consistency, conf config.Config
 
 	cluster := gocql.NewCluster(clusterURLs...)
 	cluster.Consistency = s.consistency
+	cluster.Timeout = 5 * time.Second
 	var err error
 
 	s.session, err = cluster.CreateSession()
@@ -83,7 +84,7 @@ func New(clusterURLs []string, consistency gocql.Consistency, conf config.Config
 }
 
 func (s *StoreCassandra) newBatch() *gocql.Batch {
-	batch := gocql.NewBatch(gocql.UnloggedBatch)
+	batch := gocql.NewBatch(gocql.LoggedBatch)
 	batch.Cons = s.consistency
 	return batch
 }
