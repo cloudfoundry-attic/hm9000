@@ -13,18 +13,18 @@ type StoreCassandra struct {
 	session      *gocql.Session
 	conf         config.Config
 	timeProvider timeprovider.TimeProvider
+	consistency  gocql.Consistency
 }
 
-func New(clusterURLs []string, conf config.Config, timeProvider timeprovider.TimeProvider) (*StoreCassandra, error) {
+func New(clusterURLs []string, consistency gocql.Consistency, conf config.Config, timeProvider timeprovider.TimeProvider) (*StoreCassandra, error) {
 	s := &StoreCassandra{
 		conf:         conf,
 		timeProvider: timeProvider,
+		consistency:  consistency,
 	}
 
 	cluster := gocql.NewCluster(clusterURLs...)
-	cluster.Consistency = gocql.One
-	cluster.NumConns = 1
-	cluster.NumStreams = 1
+	cluster.Consistency = s.consistency
 	var err error
 
 	s.session, err = cluster.CreateSession()
@@ -80,6 +80,12 @@ func New(clusterURLs []string, conf config.Config, timeProvider timeprovider.Tim
 	}
 
 	return s, err
+}
+
+func (s *StoreCassandra) newBatch() *gocql.Batch {
+	batch := gocql.NewBatch(gocql.UnloggedBatch)
+	batch.Cons = s.consistency
+	return batch
 }
 
 func (s *StoreCassandra) AppKey(appGuid string, appVersion string) string {
@@ -245,14 +251,13 @@ func (s *StoreCassandra) getCrashCountsForApp(appGuid string, appVersion string)
 }
 
 func (s *StoreCassandra) SaveDesiredState(desiredStates ...models.DesiredAppState) error {
+	batch := s.newBatch()
+
 	for _, state := range desiredStates {
-		err := s.session.Query(`INSERT INTO DesiredStates (app_guid, app_version, number_of_instances, memory, state, package_state, updated_at, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, state.AppGuid, state.AppVersion, state.NumberOfInstances, state.Memory, state.State, state.PackageState, int64(state.UpdatedAt.Unix()), s.timeProvider.Time().Unix()+int64(s.conf.DesiredStateTTL())).Exec()
-		if err != nil {
-			return err
-		}
+		batch.Query(`INSERT INTO DesiredStates (app_guid, app_version, number_of_instances, memory, state, package_state, updated_at, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, state.AppGuid, state.AppVersion, state.NumberOfInstances, state.Memory, state.State, state.PackageState, int64(state.UpdatedAt.Unix()), s.timeProvider.Time().Unix()+int64(s.conf.DesiredStateTTL()))
 	}
 
-	return nil
+	return s.session.ExecuteBatch(batch)
 }
 
 func (s *StoreCassandra) GetDesiredState() (map[string]models.DesiredAppState, error) {
@@ -267,12 +272,11 @@ func (s *StoreCassandra) GetDesiredState() (map[string]models.DesiredAppState, e
 
 	currentTime := s.timeProvider.Time().Unix()
 
+	batch := s.newBatch()
+
 	for iter.Scan(&appGuid, &appVersion, &numberOfInstances, &memory, &state, &packageState, &updatedAt, &expires) {
 		if expires <= currentTime {
-			err = s.deleteDesiredState(appGuid, appVersion)
-			if err != nil {
-				return result, err
-			}
+			s.deleteDesiredState(appGuid, appVersion, batch)
 		} else {
 			desiredState := models.DesiredAppState{
 				AppGuid:           appGuid,
@@ -289,27 +293,33 @@ func (s *StoreCassandra) GetDesiredState() (map[string]models.DesiredAppState, e
 
 	err = iter.Close()
 
+	if err != nil {
+		return result, err
+	}
+
+	err = s.session.ExecuteBatch(batch)
 	return result, err
 }
 
-func (s *StoreCassandra) deleteDesiredState(appGuid string, appVersion string) error {
-	return s.session.Query(`DELETE FROM DesiredStates WHERE app_guid=? AND app_version=?`, appGuid, appVersion).Exec()
+func (s *StoreCassandra) deleteDesiredState(appGuid string, appVersion string, batch *gocql.Batch) {
+	batch.Query(`DELETE FROM DesiredStates WHERE app_guid=? AND app_version=?`, appGuid, appVersion)
 }
 
 func (s *StoreCassandra) DeleteDesiredState(desiredStates ...models.DesiredAppState) error {
+	batch := s.newBatch()
+
 	for _, state := range desiredStates {
-		err := s.deleteDesiredState(state.AppGuid, state.AppVersion)
-		if err != nil {
-			return err
-		}
+		s.deleteDesiredState(state.AppGuid, state.AppVersion, batch)
 	}
 
-	return nil
+	return s.session.ExecuteBatch(batch)
 }
 
 func (s *StoreCassandra) SaveActualState(actualStates ...models.InstanceHeartbeat) error {
+	batch := s.newBatch()
+
 	for _, state := range actualStates {
-		err := s.session.Query(`INSERT INTO ActualStates (app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		batch.Query(`INSERT INTO ActualStates (app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			state.AppGuid,
 			state.AppVersion,
 			state.InstanceGuid,
@@ -317,13 +327,10 @@ func (s *StoreCassandra) SaveActualState(actualStates ...models.InstanceHeartbea
 			state.State,
 			int64(state.StateTimestamp),
 			state.CCPartition,
-			s.timeProvider.Time().Unix()+int64(s.conf.HeartbeatTTL())).Exec()
-		if err != nil {
-			return err
-		}
+			s.timeProvider.Time().Unix()+int64(s.conf.HeartbeatTTL()))
 	}
 
-	return nil
+	return s.session.ExecuteBatch(batch)
 }
 
 func (s *StoreCassandra) GetActualState() (map[string]models.InstanceHeartbeat, error) {
@@ -338,12 +345,11 @@ func (s *StoreCassandra) GetActualState() (map[string]models.InstanceHeartbeat, 
 
 	currentTime := s.timeProvider.Time().Unix()
 
+	batch := s.newBatch()
+
 	for iter.Scan(&appGuid, &appVersion, &instanceGuid, &instanceIndex, &state, &stateTimestamp, &ccPartition, &expires) {
 		if expires <= currentTime {
-			err := s.session.Query(`DELETE FROM ActualStates WHERE app_guid=? AND app_version=? AND instance_guid = ?`, appGuid, appVersion, instanceGuid).Exec()
-			if err != nil {
-				return result, err
-			}
+			batch.Query(`DELETE FROM ActualStates WHERE app_guid=? AND app_version=? AND instance_guid = ?`, appGuid, appVersion, instanceGuid)
 		} else {
 			actualState := models.InstanceHeartbeat{
 				CCPartition:    ccPartition,
@@ -360,6 +366,12 @@ func (s *StoreCassandra) GetActualState() (map[string]models.InstanceHeartbeat, 
 
 	err = iter.Close()
 
+	if err != nil {
+		return result, err
+	}
+
+	err = s.session.ExecuteBatch(batch)
+
 	return result, err
 }
 
@@ -368,20 +380,19 @@ func (s *StoreCassandra) TruncateActualState() error {
 }
 
 func (s *StoreCassandra) SaveCrashCounts(crashCounts ...models.CrashCount) error {
+	batch := s.newBatch()
+
 	for _, crashCount := range crashCounts {
-		err := s.session.Query(`INSERT INTO CrashCounts (app_guid, app_version, instance_index, crash_count, created_at, expires) VALUES (?, ?, ?, ?, ?, ?)`,
+		batch.Query(`INSERT INTO CrashCounts (app_guid, app_version, instance_index, crash_count, created_at, expires) VALUES (?, ?, ?, ?, ?, ?)`,
 			crashCount.AppGuid,
 			crashCount.AppVersion,
 			int32(crashCount.InstanceIndex),
 			int32(crashCount.CrashCount),
 			crashCount.CreatedAt,
-			s.timeProvider.Time().Unix()+int64(s.conf.MaximumBackoffDelay().Seconds()*2)).Exec()
-		if err != nil {
-			return err
-		}
+			s.timeProvider.Time().Unix()+int64(s.conf.MaximumBackoffDelay().Seconds()*2))
 	}
 
-	return nil
+	return s.session.ExecuteBatch(batch)
 }
 
 func (s *StoreCassandra) GetCrashCounts() (map[string]models.CrashCount, error) {
@@ -396,12 +407,11 @@ func (s *StoreCassandra) GetCrashCounts() (map[string]models.CrashCount, error) 
 
 	currentTime := s.timeProvider.Time().Unix()
 
+	batch := s.newBatch()
+
 	for iter.Scan(&appGuid, &appVersion, &instanceIndex, &crashCount, &createdAt, &expires) {
 		if expires <= currentTime {
-			err := s.session.Query(`DELETE FROM CrashCounts WHERE app_guid=? AND app_version=? AND instance_index = ?`, appGuid, appVersion, instanceIndex).Exec()
-			if err != nil {
-				return result, err
-			}
+			batch.Query(`DELETE FROM CrashCounts WHERE app_guid=? AND app_version=? AND instance_index = ?`, appGuid, appVersion, instanceIndex)
 		} else {
 			crashCount := models.CrashCount{
 				AppGuid:       appGuid,
@@ -416,12 +426,19 @@ func (s *StoreCassandra) GetCrashCounts() (map[string]models.CrashCount, error) 
 
 	err = iter.Close()
 
+	if err != nil {
+		return result, err
+	}
+
+	err = s.session.ExecuteBatch(batch)
+
 	return result, err
 }
 
 func (s *StoreCassandra) SavePendingStartMessages(startMessages ...models.PendingStartMessage) error {
+	batch := s.newBatch()
 	for _, startMessage := range startMessages {
-		err := s.session.Query(`INSERT INTO PendingStartMessages (app_guid, app_version, message_id, send_on, sent_on, keep_alive, index_to_start, priority, skip_verification) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		batch.Query(`INSERT INTO PendingStartMessages (app_guid, app_version, message_id, send_on, sent_on, keep_alive, index_to_start, priority, skip_verification) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			startMessage.AppGuid,
 			startMessage.AppVersion,
 			startMessage.MessageId,
@@ -430,14 +447,10 @@ func (s *StoreCassandra) SavePendingStartMessages(startMessages ...models.Pendin
 			startMessage.KeepAlive,
 			startMessage.IndexToStart,
 			startMessage.Priority,
-			startMessage.SkipVerification).Exec()
-		if err != nil {
-			return err
-		}
-
+			startMessage.SkipVerification)
 	}
 
-	return nil
+	return s.session.ExecuteBatch(batch)
 }
 
 func (s *StoreCassandra) GetPendingStartMessages() (map[string]models.PendingStartMessage, error) {
@@ -475,33 +488,29 @@ func (s *StoreCassandra) GetPendingStartMessages() (map[string]models.PendingSta
 }
 
 func (s *StoreCassandra) DeletePendingStartMessages(startMessages ...models.PendingStartMessage) error {
+	batch := s.newBatch()
 	for _, startMessage := range startMessages {
-		err := s.session.Query(`DELETE FROM PendingStartMessages WHERE app_guid=? AND app_version=? AND index_to_start=?`, startMessage.AppGuid, startMessage.AppVersion, startMessage.IndexToStart).Exec()
-		if err != nil {
-			return err
-		}
+		batch.Query(`DELETE FROM PendingStartMessages WHERE app_guid=? AND app_version=? AND index_to_start=?`, startMessage.AppGuid, startMessage.AppVersion, startMessage.IndexToStart)
 	}
 
-	return nil
+	return s.session.ExecuteBatch(batch)
 }
 
 func (s *StoreCassandra) SavePendingStopMessages(stopMessages ...models.PendingStopMessage) error {
+	batch := s.newBatch()
 	for _, stopMessage := range stopMessages {
-		err := s.session.Query(`INSERT INTO PendingStopMessages (app_guid, app_version, message_id, send_on, sent_on, keep_alive, instance_guid) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		batch.Query(`INSERT INTO PendingStopMessages (app_guid, app_version, message_id, send_on, sent_on, keep_alive, instance_guid) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			stopMessage.AppGuid,
 			stopMessage.AppVersion,
 			stopMessage.MessageId,
 			stopMessage.SendOn,
 			stopMessage.SentOn,
 			stopMessage.KeepAlive,
-			stopMessage.InstanceGuid).Exec()
-		if err != nil {
-			return err
-		}
+			stopMessage.InstanceGuid)
 
 	}
 
-	return nil
+	return s.session.ExecuteBatch(batch)
 }
 
 func (s *StoreCassandra) GetPendingStopMessages() (map[string]models.PendingStopMessage, error) {
@@ -535,17 +544,15 @@ func (s *StoreCassandra) GetPendingStopMessages() (map[string]models.PendingStop
 }
 
 func (s *StoreCassandra) DeletePendingStopMessages(stopMessages ...models.PendingStopMessage) error {
+	batch := s.newBatch()
 	for _, stopMessage := range stopMessages {
-		err := s.session.Query(`DELETE FROM PendingStopMessages WHERE app_guid=? AND app_version=? AND instance_guid=?`,
+		batch.Query(`DELETE FROM PendingStopMessages WHERE app_guid=? AND app_version=? AND instance_guid=?`,
 			stopMessage.AppGuid,
 			stopMessage.AppVersion,
-			stopMessage.InstanceGuid).Exec()
-		if err != nil {
-			return err
-		}
+			stopMessage.InstanceGuid)
 	}
 
-	return nil
+	return s.session.ExecuteBatch(batch)
 }
 
 func (s *StoreCassandra) BumpDesiredFreshness(timestamp time.Time) error {

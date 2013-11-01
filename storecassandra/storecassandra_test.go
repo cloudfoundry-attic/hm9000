@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
+	"tux21b.org/v1/gocql"
 )
 
 var _ = Describe("Storecassandra", func() {
@@ -36,7 +37,7 @@ var _ = Describe("Storecassandra", func() {
 		}
 
 		var err error
-		store, err = New(cassandraRunner.NodeURLS(), conf, timeProvider)
+		store, err = New(cassandraRunner.NodeURLS(), gocql.One, conf, timeProvider)
 		Ω(err).ShouldNot(HaveOccured())
 
 		app1 = appfixture.NewAppFixture()

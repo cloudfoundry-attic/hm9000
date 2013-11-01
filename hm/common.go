@@ -93,7 +93,7 @@ func connectToStore(l logger.Logger, conf config.Config) store.Store {
 		adapter := connectToStoreAdapter(l, conf)
 		return store.NewStore(conf, adapter, l)
 	} else if conf.StoreType == "Cassandra" {
-		store, err := storecassandra.New(conf.StoreURLs, conf, buildTimeProvider(l))
+		store, err := storecassandra.New(conf.StoreURLs, conf.CassandraConsistency(), conf, buildTimeProvider(l))
 		if err != nil {
 			l.Error("Failed to connect to the store", err)
 			os.Exit(1)

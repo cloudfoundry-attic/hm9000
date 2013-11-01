@@ -1,8 +1,12 @@
 package phd_aws
 
 import (
+	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
+	"github.com/cloudfoundry/hm9000/storecassandra"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"tux21b.org/v1/gocql"
 
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
@@ -13,7 +17,19 @@ import (
 var numberOfApps = []int{30, 100, 300, 1000, 3000, 10000}
 var numberOfInstancesPerApp = 2
 
+var justOnce = false
 var _ = Describe("Benchmarking AWS MCAT ", func() {
+	var store *storecassandra.StoreCassandra
+	BeforeEach(func() {
+		if !justOnce {
+			conf, _ := config.DefaultConfig()
+			var err error
+			store, err = storecassandra.New([]string{"127.0.0.1:9042"}, gocql.One, conf, timeprovider.NewTimeProvider())
+			Ω(err).ShouldNot(HaveOccured())
+			justOnce = true
+		}
+	})
+
 	for _, numApps := range numberOfApps {
 		numApps := numApps
 		iteration := 1

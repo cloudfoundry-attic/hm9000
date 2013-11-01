@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+	"tux21b.org/v1/gocql"
 )
 
 type Config struct {
@@ -36,9 +37,11 @@ type Config struct {
 	StoreType                  string   `json:"store_type"`
 	StoreURLs                  []string `json:"store_urls"`
 	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`
-	SenderNatsStartSubject     string   `json:"sender_nats_start_subject"`
-	SenderNatsStopSubject      string   `json:"sender_nats_stop_subject"`
-	SenderMessageLimit         int      `json:"sender_message_limit"`
+	CassandraConsistencyString string   `json:"cassandra_consistency"`
+
+	SenderNatsStartSubject string `json:"sender_nats_start_subject"`
+	SenderNatsStopSubject  string `json:"sender_nats_stop_subject"`
+	SenderMessageLimit     int    `json:"sender_message_limit"`
 
 	NumberOfCrashesBeforeBackoffBegins int `json:"number_of_crashes_before_backoff_begins"`
 	StartingBackoffDelayInHeartbeats   int `json:"starting_backoff_delay_in_heartbeats"`
@@ -118,6 +121,17 @@ func (conf *Config) StartingBackoffDelay() time.Duration {
 
 func (conf *Config) MaximumBackoffDelay() time.Duration {
 	return time.Duration(conf.MaximumBackoffDelayInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+}
+
+func (conf *Config) CassandraConsistency() gocql.Consistency {
+	switch conf.CassandraConsistencyString {
+	case "ONE":
+		return gocql.One
+	case "ALL":
+		return gocql.All
+	default:
+		return gocql.Quorum
+	}
 }
 
 func DefaultConfig() (Config, error) {
