@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var _ = Describe("ZookeeperStoreAdapter", func() {
+var _ = Describe("ZooKeeperStoreAdapter", func() {
 	var (
 		adapter      StoreAdapter
 		client       *zk.Conn
