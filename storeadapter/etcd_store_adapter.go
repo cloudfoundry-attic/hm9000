@@ -56,15 +56,12 @@ func (adapter *ETCDStoreAdapter) isNotAFileError(err error) bool {
 }
 
 func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
-	fmt.Printf("[STORE] Saving %d nodes\n", len(nodes))
 	results := make(chan error, len(nodes))
 
 	for _, node := range nodes {
 		node := node
 		adapter.workerPool.ScheduleWork(func() {
-			fmt.Printf("[STORE]   Saving a node\n")
 			_, err := adapter.client.Set(node.Key, string(node.Value), node.TTL)
-			fmt.Printf("[STORE]   Done saving a node\n")
 			results <- err
 		})
 	}
@@ -74,12 +71,10 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 	for numReceived < len(nodes) {
 		result := <-results
 		numReceived++
-		fmt.Printf("[STORE]   Heard about a saved node %d/%d\n", numReceived, len(nodes))
 		if err == nil {
 			err = result
 		}
 	}
-	fmt.Printf("[STORE] Completed save\n")
 
 	if adapter.isNotAFileError(err) {
 		return ErrorNodeIsDirectory
@@ -93,7 +88,6 @@ func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {
 }
 
 func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
-	fmt.Printf("[STORE] Getting %s\n", key)
 	//TODO: remove this terribleness when we upgrade go-etcd
 	if key == "/" {
 		key = "/?garbage=foo&"
@@ -101,25 +95,20 @@ func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 
 	response, err := adapter.client.Get(key, false)
 	if adapter.isTimeoutError(err) {
-		fmt.Printf("[STORE]   Timed out getting %s\n", key)
 		return StoreNode{}, ErrorTimeout
 	}
 
 	if adapter.isMissingKeyError(err) {
-		fmt.Printf("[STORE]   Could not find %s\n", key)
 		return StoreNode{}, ErrorKeyNotFound
 	}
 	if err != nil {
-		fmt.Printf("[STORE]   Another bad thing happened getting %s: %s\n", key, err.Error())
 		return StoreNode{}, err
 	}
 
 	if response.Dir {
-		fmt.Printf("[STORE]   Got a directory when getting %s\n", key)
 		return StoreNode{}, ErrorNodeIsDirectory
 	}
 
-	fmt.Printf("[STORE] Succesfully got %s\n", key)
 	return StoreNode{
 		Key:   response.Key,
 		Value: []byte(response.Value),
