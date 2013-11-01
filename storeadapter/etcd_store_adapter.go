@@ -1,7 +1,6 @@
 package storeadapter
 
 import (
-	"fmt"
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/coreos/go-etcd/etcd"
 )
