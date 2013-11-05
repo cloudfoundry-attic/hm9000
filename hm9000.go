@@ -14,14 +14,14 @@ import (
 func main() {
 	c := &gosteno.Config{
 		Sinks: []gosteno.Sink{
-			gosteno.NewSyslogSink("hm9000"),
+			gosteno.NewSyslogSink("vcap.hm9000"),
 		},
 		Level:     gosteno.LOG_INFO,
 		Codec:     gosteno.NewJsonCodec(),
 		EnableLOC: true,
 	}
 	gosteno.Init(c)
-	steno := gosteno.NewLogger("hm9000")
+	steno := gosteno.NewLogger("vcap.hm9000")
 	l := logger.NewRealLogger(steno)
 
 	app := cli.NewApp()
