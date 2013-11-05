@@ -106,7 +106,7 @@ func dumpApp(app *models.App, starts map[string]models.PendingStartMessage, stop
 
 	if len(appStarts) > 0 {
 		fmt.Printf("  Pending Starts:\n")
-		for _, start := range starts {
+		for _, start := range appStarts {
 			message := []string{}
 			message = append(message, fmt.Sprintf("[%d]", start.IndexToStart))
 			message = append(message, fmt.Sprintf("priority:%.2f", start.Priority))
@@ -126,7 +126,7 @@ func dumpApp(app *models.App, starts map[string]models.PendingStartMessage, stop
 
 	if len(appStops) > 0 {
 		fmt.Printf("  Pending Stops:\n")
-		for _, stop := range stops {
+		for _, stop := range appStops {
 			message := []string{}
 			message = append(message, stop.InstanceGuid)
 			if stop.SentOn != 0 {
