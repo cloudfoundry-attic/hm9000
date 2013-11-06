@@ -46,6 +46,29 @@ var _ = Describe("Serving Metrics", func() {
 		coordinator.MessageBus.PublishWithReplyTo("vcap.component.discover", "", guid)
 	})
 
+	Context("when there is a desired app that failed to stage", func() {
+		BeforeEach(func() {
+			desiredState := a.DesiredState(2)
+			desiredState.PackageState = models.AppPackageStateFailed
+			simulator.SetDesiredState(desiredState)
+			simulator.SetCurrentHeartbeats(a.Heartbeat(1))
+
+			simulator.Tick(simulator.TicksToAttainFreshness)
+			cliRunner.StartMetricsServer(simulator.currentTimestamp)
+		})
+
+		It("should not count as an app with missing instances", func() {
+			resp, err := http.Get(fmt.Sprintf("http://bob:password@%s:%d/varz", ip, coordinator.MetricsServerPort))
+			Ω(err).ShouldNot(HaveOccured())
+
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			bodyAsString := string(body)
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(bodyAsString).Should(ContainSubstring(`"name":"NumberOfAppsWithMissingInstances","value":0`))
+		})
+	})
+
 	Context("when the store is fresh", func() {
 		BeforeEach(func() {
 			simulator.Tick(simulator.TicksToAttainFreshness)

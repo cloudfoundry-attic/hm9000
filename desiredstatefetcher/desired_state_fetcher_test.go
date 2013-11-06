@@ -121,10 +121,12 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 		Context("when a response with desired state is received", func() {
 			var (
-				a1         appfixture.AppFixture
-				a2         appfixture.AppFixture
-				stoppedApp appfixture.AppFixture
-				deletedApp appfixture.AppFixture
+				a1                appfixture.AppFixture
+				a2                appfixture.AppFixture
+				stoppedApp        appfixture.AppFixture
+				pendingStagingApp appfixture.AppFixture
+				failedToStageApp  appfixture.AppFixture
+				deletedApp        appfixture.AppFixture
 			)
 
 			BeforeEach(func() {
@@ -133,14 +135,26 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 				a1 = appfixture.NewAppFixture()
 				a2 = appfixture.NewAppFixture()
+
 				stoppedApp = appfixture.NewAppFixture()
 				stoppedDesiredState := stoppedApp.DesiredState(1)
 				stoppedDesiredState.State = models.AppStateStopped
+
+				pendingStagingApp = appfixture.NewAppFixture()
+				pendingStagingDesiredState := pendingStagingApp.DesiredState(1)
+				pendingStagingDesiredState.PackageState = models.AppPackageStatePending
+
+				failedToStageApp = appfixture.NewAppFixture()
+				failedStagingDesiredState := failedToStageApp.DesiredState(1)
+				failedStagingDesiredState.PackageState = models.AppPackageStateFailed
+
 				response = DesiredStateServerResponse{
 					Results: map[string]models.DesiredAppState{
-						a1.AppGuid:         a1.DesiredState(1),
-						a2.AppGuid:         a2.DesiredState(1),
-						stoppedApp.AppGuid: stoppedDesiredState,
+						a1.AppGuid:                a1.DesiredState(1),
+						a2.AppGuid:                a2.DesiredState(1),
+						stoppedApp.AppGuid:        stoppedDesiredState,
+						pendingStagingApp.AppGuid: pendingStagingDesiredState,
+						failedToStageApp.AppGuid:  failedStagingDesiredState,
 					},
 					BulkToken: BulkToken{
 						Id: 5,
@@ -191,7 +205,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 					Ω(fresh).Should(BeTrue())
 				})
 
-				It("should store any desired state that is in the STARTED appstate, and delete any stale data", func() {
+				It("should store any desired state that is in the STARTED appstate and STAGED package state, and delete any stale data", func() {
 					desired, _ := store.GetDesiredState()
 					Ω(desired).Should(HaveLen(2))
 					Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState(1))))
