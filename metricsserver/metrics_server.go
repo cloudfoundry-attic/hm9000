@@ -45,6 +45,8 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 	NumberOfMissingIndices := 0
 	NumberOfCrashedInstances := 0
 	NumberOfCrashedIndices := 0
+	NumberOfDesiredApps := 0
+	NumberOfDesiredInstances := 0
 
 	defer func() {
 		context.Metrics = append(context.Metrics, instrumentation.Metric{
@@ -81,6 +83,16 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 			Name:  "NumberOfCrashedIndices",
 			Value: NumberOfCrashedIndices,
 		})
+
+		context.Metrics = append(context.Metrics, instrumentation.Metric{
+			Name:  "NumberOfDesiredApps",
+			Value: NumberOfDesiredApps,
+		})
+
+		context.Metrics = append(context.Metrics, instrumentation.Metric{
+			Name:  "NumberOfDesiredInstances",
+			Value: NumberOfDesiredInstances,
+		})
 	}()
 
 	err := s.store.VerifyFreshness(s.timeProvider.Time())
@@ -93,6 +105,8 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		NumberOfMissingIndices = -1
 		NumberOfCrashedInstances = -1
 		NumberOfCrashedIndices = -1
+		NumberOfDesiredApps = -1
+		NumberOfDesiredInstances = -1
 		return
 	}
 
@@ -106,12 +120,16 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		NumberOfMissingIndices = -1
 		NumberOfCrashedInstances = -1
 		NumberOfCrashedIndices = -1
+		NumberOfDesiredApps = -1
+		NumberOfDesiredInstances = -1
 		return
 	}
 
 	for _, app := range apps {
 		numberOfMissingIndicesForApp := app.NumberOfDesiredInstances() - app.NumberOfDesiredIndicesReporting()
 		if app.IsDesired() {
+			NumberOfDesiredApps += 1
+			NumberOfDesiredInstances += app.NumberOfDesiredInstances()
 			if numberOfMissingIndicesForApp == 0 {
 				NumberOfAppsWithAllInstancesReporting++
 			} else {
