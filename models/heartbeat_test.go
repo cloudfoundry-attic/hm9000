@@ -2,6 +2,7 @@ package models_test
 
 import (
 	. "github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -66,6 +67,41 @@ var _ = Describe("Heartbeat", func() {
 
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(jsonHeartbeat).Should(Equal(heartbeat))
+		})
+	})
+
+	Describe("LogDescription", func() {
+		var heartbeat Heartbeat
+		BeforeEach(func() {
+			app := appfixture.NewAppFixture()
+
+			crashedHeartbeat := app.InstanceAtIndex(2).Heartbeat()
+			crashedHeartbeat.State = InstanceStateCrashed
+
+			startingHeartbeat := app.InstanceAtIndex(3).Heartbeat()
+			startingHeartbeat.State = InstanceStateStarting
+
+			evacuatingHeartbeat := app.InstanceAtIndex(4).Heartbeat()
+			evacuatingHeartbeat.State = InstanceStateEvacuating
+
+			heartbeat = Heartbeat{
+				DeaGuid: "abc",
+				InstanceHeartbeats: []InstanceHeartbeat{
+					crashedHeartbeat,
+					startingHeartbeat,
+					evacuatingHeartbeat,
+					app.InstanceAtIndex(0).Heartbeat(),
+				},
+			}
+		})
+
+		It("should return a nice rollup", func() {
+			desc := heartbeat.LogDescription()
+			Ω(desc["DEA"]).Should(Equal("abc"))
+			Ω(desc["Evacuating"]).Should(Equal("1"))
+			Ω(desc["Crashed"]).Should(Equal("1"))
+			Ω(desc["Starting"]).Should(Equal("1"))
+			Ω(desc["Running"]).Should(Equal("1"))
 		})
 	})
 })

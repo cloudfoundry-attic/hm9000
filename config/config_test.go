@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"github.com/cloudfoundry/gosteno"
 	. "github.com/cloudfoundry/hm9000/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -48,6 +49,7 @@ var _ = Describe("Config", func() {
         "api_server_port": 1812,
         "api_server_user": "magnet",
         "api_server_password": "orangutan4sale",
+        "log_level": "INFO",
         "nats": {
             "host": "127.0.0.1",
             "port": 4222,
@@ -106,6 +108,20 @@ var _ = Describe("Config", func() {
 			Ω(config.NATS.Port).Should(Equal(4222))
 			Ω(config.NATS.User).Should(Equal(""))
 			Ω(config.NATS.Password).Should(Equal(""))
+
+			Ω(config.LogLevelString).Should(Equal("INFO"))
+		})
+	})
+
+	Describe("LogLevel", func() {
+		It("should support INFO and DEBUG", func() {
+			config, _ := FromJSON([]byte(configJSON))
+			config.LogLevelString = "INFO"
+			Ω(config.LogLevel()).Should(Equal(gosteno.LOG_INFO))
+			config.LogLevelString = "DEBUG"
+			Ω(config.LogLevel()).Should(Equal(gosteno.LOG_DEBUG))
+			config.LogLevelString = "Eggplant"
+			Ω(config.LogLevel()).Should(Equal(gosteno.LOG_INFO))
 		})
 	})
 

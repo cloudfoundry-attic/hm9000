@@ -76,7 +76,7 @@ func connectToStoreAdapter(l logger.Logger, conf config.Config) (adapter storead
 	} else if conf.StoreType == "ZooKeeper" {
 		adapter = storeadapter.NewZookeeperStoreAdapter(conf.StoreURLs, conf.StoreMaxConcurrentRequests, buildTimeProvider(l), time.Second)
 	} else {
-		l.Info(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd' or 'ZooKeeper'", conf.StoreType))
+		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd' or 'ZooKeeper'", conf.StoreType), fmt.Errorf("Unkown store type"))
 		os.Exit(1)
 	}
 	err := adapter.Connect()
@@ -100,7 +100,7 @@ func connectToStore(l logger.Logger, conf config.Config) store.Store {
 		}
 		return store
 	} else {
-		l.Info(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd', 'ZooKeeper' or 'Cassandra'", conf.StoreType))
+		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd', 'ZooKeeper' or 'Cassandra'", conf.StoreType), fmt.Errorf("Unkown store type"))
 		os.Exit(1)
 	}
 

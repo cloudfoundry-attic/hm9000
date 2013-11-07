@@ -94,7 +94,7 @@ func (store *RealStore) save(stuff interface{}, root string, ttl uint64) error {
 
 	err := store.adapter.Set(nodes)
 
-	store.logger.Info(fmt.Sprintf("Save Duration %s", root), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Save Duration %s", root), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", arrValue.Len()),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
@@ -119,7 +119,7 @@ func (store *RealStore) get(root string, mapType reflect.Type, constructor refle
 		mapToReturn.SetMapIndex(reflect.ValueOf(item.StoreKey()), out[0])
 	}
 
-	store.logger.Info(fmt.Sprintf("Get Duration %s", root), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Get Duration %s", root), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", mapToReturn.Len()),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
@@ -139,7 +139,7 @@ func (store *RealStore) delete(stuff interface{}, root string) error {
 		}
 	}
 
-	store.logger.Info(fmt.Sprintf("Delete Duration %s", root), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Delete Duration %s", root), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", arrValue.Len()),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})

@@ -25,7 +25,7 @@ func (store *RealStore) SaveDesiredState(desiredStates ...models.DesiredAppState
 
 	err := store.adapter.Set(nodes)
 
-	store.logger.Info(fmt.Sprintf("Save Duration Desired"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Save Duration Desired"), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", len(desiredStates)),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
@@ -48,7 +48,7 @@ func (store *RealStore) GetDesiredState() (results map[string]models.DesiredAppS
 		}
 	}
 
-	store.logger.Info(fmt.Sprintf("Get Duration Desired"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Get Duration Desired"), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", len(results)),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
@@ -65,7 +65,7 @@ func (store *RealStore) DeleteDesiredState(desiredStates ...models.DesiredAppSta
 		}
 	}
 
-	store.logger.Info(fmt.Sprintf("Delete Duration Desired"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Delete Duration Desired"), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", len(desiredStates)),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})

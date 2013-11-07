@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -50,6 +51,8 @@ type Config struct {
 	MetricsServerPort     int    `json:"metrics_server_port"`
 	MetricsServerUser     string `json:"metrics_server_user"`
 	MetricsServerPassword string `json:"metrics_server_password"`
+
+	LogLevelString string `json:"log_level"`
 
 	NATS struct {
 		Host     string `json:"host"`
@@ -131,6 +134,17 @@ func (conf *Config) CassandraConsistency() gocql.Consistency {
 		return gocql.All
 	default:
 		return gocql.Quorum
+	}
+}
+
+func (conf *Config) LogLevel() gosteno.LogLevel {
+	switch conf.LogLevelString {
+	case "INFO":
+		return gosteno.LOG_INFO
+	case "DEBUG":
+		return gosteno.LOG_DEBUG
+	default:
+		return gosteno.LOG_INFO
 	}
 }
 

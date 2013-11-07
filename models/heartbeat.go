@@ -92,3 +92,26 @@ func (heartbeat Heartbeat) ToJSON() []byte {
 	encoded, _ := json.Marshal(heartbeat)
 	return encoded
 }
+
+func (heartbeat Heartbeat) LogDescription() map[string]string {
+	var evacuating, running, crashed, starting int
+	for _, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
+		switch instanceHeartbeat.State {
+		case InstanceStateCrashed:
+			crashed += 1
+		case InstanceStateEvacuating:
+			evacuating += 1
+		case InstanceStateRunning:
+			running += 1
+		case InstanceStateStarting:
+			starting += 1
+		}
+	}
+	return map[string]string{
+		"DEA":        heartbeat.DeaGuid,
+		"Evacuating": strconv.Itoa(evacuating),
+		"Crashed":    strconv.Itoa(crashed),
+		"Running":    strconv.Itoa(running),
+		"Starting":   strconv.Itoa(starting),
+	}
+}

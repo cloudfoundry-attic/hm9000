@@ -96,11 +96,12 @@ var _ = Describe("Actual state listener", func() {
 	})
 
 	Context("When it receives a complex heartbeat with multiple apps and instances", func() {
+		var heartbeat Heartbeat
 		JustBeforeEach(func() {
 			isFresh, _ := store.IsActualStateFresh(freshByTime)
 			Ω(isFresh).Should(BeFalse())
 
-			heartbeat := Heartbeat{
+			heartbeat = Heartbeat{
 				DeaGuid: Guid(),
 				InstanceHeartbeats: []InstanceHeartbeat{
 					app.InstanceAtIndex(0).Heartbeat(),
@@ -118,6 +119,7 @@ var _ = Describe("Actual state listener", func() {
 			foundApp1, err := store.GetApp(app.AppGuid, app.AppVersion)
 			Ω(err).ShouldNot(HaveOccured())
 
+			Ω(foundApp1.InstanceHeartbeats).Should(HaveLen(2))
 			Ω(foundApp1.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
 			Ω(foundApp1.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(1).Heartbeat()))
 
@@ -128,6 +130,11 @@ var _ = Describe("Actual state listener", func() {
 		})
 
 		Context("when the save succeeds", func() {
+			It("should log about the heartbeat", func() {
+				Ω(logger.LoggedSubjects).Should(ContainElement("Saved a Heartbeat"))
+				Ω(logger.LoggedMessages).Should(ContainElement(ContainSubstring(`"DEA":"%s"`, heartbeat.DeaGuid)))
+			})
+
 			It("bumps the freshness", func() {
 				isFresh, _ := store.IsActualStateFresh(freshByTime)
 				Ω(isFresh).Should(BeTrue())

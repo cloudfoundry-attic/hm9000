@@ -25,7 +25,7 @@ func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error 
 
 	err := store.adapter.Set(nodes)
 
-	store.logger.Info(fmt.Sprintf("Save Duration Crash Counts"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Save Duration Crash Counts"), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", len(crashCounts)),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})

@@ -25,7 +25,7 @@ func (store *RealStore) SaveActualState(actualStates ...models.InstanceHeartbeat
 
 	err := store.adapter.Set(nodes)
 
-	store.logger.Info(fmt.Sprintf("Save Duration Actual"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", len(actualStates)),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})

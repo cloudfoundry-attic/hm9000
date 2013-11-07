@@ -36,11 +36,11 @@ func New(config config.Config,
 func (listener *ActualStateListener) Start() {
 	listener.messageBus.Subscribe("dea.advertise", func(message *yagnats.Message) {
 		listener.bumpFreshness()
-		listener.logger.Info("Received dea.advertise")
+		listener.logger.Debug("Received dea.advertise")
 	})
 
 	listener.messageBus.Subscribe("dea.heartbeat", func(message *yagnats.Message) {
-		listener.logger.Info("Got a heartbeat")
+		listener.logger.Debug("Got a heartbeat")
 		heartbeat, err := models.NewHeartbeatFromJSON([]byte(message.Payload))
 		if err != nil {
 			listener.logger.Error("Could not unmarshal heartbeat", err,
@@ -50,15 +50,16 @@ func (listener *ActualStateListener) Start() {
 			return
 		}
 
-		listener.logger.Info("Decoded the heartbeat")
+		listener.logger.Debug("Decoded the heartbeat")
 		err = listener.store.SaveActualState(heartbeat.InstanceHeartbeats...)
 		if err != nil {
 			listener.logger.Error("Could not put instance heartbeats in store:", err)
 			return
 		}
-		listener.logger.Info("Saved the heartbeat")
+
+		listener.logger.Info("Saved a Heartbeat", heartbeat.LogDescription())
 		listener.bumpFreshness()
-		listener.logger.Info("Received dea.heartbeat")
+		listener.logger.Debug("Received dea.heartbeat") //Leave this here: the integration test uses this to ensure the heartbeat has been processed
 	})
 }
 
@@ -67,6 +68,6 @@ func (listener *ActualStateListener) bumpFreshness() {
 	if err != nil {
 		listener.logger.Error("Could not update actual freshness", err)
 	} else {
-		listener.logger.Info("Succesfully bumped freshness")
+		listener.logger.Info("Bumped freshness")
 	}
 }
