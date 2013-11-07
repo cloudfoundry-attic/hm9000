@@ -96,12 +96,12 @@ func (a *appAnalyzer) generatePendingStopsForExtraInstances() {
 	for _, extraInstance := range a.app.ExtraStartingOrRunningInstances() {
 		message := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, extraInstance.InstanceGuid)
 
-		a.appendStopMessageIfNotDuplicate(message)
-
 		a.logger.Info("Identified extra running instance", message.LogDescription(), map[string]string{
 			"InstanceIndex":          strconv.Itoa(extraInstance.InstanceIndex),
 			"Desired # of Instances": strconv.Itoa(a.app.NumberOfDesiredInstances()),
 		})
+
+		a.appendStopMessageIfNotDuplicate(message)
 	}
 
 	return
