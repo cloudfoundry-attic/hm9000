@@ -22,6 +22,7 @@ func FetchDesiredState(l logger.Logger, conf config.Config, poll bool) {
 			l.Error("Desired State Daemon Errored", err)
 		}
 		l.Info("Desired State Daemon is Down")
+		os.Exit(1)
 	} else {
 		err := fetchDesiredState(l, conf, store)
 		if err != nil {

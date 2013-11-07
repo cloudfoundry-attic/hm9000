@@ -23,6 +23,7 @@ func Send(l logger.Logger, conf config.Config, poll bool) {
 			l.Error("Sender Daemon Errored", err)
 		}
 		l.Info("Sender Daemon is Down")
+		os.Exit(1)
 	} else {
 		err := send(l, conf, messageBus, store)
 		if err != nil {

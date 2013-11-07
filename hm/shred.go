@@ -24,6 +24,7 @@ func Shred(l logger.Logger, conf config.Config, poll bool) {
 			l.Error("Shredder Errored", err)
 		}
 		l.Info("Shredder Daemon is Down")
+		os.Exit(1)
 	} else {
 		err := shred(l, conf, adapter)
 		if err != nil {

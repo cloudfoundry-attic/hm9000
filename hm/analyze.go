@@ -21,6 +21,7 @@ func Analyze(l logger.Logger, conf config.Config, poll bool) {
 			l.Error("Analyze Daemon Errored", err)
 		}
 		l.Info("Analyze Daemon is Down")
+		os.Exit(1)
 	} else {
 		err := analyze(l, conf, store)
 		if err != nil {
