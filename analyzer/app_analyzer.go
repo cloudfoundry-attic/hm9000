@@ -77,6 +77,7 @@ func (a *appAnalyzer) generatePendingStartsForCrashedInstances(priority float64)
 
 			didAppend := a.appendStartMessageIfNotDuplicate(message, "Identified crashed instance", map[string]string{
 				"Desired # of Instances": strconv.Itoa(a.app.NumberOfDesiredInstances()),
+				"Crash Count":            strconv.Itoa(crashCount.CrashCount),
 			})
 
 			if didAppend {
