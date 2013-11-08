@@ -43,7 +43,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
-		fetcher = desiredstatefetcher.New(conf, store, httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{})
+		fetcher = desiredstatefetcher.New(conf, store, httpclient.NewHttpClient(conf.FetcherNetworkTimeout()), &timeprovider.RealTimeProvider{}, fakelogger.NewFakeLogger())
 		fetcher.Fetch(resultChan)
 	})
 

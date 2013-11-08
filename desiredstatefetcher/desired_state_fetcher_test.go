@@ -56,14 +56,14 @@ var _ = Describe("DesiredStateFetcher", func() {
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
-		fetcher = New(conf, store, httpClient, timeProvider)
+		fetcher = New(conf, store, httpClient, timeProvider, fakelogger.NewFakeLogger())
 		fetcher.Fetch(resultChan)
 	})
 
 	Describe("Fetching with an invalid URL", func() {
 		BeforeEach(func() {
 			conf.CCBaseURL = "http://example.com/#%ZZ"
-			fetcher = New(conf, store, httpClient, timeProvider)
+			fetcher = New(conf, store, httpClient, timeProvider, fakelogger.NewFakeLogger())
 			fetcher.Fetch(resultChan)
 		})
 

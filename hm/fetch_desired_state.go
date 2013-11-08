@@ -39,6 +39,7 @@ func fetchDesiredState(l logger.Logger, conf config.Config, store store.Store) e
 		store,
 		httpclient.NewHttpClient(conf.FetcherNetworkTimeout()),
 		buildTimeProvider(l),
+		l,
 	)
 
 	resultChan := make(chan desiredstatefetcher.DesiredStateFetcherResult, 1)

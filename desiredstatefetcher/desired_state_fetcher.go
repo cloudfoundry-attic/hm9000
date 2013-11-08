@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
+	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 type DesiredStateFetcherResult struct {
@@ -26,12 +29,14 @@ type DesiredStateFetcher struct {
 	store        store.Store
 	timeProvider timeprovider.TimeProvider
 	cache        map[string]models.DesiredAppState
+	logger       logger.Logger
 }
 
 func New(config config.Config,
 	store store.Store,
 	httpClient httpclient.HttpClient,
-	timeProvider timeprovider.TimeProvider) *DesiredStateFetcher {
+	timeProvider timeprovider.TimeProvider,
+	logger logger.Logger) *DesiredStateFetcher {
 
 	return &DesiredStateFetcher{
 		config:       config,
@@ -39,6 +44,7 @@ func New(config config.Config,
 		store:        store,
 		timeProvider: timeProvider,
 		cache:        map[string]models.DesiredAppState{},
+		logger:       logger,
 	}
 }
 
@@ -115,6 +121,16 @@ func (fetcher *DesiredStateFetcher) bulkURL(batchSize int, bulkToken string) str
 	return fmt.Sprintf("%s/bulk/apps?batch_size=%d&bulk_token=%s", fetcher.config.CCBaseURL, batchSize, bulkToken)
 }
 
+func (fetcher *DesiredStateFetcher) guids(desiredStates []models.DesiredAppState) string {
+	result := make([]string, len(desiredStates))
+
+	for i, desired := range desiredStates {
+		result[i] = desired.AppGuid
+	}
+
+	return strings.Join(result, ",")
+}
+
 func (fetcher *DesiredStateFetcher) syncStore() error {
 	desiredStates := make([]models.DesiredAppState, len(fetcher.cache))
 	i := 0
@@ -124,11 +140,16 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 	}
 	err := fetcher.store.SaveDesiredState(desiredStates...)
 	if err != nil {
+		fetcher.logger.Error("Failed to Save Desired State", err, map[string]string{
+			"Number of Entries": strconv.Itoa(len(desiredStates)),
+			"Desireds":          fetcher.guids(desiredStates),
+		})
 		return err
 	}
 
 	storedDesiredState, err := fetcher.store.GetDesiredState()
 	if err != nil {
+		fetcher.logger.Error("Failed to Fetch Desired State", err)
 		return err
 	}
 
@@ -140,7 +161,16 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 		}
 	}
 
-	return fetcher.store.DeleteDesiredState(statesToDelete...)
+	err = fetcher.store.DeleteDesiredState(statesToDelete...)
+	if err != nil {
+		fetcher.logger.Error("Failed to Delete Desired State", err, map[string]string{
+			"Number of Entries": strconv.Itoa(len(statesToDelete)),
+			"Desireds":          fetcher.guids(statesToDelete),
+		})
+		return err
+	}
+
+	return nil
 }
 
 func (fetcher *DesiredStateFetcher) cacheResponse(response DesiredStateServerResponse) {
