@@ -47,6 +47,7 @@ func (e *Evacuator) handleExited(exited models.DropletExited) {
 			exited.AppVersion,
 			exited.InstanceIndex,
 			2.0,
+			models.PendingStartMessageReasonEvacuating,
 		)
 		startMessage.SkipVerification = true
 

@@ -3,6 +3,7 @@ package hm
 import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
@@ -37,7 +38,7 @@ func Send(l logger.Logger, conf config.Config, poll bool) {
 func send(l logger.Logger, conf config.Config, messageBus yagnats.NATSClient, store store.Store) error {
 	l.Info("Sending...")
 
-	sender := sender.New(store, conf, messageBus, buildTimeProvider(l), l)
+	sender := sender.New(store, metricsaccountant.New(store), conf, messageBus, buildTimeProvider(l), l)
 	err := sender.Send()
 
 	if err != nil {

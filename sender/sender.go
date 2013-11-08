@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
@@ -21,25 +22,31 @@ type Sender struct {
 	timeProvider timeprovider.TimeProvider
 
 	numberOfStartMessagesSent int
+	sentStartMessages         []models.PendingStartMessage
 	startMessagesToSave       []models.PendingStartMessage
 	startMessagesToDelete     []models.PendingStartMessage
+	sentStopMessages          []models.PendingStopMessage
 	stopMessagesToSave        []models.PendingStopMessage
 	stopMessagesToDelete      []models.PendingStopMessage
+	metricsAccountant         metricsaccountant.MetricsAccountant
 
 	didSucceed bool
 }
 
-func New(store store.Store, conf config.Config, messageBus yagnats.NATSClient, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
+func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf config.Config, messageBus yagnats.NATSClient, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
 	return &Sender{
 		store:                 store,
 		conf:                  conf,
 		logger:                logger,
 		messageBus:            messageBus,
 		timeProvider:          timeProvider,
+		sentStartMessages:     []models.PendingStartMessage{},
 		startMessagesToSave:   []models.PendingStartMessage{},
 		startMessagesToDelete: []models.PendingStartMessage{},
+		sentStopMessages:      []models.PendingStopMessage{},
 		stopMessagesToSave:    []models.PendingStopMessage{},
 		stopMessagesToDelete:  []models.PendingStopMessage{},
+		metricsAccountant:     metricsAccountant,
 		didSucceed:            true,
 	}
 }
@@ -71,6 +78,12 @@ func (sender *Sender) Send() error {
 
 	sender.sendStartMessages(pendingStartMessages)
 	sender.sendStopMessages(pendingStopMessages)
+
+	err = sender.metricsAccountant.IncrementMetrics(sender.sentStartMessages, sender.sentStopMessages)
+	if err != nil {
+		sender.logger.Error("Failed to increment metrics", err)
+		sender.didSucceed = false
+	}
 
 	err = sender.store.SavePendingStartMessages(sender.startMessagesToSave...)
 	if err != nil {
@@ -138,6 +151,8 @@ func (sender *Sender) sendStartMessage(startMessage models.PendingStartMessage) 
 				return
 			}
 
+			sender.sentStartMessages = append(sender.sentStartMessages, startMessage)
+
 			if startMessage.KeepAlive == 0 {
 				sender.queueStartMessageForDeletion(startMessage, "a sent start message with no keep alive")
 			} else {
@@ -161,6 +176,8 @@ func (sender *Sender) sendStopMessage(stopMessage models.PendingStopMessage) {
 			sender.didSucceed = false
 			return
 		}
+
+		sender.sentStopMessages = append(sender.sentStopMessages, stopMessage)
 
 		if stopMessage.KeepAlive == 0 {
 			sender.queueStopMessageForDeletion(stopMessage, "sent stop message with no keep alive")

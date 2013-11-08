@@ -8,6 +8,7 @@ import (
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakemetricsaccountant"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -18,10 +19,11 @@ import (
 
 var _ = Describe("Metrics Server", func() {
 	var (
-		store         storepackage.Store
-		storeAdapter  *fakestoreadapter.FakeStoreAdapter
-		timeProvider  *faketimeprovider.FakeTimeProvider
-		metricsServer *MetricsServer
+		store             storepackage.Store
+		storeAdapter      *fakestoreadapter.FakeStoreAdapter
+		timeProvider      *faketimeprovider.FakeTimeProvider
+		metricsServer     *MetricsServer
+		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
 	)
 
 	BeforeEach(func() {
@@ -30,10 +32,41 @@ var _ = Describe("Metrics Server", func() {
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 		timeProvider = &faketimeprovider.FakeTimeProvider{TimeToProvide: time.Unix(100, 0)}
 
-		metricsServer = New(nil, nil, fakelogger.NewFakeLogger(), store, timeProvider, conf)
+		metricsAccountant = fakemetricsaccountant.New()
+
+		metricsServer = New(nil, nil, metricsAccountant, fakelogger.NewFakeLogger(), store, timeProvider, conf)
 	})
 
-	Describe("the returned context", func() {
+	Describe("message metrics", func() {
+		BeforeEach(func() {
+			metricsAccountant.GetMetricsMetrics = map[string]int{
+				"foo": 1,
+				"bar": 2,
+			}
+		})
+
+		Context("when the metrics fetch succesfully", func() {
+			It("should return them", func() {
+				context := metricsServer.Emit()
+				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "foo", Value: 1}))
+				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "bar", Value: 2}))
+			})
+		})
+
+		Context("when the metrics fail to fetch", func() {
+			BeforeEach(func() {
+				metricsAccountant.GetMetricsError = errors.New("oops")
+			})
+
+			It("should not return them", func() {
+				context := metricsServer.Emit()
+				Ω(context.Metrics).ShouldNot(ContainElement(instrumentation.Metric{Name: "foo", Value: 1}))
+				Ω(context.Metrics).ShouldNot(ContainElement(instrumentation.Metric{Name: "bar", Value: 2}))
+			})
+		})
+	})
+
+	Describe("app metrics", func() {
 		It("should have a name", func() {
 			context := metricsServer.Emit()
 			Ω(context.Name).Should(Equal("HM9000"))

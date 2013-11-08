@@ -8,6 +8,7 @@ import (
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakemetricsaccountant"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
@@ -18,19 +19,21 @@ import (
 
 var _ = Describe("Sender", func() {
 	var (
-		storeAdapter *fakestoreadapter.FakeStoreAdapter
-		store        storepackage.Store
-		sender       *Sender
-		messageBus   *fakeyagnats.FakeYagnats
-		timeProvider *faketimeprovider.FakeTimeProvider
-		app1         appfixture.AppFixture
-		conf         config.Config
+		storeAdapter      *fakestoreadapter.FakeStoreAdapter
+		store             storepackage.Store
+		sender            *Sender
+		messageBus        *fakeyagnats.FakeYagnats
+		timeProvider      *faketimeprovider.FakeTimeProvider
+		app1              appfixture.AppFixture
+		conf              config.Config
+		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
 	)
 
 	BeforeEach(func() {
 		messageBus = fakeyagnats.New()
 		app1 = appfixture.NewAppFixture()
 		conf, _ = config.DefaultConfig()
+		metricsAccountant = fakemetricsaccountant.New()
 
 		timeProvider = &faketimeprovider.FakeTimeProvider{
 			TimeToProvide: time.Unix(int64(10+conf.ActualFreshnessTTL()), 0),
@@ -38,7 +41,7 @@ var _ = Describe("Sender", func() {
 
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
+		sender = New(store, metricsAccountant, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
 	})
@@ -104,7 +107,7 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			store.SaveDesiredState(app1.DesiredState(1))
-			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0)
+			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0, models.PendingStartMessageReasonInvalid)
 			pendingMessage.SentOn = sentOn
 			store.SavePendingStartMessages(
 				pendingMessage,
@@ -133,6 +136,10 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
 			})
 
+			It("should not increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStarts).Should(BeEmpty())
+			})
+
 			It("should leave the messages in the queue", func() {
 				messages, _ := store.GetPendingStartMessages()
 				Ω(messages).Should(HaveLen(1))
@@ -153,6 +160,10 @@ var _ = Describe("Sender", func() {
 					InstanceIndex: 0,
 					MessageId:     pendingMessage.MessageId,
 				}))
+			})
+
+			It("should increment the metrics for that message", func() {
+				Ω(metricsAccountant.IncrementedStarts).Should(ContainElement(pendingMessage))
 			})
 
 			It("should not error", func() {
@@ -212,6 +223,10 @@ var _ = Describe("Sender", func() {
 				It("should return an error", func() {
 					Ω(err).Should(HaveOccured())
 				})
+
+				It("should not increment the metrics", func() {
+					Ω(metricsAccountant.IncrementedStarts).Should(BeEmpty())
+				})
 			})
 		})
 
@@ -219,6 +234,10 @@ var _ = Describe("Sender", func() {
 			BeforeEach(func() {
 				sentOn = 130
 				keepAliveTime = 30
+			})
+
+			It("should not increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStarts).Should(BeEmpty())
 			})
 
 			Context("and the keep alive has elapsed", func() {
@@ -260,7 +279,7 @@ var _ = Describe("Sender", func() {
 				app1.InstanceAtIndex(1).Heartbeat(),
 			)
 
-			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, app1.InstanceAtIndex(0).InstanceGuid)
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, app1.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonInvalid)
 			pendingMessage.SentOn = sentOn
 			store.SavePendingStopMessages(
 				pendingMessage,
@@ -294,6 +313,10 @@ var _ = Describe("Sender", func() {
 				messages, _ := store.GetPendingStopMessages()
 				Ω(messages).Should(HaveLen(1))
 			})
+
+			It("should not increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStops).Should(BeEmpty())
+			})
 		})
 
 		Context("and it is time to send the message", func() {
@@ -316,6 +339,10 @@ var _ = Describe("Sender", func() {
 					IsDuplicate:   false,
 					MessageId:     pendingMessage.MessageId,
 				}))
+			})
+
+			It("should increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStops).Should(ContainElement(pendingMessage))
 			})
 
 			Context("when the message should be kept alive", func() {
@@ -370,6 +397,10 @@ var _ = Describe("Sender", func() {
 
 				It("should return an error", func() {
 					Ω(err).Should(HaveOccured())
+
+				})
+				It("should not increment the metrics", func() {
+					Ω(metricsAccountant.IncrementedStops).Should(BeEmpty())
 				})
 			})
 		})
@@ -382,6 +413,10 @@ var _ = Describe("Sender", func() {
 
 			It("should not error", func() {
 				Ω(err).ShouldNot(HaveOccured())
+			})
+
+			It("should not increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStops).Should(BeEmpty())
 			})
 
 			Context("and the keep alive has elapsed", func() {
@@ -419,7 +454,7 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart, 1.0)
+			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart, 1.0, models.PendingStartMessageReasonInvalid)
 			pendingMessage.SentOn = 0
 			pendingMessage.SkipVerification = skipVerification
 			store.SavePendingStartMessages(
@@ -444,6 +479,10 @@ var _ = Describe("Sender", func() {
 			It("should not send the start message", func() {
 				Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
 			})
+
+			It("should not increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStarts).Should(BeEmpty())
+			})
 		}
 
 		assertMessageWasSent := func() {
@@ -464,6 +503,10 @@ var _ = Describe("Sender", func() {
 					InstanceIndex: 0,
 					MessageId:     pendingMessage.MessageId,
 				}))
+			})
+
+			It("should increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStarts).Should(ContainElement(pendingMessage))
 			})
 		}
 
@@ -548,7 +591,7 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, app1.InstanceAtIndex(indexToStop).InstanceGuid)
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, app1.InstanceAtIndex(indexToStop).InstanceGuid, models.PendingStopMessageReasonInvalid)
 			pendingMessage.SentOn = 0
 			store.SavePendingStopMessages(
 				pendingMessage,
@@ -569,6 +612,10 @@ var _ = Describe("Sender", func() {
 
 			It("should not send the stop message", func() {
 				Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.stop"))
+			})
+
+			It("should not increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStops).Should(BeEmpty())
 			})
 		}
 
@@ -593,6 +640,10 @@ var _ = Describe("Sender", func() {
 					IsDuplicate:   isDuplicate,
 					MessageId:     pendingMessage.MessageId,
 				}))
+			})
+
+			It("should increment the metrics", func() {
+				Ω(metricsAccountant.IncrementedStops).Should(ContainElement(pendingMessage))
 			})
 		}
 
@@ -693,7 +744,7 @@ var _ = Describe("Sender", func() {
 			conf, _ = config.DefaultConfig()
 			conf.SenderMessageLimit = 20
 
-			sender = New(store, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
+			sender = New(store, metricsAccountant, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
 
 			for i := 0; i < 40; i += 1 {
 				a := appfixture.NewAppFixture()
@@ -703,28 +754,28 @@ var _ = Describe("Sender", func() {
 				)
 
 				//only some of these should be sent:
-				validStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 0, float64(i)/40.0)
+				validStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 0, float64(i)/40.0, models.PendingStartMessageReasonInvalid)
 				validStartMessages = append(validStartMessages, validStartMessage)
 				store.SavePendingStartMessages(
 					validStartMessage,
 				)
 
 				//all of these should be deleted:
-				invalidStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 1, 1.0)
+				invalidStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 1, 1.0, models.PendingStartMessageReasonInvalid)
 				invalidStartMessages = append(invalidStartMessages, invalidStartMessage)
 				store.SavePendingStartMessages(
 					invalidStartMessage,
 				)
 
 				//all of these should be deleted:
-				expiredStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 0, 20, a.AppGuid, a.AppVersion, 2, 1.0)
+				expiredStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 0, 20, a.AppGuid, a.AppVersion, 2, 1.0, models.PendingStartMessageReasonInvalid)
 				expiredStartMessage.SentOn = 100
 				expiredStartMessages = append(expiredStartMessages, expiredStartMessage)
 				store.SavePendingStartMessages(
 					expiredStartMessage,
 				)
 
-				stopMessage := models.NewPendingStopMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, a.InstanceAtIndex(1).InstanceGuid)
+				stopMessage := models.NewPendingStopMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, a.InstanceAtIndex(1).InstanceGuid, models.PendingStopMessageReasonInvalid)
 				store.SavePendingStopMessages(
 					stopMessage,
 				)
@@ -739,6 +790,7 @@ var _ = Describe("Sender", func() {
 			remainingStartMessages, _ := store.GetPendingStartMessages()
 			Ω(remainingStartMessages).Should(HaveLen(20))
 			Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(20))
+			Ω(metricsAccountant.IncrementedStarts).Should(HaveLen(20))
 
 			for _, remainingStartMessage := range remainingStartMessages {
 				Ω(validStartMessages).Should(ContainElement(remainingStartMessage))
@@ -764,6 +816,7 @@ var _ = Describe("Sender", func() {
 			remainingStopMessages, _ := store.GetPendingStopMessages()
 			Ω(remainingStopMessages).Should(BeEmpty())
 			Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(40))
+			Ω(metricsAccountant.IncrementedStops).Should(HaveLen(40))
 		})
 	})
 })

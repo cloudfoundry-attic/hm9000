@@ -95,6 +95,11 @@ func (s *StoreCassandra) createTables() error {
 		return err
 	}
 
+	err = s.session.Query(`CREATE TABLE IF NOT EXISTS Metrics (key text, value int, PRIMARY KEY (key))`).Exec()
+	if err != nil {
+		return err
+	}
+
 	return err
 
 }

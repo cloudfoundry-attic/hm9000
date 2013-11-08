@@ -29,9 +29,9 @@ var _ = Describe("Storing PendingStopMessages", func() {
 		err = etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		message1 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC", "123", "XYZ")
-		message2 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF", "456", "ALPHA")
-		message3 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI", "789", "BETA")
+		message1 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC", "123", "XYZ", models.PendingStopMessageReasonInvalid)
+		message2 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF", "456", "ALPHA", models.PendingStopMessageReasonInvalid)
+		message3 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI", "789", "BETA", models.PendingStopMessageReasonInvalid)
 
 		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
 	})
@@ -128,8 +128,8 @@ var _ = Describe("Storing PendingStopMessages", func() {
 		Context("When the stop message is present", func() {
 			It("can delete the stop message (and only cares about the relevant fields)", func() {
 				toDelete := []models.PendingStopMessage{
-					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", message1.InstanceGuid),
-					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", message3.InstanceGuid),
+					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", message1.InstanceGuid, models.PendingStopMessageReasonInvalid),
+					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", message3.InstanceGuid, models.PendingStopMessageReasonInvalid),
 				}
 				err := store.DeletePendingStopMessages(toDelete...)
 				Ω(err).ShouldNot(HaveOccured())
@@ -144,9 +144,9 @@ var _ = Describe("Storing PendingStopMessages", func() {
 		Context("When the desired message key is not present", func() {
 			It("returns an error, but does leave things in a broken state... for now...", func() {
 				toDelete := []models.PendingStopMessage{
-					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", message1.InstanceGuid),
-					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", "floobedey"),
-					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", message3.InstanceGuid),
+					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", message1.InstanceGuid, models.PendingStopMessageReasonInvalid),
+					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", "floobedey", models.PendingStopMessageReasonInvalid),
+					models.NewPendingStopMessage(time.Time{}, 0, 0, "", "", message3.InstanceGuid, models.PendingStopMessageReasonInvalid),
 				}
 				err := store.DeletePendingStopMessages(toDelete...)
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))

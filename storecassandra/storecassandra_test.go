@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	storepackage "github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/hm9000/storeadapter"
 	. "github.com/cloudfoundry/hm9000/storecassandra"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
@@ -247,8 +248,8 @@ var _ = Describe("Storecassandra", func() {
 
 	Describe("Pending Start Messages", func() {
 		BeforeEach(func() {
-			startMessage1 = models.NewPendingStartMessage(timeProvider.Time(), 10, 4, "ABC", "123", 1, 1.0)
-			startMessage2 = models.NewPendingStartMessage(timeProvider.Time(), 10, 4, "DEF", "456", 1, 1.0)
+			startMessage1 = models.NewPendingStartMessage(timeProvider.Time(), 10, 4, "ABC", "123", 1, 1.0, models.PendingStartMessageReasonInvalid)
+			startMessage2 = models.NewPendingStartMessage(timeProvider.Time(), 10, 4, "DEF", "456", 1, 1.0, models.PendingStartMessageReasonInvalid)
 		})
 
 		Describe("Writing and reading pending start messages", func() {
@@ -296,8 +297,8 @@ var _ = Describe("Storecassandra", func() {
 
 	Describe("Pending Stop Messages", func() {
 		BeforeEach(func() {
-			stopMessage1 = models.NewPendingStopMessage(timeProvider.Time(), 10, 4, "ABC", "123", "XYZ")
-			stopMessage2 = models.NewPendingStopMessage(timeProvider.Time(), 10, 4, "DEF", "456", "ALPHA")
+			stopMessage1 = models.NewPendingStopMessage(timeProvider.Time(), 10, 4, "ABC", "123", "XYZ", models.PendingStopMessageReasonInvalid)
+			stopMessage2 = models.NewPendingStopMessage(timeProvider.Time(), 10, 4, "DEF", "456", "ALPHA", models.PendingStopMessageReasonInvalid)
 		})
 
 		Describe("Writing and reading pending stop messages", func() {
@@ -646,7 +647,45 @@ var _ = Describe("Storecassandra", func() {
 					Ω(apps).Should(BeEmpty())
 				})
 			})
-
 		})
 	})
+
+	Describe("Metrics", func() {
+		Describe("Getting and setting a metric", func() {
+			BeforeEach(func() {
+				err := store.SaveMetric("sprockets", 17)
+				Ω(err).ShouldNot(HaveOccured())
+			})
+
+			Context("when the metric is present", func() {
+				It("should return the stored value and no error", func() {
+					value, err := store.GetMetric("sprockets")
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(value).Should(Equal(17))
+				})
+
+				Context("and it is overwritten", func() {
+					BeforeEach(func() {
+						err := store.SaveMetric("sprockets", 23)
+						Ω(err).ShouldNot(HaveOccured())
+					})
+
+					It("should return the new value", func() {
+						value, err := store.GetMetric("sprockets")
+						Ω(err).ShouldNot(HaveOccured())
+						Ω(value).Should(Equal(23))
+					})
+				})
+			})
+
+			Context("when the metric is not present", func() {
+				It("should return -1 and an error", func() {
+					value, err := store.GetMetric("nonexistent")
+					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+					Ω(value).Should(Equal(-1))
+				})
+			})
+		})
+	})
+
 })

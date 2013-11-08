@@ -38,7 +38,9 @@ func (c *CassandraClusterRunner) Start() {
 }
 
 func (c *CassandraClusterRunner) Stop() {
-	c.cassandraCommand.Process.Kill()
+	if c.cassandraCommand.Process != nil {
+		c.cassandraCommand.Process.Kill()
+	}
 }
 
 func (c *CassandraClusterRunner) NodeURLS() []string {

@@ -72,6 +72,7 @@ var _ = Describe("Serving Metrics", func() {
 	Context("when the store is fresh", func() {
 		BeforeEach(func() {
 			simulator.Tick(simulator.TicksToAttainFreshness)
+			simulator.Tick(1)
 			cliRunner.StartMetricsServer(simulator.currentTimestamp)
 		})
 
@@ -85,6 +86,7 @@ var _ = Describe("Serving Metrics", func() {
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(bodyAsString).Should(ContainSubstring(`"name":"NumberOfUndesiredRunningApps","value":0`))
 			Ω(bodyAsString).Should(ContainSubstring(`"name":"NumberOfAppsWithMissingInstances","value":1`))
+			Ω(bodyAsString).Should(ContainSubstring(`"name":"StopExtra","value":1`))
 			Ω(bodyAsString).Should(ContainSubstring(`"name":"HM9000"`))
 		})
 	})

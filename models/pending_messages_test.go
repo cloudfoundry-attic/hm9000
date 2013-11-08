@@ -12,7 +12,7 @@ var _ = Describe("Pending Messages", func() {
 	Describe("Start Message", func() {
 		var message PendingStartMessage
 		BeforeEach(func() {
-			message = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.3)
+			message = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.3, PendingStartMessageReasonCrashed)
 		})
 
 		It("should generate a random message id guid", func() {
@@ -32,6 +32,7 @@ var _ = Describe("Pending Messages", func() {
 				Ω(message.AppVersion).Should(Equal("app-version"))
 				Ω(message.IndexToStart).Should(Equal(1))
 				Ω(message.Priority).Should(Equal(0.3))
+				Ω(message.StartReason).Should(Equal(PendingStartMessageReasonCrashed))
 			})
 		})
 
@@ -47,7 +48,8 @@ var _ = Describe("Pending Messages", func() {
                         "index": 1,
                         "message_id": "abc",
                         "priority": 0.3,
-                        "skip_verification": false
+                        "skip_verification": false,
+                        "start_reason": "CRASHED"
                     }`))
 					Ω(err).ShouldNot(HaveOccured())
 					message.MessageId = "abc"
@@ -89,13 +91,14 @@ var _ = Describe("Pending Messages", func() {
 					"IndexToStart":     "1",
 					"MessageId":        message.MessageId,
 					"SkipVerification": "false",
+					"StartReason":      "CRASHED",
 				}))
 			})
 		})
 
 		Describe("Equality", func() {
 			It("should work, and ignore the random MessageId", func() {
-				anotherMessage := NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.3)
+				anotherMessage := NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.3, PendingStartMessageReasonCrashed)
 				Ω(message.Equal(anotherMessage)).Should(BeTrue())
 
 				mutatedMessage := anotherMessage
@@ -129,15 +132,19 @@ var _ = Describe("Pending Messages", func() {
 				mutatedMessage = anotherMessage
 				mutatedMessage.SkipVerification = true
 				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.StartReason = PendingStartMessageReasonMissing
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
 			})
 		})
 
 		Describe("Sorting start messages", func() {
 			It("should sort the passed in hash in order of decreasing priority", func() {
 				startMessages := make(map[string]PendingStartMessage)
-				startMessages["A"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.7)
-				startMessages["B"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.5)
-				startMessages["C"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 1.0)
+				startMessages["A"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.7, PendingStartMessageReasonCrashed)
+				startMessages["B"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.5, PendingStartMessageReasonCrashed)
+				startMessages["C"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 1.0, PendingStartMessageReasonCrashed)
 
 				sortedStartMessage := SortStartMessagesByPriority(startMessages)
 				Ω(sortedStartMessage).Should(HaveLen(3))
@@ -151,25 +158,26 @@ var _ = Describe("Pending Messages", func() {
 	Describe("Stop Message", func() {
 		var message PendingStopMessage
 		BeforeEach(func() {
-			message = NewPendingStopMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", "instance-guid")
+			message = NewPendingStopMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", "instance-guid", PendingStopMessageReasonExtra)
 		})
 
 		It("should generate a random message id guid", func() {
 			Ω(message.MessageId).ShouldNot(BeZero())
 		})
 
-		Describe("Creating new start messages programatically", func() {
-			It("should populate the start message correctly, and compute the correct SendOn time", func() {
+		Describe("Creating new stop messages programatically", func() {
+			It("should populate the stop message correctly, and compute the correct SendOn time", func() {
 				Ω(message.SendOn).Should(BeNumerically("==", 130))
 				Ω(message.SentOn).Should(BeNumerically("==", 0))
 				Ω(message.KeepAlive).Should(BeNumerically("==", 10))
 				Ω(message.AppGuid).Should(Equal("app-guid"))
 				Ω(message.AppVersion).Should(Equal("app-version"))
 				Ω(message.InstanceGuid).Should(Equal("instance-guid"))
+				Ω(message.StopReason).Should(Equal(PendingStopMessageReasonExtra))
 			})
 		})
 
-		Describe("Creating new start messages from JSON", func() {
+		Describe("Creating new stop messages from JSON", func() {
 			Context("when passed valid JSON", func() {
 				It("should parse correctly", func() {
 					parsed, err := NewPendingStopMessageFromJSON([]byte(`{
@@ -179,7 +187,8 @@ var _ = Describe("Pending Messages", func() {
                         "instance": "instance-guid",
                         "droplet": "app-guid",
                         "version": "app-version",
-                        "message_id": "abc"
+                        "message_id": "abc",
+                        "stop_reason": "EXTRA"
                     }`))
 					Ω(err).ShouldNot(HaveOccured())
 					message.MessageId = "abc"
@@ -220,13 +229,14 @@ var _ = Describe("Pending Messages", func() {
 					"AppGuid":      "app-guid",
 					"AppVersion":   "app-version",
 					"MessageId":    message.MessageId,
+					"StopReason":   "EXTRA",
 				}))
 			})
 		})
 
 		Describe("Equality", func() {
 			It("should work, and ignore the random MessageId", func() {
-				anotherMessage := NewPendingStopMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", "instance-guid")
+				anotherMessage := NewPendingStopMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", "instance-guid", PendingStopMessageReasonExtra)
 				Ω(message.Equal(anotherMessage)).Should(BeTrue())
 
 				mutatedMessage := anotherMessage
@@ -251,6 +261,10 @@ var _ = Describe("Pending Messages", func() {
 
 				mutatedMessage = anotherMessage
 				mutatedMessage.AppVersion = "methuselah"
+				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
+
+				mutatedMessage = anotherMessage
+				mutatedMessage.StopReason = PendingStopMessageReasonDuplicate
 				Ω(message.Equal(mutatedMessage)).Should(BeFalse())
 			})
 		})

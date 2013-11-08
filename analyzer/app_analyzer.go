@@ -53,7 +53,7 @@ func (a *appAnalyzer) analyzeApp() (map[string]models.PendingStartMessage, map[s
 func (a *appAnalyzer) generatePendingStartsForMissingInstances(priority float64) {
 	for index := 0; a.app.IsIndexDesired(index); index++ {
 		if !a.app.HasStartingOrRunningInstanceAtIndex(index) && !a.app.HasCrashedInstanceAtIndex(index) {
-			message := models.NewPendingStartMessage(a.currentTime, a.conf.GracePeriod(), 0, a.app.AppGuid, a.app.AppVersion, index, priority)
+			message := models.NewPendingStartMessage(a.currentTime, a.conf.GracePeriod(), 0, a.app.AppGuid, a.app.AppVersion, index, priority, models.PendingStartMessageReasonMissing)
 
 			a.appendStartMessageIfNotDuplicate(message, "Identified missing instance", map[string]string{
 				"Desired # of Instances": strconv.Itoa(a.app.NumberOfDesiredInstances()),
@@ -73,7 +73,7 @@ func (a *appAnalyzer) generatePendingStartsForCrashedInstances(priority float64)
 
 			crashCount := a.app.CrashCountAtIndex(index, a.currentTime)
 			delay := a.computeDelayForCrashCount(crashCount)
-			message := models.NewPendingStartMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, index, priority)
+			message := models.NewPendingStartMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, index, priority, models.PendingStartMessageReasonCrashed)
 
 			didAppend := a.appendStartMessageIfNotDuplicate(message, "Identified crashed instance", map[string]string{
 				"Desired # of Instances": strconv.Itoa(a.app.NumberOfDesiredInstances()),
@@ -92,7 +92,7 @@ func (a *appAnalyzer) generatePendingStartsForCrashedInstances(priority float64)
 
 func (a *appAnalyzer) generatePendingStopsForExtraInstances() {
 	for _, extraInstance := range a.app.ExtraStartingOrRunningInstances() {
-		message := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, extraInstance.InstanceGuid)
+		message := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, extraInstance.InstanceGuid, models.PendingStopMessageReasonExtra)
 
 		a.appendStopMessageIfNotDuplicate(message, "Identified extra running instance", map[string]string{
 			"InstanceIndex":          strconv.Itoa(extraInstance.InstanceIndex),
@@ -113,7 +113,7 @@ func (a *appAnalyzer) generatePendingStopsForDuplicateInstances() {
 		if len(instances) > 1 {
 			for i, instance := range instances {
 				delay := (i + 1) * a.conf.GracePeriod()
-				message := models.NewPendingStopMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, instance.InstanceGuid)
+				message := models.NewPendingStopMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, instance.InstanceGuid, models.PendingStopMessageReasonDuplicate)
 
 				a.appendStopMessageIfNotDuplicate(message, "Identified duplicate running instance", map[string]string{
 					"InstanceIndex": strconv.Itoa(instance.InstanceIndex),
@@ -132,21 +132,21 @@ func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
 		evacuatingInstances := a.app.EvacuatingInstancesAtIndex(index)
 
 		if len(evacuatingInstances) > 0 {
-			startMessage := models.NewPendingStartMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, index, 2.0)
-			addStopMessages := func(reason string) {
+			startMessage := models.NewPendingStartMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, index, 2.0, models.PendingStartMessageReasonEvacuating)
+			addStopMessages := func(displayReason string, stopReason models.PendingStopMessageReason) {
 				for _, evacuatingInstance := range evacuatingInstances {
-					stopMessage := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, evacuatingInstance.InstanceGuid)
-					a.appendStopMessageIfNotDuplicate(stopMessage, reason, map[string]string{})
+					stopMessage := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, evacuatingInstance.InstanceGuid, stopReason)
+					a.appendStopMessageIfNotDuplicate(stopMessage, displayReason, map[string]string{})
 				}
 			}
 
 			if !a.app.IsIndexDesired(index) {
-				addStopMessages("Identified undesired evacuating instance.")
+				addStopMessages("Identified undesired evacuating instance.", models.PendingStopMessageReasonExtra)
 				continue
 			}
 
 			if a.app.HasRunningInstanceAtIndex(index) {
-				addStopMessages("Stopping an evacuating instance that has started running elsewhere.")
+				addStopMessages("Stopping an evacuating instance that has started running elsewhere.", models.PendingStopMessageReasonEvacuationComplete)
 				continue
 			}
 
@@ -157,7 +157,7 @@ func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
 			a.appendStartMessageIfNotDuplicate(startMessage, "An instance is evacuating.  Starting it elsewhere.", map[string]string{})
 
 			if a.app.CrashCountAtIndex(index, a.currentTime).CrashCount >= a.conf.NumberOfCrashesBeforeBackoffBegins {
-				addStopMessages("Stopping an unstable evacuating instance.")
+				addStopMessages("Stopping an unstable evacuating instance.", models.PendingStopMessageReasonEvacuationComplete)
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -16,22 +17,24 @@ type CollectorRegistrar interface {
 }
 
 type MetricsServer struct {
-	registrar    CollectorRegistrar
-	steno        *gosteno.Logger
-	store        store.Store
-	logger       logger.Logger
-	timeProvider timeprovider.TimeProvider
-	config       config.Config
+	registrar         CollectorRegistrar
+	steno             *gosteno.Logger
+	store             store.Store
+	logger            logger.Logger
+	timeProvider      timeprovider.TimeProvider
+	config            config.Config
+	metricsAccountant metricsaccountant.MetricsAccountant
 }
 
-func New(registrar CollectorRegistrar, steno *gosteno.Logger, logger logger.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config) *MetricsServer {
+func New(registrar CollectorRegistrar, steno *gosteno.Logger, metricsAccountant metricsaccountant.MetricsAccountant, logger logger.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf config.Config) *MetricsServer {
 	return &MetricsServer{
-		registrar:    registrar,
-		store:        store,
-		timeProvider: timeProvider,
-		steno:        steno,
-		logger:       logger,
-		config:       conf,
+		registrar:         registrar,
+		store:             store,
+		timeProvider:      timeProvider,
+		steno:             steno,
+		logger:            logger,
+		config:            conf,
+		metricsAccountant: metricsAccountant,
 	}
 }
 
@@ -95,7 +98,17 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		})
 	}()
 
-	err := s.store.VerifyFreshness(s.timeProvider.Time())
+	messageMetrics, err := s.metricsAccountant.GetMetrics()
+	if err == nil {
+		for key, value := range messageMetrics {
+			context.Metrics = append(context.Metrics, instrumentation.Metric{
+				Name:  key,
+				Value: value,
+			})
+		}
+	}
+
+	err = s.store.VerifyFreshness(s.timeProvider.Time())
 	if err != nil {
 		s.logger.Error("Failed to server metrics: store is not fresh", err)
 		NumberOfAppsWithAllInstancesReporting = -1

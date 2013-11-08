@@ -49,6 +49,9 @@ type Store interface {
 	SavePendingStopMessages(stopMessages ...models.PendingStopMessage) error
 	GetPendingStopMessages() (map[string]models.PendingStopMessage, error)
 	DeletePendingStopMessages(stopMessages ...models.PendingStopMessage) error
+
+	SaveMetric(metric string, value int) error
+	GetMetric(metric string) (int, error)
 }
 
 type RealStore struct {
