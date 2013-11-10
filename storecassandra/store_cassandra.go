@@ -80,12 +80,12 @@ func (s *StoreCassandra) createTables() error {
 		return err
 	}
 
-	err = s.session.Query(`CREATE TABLE IF NOT EXISTS PendingStartMessages (app_guid text, app_version text, message_id text, send_on bigint, sent_on bigint, keep_alive int, index_to_start int, priority double, skip_verification boolean, PRIMARY KEY (app_guid, app_version, index_to_start))`).Exec()
+	err = s.session.Query(`CREATE TABLE IF NOT EXISTS PendingStartMessages (app_guid text, app_version text, message_id text, send_on bigint, sent_on bigint, keep_alive int, index_to_start int, priority double, skip_verification boolean, reason text, PRIMARY KEY (app_guid, app_version, index_to_start))`).Exec()
 	if err != nil {
 		return err
 	}
 
-	err = s.session.Query(`CREATE TABLE IF NOT EXISTS PendingStopMessages (app_guid text, app_version text, message_id text, send_on bigint, sent_on bigint, keep_alive int, instance_guid text, PRIMARY KEY (app_guid, app_version, instance_guid))`).Exec()
+	err = s.session.Query(`CREATE TABLE IF NOT EXISTS PendingStopMessages (app_guid text, app_version text, message_id text, send_on bigint, sent_on bigint, keep_alive int, instance_guid text, reason text, PRIMARY KEY (app_guid, app_version, instance_guid))`).Exec()
 	if err != nil {
 		return err
 	}

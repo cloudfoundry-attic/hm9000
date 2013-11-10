@@ -7,7 +7,7 @@ import (
 func (s *StoreCassandra) SavePendingStartMessages(startMessages ...models.PendingStartMessage) error {
 	batch := s.newBatch()
 	for _, startMessage := range startMessages {
-		batch.Query(`INSERT INTO PendingStartMessages (app_guid, app_version, message_id, send_on, sent_on, keep_alive, index_to_start, priority, skip_verification) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		batch.Query(`INSERT INTO PendingStartMessages (app_guid, app_version, message_id, send_on, sent_on, keep_alive, index_to_start, priority, skip_verification, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			startMessage.AppGuid,
 			startMessage.AppVersion,
 			startMessage.MessageId,
@@ -16,7 +16,8 @@ func (s *StoreCassandra) SavePendingStartMessages(startMessages ...models.Pendin
 			startMessage.KeepAlive,
 			startMessage.IndexToStart,
 			startMessage.Priority,
-			startMessage.SkipVerification)
+			startMessage.SkipVerification,
+			startMessage.StartReason)
 	}
 
 	return s.session.ExecuteBatch(batch)
@@ -26,15 +27,15 @@ func (s *StoreCassandra) GetPendingStartMessages() (map[string]models.PendingSta
 	startMessages := map[string]models.PendingStartMessage{}
 	var err error
 
-	iter := s.session.Query(`SELECT app_guid, app_version, message_id, send_on, sent_on, keep_alive, index_to_start, priority, skip_verification FROM PendingStartMessages`).Iter()
+	iter := s.session.Query(`SELECT app_guid, app_version, message_id, send_on, sent_on, keep_alive, index_to_start, priority, skip_verification, reason FROM PendingStartMessages`).Iter()
 
-	var messageId, appGuid, appVersion string
+	var messageId, appGuid, appVersion, reason string
 	var sendOn, sentOn int64
 	var keepAlive, indexToStart int
 	var priority float64
 	var skipVerification bool
 
-	for iter.Scan(&appGuid, &appVersion, &messageId, &sendOn, &sentOn, &keepAlive, &indexToStart, &priority, &skipVerification) {
+	for iter.Scan(&appGuid, &appVersion, &messageId, &sendOn, &sentOn, &keepAlive, &indexToStart, &priority, &skipVerification, &reason) {
 		startMessage := models.PendingStartMessage{
 			PendingMessage: models.PendingMessage{
 				MessageId:  messageId,
@@ -47,6 +48,7 @@ func (s *StoreCassandra) GetPendingStartMessages() (map[string]models.PendingSta
 			IndexToStart:     indexToStart,
 			Priority:         priority,
 			SkipVerification: skipVerification,
+			StartReason:      models.PendingStartMessageReason(reason),
 		}
 		startMessages[startMessage.StoreKey()] = startMessage
 	}

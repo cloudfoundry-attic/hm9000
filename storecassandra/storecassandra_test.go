@@ -248,8 +248,8 @@ var _ = Describe("Storecassandra", func() {
 
 	Describe("Pending Start Messages", func() {
 		BeforeEach(func() {
-			startMessage1 = models.NewPendingStartMessage(timeProvider.Time(), 10, 4, "ABC", "123", 1, 1.0, models.PendingStartMessageReasonInvalid)
-			startMessage2 = models.NewPendingStartMessage(timeProvider.Time(), 10, 4, "DEF", "456", 1, 1.0, models.PendingStartMessageReasonInvalid)
+			startMessage1 = models.NewPendingStartMessage(timeProvider.Time(), 10, 4, "ABC", "123", 1, 1.0, models.PendingStartMessageReasonMissing)
+			startMessage2 = models.NewPendingStartMessage(timeProvider.Time(), 10, 4, "DEF", "456", 1, 1.0, models.PendingStartMessageReasonMissing)
 		})
 
 		Describe("Writing and reading pending start messages", func() {
@@ -297,8 +297,8 @@ var _ = Describe("Storecassandra", func() {
 
 	Describe("Pending Stop Messages", func() {
 		BeforeEach(func() {
-			stopMessage1 = models.NewPendingStopMessage(timeProvider.Time(), 10, 4, "ABC", "123", "XYZ", models.PendingStopMessageReasonInvalid)
-			stopMessage2 = models.NewPendingStopMessage(timeProvider.Time(), 10, 4, "DEF", "456", "ALPHA", models.PendingStopMessageReasonInvalid)
+			stopMessage1 = models.NewPendingStopMessage(timeProvider.Time(), 10, 4, "ABC", "123", "XYZ", models.PendingStopMessageReasonExtra)
+			stopMessage2 = models.NewPendingStopMessage(timeProvider.Time(), 10, 4, "DEF", "456", "ALPHA", models.PendingStopMessageReasonExtra)
 		})
 
 		Describe("Writing and reading pending stop messages", func() {
