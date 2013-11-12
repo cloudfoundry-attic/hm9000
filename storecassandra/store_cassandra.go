@@ -65,7 +65,7 @@ func (s *StoreCassandra) createKeySpace() error {
 
 func (s *StoreCassandra) createTables() error {
 	var err error
-	err = s.session.Query(`CREATE TABLE IF NOT EXISTS DesiredStates (app_guid text, app_version text, number_of_instances int, memory int, state text, package_state text, updated_at bigint, expires bigint, PRIMARY KEY (app_guid, app_version))`).Exec()
+	err = s.session.Query(`CREATE TABLE IF NOT EXISTS DesiredStates (app_guid text, app_version text, number_of_instances int, memory int, state text, package_state text, updated_at bigint, PRIMARY KEY (app_guid, app_version))`).Exec()
 	if err != nil {
 		return err
 	}

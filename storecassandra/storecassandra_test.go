@@ -45,72 +45,41 @@ var _ = Describe("Storecassandra", func() {
 		app2 = appfixture.NewAppFixture()
 	})
 
-	Describe("Desired State", func() {
-		Describe("Writing and reading desired state", func() {
+	Describe("Syncing and reading Desired State", func() {
+		BeforeEach(func() {
+			err := store.SyncDesiredState(app1.DesiredState(1), app2.DesiredState(3))
+			Ω(err).ShouldNot(HaveOccured())
+		})
+
+		It("should return the stored desired state", func() {
+			state, err := store.GetDesiredState()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(state).Should(HaveLen(2))
+
+			Ω(state[app1.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app1.DesiredState(1)))
+			Ω(state[app2.DesiredState(3).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(3)))
+		})
+
+		Context("When resyncing the desired state", func() {
+			var app3 appfixture.AppFixture
+
 			BeforeEach(func() {
-				err := store.SaveDesiredState(app1.DesiredState(1), app2.DesiredState(3))
+				app3 = appfixture.NewAppFixture()
+
+				err := store.SyncDesiredState(app2.DesiredState(2), app3.DesiredState(1))
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
-			It("should return the stored desired state", func() {
+			It("should update any changed state, remove any stale state, and add any new state", func() {
 				state, err := store.GetDesiredState()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(state).Should(HaveLen(2))
 
-				Ω(state[app1.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app1.DesiredState(1)))
-				Ω(state[app2.DesiredState(3).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(3)))
-			})
-
-			Context("when the TTL expires", func() {
-				BeforeEach(func() {
-					timeProvider.IncrementBySeconds(conf.DesiredStateTTL())
-				})
-
-				It("should expire the nodes appropriately", func() {
-					state, err := store.GetDesiredState()
-					Ω(err).ShouldNot(HaveOccured())
-					Ω(state).Should(HaveLen(0))
-				})
-			})
-
-			Describe("Updating desired state", func() {
-				BeforeEach(func() {
-					timeProvider.IncrementBySeconds(conf.DesiredStateTTL() - 10)
-
-					err := store.SaveDesiredState(app2.DesiredState(2))
-					Ω(err).ShouldNot(HaveOccured())
-				})
-
-				It("should update the correct entry", func() {
-					state, err := store.GetDesiredState()
-					Ω(err).ShouldNot(HaveOccured())
-					Ω(state).Should(HaveLen(2))
-
-					Ω(state[app1.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app1.DesiredState(1)))
-					Ω(state[app2.DesiredState(2).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(2)))
-				})
-
-				It("should bump the TTL", func() {
-					timeProvider.IncrementBySeconds(10)
-					state, err := store.GetDesiredState()
-					Ω(err).ShouldNot(HaveOccured())
-					Ω(state).Should(HaveLen(1))
-					Ω(state[app2.DesiredState(2).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(2)))
-				})
-			})
-
-			Describe("Deleting desired state", func() {
-				It("should delete the specified app but leave the others", func() {
-					err := store.DeleteDesiredState(app1.DesiredState(1))
-					Ω(err).ShouldNot(HaveOccured())
-
-					state, err := store.GetDesiredState()
-					Ω(err).ShouldNot(HaveOccured())
-					Ω(state).Should(HaveLen(1))
-					Ω(state[app2.DesiredState(3).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(3)))
-				})
+				Ω(state[app2.DesiredState(2).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(2)))
+				Ω(state[app3.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app3.DesiredState(1)))
 			})
 		})
+
 	})
 
 	Describe("Actual State", func() {
@@ -541,7 +510,7 @@ var _ = Describe("Storecassandra", func() {
 				CreatedAt:     4,
 			}
 
-			store.SaveDesiredState(app1.DesiredState(1), app2.DesiredState(3))
+			store.SyncDesiredState(app1.DesiredState(1), app2.DesiredState(3))
 			store.SaveActualState(app1.InstanceAtIndex(0).Heartbeat(), app3.InstanceAtIndex(2).Heartbeat())
 			store.SaveCrashCounts(crashCount1, crashCount2)
 
@@ -602,20 +571,6 @@ var _ = Describe("Storecassandra", func() {
 					Ω(err).Should(Equal(storepackage.AppNotFoundError))
 				})
 			})
-
-			Context("when ttls have expired", func() {
-				BeforeEach(func() {
-					timeProvider.IncrementBySeconds(100000000)
-				})
-
-				It("should return no apps", func() {
-					for _, appFixture := range []appfixture.AppFixture{app1, app2, app3, app4} {
-						app, err := store.GetApp(appFixture.AppGuid, appFixture.AppVersion)
-						Ω(app).Should(BeNil())
-						Ω(err).Should(Equal(storepackage.AppNotFoundError))
-					}
-				})
-			})
 		})
 
 		Describe("GetApps()", func() {
@@ -634,18 +589,6 @@ var _ = Describe("Storecassandra", func() {
 					Ω(apps[key].InstanceHeartbeats).Should(Equal(app.InstanceHeartbeats))
 					Ω(apps[key].CrashCounts).Should(Equal(app.CrashCounts))
 				}
-			})
-
-			Context("when ttls have expired", func() {
-				BeforeEach(func() {
-					timeProvider.IncrementBySeconds(100000000)
-				})
-
-				It("should return no apps", func() {
-					apps, err := store.GetApps()
-					Ω(err).ShouldNot(HaveOccured())
-					Ω(apps).Should(BeEmpty())
-				})
 			})
 		})
 	})

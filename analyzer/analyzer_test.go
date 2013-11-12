@@ -75,7 +75,7 @@ var _ = Describe("Analyzer", func() {
 			BeforeEach(func() {
 				desired := app.DesiredState(3)
 				desired.State = models.AppStateStarted
-				store.SaveDesiredState(
+				store.SyncDesiredState(
 					desired,
 				)
 				store.SaveActualState(
@@ -97,7 +97,7 @@ var _ = Describe("Analyzer", func() {
 	Describe("Starting missing instances", func() {
 		Context("where an app has desired instances", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState(
+				store.SyncDesiredState(
 					app.DesiredState(2),
 				)
 			})
@@ -213,7 +213,7 @@ var _ = Describe("Analyzer", func() {
 
 		Context("when the desired state requires fewer versions", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState(
+				store.SyncDesiredState(
 					app.DesiredState(1),
 				)
 			})
@@ -262,7 +262,7 @@ var _ = Describe("Analyzer", func() {
 		)
 
 		BeforeEach(func() {
-			store.SaveDesiredState(
+			store.SyncDesiredState(
 				app.DesiredState(3),
 			)
 
@@ -427,7 +427,7 @@ var _ = Describe("Analyzer", func() {
 
 		Context("when the EVACUTING instance is no longer in the desired range", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState(app.DesiredState(1))
+				store.SyncDesiredState(app.DesiredState(1))
 			})
 
 			It("should send an immediate stop", func() {
@@ -445,7 +445,7 @@ var _ = Describe("Analyzer", func() {
 
 		Context("and the index is still desired", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState(app.DesiredState(2))
+				store.SyncDesiredState(app.DesiredState(2))
 			})
 
 			Context("and no other instances", func() {
@@ -566,7 +566,7 @@ var _ = Describe("Analyzer", func() {
 
 			Context("when the app is desired", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState(
+					store.SyncDesiredState(
 						app.DesiredState(1),
 					)
 				})
@@ -612,7 +612,7 @@ var _ = Describe("Analyzer", func() {
 				store.SaveActualState(
 					app.CrashedInstanceHeartbeatAtIndex(0),
 				)
-				store.SaveDesiredState(
+				store.SyncDesiredState(
 					app.DesiredState(1),
 				)
 			})
@@ -637,7 +637,7 @@ var _ = Describe("Analyzer", func() {
 					app.CrashedInstanceHeartbeatAtIndex(1),
 				)
 
-				store.SaveDesiredState(
+				store.SyncDesiredState(
 					app.DesiredState(2),
 				)
 			})
@@ -658,7 +658,7 @@ var _ = Describe("Analyzer", func() {
 					app.InstanceAtIndex(2).Heartbeat(),
 				)
 
-				store.SaveDesiredState(
+				store.SyncDesiredState(
 					app.DesiredState(3),
 				)
 			})
@@ -690,7 +690,7 @@ var _ = Describe("Analyzer", func() {
 			yetAnotherApp = appfixture.NewAppFixture()
 			undesiredApp.AppGuid = app.AppGuid
 
-			store.SaveDesiredState(
+			store.SyncDesiredState(
 				app.DesiredState(1),
 				otherApp.DesiredState(3),
 				yetAnotherApp.DesiredState(2),
@@ -735,7 +735,7 @@ var _ = Describe("Analyzer", func() {
 
 			desired := app.DesiredState(1)
 			//this setup would, ordinarily, trigger a start and a stop
-			store.SaveDesiredState(
+			store.SyncDesiredState(
 				desired,
 			)
 			store.SaveActualState(

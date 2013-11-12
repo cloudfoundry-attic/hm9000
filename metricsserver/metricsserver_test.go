@@ -117,7 +117,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when a desired app has all instances running", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState(a.DesiredState(3))
+					store.SyncDesiredState(a.DesiredState(3))
 
 					store.SaveActualState(
 						a.InstanceAtIndex(0).Heartbeat(),
@@ -142,7 +142,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when a desired app has an instance starting and others running", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState(a.DesiredState(3))
+					store.SyncDesiredState(a.DesiredState(3))
 
 					startingHB := a.InstanceAtIndex(1).Heartbeat()
 					startingHB.State = models.InstanceStateStarting
@@ -169,7 +169,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when a desired app has crashed instances on some of the indices", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState(a.DesiredState(3))
+					store.SyncDesiredState(a.DesiredState(3))
 
 					store.SaveActualState(
 						a.InstanceAtIndex(0).Heartbeat(),
@@ -197,7 +197,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when a desired app has extra instances heartbeating", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState(a.DesiredState(3))
+					store.SyncDesiredState(a.DesiredState(3))
 
 					store.SaveActualState(
 						a.InstanceAtIndex(0).Heartbeat(),
@@ -224,7 +224,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when a desired app has at least one of the desired instances reporting as crashed", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState(a.DesiredState(3))
+					store.SyncDesiredState(a.DesiredState(3))
 
 					store.SaveActualState(
 						a.InstanceAtIndex(0).Heartbeat(),
@@ -250,7 +250,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when a desired app has at least one of the desired instances missing", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState(a.DesiredState(3))
+					store.SyncDesiredState(a.DesiredState(3))
 
 					store.SaveActualState(
 						a.InstanceAtIndex(0).Heartbeat(),
@@ -274,7 +274,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when a desired app has all of the desired instances missing", func() {
 				BeforeEach(func() {
-					store.SaveDesiredState(a.DesiredState(3))
+					store.SyncDesiredState(a.DesiredState(3))
 				})
 
 				It("should not report the app as 100 %% reporting", func() {

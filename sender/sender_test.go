@@ -106,7 +106,7 @@ var _ = Describe("Sender", func() {
 		var storeSetErrInjector *fakestoreadapter.FakeStoreAdapterErrorInjector
 
 		JustBeforeEach(func() {
-			store.SaveDesiredState(app1.DesiredState(1))
+			store.SyncDesiredState(app1.DesiredState(1))
 			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0, models.PendingStartMessageReasonInvalid)
 			pendingMessage.SentOn = sentOn
 			store.SavePendingStartMessages(
@@ -512,7 +512,7 @@ var _ = Describe("Sender", func() {
 
 		Context("When the app is still desired", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState(app1.DesiredState(1))
+				store.SyncDesiredState(app1.DesiredState(1))
 			})
 
 			Context("when the index-to-start is within the # of desired instances", func() {
@@ -649,7 +649,7 @@ var _ = Describe("Sender", func() {
 
 		Context("When the app is still desired", func() {
 			BeforeEach(func() {
-				store.SaveDesiredState(app1.DesiredState(1))
+				store.SyncDesiredState(app1.DesiredState(1))
 			})
 
 			Context("When instance is still running", func() {
@@ -746,9 +746,10 @@ var _ = Describe("Sender", func() {
 
 			sender = New(store, metricsAccountant, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
 
+			desiredStates := []models.DesiredAppState{}
 			for i := 0; i < 40; i += 1 {
 				a := appfixture.NewAppFixture()
-				store.SaveDesiredState(a.DesiredState(1))
+				desiredStates = append(desiredStates, a.DesiredState(1))
 				store.SaveActualState(
 					a.InstanceAtIndex(1).Heartbeat(),
 				)
@@ -780,6 +781,8 @@ var _ = Describe("Sender", func() {
 					stopMessage,
 				)
 			}
+
+			store.SyncDesiredState(desiredStates...)
 
 			timeProvider.TimeToProvide = time.Unix(130, 0)
 			err := sender.Send()
