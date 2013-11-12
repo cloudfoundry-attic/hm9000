@@ -8,7 +8,7 @@ import (
 )
 
 func (store *RealStore) actualStateStoreKey(actualState models.InstanceHeartbeat) string {
-	return "/apps/" + store.AppKey(actualState.AppGuid, actualState.AppVersion) + "/actual/" + actualState.StoreKey()
+	return "/apps/actual/" + store.AppKey(actualState.AppGuid, actualState.AppVersion) + "/" + actualState.StoreKey()
 }
 
 func (store *RealStore) SaveActualState(actualStates ...models.InstanceHeartbeat) error {

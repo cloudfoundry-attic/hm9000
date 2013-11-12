@@ -49,18 +49,18 @@ var _ = Describe("Crash Count", func() {
 		It("stores the passed in crash state", func() {
 			expectedTTL := uint64(conf.MaximumBackoffDelay().Seconds()) * 2
 
-			node, err := etcdAdapter.Get("/apps/" + crashCount1.AppGuid + "-" + crashCount1.AppVersion + "/crashes/" + crashCount1.StoreKey())
+			node, err := etcdAdapter.Get("/apps/crashes/" + crashCount1.AppGuid + "-" + crashCount1.AppVersion + "/1")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(node).Should(Equal(storeadapter.StoreNode{
-				Key:   "/apps/" + crashCount1.AppGuid + "-" + crashCount1.AppVersion + "/crashes/" + crashCount1.StoreKey(),
+				Key:   "/apps/crashes/" + crashCount1.AppGuid + "-" + crashCount1.AppVersion + "/1",
 				Value: crashCount1.ToJSON(),
 				TTL:   expectedTTL,
 			}))
 
-			node, err = etcdAdapter.Get("/apps/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/crashes/" + crashCount2.StoreKey())
+			node, err = etcdAdapter.Get("/apps/crashes/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/4")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(node).Should(Equal(storeadapter.StoreNode{
-				Key:   "/apps/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/crashes/" + crashCount2.StoreKey(),
+				Key:   "/apps/crashes/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/4",
 				Value: crashCount2.ToJSON(),
 				TTL:   expectedTTL,
 			}))

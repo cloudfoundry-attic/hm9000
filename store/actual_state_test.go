@@ -50,18 +50,18 @@ var _ = Describe("Actual State", func() {
 		})
 
 		It("can stores the passed in actual state", func() {
-			heartbeatNode, err := etcdAdapter.Get("/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual/" + heartbeat1.InstanceGuid)
+			heartbeatNode, err := etcdAdapter.Get("/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + heartbeat1.InstanceGuid)
 			Ω(err).ShouldNot(HaveOccured())
 
 			Ω(heartbeatNode).Should(Equal(storeadapter.StoreNode{
-				Key:   "/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual/" + heartbeat1.InstanceGuid,
+				Key:   "/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + heartbeat1.InstanceGuid,
 				Value: heartbeat1.ToJSON(),
 				TTL:   conf.HeartbeatTTL(),
 			}))
 
-			heartbeatNode, err = etcdAdapter.Get("/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual/" + heartbeat2.InstanceGuid)
+			heartbeatNode, err = etcdAdapter.Get("/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + heartbeat2.InstanceGuid)
 			Ω(heartbeatNode).Should(Equal(storeadapter.StoreNode{
-				Key:   "/apps/" + app.AppGuid + "-" + app.AppVersion + "/actual/" + heartbeat2.InstanceGuid,
+				Key:   "/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + heartbeat2.InstanceGuid,
 				Value: heartbeat2.ToJSON(),
 				TTL:   conf.HeartbeatTTL(),
 			}))

@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"strconv"
 	"time"
 )
 
 func (store *RealStore) crashCountStoreKey(crashCount models.CrashCount) string {
-	return "/apps/" + store.AppKey(crashCount.AppGuid, crashCount.AppVersion) + "/crashes/" + crashCount.StoreKey()
+	return "/apps/crashes/" + store.AppKey(crashCount.AppGuid, crashCount.AppVersion) + "/" + strconv.Itoa(crashCount.InstanceIndex)
 }
 
 func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error {

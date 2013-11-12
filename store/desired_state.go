@@ -8,7 +8,7 @@ import (
 )
 
 func (store *RealStore) desiredStateStoreKey(desiredState models.DesiredAppState) string {
-	return "/apps/" + store.AppKey(desiredState.AppGuid, desiredState.AppVersion) + "/desired"
+	return "/apps/desired/" + store.AppKey(desiredState.AppGuid, desiredState.AppVersion)
 }
 
 func (store *RealStore) SyncDesiredState(newDesiredStates ...models.DesiredAppState) error {
@@ -18,6 +18,10 @@ func (store *RealStore) SyncDesiredState(newDesiredStates ...models.DesiredAppSt
 	if err != nil {
 		return err
 	}
+
+	dtGet := time.Since(t).Seconds()
+
+	t = time.Now()
 
 	newDesiredStateKeys := make(map[string]bool, 0)
 	nodesToSave := make([]storeadapter.StoreNode, 0)
@@ -39,6 +43,9 @@ func (store *RealStore) SyncDesiredState(newDesiredStates ...models.DesiredAppSt
 		return err
 	}
 
+	dtSet := time.Since(t).Seconds()
+	t = time.Now()
+
 	numberOfDeletedNodes := 0
 	for key, currentDesiredState := range currentDesiredStates {
 		if !newDesiredStateKeys[key] {
@@ -47,11 +54,15 @@ func (store *RealStore) SyncDesiredState(newDesiredStates ...models.DesiredAppSt
 		}
 	}
 
+	dtDelete := time.Since(t).Seconds()
+
 	store.logger.Debug(fmt.Sprintf("Save Duration Desired"), map[string]string{
 		"Number of Items Synced":  fmt.Sprintf("%d", len(newDesiredStates)),
 		"Number of Items Saved":   fmt.Sprintf("%d", len(nodesToSave)),
 		"Number of Items Deleted": fmt.Sprintf("%d", numberOfDeletedNodes),
-		"Duration":                fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Get Duration":            fmt.Sprintf("%.4f seconds", dtGet),
+		"Set Duration":            fmt.Sprintf("%.4f seconds", dtSet),
+		"Delete Duration":         fmt.Sprintf("%.4f seconds", dtDelete),
 	})
 	return err
 }
@@ -61,15 +72,21 @@ func (store *RealStore) GetDesiredState() (results map[string]models.DesiredAppS
 
 	results = make(map[string]models.DesiredAppState)
 
-	apps, err := store.GetApps()
-	if err != nil {
+	node, err := store.adapter.ListRecursively("/apps/desired")
+
+	if err == storeadapter.ErrorKeyNotFound {
+		return results, nil
+	} else if err != nil {
 		return results, err
 	}
 
-	for _, app := range apps {
-		if app.Desired.AppGuid != "" {
-			results[app.Desired.StoreKey()] = app.Desired
+	for _, desiredNode := range node.ChildNodes {
+		desiredState, err := models.NewDesiredAppStateFromJSON(desiredNode.Value)
+		if err != nil {
+			return results, err
 		}
+
+		results[desiredState.StoreKey()] = desiredState
 	}
 
 	store.logger.Debug(fmt.Sprintf("Get Duration Desired"), map[string]string{
