@@ -24,14 +24,16 @@ var _ = Describe("Sender", func() {
 		sender            *Sender
 		messageBus        *fakeyagnats.FakeYagnats
 		timeProvider      *faketimeprovider.FakeTimeProvider
-		app1              appfixture.AppFixture
+		dea               appfixture.DeaFixture
+		app               appfixture.AppFixture
 		conf              config.Config
 		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
 	)
 
 	BeforeEach(func() {
 		messageBus = fakeyagnats.New()
-		app1 = appfixture.NewAppFixture()
+		dea = appfixture.NewDeaFixture()
+		app = dea.GetApp(0)
 		conf, _ = config.DefaultConfig()
 		metricsAccountant = fakemetricsaccountant.New()
 
@@ -106,8 +108,8 @@ var _ = Describe("Sender", func() {
 		var storeSetErrInjector *fakestoreadapter.FakeStoreAdapterErrorInjector
 
 		JustBeforeEach(func() {
-			store.SyncDesiredState(app1.DesiredState(1))
-			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, 0, 1.0, models.PendingStartMessageReasonInvalid)
+			store.SyncDesiredState(app.DesiredState(1))
+			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app.AppGuid, app.AppVersion, 0, 1.0, models.PendingStartMessageReasonInvalid)
 			pendingMessage.SentOn = sentOn
 			store.SavePendingStartMessages(
 				pendingMessage,
@@ -155,8 +157,8 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
 				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.start"][0].Payload))
 				Ω(message).Should(Equal(models.StartMessage{
-					AppGuid:       app1.AppGuid,
-					AppVersion:    app1.AppVersion,
+					AppGuid:       app.AppGuid,
+					AppVersion:    app.AppVersion,
 					InstanceIndex: 0,
 					MessageId:     pendingMessage.MessageId,
 				}))
@@ -274,9 +276,9 @@ var _ = Describe("Sender", func() {
 		var storeSetErrInjector *fakestoreadapter.FakeStoreAdapterErrorInjector
 
 		JustBeforeEach(func() {
-			store.SaveHeartbeat(app1.Heartbeat(2))
+			store.SaveHeartbeat(app.Heartbeat(2))
 
-			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app1.AppGuid, app1.AppVersion, app1.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonInvalid)
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app.AppGuid, app.AppVersion, app.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonInvalid)
 			pendingMessage.SentOn = sentOn
 			store.SavePendingStopMessages(
 				pendingMessage,
@@ -329,10 +331,10 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(1))
 				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.stop"][0].Payload))
 				Ω(message).Should(Equal(models.StopMessage{
-					AppGuid:       app1.AppGuid,
-					AppVersion:    app1.AppVersion,
+					AppGuid:       app.AppGuid,
+					AppVersion:    app.AppVersion,
 					InstanceIndex: 0,
-					InstanceGuid:  app1.InstanceAtIndex(0).InstanceGuid,
+					InstanceGuid:  app.InstanceAtIndex(0).InstanceGuid,
 					IsDuplicate:   false,
 					MessageId:     pendingMessage.MessageId,
 				}))
@@ -451,7 +453,7 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, indexToStart, 1.0, models.PendingStartMessageReasonInvalid)
+			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, 10, app.AppGuid, app.AppVersion, indexToStart, 1.0, models.PendingStartMessageReasonInvalid)
 			pendingMessage.SentOn = 0
 			pendingMessage.SkipVerification = skipVerification
 			store.SavePendingStartMessages(
@@ -495,8 +497,8 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
 				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.start"][0].Payload))
 				Ω(message).Should(Equal(models.StartMessage{
-					AppGuid:       app1.AppGuid,
-					AppVersion:    app1.AppVersion,
+					AppGuid:       app.AppGuid,
+					AppVersion:    app.AppVersion,
 					InstanceIndex: 0,
 					MessageId:     pendingMessage.MessageId,
 				}))
@@ -509,7 +511,7 @@ var _ = Describe("Sender", func() {
 
 		Context("When the app is still desired", func() {
 			BeforeEach(func() {
-				store.SyncDesiredState(app1.DesiredState(1))
+				store.SyncDesiredState(app.DesiredState(1))
 			})
 
 			Context("when the index-to-start is within the # of desired instances", func() {
@@ -523,9 +525,9 @@ var _ = Describe("Sender", func() {
 
 				Context("when there is no running instance reporting at that index", func() {
 					BeforeEach(func() {
-						store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
-							app1.InstanceAtIndex(1).Heartbeat(),
-							app1.InstanceAtIndex(2).Heartbeat(),
+						store.SaveHeartbeat(dea.HeartbeatWith(
+							app.InstanceAtIndex(1).Heartbeat(),
+							app.InstanceAtIndex(2).Heartbeat(),
 						))
 					})
 					assertMessageWasSent()
@@ -533,11 +535,11 @@ var _ = Describe("Sender", func() {
 
 				Context("when there are crashed instances reporting at that index", func() {
 					BeforeEach(func() {
-						store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
-							app1.CrashedInstanceHeartbeatAtIndex(0),
-							app1.CrashedInstanceHeartbeatAtIndex(0),
-							app1.InstanceAtIndex(1).Heartbeat(),
-							app1.InstanceAtIndex(2).Heartbeat(),
+						store.SaveHeartbeat(dea.HeartbeatWith(
+							app.CrashedInstanceHeartbeatAtIndex(0),
+							app.CrashedInstanceHeartbeatAtIndex(0),
+							app.InstanceAtIndex(1).Heartbeat(),
+							app.InstanceAtIndex(2).Heartbeat(),
 						))
 					})
 
@@ -546,8 +548,8 @@ var _ = Describe("Sender", func() {
 
 				Context("when there *is* a running instance reporting at that index", func() {
 					BeforeEach(func() {
-						store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
-							app1.InstanceAtIndex(0).Heartbeat(),
+						store.SaveHeartbeat(dea.HeartbeatWith(
+							app.InstanceAtIndex(0).Heartbeat(),
 						))
 					})
 
@@ -588,7 +590,7 @@ var _ = Describe("Sender", func() {
 
 		JustBeforeEach(func() {
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app1.AppGuid, app1.AppVersion, app1.InstanceAtIndex(indexToStop).InstanceGuid, models.PendingStopMessageReasonInvalid)
+			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, 10, app.AppGuid, app.AppVersion, app.InstanceAtIndex(indexToStop).InstanceGuid, models.PendingStopMessageReasonInvalid)
 			pendingMessage.SentOn = 0
 			store.SavePendingStopMessages(
 				pendingMessage,
@@ -630,10 +632,10 @@ var _ = Describe("Sender", func() {
 				Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(1))
 				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.stop"][0].Payload))
 				Ω(message).Should(Equal(models.StopMessage{
-					AppGuid:       app1.AppGuid,
-					AppVersion:    app1.AppVersion,
+					AppGuid:       app.AppGuid,
+					AppVersion:    app.AppVersion,
 					InstanceIndex: indexToStop,
-					InstanceGuid:  app1.InstanceAtIndex(indexToStop).InstanceGuid,
+					InstanceGuid:  app.InstanceAtIndex(indexToStop).InstanceGuid,
 					IsDuplicate:   isDuplicate,
 					MessageId:     pendingMessage.MessageId,
 				}))
@@ -646,14 +648,14 @@ var _ = Describe("Sender", func() {
 
 		Context("When the app is still desired", func() {
 			BeforeEach(func() {
-				store.SyncDesiredState(app1.DesiredState(1))
+				store.SyncDesiredState(app.DesiredState(1))
 			})
 
 			Context("When instance is still running", func() {
 				BeforeEach(func() {
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
-						app1.InstanceAtIndex(0).Heartbeat(),
-						app1.InstanceAtIndex(1).Heartbeat(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
+						app.InstanceAtIndex(0).Heartbeat(),
+						app.InstanceAtIndex(1).Heartbeat(),
 					))
 				})
 
@@ -664,10 +666,10 @@ var _ = Describe("Sender", func() {
 
 					Context("When there are other running instances on the index", func() {
 						BeforeEach(func() {
-							instance := app1.InstanceAtIndex(0)
+							instance := app.InstanceAtIndex(0)
 							instance.InstanceGuid = models.Guid()
 
-							store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+							store.SaveHeartbeat(dea.HeartbeatWith(
 								instance.Heartbeat(),
 							))
 						})
@@ -677,8 +679,8 @@ var _ = Describe("Sender", func() {
 
 					Context("when there are other, crashed, instances on the index, and no running instances", func() {
 						BeforeEach(func() {
-							store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
-								app1.CrashedInstanceHeartbeatAtIndex(0),
+							store.SaveHeartbeat(dea.HeartbeatWith(
+								app.CrashedInstanceHeartbeatAtIndex(0),
 							))
 						})
 
@@ -701,11 +703,11 @@ var _ = Describe("Sender", func() {
 
 			Context("When the instance-to-stop is evacuating", func() {
 				BeforeEach(func() {
-					heartbeat := app1.InstanceAtIndex(0).Heartbeat()
+					heartbeat := app.InstanceAtIndex(0).Heartbeat()
 					heartbeat.State = models.InstanceStateEvacuating
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
 						heartbeat,
-						app1.InstanceAtIndex(1).Heartbeat(),
+						app.InstanceAtIndex(1).Heartbeat(),
 					))
 				})
 
@@ -720,7 +722,7 @@ var _ = Describe("Sender", func() {
 		Context("When the app is no longer desired", func() {
 			Context("when the instance is still running", func() {
 				BeforeEach(func() {
-					store.SaveHeartbeat(app1.Heartbeat(2))
+					store.SaveHeartbeat(app.Heartbeat(2))
 				})
 				assertMessageWasSent(0, false)
 			})
@@ -744,9 +746,10 @@ var _ = Describe("Sender", func() {
 			for i := 0; i < 40; i += 1 {
 				a := appfixture.NewAppFixture()
 				desiredStates = append(desiredStates, a.DesiredState(1))
-				store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
-					a.InstanceAtIndex(1).Heartbeat(),
-				))
+				store.SaveHeartbeat(models.Heartbeat{
+					DeaGuid:            models.Guid(),
+					InstanceHeartbeats: []models.InstanceHeartbeat{a.InstanceAtIndex(1).Heartbeat()},
+				})
 
 				//only some of these should be sent:
 				validStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 0, float64(i)/40.0, models.PendingStartMessageReasonInvalid)

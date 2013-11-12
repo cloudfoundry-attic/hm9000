@@ -5,74 +5,12 @@ import (
 	"strconv"
 )
 
-type InstanceState string
-
-const (
-	InstanceStateInvalid    InstanceState = ""
-	InstanceStateStarting   InstanceState = "STARTING"
-	InstanceStateRunning    InstanceState = "RUNNING"
-	InstanceStateCrashed    InstanceState = "CRASHED"
-	InstanceStateEvacuating InstanceState = "EVACUATING"
-)
-
-type InstanceHeartbeat struct {
-	CCPartition    string        `json:"cc_partition"`
-	AppGuid        string        `json:"droplet"`
-	AppVersion     string        `json:"version"`
-	InstanceGuid   string        `json:"instance"`
-	InstanceIndex  int           `json:"index"`
-	State          InstanceState `json:"state"`
-	StateTimestamp float64       `json:"state_timestamp"`
+type HeartbeatSummary struct {
+	DeaGuid                    string                   `json:"dea"`
+	InstanceHeartbeatSummaries map[string]InstanceState `json:"summary"`
 }
 
-func NewInstanceHeartbeatFromJSON(encoded []byte) (InstanceHeartbeat, error) {
-	var instance InstanceHeartbeat
-	err := json.Unmarshal(encoded, &instance)
-	if err != nil {
-		return InstanceHeartbeat{}, err
-	}
-	return instance, nil
-}
-
-func (instance InstanceHeartbeat) ToJSON() []byte {
-	encoded, _ := json.Marshal(instance)
-	return encoded
-}
-
-func (instance InstanceHeartbeat) StoreKey() string {
-	return instance.InstanceGuid
-}
-
-func (instance InstanceHeartbeat) IsStartingOrRunning() bool {
-	return instance.IsStarting() || instance.IsRunning()
-}
-
-func (instance InstanceHeartbeat) IsStarting() bool {
-	return instance.State == InstanceStateStarting
-}
-
-func (instance InstanceHeartbeat) IsRunning() bool {
-	return instance.State == InstanceStateRunning
-}
-
-func (instance InstanceHeartbeat) IsCrashed() bool {
-	return instance.State == InstanceStateCrashed
-}
-
-func (instance InstanceHeartbeat) IsEvacuating() bool {
-	return instance.State == InstanceStateEvacuating
-}
-
-func (instance InstanceHeartbeat) LogDescription() map[string]string {
-	return map[string]string{
-		"AppGuid":        instance.AppGuid,
-		"AppVersion":     instance.AppVersion,
-		"InstanceGuid":   instance.InstanceGuid,
-		"InstanceIndex":  strconv.Itoa(instance.InstanceIndex),
-		"State":          string(instance.State),
-		"StateTimestamp": strconv.Itoa(int(instance.StateTimestamp)),
-	}
-}
+//from and to json on this guy
 
 type Heartbeat struct {
 	DeaGuid            string              `json:"dea"`
@@ -84,6 +22,10 @@ func NewHeartbeatFromJSON(encoded []byte) (Heartbeat, error) {
 	err := json.Unmarshal(encoded, &heartbeat)
 	if err != nil {
 		return Heartbeat{}, err
+	}
+	for i, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
+		instanceHeartbeat.DeaGuid = heartbeat.DeaGuid
+		heartbeat.InstanceHeartbeats[i] = instanceHeartbeat
 	}
 	return heartbeat, nil
 }
@@ -114,4 +56,17 @@ func (heartbeat Heartbeat) LogDescription() map[string]string {
 		"Running":    strconv.Itoa(running),
 		"Starting":   strconv.Itoa(starting),
 	}
+}
+
+func (heartbeat Heartbeat) HeartbeatSummary() HeartbeatSummary {
+	summary := HeartbeatSummary{
+		DeaGuid:                    heartbeat.DeaGuid,
+		InstanceHeartbeatSummaries: make(map[string]InstanceState),
+	}
+
+	for _, instanceHeartbate := range heartbeat.InstanceHeartbeats {
+		summary.InstanceHeartbeatSummaries[instanceHeartbate.InstanceGuid] = instanceHeartbate.State
+	}
+
+	return summary
 }

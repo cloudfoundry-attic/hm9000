@@ -60,6 +60,7 @@ var _ = Describe("App Fixture", func() {
 			Ω(heartbeat.AppVersion).Should(Equal(app.AppVersion))
 			Ω(heartbeat.InstanceGuid).ShouldNot(BeZero())
 			Ω(heartbeat.InstanceIndex).Should(Equal(index))
+			Ω(heartbeat.DeaGuid).Should(Equal(app.DeaGuid))
 		})
 	})
 
@@ -79,6 +80,7 @@ var _ = Describe("App Fixture", func() {
 				Ω(heartbeat.InstanceGuid).Should(Equal(instance.InstanceGuid))
 				Ω(heartbeat.InstanceIndex).Should(Equal(instance.InstanceIndex))
 				Ω(heartbeat.State).Should(Equal(InstanceStateRunning))
+				Ω(heartbeat.DeaGuid).Should(Equal(app.DeaGuid))
 			})
 		})
 
@@ -105,6 +107,7 @@ var _ = Describe("App Fixture", func() {
 			heartbeat := app.Heartbeat(2)
 
 			Ω(heartbeat.DeaGuid).ShouldNot(BeEmpty())
+			Ω(heartbeat.DeaGuid).Should(Equal(app.DeaGuid))
 
 			Ω(heartbeat.InstanceHeartbeats).Should(HaveLen(2))
 			Ω(heartbeat.InstanceHeartbeats[0]).Should(Equal(instance.Heartbeat()))

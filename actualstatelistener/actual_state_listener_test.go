@@ -46,6 +46,7 @@ var _ = Describe("Actual state listener", func() {
 
 		app = NewAppFixture()
 		anotherApp = NewAppFixture()
+		anotherApp.DeaGuid = app.DeaGuid
 
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
@@ -102,7 +103,7 @@ var _ = Describe("Actual state listener", func() {
 			Ω(isFresh).Should(BeFalse())
 
 			heartbeat = Heartbeat{
-				DeaGuid: Guid(),
+				DeaGuid: app.DeaGuid,
 				InstanceHeartbeats: []InstanceHeartbeat{
 					app.InstanceAtIndex(0).Heartbeat(),
 					app.InstanceAtIndex(1).Heartbeat(),

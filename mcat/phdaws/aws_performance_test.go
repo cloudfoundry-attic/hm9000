@@ -37,7 +37,10 @@ var _ = Describe("Benchmarking AWS MCAT ", func() {
 			Measure("Read/Write/Delete Performance", func(b Benchmarker) {
 				fmt.Printf("%d apps iteration %d\n", numApps, iteration)
 				iteration += 1
-				heartbeat := appfixture.NewHeartbeat(models.Guid())
+				heartbeat := models.Heartbeat{
+					DeaGuid:            models.Guid(),
+					InstanceHeartbeats: []models.InstanceHeartbeat{},
+				}
 				n := 0
 				for i := 0; i < numApps; i++ {
 					app := appfixture.NewAppFixture()

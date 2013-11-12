@@ -23,6 +23,7 @@ var _ = Describe("Analyzer", func() {
 		storeAdapter *fakestoreadapter.FakeStoreAdapter
 		store        storepackage.Store
 		timeProvider *faketimeprovider.FakeTimeProvider
+		dea          appfixture.DeaFixture
 		app          appfixture.AppFixture
 	)
 
@@ -35,7 +36,8 @@ var _ = Describe("Analyzer", func() {
 		timeProvider = &faketimeprovider.FakeTimeProvider{}
 		timeProvider.TimeToProvide = time.Unix(1000, 0)
 
-		app = appfixture.NewAppFixture()
+		dea = appfixture.NewDeaFixture()
+		app = dea.GetApp(0)
 
 		store.BumpActualFreshness(time.Unix(100, 0))
 		store.BumpDesiredFreshness(time.Unix(100, 0))
@@ -267,7 +269,7 @@ var _ = Describe("Analyzer", func() {
 		Context("When there are missing instances on other indices", func() {
 			It("should not schedule any stops but should start the missing indices", func() {
 				//[-,-,2|2|2|2]
-				store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+				store.SaveHeartbeat(dea.HeartbeatWith(
 					app.InstanceAtIndex(2).Heartbeat(),
 					duplicateInstance1.Heartbeat(),
 					duplicateInstance2.Heartbeat(),
@@ -293,7 +295,7 @@ var _ = Describe("Analyzer", func() {
 				//[0,1,2|2|2] < stop 2,2,2 with increasing delays etc...
 				crashedHeartbeat := duplicateInstance3.Heartbeat()
 				crashedHeartbeat.State = models.InstanceStateCrashed
-				store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+				store.SaveHeartbeat(dea.HeartbeatWith(
 					app.InstanceAtIndex(0).Heartbeat(),
 					app.InstanceAtIndex(1).Heartbeat(),
 					app.InstanceAtIndex(2).Heartbeat(),
@@ -359,7 +361,7 @@ var _ = Describe("Analyzer", func() {
 
 			It("should terminate the extra indices with extreme prejudice", func() {
 				//[0,1,2,3,3,3] < stop 3,3,3
-				store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+				store.SaveHeartbeat(dea.HeartbeatWith(
 					app.InstanceAtIndex(0).Heartbeat(),
 					app.InstanceAtIndex(1).Heartbeat(),
 					app.InstanceAtIndex(2).Heartbeat(),
@@ -392,7 +394,7 @@ var _ = Describe("Analyzer", func() {
 		BeforeEach(func() {
 			evacuatingHeartbeat = app.InstanceAtIndex(1).Heartbeat()
 			evacuatingHeartbeat.State = models.InstanceStateEvacuating
-			heartbeat = appfixture.NewHeartbeat(models.Guid(),
+			heartbeat = dea.HeartbeatWith(
 				app.InstanceAtIndex(0).Heartbeat(),
 				evacuatingHeartbeat,
 			)
@@ -553,7 +555,7 @@ var _ = Describe("Analyzer", func() {
 			})
 
 			BeforeEach(func() {
-				heartbeat = appfixture.NewHeartbeat(models.Guid(), app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(0))
+				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(0))
 				store.SaveHeartbeat(heartbeat)
 			})
 
@@ -603,7 +605,7 @@ var _ = Describe("Analyzer", func() {
 
 		Describe("applying the backoff", func() {
 			BeforeEach(func() {
-				heartbeat = appfixture.NewHeartbeat(models.Guid(), app.CrashedInstanceHeartbeatAtIndex(0))
+				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0))
 				store.SaveHeartbeat(heartbeat)
 				store.SyncDesiredState(
 					app.DesiredState(1),
@@ -625,7 +627,7 @@ var _ = Describe("Analyzer", func() {
 
 		Context("When all instances are crashed", func() {
 			BeforeEach(func() {
-				heartbeat = appfixture.NewHeartbeat(models.Guid(), app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(1))
+				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(1))
 				store.SaveHeartbeat(heartbeat)
 
 				store.SyncDesiredState(
@@ -643,7 +645,7 @@ var _ = Describe("Analyzer", func() {
 
 		Context("When at least one instance is running and all others are crashed", func() {
 			BeforeEach(func() {
-				heartbeat = appfixture.NewHeartbeat(models.Guid(), app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(1), app.InstanceAtIndex(2).Heartbeat())
+				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(1), app.InstanceAtIndex(2).Heartbeat())
 				store.SaveHeartbeat(heartbeat)
 
 				store.SyncDesiredState(
@@ -673,9 +675,9 @@ var _ = Describe("Analyzer", func() {
 		)
 
 		BeforeEach(func() {
-			otherApp = appfixture.NewAppFixture()
-			undesiredApp = appfixture.NewAppFixture()
-			yetAnotherApp = appfixture.NewAppFixture()
+			otherApp = dea.GetApp(1)
+			undesiredApp = dea.GetApp(2)
+			yetAnotherApp = dea.GetApp(3)
 			undesiredApp.AppGuid = app.AppGuid
 
 			store.SyncDesiredState(
@@ -683,7 +685,7 @@ var _ = Describe("Analyzer", func() {
 				otherApp.DesiredState(3),
 				yetAnotherApp.DesiredState(2),
 			)
-			store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+			store.SaveHeartbeat(dea.HeartbeatWith(
 				app.InstanceAtIndex(0).Heartbeat(),
 				app.InstanceAtIndex(1).Heartbeat(),
 				undesiredApp.InstanceAtIndex(0).Heartbeat(),

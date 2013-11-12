@@ -18,6 +18,7 @@ var _ = Describe("Apps", func() {
 		etcdAdapter storeadapter.StoreAdapter
 		conf        config.Config
 
+		dea        appfixture.DeaFixture
 		app1       appfixture.AppFixture
 		app2       appfixture.AppFixture
 		app3       appfixture.AppFixture
@@ -34,10 +35,11 @@ var _ = Describe("Apps", func() {
 
 		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
 
-		app1 = appfixture.NewAppFixture()
-		app2 = appfixture.NewAppFixture()
-		app3 = appfixture.NewAppFixture()
-		app4 = appfixture.NewAppFixture()
+		dea = appfixture.NewDeaFixture()
+		app1 = dea.GetApp(0)
+		app2 = dea.GetApp(1)
+		app3 = dea.GetApp(2)
+		app4 = dea.GetApp(3)
 
 		actualState := []models.InstanceHeartbeat{
 			app1.InstanceAtIndex(0).Heartbeat(),
@@ -78,7 +80,7 @@ var _ = Describe("Apps", func() {
 			},
 		}
 
-		store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(), actualState...))
+		store.SaveHeartbeat(dea.HeartbeatWith(actualState...))
 		store.SyncDesiredState(desiredState...)
 		store.SaveCrashCounts(crashCount...)
 	})

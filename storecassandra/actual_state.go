@@ -9,7 +9,7 @@ func (s *StoreCassandra) SaveHeartbeat(heartbeat models.Heartbeat) error {
 	batch := s.newBatch()
 
 	for _, state := range heartbeat.InstanceHeartbeats {
-		batch.Query(`INSERT INTO ActualStates (app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		batch.Query(`INSERT INTO ActualStates (app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, dea_guid, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			state.AppGuid,
 			state.AppVersion,
 			state.InstanceGuid,
@@ -17,6 +17,7 @@ func (s *StoreCassandra) SaveHeartbeat(heartbeat models.Heartbeat) error {
 			state.State,
 			int64(state.StateTimestamp),
 			state.CCPartition,
+			state.DeaGuid,
 			s.timeProvider.Time().Unix()+int64(s.conf.HeartbeatTTL()))
 	}
 
@@ -44,12 +45,12 @@ func (s *StoreCassandra) getActualState(optionalAppGuid string, optionalAppVersi
 	var iter *gocql.Iter
 
 	if optionalAppGuid == "" {
-		iter = s.session.Query(`SELECT app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, expires FROM ActualStates`).Iter()
+		iter = s.session.Query(`SELECT app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, dea_guid, expires FROM ActualStates`).Iter()
 	} else {
-		iter = s.session.Query(`SELECT app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, expires FROM ActualStates WHERE app_guid = ? AND app_version = ?`, optionalAppGuid, optionalAppVersion).Iter()
+		iter = s.session.Query(`SELECT app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, dea_guid, expires FROM ActualStates WHERE app_guid = ? AND app_version = ?`, optionalAppGuid, optionalAppVersion).Iter()
 	}
 
-	var appGuid, appVersion, instanceGuid, state, ccPartition string
+	var appGuid, appVersion, instanceGuid, state, ccPartition, deaGuid string
 	var instanceIndex int32
 	var stateTimestamp, expires int64
 
@@ -57,7 +58,7 @@ func (s *StoreCassandra) getActualState(optionalAppGuid string, optionalAppVersi
 
 	batch := s.newBatch()
 
-	for iter.Scan(&appGuid, &appVersion, &instanceGuid, &instanceIndex, &state, &stateTimestamp, &ccPartition, &expires) {
+	for iter.Scan(&appGuid, &appVersion, &instanceGuid, &instanceIndex, &state, &stateTimestamp, &ccPartition, &deaGuid, &expires) {
 		if expires <= currentTime {
 			batch.Query(`DELETE FROM ActualStates WHERE app_guid=? AND app_version=? AND instance_guid = ?`, appGuid, appVersion, instanceGuid)
 		} else {
@@ -69,6 +70,7 @@ func (s *StoreCassandra) getActualState(optionalAppGuid string, optionalAppVersi
 				InstanceIndex:  int(instanceIndex),
 				State:          models.InstanceState(state),
 				StateTimestamp: float64(stateTimestamp),
+				DeaGuid:        deaGuid,
 			}
 			result = append(result, actualState)
 		}

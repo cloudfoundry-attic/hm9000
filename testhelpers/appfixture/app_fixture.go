@@ -9,7 +9,7 @@ type AppFixture struct {
 	AppVersion string
 
 	instances map[int]Instance
-	deaGuid   string
+	DeaGuid   string
 }
 
 type Instance struct {
@@ -17,13 +17,7 @@ type Instance struct {
 	InstanceIndex int
 	AppGuid       string
 	AppVersion    string
-}
-
-func NewHeartbeat(deaGuid string, instanceHeartbeats ...InstanceHeartbeat) Heartbeat {
-	return Heartbeat{
-		DeaGuid:            deaGuid,
-		InstanceHeartbeats: instanceHeartbeats,
-	}
+	DeaGuid       string
 }
 
 func NewAppFixture() AppFixture {
@@ -35,7 +29,7 @@ func newAppForDeaGuid(deaGuid string) AppFixture {
 		AppGuid:    Guid(),
 		AppVersion: Guid(),
 		instances:  make(map[int]Instance, 0),
-		deaGuid:    deaGuid,
+		DeaGuid:    deaGuid,
 	}
 }
 
@@ -47,6 +41,7 @@ func (app AppFixture) CrashedInstanceHeartbeatAtIndex(index int) InstanceHeartbe
 		AppVersion:    app.AppVersion,
 		InstanceGuid:  Guid(),
 		InstanceIndex: index,
+		DeaGuid:       app.DeaGuid,
 	}
 }
 
@@ -58,6 +53,7 @@ func (app AppFixture) InstanceAtIndex(index int) Instance {
 			InstanceIndex: index,
 			AppGuid:       app.AppGuid,
 			AppVersion:    app.AppVersion,
+			DeaGuid:       app.DeaGuid,
 		}
 	}
 
@@ -83,6 +79,7 @@ func (instance Instance) Heartbeat() InstanceHeartbeat {
 		InstanceGuid:  instance.InstanceGuid,
 		InstanceIndex: instance.InstanceIndex,
 		State:         InstanceStateRunning,
+		DeaGuid:       instance.DeaGuid,
 	}
 }
 
@@ -107,7 +104,7 @@ func (app AppFixture) Heartbeat(instances int) Heartbeat {
 	}
 
 	return Heartbeat{
-		DeaGuid:            app.deaGuid,
+		DeaGuid:            app.DeaGuid,
 		InstanceHeartbeats: instanceHeartbeats,
 	}
 }

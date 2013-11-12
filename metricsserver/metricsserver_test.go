@@ -88,10 +88,12 @@ var _ = Describe("Metrics Server", func() {
 		})
 
 		Context("when the store is fresh", func() {
+			var dea appfixture.DeaFixture
 			var a appfixture.AppFixture
 
 			BeforeEach(func() {
-				a = appfixture.NewAppFixture()
+				dea = appfixture.NewDeaFixture()
+				a = dea.GetApp(0)
 				store.BumpDesiredFreshness(time.Unix(0, 0))
 				store.BumpActualFreshness(time.Unix(0, 0))
 			})
@@ -141,7 +143,7 @@ var _ = Describe("Metrics Server", func() {
 
 					startingHB := a.InstanceAtIndex(1).Heartbeat()
 					startingHB.State = models.InstanceStateStarting
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						startingHB,
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -166,7 +168,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(1).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -194,7 +196,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(1).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -221,7 +223,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 						a.CrashedInstanceHeartbeatAtIndex(1),
@@ -247,7 +249,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
 					))
@@ -289,7 +291,7 @@ var _ = Describe("Metrics Server", func() {
 			Context("when there is an undesired app that is reporting as running", func() {
 				BeforeEach(func() {
 					b := appfixture.NewAppFixture()
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -313,7 +315,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when there is an undesired app that is reporting as crashed", func() {
 				BeforeEach(func() {
-					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
+					store.SaveHeartbeat(dea.HeartbeatWith(
 						a.CrashedInstanceHeartbeatAtIndex(0),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 					))

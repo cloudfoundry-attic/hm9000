@@ -18,6 +18,7 @@ import (
 var _ = Describe("Storecassandra", func() {
 	var store *StoreCassandra
 	var timeProvider *faketimeprovider.FakeTimeProvider
+	var dea appfixture.DeaFixture
 	var app1 appfixture.AppFixture
 	var app2 appfixture.AppFixture
 
@@ -41,8 +42,9 @@ var _ = Describe("Storecassandra", func() {
 		store, err = New(cassandraRunner.NodeURLS(), gocql.One, conf, timeProvider)
 		Ω(err).ShouldNot(HaveOccured())
 
-		app1 = appfixture.NewAppFixture()
-		app2 = appfixture.NewAppFixture()
+		dea = appfixture.NewDeaFixture()
+		app1 = dea.GetApp(0)
+		app2 = dea.GetApp(1)
 	})
 
 	Describe("Syncing and reading Desired State", func() {
@@ -64,7 +66,7 @@ var _ = Describe("Storecassandra", func() {
 			var app3 appfixture.AppFixture
 
 			BeforeEach(func() {
-				app3 = appfixture.NewAppFixture()
+				app3 = dea.GetApp(2)
 
 				err := store.SyncDesiredState(app2.DesiredState(2), app3.DesiredState(1))
 				Ω(err).ShouldNot(HaveOccured())
@@ -86,7 +88,7 @@ var _ = Describe("Storecassandra", func() {
 		var heartbeat models.Heartbeat
 		Describe("Writing and reading actual state", func() {
 			BeforeEach(func() {
-				heartbeat = appfixture.NewHeartbeat(models.Guid(), app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat())
+				heartbeat = dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat())
 				err := store.SaveHeartbeat(heartbeat)
 				Ω(err).ShouldNot(HaveOccured())
 			})
@@ -492,8 +494,8 @@ var _ = Describe("Storecassandra", func() {
 		BeforeEach(func() {
 
 			//4 apps: app1 has desired, actual & crashes, app2 has desired only, app3 has actual only, app4 has crashes only
-			app3 = appfixture.NewAppFixture()
-			app4 = appfixture.NewAppFixture()
+			app3 = dea.GetApp(2)
+			app4 = dea.GetApp(3)
 
 			crashCount1 = models.CrashCount{
 				AppGuid:       app1.AppGuid,
@@ -511,7 +513,7 @@ var _ = Describe("Storecassandra", func() {
 			}
 
 			store.SyncDesiredState(app1.DesiredState(1), app2.DesiredState(3))
-			store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(), app1.InstanceAtIndex(0).Heartbeat(), app3.InstanceAtIndex(2).Heartbeat()))
+			store.SaveHeartbeat(dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app3.InstanceAtIndex(2).Heartbeat()))
 			store.SaveCrashCounts(crashCount1, crashCount2)
 
 		})
