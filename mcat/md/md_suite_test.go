@@ -36,9 +36,9 @@ func TestMd(t *testing.T) {
 	coordinator.StartStartStopListener()
 
 	//run the suite for Cassandra...
-	coordinator.StartCassandra()
-	RunSpecs(t, "MCAT Cassandra MD Suite")
-	coordinator.StopStore()
+	// coordinator.StartCassandra()
+	// RunSpecs(t, "MCAT Cassandra MD Suite")
+	// coordinator.StopStore()
 
 	//run the suite for ETCD...
 	coordinator.StartETCD()

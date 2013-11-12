@@ -138,34 +138,11 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 		desiredStates[i] = desiredState
 		i++
 	}
-	err := fetcher.store.SaveDesiredState(desiredStates...)
+	err := fetcher.store.SyncDesiredState(desiredStates...)
 	if err != nil {
-		fetcher.logger.Error("Failed to Save Desired State", err, map[string]string{
+		fetcher.logger.Error("Failed to Sync Desired State", err, map[string]string{
 			"Number of Entries": strconv.Itoa(len(desiredStates)),
 			"Desireds":          fetcher.guids(desiredStates),
-		})
-		return err
-	}
-
-	storedDesiredState, err := fetcher.store.GetDesiredState()
-	if err != nil {
-		fetcher.logger.Error("Failed to Fetch Desired State", err)
-		return err
-	}
-
-	statesToDelete := make([]models.DesiredAppState, 0)
-	for _, desiredState := range storedDesiredState {
-		_, present := fetcher.cache[desiredState.StoreKey()]
-		if !present {
-			statesToDelete = append(statesToDelete, desiredState)
-		}
-	}
-
-	err = fetcher.store.DeleteDesiredState(statesToDelete...)
-	if err != nil {
-		fetcher.logger.Error("Failed to Delete Desired State", err, map[string]string{
-			"Number of Entries": strconv.Itoa(len(statesToDelete)),
-			"Desireds":          fetcher.guids(statesToDelete),
 		})
 		return err
 	}

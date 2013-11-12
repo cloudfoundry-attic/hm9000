@@ -131,7 +131,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 			BeforeEach(func() {
 				deletedApp = appfixture.NewAppFixture()
-				store.SaveDesiredState(deletedApp.DesiredState(1))
+				store.SyncDesiredState(deletedApp.DesiredState(1))
 
 				a1 = appfixture.NewAppFixture()
 				a2 = appfixture.NewAppFixture()

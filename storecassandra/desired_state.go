@@ -6,6 +6,11 @@ import (
 	"tux21b.org/v1/gocql"
 )
 
+func (s *StoreCassandra) SyncDesiredState(desiredStates ...models.DesiredAppState) error {
+	panic("IMPLEMENT!")
+	return nil
+}
+
 func (s *StoreCassandra) SaveDesiredState(desiredStates ...models.DesiredAppState) error {
 	batch := s.newBatch()
 

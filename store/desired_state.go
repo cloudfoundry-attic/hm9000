@@ -11,23 +11,47 @@ func (store *RealStore) desiredStateStoreKey(desiredState models.DesiredAppState
 	return "/apps/" + store.AppKey(desiredState.AppGuid, desiredState.AppVersion) + "/desired"
 }
 
-func (store *RealStore) SaveDesiredState(desiredStates ...models.DesiredAppState) error {
+func (store *RealStore) SyncDesiredState(newDesiredStates ...models.DesiredAppState) error {
 	t := time.Now()
 
-	nodes := make([]storeadapter.StoreNode, len(desiredStates))
-	for i, desiredState := range desiredStates {
-		nodes[i] = storeadapter.StoreNode{
-			Key:   store.desiredStateStoreKey(desiredState),
-			Value: desiredState.ToJSON(),
-			TTL:   store.config.DesiredStateTTL(),
+	currentDesiredStates, err := store.GetDesiredState()
+	if err != nil {
+		return err
+	}
+
+	newDesiredStateKeys := make(map[string]bool, 0)
+	nodesToSave := make([]storeadapter.StoreNode, 0)
+	for _, newDesiredState := range newDesiredStates {
+		key := newDesiredState.StoreKey()
+		newDesiredStateKeys[key] = true
+
+		currentDesiredState, present := currentDesiredStates[key]
+		if !(present && newDesiredState.Equal(currentDesiredState)) {
+			nodesToSave = append(nodesToSave, storeadapter.StoreNode{
+				Key:   store.desiredStateStoreKey(newDesiredState),
+				Value: newDesiredState.ToJSON(),
+			})
 		}
 	}
 
-	err := store.adapter.Set(nodes)
+	err = store.adapter.Set(nodesToSave)
+	if err != nil {
+		return err
+	}
+
+	numberOfDeletedNodes := 0
+	for key, currentDesiredState := range currentDesiredStates {
+		if !newDesiredStateKeys[key] {
+			err = store.adapter.Delete(store.desiredStateStoreKey(currentDesiredState))
+			numberOfDeletedNodes += 1
+		}
+	}
 
 	store.logger.Debug(fmt.Sprintf("Save Duration Desired"), map[string]string{
-		"Number of Items": fmt.Sprintf("%d", len(desiredStates)),
-		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Number of Items Synced":  fmt.Sprintf("%d", len(newDesiredStates)),
+		"Number of Items Saved":   fmt.Sprintf("%d", len(nodesToSave)),
+		"Number of Items Deleted": fmt.Sprintf("%d", numberOfDeletedNodes),
+		"Duration":                fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
 	return err
 }
@@ -53,22 +77,4 @@ func (store *RealStore) GetDesiredState() (results map[string]models.DesiredAppS
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
 	return results, nil
-}
-
-func (store *RealStore) DeleteDesiredState(desiredStates ...models.DesiredAppState) error {
-	t := time.Now()
-
-	for _, desiredState := range desiredStates {
-		err := store.adapter.Delete(store.desiredStateStoreKey(desiredState))
-		if err != nil {
-			return err
-		}
-	}
-
-	store.logger.Debug(fmt.Sprintf("Delete Duration Desired"), map[string]string{
-		"Number of Items": fmt.Sprintf("%d", len(desiredStates)),
-		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
-	})
-
-	return nil
 }

@@ -71,7 +71,7 @@ var _ = Describe("Apps", func() {
 		}
 
 		store.SaveActualState(actualState...)
-		store.SaveDesiredState(desiredState...)
+		store.SyncDesiredState(desiredState...)
 		store.SaveCrashCounts(crashCount...)
 	})
 

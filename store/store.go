@@ -34,9 +34,8 @@ type Store interface {
 	GetApps() (map[string]*models.App, error)
 	GetApp(appGuid string, appVersion string) (*models.App, error)
 
-	SaveDesiredState(desiredStates ...models.DesiredAppState) error
+	SyncDesiredState(desiredStates ...models.DesiredAppState) error
 	GetDesiredState() (map[string]models.DesiredAppState, error)
-	DeleteDesiredState(desiredStates ...models.DesiredAppState) error
 
 	SaveActualState(actualStates ...models.InstanceHeartbeat) error
 
