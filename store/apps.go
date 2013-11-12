@@ -3,19 +3,9 @@ package store
 import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/storeadapter"
 	"strings"
 	"time"
 )
-
-type appNodes struct {
-	desiredNode storeadapter.StoreNode
-	hasDesired  bool
-	actualNode  storeadapter.StoreNode
-	hasActual   bool
-	crashNode   storeadapter.StoreNode
-	hasCrashes  bool
-}
 
 func (store *RealStore) AppKey(appGuid string, appVersion string) string {
 	return appGuid + "-" + appVersion
@@ -23,50 +13,49 @@ func (store *RealStore) AppKey(appGuid string, appVersion string) string {
 
 func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, error) {
 	t := time.Now()
-	key := store.AppKey(appGuid, appVersion)
 
-	nodes := &appNodes{
-		hasDesired: true,
-		hasActual:  true,
-		hasCrashes: true,
+	representation := &appRepresentation{
+		actualState: []models.InstanceHeartbeat{},
+		crashCounts: []models.CrashCount{},
 	}
 
 	var err error
 
-	nodes.desiredNode, err = store.adapter.Get("/apps/desired/" + key)
-	if err == storeadapter.ErrorKeyNotFound {
-		nodes.hasDesired = false
-	} else if err != nil {
+	tDesired := time.Now()
+	representation.desiredState, err = store.getDesiredStateForApp(appGuid, appVersion)
+	if err != nil {
 		return nil, err
 	}
+	dtDesired := time.Since(tDesired).Seconds()
 
-	nodes.actualNode, err = store.adapter.ListRecursively("/apps/actual/" + key)
-	if err == storeadapter.ErrorKeyNotFound {
-		nodes.hasActual = false
-	} else if err != nil {
+	tActual := time.Now()
+	representation.actualState, err = store.getActualStateForApp(appGuid, appVersion)
+	if err != nil {
 		return nil, err
-	} else if len(nodes.actualNode.ChildNodes) == 0 {
-		nodes.hasActual = false
 	}
+	dtActual := time.Since(tActual).Seconds()
 
-	if !nodes.hasDesired && !nodes.hasActual {
+	if !representation.representsAnApp() {
 		return nil, AppNotFoundError
 	}
 
-	nodes.crashNode, err = store.adapter.ListRecursively("/apps/crashes/" + key)
-	if err == storeadapter.ErrorKeyNotFound {
-		nodes.hasCrashes = false
-	} else if err != nil {
+	tCrash := time.Now()
+	representation.crashCounts, err = store.getCrashCountForApp(appGuid, appVersion)
+	if err != nil {
 		return nil, err
 	}
+	dtCrash := time.Since(tCrash).Seconds()
 
-	app, err := store.nodesToApp(nodes)
+	app, err := representation.buildApp()
 	if app == nil {
 		return nil, AppNotFoundError
 	}
 
 	store.logger.Debug(fmt.Sprintf("Get Duration App"), map[string]string{
-		"Duration": fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Duration":                   fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Time to Fetch Desired":      fmt.Sprintf("%.4f seconds", dtDesired),
+		"Time to Fetch Actual":       fmt.Sprintf("%.4f seconds", dtActual),
+		"Time to Fetch Crash Counts": fmt.Sprintf("%.4f seconds", dtCrash),
 	})
 
 	return app, err
@@ -76,45 +65,46 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 	t := time.Now()
 
 	results = make(map[string]*models.App)
-	nodes := make(map[string]*appNodes)
+	representations := make(appRepresentations)
 
-	appsNode, err := store.adapter.ListRecursively("/apps")
+	tDesired := time.Now()
+	desiredStates, err := store.GetDesiredState()
+	dtDesired := time.Since(tDesired).Seconds()
 
-	if err == storeadapter.ErrorKeyNotFound {
-		return results, nil
-	} else if err != nil {
+	if err != nil {
 		return results, err
 	}
-
-	for _, subNode := range appsNode.ChildNodes {
-		if strings.HasSuffix(subNode.Key, "desired") {
-			for _, desiredNode := range subNode.ChildNodes {
-				appNodes := store.appNodesForKey(desiredNode.Key, nodes)
-				appNodes.hasDesired = true
-				appNodes.desiredNode = desiredNode
-			}
-		} else if strings.HasSuffix(subNode.Key, "actual") {
-			for _, actualNode := range subNode.ChildNodes {
-				if len(actualNode.ChildNodes) > 0 {
-					appNodes := store.appNodesForKey(actualNode.Key, nodes)
-					appNodes.hasActual = true
-					appNodes.actualNode = actualNode
-				}
-			}
-		} else if strings.HasSuffix(subNode.Key, "crashes") {
-			for _, crashNode := range subNode.ChildNodes {
-				if len(crashNode.ChildNodes) > 0 {
-					appNodes := store.appNodesForKey(crashNode.Key, nodes)
-					appNodes.hasCrashes = true
-					appNodes.crashNode = crashNode
-				}
-			}
-		}
+	for _, desiredState := range desiredStates {
+		representation := representations.representationForKey(store.AppKey(desiredState.AppGuid, desiredState.AppVersion))
+		representation.desiredState = desiredState
 	}
 
-	for _, appNodes := range nodes {
-		if appNodes.hasDesired || appNodes.hasActual {
-			app, err := store.nodesToApp(appNodes)
+	tActual := time.Now()
+	actualStates, err := store.getActualStates()
+	dtActual := time.Since(tActual).Seconds()
+	if err != nil {
+		return results, err
+	}
+	for _, actualState := range actualStates {
+		representation := representations.representationForKey(store.AppKey(actualState.AppGuid, actualState.AppVersion))
+		representation.actualState = append(representation.actualState, actualState)
+	}
+
+	tCrash := time.Now()
+	crashCounts, err := store.getCrashCounts()
+	dtCrash := time.Since(tCrash).Seconds()
+
+	if err != nil {
+		return results, err
+	}
+	for _, crashCount := range crashCounts {
+		representation := representations.representationForKey(store.AppKey(crashCount.AppGuid, crashCount.AppVersion))
+		representation.crashCounts = append(representation.crashCounts, crashCount)
+	}
+
+	for _, appRepresentation := range representations {
+		if appRepresentation.representsAnApp() {
+			app, err := appRepresentation.buildApp()
 			if err != nil {
 				return make(map[string]*models.App), err
 			}
@@ -125,65 +115,69 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 	}
 
 	store.logger.Debug(fmt.Sprintf("Get Duration Apps"), map[string]string{
-		"Number of Items": fmt.Sprintf("%d", len(results)),
-		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Number of Items":            fmt.Sprintf("%d", len(results)),
+		"Duration":                   fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Time to Fetch Desired":      fmt.Sprintf("%.4f seconds", dtDesired),
+		"Time to Fetch Actual":       fmt.Sprintf("%.4f seconds", dtActual),
+		"Time to Fetch Crash Counts": fmt.Sprintf("%.4f seconds", dtCrash),
 	})
 
 	return results, nil
 }
 
-func (store *RealStore) appNodesForKey(key string, nodes map[string]*appNodes) *appNodes {
+type appRepresentations map[string]*appRepresentation
+
+func (representations appRepresentations) representationForKey(key string) *appRepresentation {
 	splitKeys := strings.Split(key, "/")
 	id := splitKeys[len(splitKeys)-1]
-	_, exists := nodes[id]
+	_, exists := representations[id]
 	if !exists {
-		nodes[id] = &appNodes{}
+		representations[id] = &appRepresentation{
+			actualState: []models.InstanceHeartbeat{},
+			crashCounts: []models.CrashCount{},
+		}
 	}
-	return nodes[id]
+	return representations[id]
 }
 
-func (store *RealStore) nodesToApp(nodes *appNodes) (*models.App, error) {
-	desiredState := models.DesiredAppState{}
-	actualState := []models.InstanceHeartbeat{}
-	crashCounts := make(map[int]models.CrashCount)
+type appRepresentation struct {
+	desiredState models.DesiredAppState
+	actualState  []models.InstanceHeartbeat
+	crashCounts  []models.CrashCount
+}
 
+func (representation *appRepresentation) hasDesired() bool {
+	return representation.desiredState.AppGuid != ""
+}
+
+func (representation *appRepresentation) representsAnApp() bool {
+	return representation.hasDesired() || len(representation.actualState) > 0
+}
+
+func (representation *appRepresentation) buildApp() (*models.App, error) {
 	appGuid := ""
 	appVersion := ""
 
-	if nodes.hasDesired {
-		desired, err := models.NewDesiredAppStateFromJSON(nodes.desiredNode.Value)
-		if err != nil {
-			return nil, err
-		}
-		desiredState = desired
-		appGuid = desired.AppGuid
-		appVersion = desired.AppVersion
+	desiredState := models.DesiredAppState{}
+	if representation.hasDesired() {
+		desiredState = representation.desiredState
+		appGuid = desiredState.AppGuid
+		appVersion = desiredState.AppVersion
 	}
 
-	if nodes.hasActual {
-		for _, actualNode := range nodes.actualNode.ChildNodes {
-			actual, err := models.NewInstanceHeartbeatFromJSON(actualNode.Value)
-			if err != nil {
-				return nil, err
-			}
-			actualState = append(actualState, actual)
-			appGuid = actual.AppGuid
-			appVersion = actual.AppVersion
-		}
-	}
-
-	if nodes.hasCrashes {
-		for _, crashNode := range nodes.crashNode.ChildNodes {
-			crashCount, err := models.NewCrashCountFromJSON(crashNode.Value)
-			if err != nil {
-				return nil, err
-			}
-			crashCounts[crashCount.InstanceIndex] = crashCount
-		}
+	actualState := representation.actualState
+	if len(actualState) > 0 {
+		appGuid = actualState[0].AppGuid
+		appVersion = actualState[0].AppVersion
 	}
 
 	if appGuid == "" || appVersion == "" {
 		return nil, nil
+	}
+
+	crashCounts := make(map[int]models.CrashCount)
+	for _, crashCount := range representation.crashCounts {
+		crashCounts[crashCount.InstanceIndex] = crashCount
 	}
 
 	return models.NewApp(appGuid, appVersion, desiredState, actualState, crashCounts), nil

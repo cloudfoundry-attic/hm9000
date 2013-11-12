@@ -31,3 +31,46 @@ func (store *RealStore) SaveActualState(actualStates ...models.InstanceHeartbeat
 	})
 	return err
 }
+
+func (store *RealStore) getActualStates() (results []models.InstanceHeartbeat, err error) {
+	node, err := store.adapter.ListRecursively("/apps/actual")
+
+	if err == storeadapter.ErrorKeyNotFound {
+		return results, nil
+	} else if err != nil {
+		return results, err
+	}
+
+	for _, actualNode := range node.ChildNodes {
+		heartbeats, err := store.heartbeatsForNode(actualNode)
+		if err != nil {
+			return []models.InstanceHeartbeat{}, nil
+		}
+		results = append(results, heartbeats...)
+	}
+
+	return results, nil
+}
+
+func (store *RealStore) getActualStateForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
+	node, err := store.adapter.ListRecursively("/apps/actual/" + store.AppKey(appGuid, appVersion))
+	if err == storeadapter.ErrorKeyNotFound {
+		return []models.InstanceHeartbeat{}, nil
+	} else if err != nil {
+		return []models.InstanceHeartbeat{}, err
+	}
+
+	return store.heartbeatsForNode(node)
+}
+
+func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode) (results []models.InstanceHeartbeat, err error) {
+	for _, heartbeatNode := range node.ChildNodes {
+		heartbeat, err := models.NewInstanceHeartbeatFromJSON(heartbeatNode.Value)
+		if err != nil {
+			return []models.InstanceHeartbeat{}, err
+		}
+
+		results = append(results, heartbeat)
+	}
+	return results, nil
+}

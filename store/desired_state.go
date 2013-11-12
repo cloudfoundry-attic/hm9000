@@ -95,3 +95,14 @@ func (store *RealStore) GetDesiredState() (results map[string]models.DesiredAppS
 	})
 	return results, nil
 }
+
+func (store *RealStore) getDesiredStateForApp(appGuid string, appVersion string) (desired models.DesiredAppState, err error) {
+	node, err := store.adapter.Get("/apps/desired/" + store.AppKey(appGuid, appVersion))
+	if err == storeadapter.ErrorKeyNotFound {
+		return desired, nil
+	} else if err != nil {
+		return desired, err
+	}
+
+	return models.NewDesiredAppStateFromJSON(node.Value)
+}

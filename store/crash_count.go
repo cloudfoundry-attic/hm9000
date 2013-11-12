@@ -32,3 +32,46 @@ func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error 
 	})
 	return err
 }
+
+func (store *RealStore) getCrashCounts() (results []models.CrashCount, err error) {
+	node, err := store.adapter.ListRecursively("/apps/crashes")
+
+	if err == storeadapter.ErrorKeyNotFound {
+		return results, nil
+	} else if err != nil {
+		return results, err
+	}
+
+	for _, crashNode := range node.ChildNodes {
+		crashCounts, err := store.crashCountsForNode(crashNode)
+		if err != nil {
+			return []models.CrashCount{}, nil
+		}
+		results = append(results, crashCounts...)
+	}
+
+	return results, nil
+}
+
+func (store *RealStore) getCrashCountForApp(appGuid string, appVersion string) (results []models.CrashCount, err error) {
+	node, err := store.adapter.ListRecursively("/apps/crashes/" + store.AppKey(appGuid, appVersion))
+	if err == storeadapter.ErrorKeyNotFound {
+		return []models.CrashCount{}, nil
+	} else if err != nil {
+		return []models.CrashCount{}, err
+	}
+
+	return store.crashCountsForNode(node)
+}
+
+func (store *RealStore) crashCountsForNode(node storeadapter.StoreNode) (results []models.CrashCount, err error) {
+	for _, crashNode := range node.ChildNodes {
+		crashCount, err := models.NewCrashCountFromJSON(crashNode.Value)
+		if err != nil {
+			return []models.CrashCount{}, err
+		}
+
+		results = append(results, crashCount)
+	}
+	return results, nil
+}
