@@ -78,7 +78,7 @@ var _ = Describe("Apps", func() {
 			},
 		}
 
-		store.SaveActualState(actualState...)
+		store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(), actualState...))
 		store.SyncDesiredState(desiredState...)
 		store.SaveCrashCounts(crashCount...)
 	})

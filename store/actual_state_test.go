@@ -45,7 +45,7 @@ var _ = Describe("Actual State", func() {
 
 	Describe("Saving actual state ", func() {
 		BeforeEach(func() {
-			err := store.SaveActualState(heartbeat1, heartbeat2)
+			err := store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(), heartbeat1, heartbeat2))
 			Ω(err).ShouldNot(HaveOccured())
 		})
 

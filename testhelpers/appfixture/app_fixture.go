@@ -19,6 +19,13 @@ type Instance struct {
 	AppVersion    string
 }
 
+func NewHeartbeat(deaGuid string, instanceHeartbeats ...InstanceHeartbeat) Heartbeat {
+	return Heartbeat{
+		DeaGuid:            deaGuid,
+		InstanceHeartbeats: instanceHeartbeats,
+	}
+}
+
 func NewAppFixture() AppFixture {
 	return newAppForDeaGuid(Guid())
 }

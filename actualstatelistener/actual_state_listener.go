@@ -51,7 +51,7 @@ func (listener *ActualStateListener) Start() {
 		}
 
 		listener.logger.Debug("Decoded the heartbeat")
-		err = listener.store.SaveActualState(heartbeat.InstanceHeartbeats...)
+		err = listener.store.SaveHeartbeat(heartbeat)
 		if err != nil {
 			listener.logger.Error("Could not put instance heartbeats in store:", err)
 			return

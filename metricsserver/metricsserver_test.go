@@ -118,12 +118,7 @@ var _ = Describe("Metrics Server", func() {
 			Context("when a desired app has all instances running", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
-
-					store.SaveActualState(
-						a.InstanceAtIndex(0).Heartbeat(),
-						a.InstanceAtIndex(1).Heartbeat(),
-						a.InstanceAtIndex(2).Heartbeat(),
-					)
+					store.SaveHeartbeat(a.Heartbeat(3))
 				})
 
 				It("should report the app as 100 %% reporting", func() {
@@ -146,11 +141,11 @@ var _ = Describe("Metrics Server", func() {
 
 					startingHB := a.InstanceAtIndex(1).Heartbeat()
 					startingHB.State = models.InstanceStateStarting
-					store.SaveActualState(
+					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
 						a.InstanceAtIndex(0).Heartbeat(),
 						startingHB,
 						a.InstanceAtIndex(2).Heartbeat(),
-					)
+					))
 				})
 
 				It("should report the app as 100 %% reporting", func() {
@@ -171,7 +166,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveActualState(
+					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(1).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -179,7 +174,7 @@ var _ = Describe("Metrics Server", func() {
 						a.CrashedInstanceHeartbeatAtIndex(1),
 						a.CrashedInstanceHeartbeatAtIndex(2),
 						a.CrashedInstanceHeartbeatAtIndex(2),
-					)
+					))
 				})
 				It("should report the app as 100 %% reporting", func() {
 					context := metricsServer.Emit()
@@ -199,14 +194,14 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveActualState(
+					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(1).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
 						a.InstanceAtIndex(4).Heartbeat(),
 						a.InstanceAtIndex(5).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(3),
-					)
+					))
 				})
 				It("should report the app as 100 %% reporting", func() {
 					context := metricsServer.Emit()
@@ -226,12 +221,12 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveActualState(
+					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 						a.InstanceAtIndex(2).Heartbeat(),
-					)
+					))
 				})
 
 				It("should report the app as 100 %% reporting", func() {
@@ -252,10 +247,10 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveActualState(
+					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
-					)
+					))
 				})
 
 				It("should not report the app as 100 %% reporting", func() {
@@ -294,12 +289,12 @@ var _ = Describe("Metrics Server", func() {
 			Context("when there is an undesired app that is reporting as running", func() {
 				BeforeEach(func() {
 					b := appfixture.NewAppFixture()
-					store.SaveActualState(
+					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 						a.InstanceAtIndex(2).Heartbeat(),
 						b.InstanceAtIndex(0).Heartbeat(),
-					)
+					))
 				})
 
 				It("should report the app as an undesired app", func() {
@@ -318,10 +313,10 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when there is an undesired app that is reporting as crashed", func() {
 				BeforeEach(func() {
-					store.SaveActualState(
+					store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(),
 						a.CrashedInstanceHeartbeatAtIndex(0),
 						a.CrashedInstanceHeartbeatAtIndex(1),
-					)
+					))
 				})
 
 				It("should report the app as an undesired app", func() {

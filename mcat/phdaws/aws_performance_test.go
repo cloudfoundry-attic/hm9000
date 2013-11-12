@@ -37,18 +37,18 @@ var _ = Describe("Benchmarking AWS MCAT ", func() {
 			Measure("Read/Write/Delete Performance", func(b Benchmarker) {
 				fmt.Printf("%d apps iteration %d\n", numApps, iteration)
 				iteration += 1
-				data := make([]models.InstanceHeartbeat, numApps*numberOfInstancesPerApp)
+				heartbeat := appfixture.NewHeartbeat(models.Guid())
 				n := 0
 				for i := 0; i < numApps; i++ {
 					app := appfixture.NewAppFixture()
 					for j := 0; j < numberOfInstancesPerApp; j++ {
-						data[n] = app.InstanceAtIndex(j).Heartbeat()
+						heartbeat.InstanceHeartbeats = append(heartbeat.InstanceHeartbeats, app.InstanceAtIndex(j).Heartbeat())
 						n += 1
 					}
 				}
 
 				b.Time("WRITE", func() {
-					err := store.SaveActualState(data...)
+					err := store.SaveHeartbeat(heartbeat)
 					Ω(err).ShouldNot(HaveOccured())
 				}, StorePerformanceReport{
 					NumApps: numApps,

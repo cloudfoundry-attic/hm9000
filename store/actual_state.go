@@ -11,11 +11,11 @@ func (store *RealStore) actualStateStoreKey(actualState models.InstanceHeartbeat
 	return "/apps/actual/" + store.AppKey(actualState.AppGuid, actualState.AppVersion) + "/" + actualState.StoreKey()
 }
 
-func (store *RealStore) SaveActualState(actualStates ...models.InstanceHeartbeat) error {
+func (store *RealStore) SaveHeartbeat(heartbeat models.Heartbeat) error {
 	t := time.Now()
 
-	nodes := make([]storeadapter.StoreNode, len(actualStates))
-	for i, actualState := range actualStates {
+	nodes := make([]storeadapter.StoreNode, len(heartbeat.InstanceHeartbeats))
+	for i, actualState := range heartbeat.InstanceHeartbeats {
 		nodes[i] = storeadapter.StoreNode{
 			Key:   store.actualStateStoreKey(actualState),
 			Value: actualState.ToJSON(),
@@ -26,7 +26,7 @@ func (store *RealStore) SaveActualState(actualStates ...models.InstanceHeartbeat
 	err := store.adapter.Set(nodes)
 
 	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), map[string]string{
-		"Number of Items": fmt.Sprintf("%d", len(actualStates)),
+		"Number of Items": fmt.Sprintf("%d", len(heartbeat.InstanceHeartbeats)),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
 	return err

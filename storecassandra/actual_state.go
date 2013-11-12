@@ -5,10 +5,10 @@ import (
 	"tux21b.org/v1/gocql"
 )
 
-func (s *StoreCassandra) SaveActualState(actualStates ...models.InstanceHeartbeat) error {
+func (s *StoreCassandra) SaveHeartbeat(heartbeat models.Heartbeat) error {
 	batch := s.newBatch()
 
-	for _, state := range actualStates {
+	for _, state := range heartbeat.InstanceHeartbeats {
 		batch.Query(`INSERT INTO ActualStates (app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			state.AppGuid,
 			state.AppVersion,

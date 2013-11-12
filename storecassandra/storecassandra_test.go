@@ -83,9 +83,11 @@ var _ = Describe("Storecassandra", func() {
 	})
 
 	Describe("Actual State", func() {
+		var heartbeat models.Heartbeat
 		Describe("Writing and reading actual state", func() {
 			BeforeEach(func() {
-				err := store.SaveActualState(app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat())
+				heartbeat = appfixture.NewHeartbeat(models.Guid(), app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat())
+				err := store.SaveHeartbeat(heartbeat)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -111,14 +113,11 @@ var _ = Describe("Storecassandra", func() {
 			})
 
 			Describe("Updating Actual state", func() {
-				var modifiedHeartbeat models.InstanceHeartbeat
-
 				BeforeEach(func() {
 					timeProvider.IncrementBySeconds(conf.HeartbeatTTL() - 10)
 
-					modifiedHeartbeat = app2.InstanceAtIndex(1).Heartbeat()
-					modifiedHeartbeat.State = models.InstanceStateCrashed
-					err := store.SaveActualState(modifiedHeartbeat)
+					heartbeat.InstanceHeartbeats[1].State = models.InstanceStateCrashed
+					err := store.SaveHeartbeat(heartbeat)
 					Ω(err).ShouldNot(HaveOccured())
 				})
 
@@ -128,15 +127,16 @@ var _ = Describe("Storecassandra", func() {
 					Ω(state).Should(HaveLen(2))
 
 					Ω(state[app1.InstanceAtIndex(0).Heartbeat().StoreKey()]).Should(Equal(app1.InstanceAtIndex(0).Heartbeat()))
-					Ω(state[modifiedHeartbeat.StoreKey()]).Should(Equal(modifiedHeartbeat))
+					Ω(state[heartbeat.InstanceHeartbeats[1].StoreKey()]).Should(Equal(heartbeat.InstanceHeartbeats[1]))
 				})
 
 				It("should bump the TTL", func() {
 					timeProvider.IncrementBySeconds(10)
 					state, err := store.GetActualState()
 					Ω(err).ShouldNot(HaveOccured())
-					Ω(state).Should(HaveLen(1))
-					Ω(state[modifiedHeartbeat.StoreKey()]).Should(Equal(modifiedHeartbeat))
+					Ω(state).Should(HaveLen(2))
+					Ω(state[app1.InstanceAtIndex(0).Heartbeat().StoreKey()]).Should(Equal(app1.InstanceAtIndex(0).Heartbeat()))
+					Ω(state[heartbeat.InstanceHeartbeats[1].StoreKey()]).Should(Equal(heartbeat.InstanceHeartbeats[1]))
 				})
 			})
 		})
@@ -511,7 +511,7 @@ var _ = Describe("Storecassandra", func() {
 			}
 
 			store.SyncDesiredState(app1.DesiredState(1), app2.DesiredState(3))
-			store.SaveActualState(app1.InstanceAtIndex(0).Heartbeat(), app3.InstanceAtIndex(2).Heartbeat())
+			store.SaveHeartbeat(appfixture.NewHeartbeat(models.Guid(), app1.InstanceAtIndex(0).Heartbeat(), app3.InstanceAtIndex(2).Heartbeat()))
 			store.SaveCrashCounts(crashCount1, crashCount2)
 
 		})
