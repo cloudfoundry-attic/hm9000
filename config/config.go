@@ -15,7 +15,6 @@ type Config struct {
 	HeartbeatTTLInHeartbeats        uint64 `json:"heartbeat_ttl_in_heartbeats"`
 	ActualFreshnessTTLInHeartbeats  uint64 `json:"actual_freshness_ttl_in_heartbeats"`
 	GracePeriodInHeartbeats         int    `json:"grace_period_in_heartbeats"`
-	DesiredStateTTLInHeartbeats     uint64 `json:"desired_state_ttl_in_heartbeats"`
 	DesiredFreshnessTTLInHeartbeats uint64 `json:"desired_freshness_ttl_in_heartbeats"`
 
 	SenderPollingIntervalInHeartbeats   int `json:"sender_polling_interval_in_heartbeats"`
@@ -72,10 +71,6 @@ func (conf *Config) ActualFreshnessTTL() uint64 {
 
 func (conf *Config) GracePeriod() int {
 	return conf.GracePeriodInHeartbeats * int(conf.HeartbeatPeriod)
-}
-
-func (conf *Config) DesiredStateTTL() uint64 {
-	return conf.DesiredStateTTLInHeartbeats * conf.HeartbeatPeriod
 }
 
 func (conf *Config) DesiredFreshnessTTL() uint64 {

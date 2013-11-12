@@ -67,7 +67,6 @@ var _ = Describe("Config", func() {
 			Ω(config.HeartbeatTTL()).Should(BeNumerically("==", 30))
 			Ω(config.ActualFreshnessTTL()).Should(BeNumerically("==", 30))
 			Ω(config.GracePeriod()).Should(BeNumerically("==", 30))
-			Ω(config.DesiredStateTTL()).Should(BeNumerically("==", 600))
 			Ω(config.DesiredFreshnessTTL()).Should(BeNumerically("==", 120))
 
 			Ω(config.SenderPollingInterval().Seconds()).Should(BeNumerically("==", 10))
