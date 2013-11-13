@@ -124,7 +124,7 @@ func (runner *CLIRunner) Run(command string, timestamp int) {
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
 	out, _ := cmd.CombinedOutput()
 	if runner.verbose {
-		fmt.Printf(command + "\n")
+		fmt.Printf(command+" (%s) \n", time.Unix(int64(timestamp), 0))
 		fmt.Printf(strings.Repeat("~", len(command)) + "\n")
 		fmt.Printf(string(out))
 

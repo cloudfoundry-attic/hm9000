@@ -87,19 +87,37 @@ var _ = Describe("Storecassandra", func() {
 	Describe("Actual State", func() {
 		var heartbeat models.Heartbeat
 		Describe("Writing and reading actual state", func() {
+			var app3 appfixture.AppFixture
 			BeforeEach(func() {
-				heartbeat = dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat())
+				app3 = dea.GetApp(2)
+
+				heartbeat = dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat(), app3.InstanceAtIndex(0).Heartbeat())
 				err := store.SaveHeartbeat(heartbeat)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
 			It("should return the stored actual state", func() {
-				state, err := store.GetActualState()
+				state, err := store.GetActualStates()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(state).Should(HaveLen(2))
+				Ω(state).Should(HaveLen(3))
 
-				Ω(state[app1.InstanceAtIndex(0).Heartbeat().StoreKey()]).Should(Equal(app1.InstanceAtIndex(0).Heartbeat()))
-				Ω(state[app2.InstanceAtIndex(1).Heartbeat().StoreKey()]).Should(Equal(app2.InstanceAtIndex(1).Heartbeat()))
+				Ω(state).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
+				Ω(state).Should(ContainElement(app2.InstanceAtIndex(1).Heartbeat()))
+				Ω(state).Should(ContainElement(app3.InstanceAtIndex(0).Heartbeat()))
+			})
+
+			It("should also return the state queried by individual app", func() {
+				state, err := store.GetActualStateForApp(app1.AppGuid, app1.AppVersion)
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(state).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
+			})
+
+			Context("when the app is not present", func() {
+				It("should also return the state queried by individual app", func() {
+					state, err := store.GetActualStateForApp("abc", "def")
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(state).Should(BeEmpty())
+				})
 			})
 
 			Context("when the TTL expires", func() {
@@ -108,7 +126,7 @@ var _ = Describe("Storecassandra", func() {
 				})
 
 				It("should expire the nodes appropriately", func() {
-					state, err := store.GetActualState()
+					state, err := store.GetActualStates()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(state).Should(HaveLen(0))
 				})
@@ -118,27 +136,29 @@ var _ = Describe("Storecassandra", func() {
 				BeforeEach(func() {
 					timeProvider.IncrementBySeconds(conf.HeartbeatTTL() - 10)
 
+					heartbeat = dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat())
 					heartbeat.InstanceHeartbeats[1].State = models.InstanceStateCrashed
 					err := store.SaveHeartbeat(heartbeat)
+
 					Ω(err).ShouldNot(HaveOccured())
 				})
 
-				It("should update the correct entry", func() {
-					state, err := store.GetActualState()
+				It("should update the correct entry and delete any missing entries", func() {
+					state, err := store.GetActualStates()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(state).Should(HaveLen(2))
 
-					Ω(state[app1.InstanceAtIndex(0).Heartbeat().StoreKey()]).Should(Equal(app1.InstanceAtIndex(0).Heartbeat()))
-					Ω(state[heartbeat.InstanceHeartbeats[1].StoreKey()]).Should(Equal(heartbeat.InstanceHeartbeats[1]))
+					Ω(state).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
+					Ω(state).Should(ContainElement(heartbeat.InstanceHeartbeats[1]))
 				})
 
 				It("should bump the TTL", func() {
 					timeProvider.IncrementBySeconds(10)
-					state, err := store.GetActualState()
+					state, err := store.GetActualStates()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(state).Should(HaveLen(2))
-					Ω(state[app1.InstanceAtIndex(0).Heartbeat().StoreKey()]).Should(Equal(app1.InstanceAtIndex(0).Heartbeat()))
-					Ω(state[heartbeat.InstanceHeartbeats[1].StoreKey()]).Should(Equal(heartbeat.InstanceHeartbeats[1]))
+					Ω(state).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
+					Ω(state).Should(ContainElement(heartbeat.InstanceHeartbeats[1]))
 				})
 			})
 		})

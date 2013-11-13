@@ -38,6 +38,8 @@ type Store interface {
 	GetDesiredState() (map[string]models.DesiredAppState, error)
 
 	SaveHeartbeat(heartbeat models.Heartbeat) error
+	GetActualStates() (results []models.InstanceHeartbeat, err error)
+	GetActualStateForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
 
 	SaveCrashCounts(crashCounts ...models.CrashCount) error
 

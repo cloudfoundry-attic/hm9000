@@ -6,11 +6,15 @@ import (
 )
 
 type HeartbeatSummary struct {
-	DeaGuid                    string                   `json:"dea"`
-	InstanceHeartbeatSummaries map[string]InstanceState `json:"summary"`
+	DeaGuid                    string                              `json:"dea"`
+	InstanceHeartbeatSummaries map[string]InstanceHeartbeatSummary `json:"summary"`
 }
 
-//from and to json on this guy
+type InstanceHeartbeatSummary struct {
+	AppGuid    string        `json:"droplet"`
+	AppVersion string        `json:"version"`
+	State      InstanceState `json:"state"`
+}
 
 type Heartbeat struct {
 	DeaGuid            string              `json:"dea"`
@@ -61,12 +65,35 @@ func (heartbeat Heartbeat) LogDescription() map[string]string {
 func (heartbeat Heartbeat) HeartbeatSummary() HeartbeatSummary {
 	summary := HeartbeatSummary{
 		DeaGuid:                    heartbeat.DeaGuid,
-		InstanceHeartbeatSummaries: make(map[string]InstanceState),
+		InstanceHeartbeatSummaries: make(map[string]InstanceHeartbeatSummary),
 	}
 
-	for _, instanceHeartbate := range heartbeat.InstanceHeartbeats {
-		summary.InstanceHeartbeatSummaries[instanceHeartbate.InstanceGuid] = instanceHeartbate.State
+	for _, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
+		summary.InstanceHeartbeatSummaries[instanceHeartbeat.InstanceGuid] = InstanceHeartbeatSummary{
+			AppGuid:    instanceHeartbeat.AppGuid,
+			AppVersion: instanceHeartbeat.AppVersion,
+			State:      instanceHeartbeat.State,
+		}
 	}
 
 	return summary
+}
+
+func NewHeartbeatSummaryFromJSON(encoded []byte) (HeartbeatSummary, error) {
+	var summary HeartbeatSummary
+	err := json.Unmarshal(encoded, &summary)
+	if err != nil {
+		return HeartbeatSummary{}, err
+	}
+	return summary, nil
+}
+
+func (summary HeartbeatSummary) ToJSON() []byte {
+	encoded, _ := json.Marshal(summary)
+	return encoded
+}
+
+func (summary HeartbeatSummary) ContainsInstanceHeartbeat(instanceHeartbeat InstanceHeartbeat) bool {
+	existing, exists := summary.InstanceHeartbeatSummaries[instanceHeartbeat.InstanceGuid]
+	return exists && existing.State == instanceHeartbeat.State
 }

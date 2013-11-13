@@ -290,7 +290,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when there is an undesired app that is reporting as running", func() {
 				BeforeEach(func() {
-					b := appfixture.NewAppFixture()
+					b := dea.GetApp(1)
 					store.SaveHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(1),

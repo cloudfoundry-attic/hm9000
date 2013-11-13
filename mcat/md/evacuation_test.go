@@ -8,11 +8,13 @@ import (
 )
 
 var _ = Describe("Evacuation and Shutdown", func() {
+	var dea appfixture.DeaFixture
 	var app appfixture.AppFixture
 
 	BeforeEach(func() {
-		app = appfixture.NewAppFixture()
-		simulator.SetCurrentHeartbeats(app.Heartbeat(1))
+		dea = appfixture.NewDeaFixture()
+		app = dea.GetApp(0)
+		simulator.SetCurrentHeartbeats(dea.HeartbeatWith(app.InstanceAtIndex(0).Heartbeat()))
 		simulator.SetDesiredState(app.DesiredState(1))
 		simulator.Tick(simulator.TicksToAttainFreshness)
 	})
@@ -47,9 +49,8 @@ var _ = Describe("Evacuation and Shutdown", func() {
 				Ω(startStopListener.Stops).Should(BeEmpty())
 				evacuatingHeartbeat = app.InstanceAtIndex(0).Heartbeat()
 				evacuatingHeartbeat.State = models.InstanceStateEvacuating
-				simulator.SetCurrentHeartbeats(models.Heartbeat{
-					InstanceHeartbeats: []models.InstanceHeartbeat{evacuatingHeartbeat},
-				})
+
+				simulator.SetCurrentHeartbeats(dea.HeartbeatWith(evacuatingHeartbeat))
 				simulator.Tick(1)
 			})
 
@@ -66,9 +67,9 @@ var _ = Describe("Evacuation and Shutdown", func() {
 					startStopListener.Reset()
 					runningHeartbeat := app.InstanceAtIndex(0).Heartbeat()
 					runningHeartbeat.InstanceGuid = models.Guid()
+					simulator.SetCurrentHeartbeats(dea.HeartbeatWith(evacuatingHeartbeat))
 					simulator.SetCurrentHeartbeats(models.Heartbeat{
-						InstanceHeartbeats: []models.InstanceHeartbeat{evacuatingHeartbeat},
-					}, models.Heartbeat{
+						DeaGuid:            "new-dea",
 						InstanceHeartbeats: []models.InstanceHeartbeat{runningHeartbeat},
 					})
 					simulator.Tick(1)

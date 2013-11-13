@@ -17,10 +17,8 @@ var _ = Describe("Actual State", func() {
 		store       Store
 		etcdAdapter storeadapter.StoreAdapter
 		conf        config.Config
-		heartbeat1  models.InstanceHeartbeat
-		heartbeat2  models.InstanceHeartbeat
-		heartbeat3  models.InstanceHeartbeat
-		app         appfixture.AppFixture
+		dea         appfixture.DeaFixture
+		otherDea    appfixture.DeaFixture
 	)
 
 	BeforeEach(func() {
@@ -30,41 +28,190 @@ var _ = Describe("Actual State", func() {
 		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
 		err = etcdAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
-
-		app = appfixture.NewAppFixture()
-		heartbeat1 = app.InstanceAtIndex(0).Heartbeat()
-		heartbeat2 = app.InstanceAtIndex(1).Heartbeat()
-		heartbeat3 = app.InstanceAtIndex(2).Heartbeat()
-
 		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+
+		dea = appfixture.NewDeaFixture()
+		otherDea = appfixture.NewDeaFixture()
 	})
 
 	AfterEach(func() {
 		etcdAdapter.Disconnect()
 	})
 
-	Describe("Saving actual state ", func() {
+	Describe("Saving actual state", func() {
 		BeforeEach(func() {
-			err := store.SaveHeartbeat(app.Heartbeat(2))
-			Ω(err).ShouldNot(HaveOccured())
+			store.SaveHeartbeat(dea.HeartbeatWith(
+				dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+				dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+			))
 		})
 
-		It("can stores the passed in actual state", func() {
-			heartbeatNode, err := etcdAdapter.Get("/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + heartbeat1.InstanceGuid)
+		It("should save the instance heartbeats for the passed-in heartbeat", func() {
+			results, err := store.GetActualStates()
 			Ω(err).ShouldNot(HaveOccured())
+			Ω(results).Should(HaveLen(2))
+			Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+			Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+		})
 
-			Ω(heartbeatNode).Should(Equal(storeadapter.StoreNode{
-				Key:   "/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + heartbeat1.InstanceGuid,
-				Value: heartbeat1.ToJSON(),
-				TTL:   conf.HeartbeatTTL(),
-			}))
+		Context("when there are already instance heartbeats stored for the DEA in question", func() {
+			var modifiedHeartbeat models.InstanceHeartbeat
+			BeforeEach(func() {
+				modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+				modifiedHeartbeat.State = models.InstanceStateEvacuating
+				store.SaveHeartbeat(dea.HeartbeatWith(
+					modifiedHeartbeat,
+					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
+				))
+			})
 
-			heartbeatNode, err = etcdAdapter.Get("/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + heartbeat2.InstanceGuid)
-			Ω(heartbeatNode).Should(Equal(storeadapter.StoreNode{
-				Key:   "/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + heartbeat2.InstanceGuid,
-				Value: heartbeat2.ToJSON(),
-				TTL:   conf.HeartbeatTTL(),
-			}))
+			It("should sync the heartbeats (add new ones, adjust ones that have changed state, and delete old ones)", func() {
+				results, err := store.GetActualStates()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(results).Should(HaveLen(2))
+				Ω(results).Should(ContainElement(modifiedHeartbeat))
+				Ω(results).Should(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+			})
+		})
+	})
+
+	Describe("Fetching all actual state", func() {
+		Context("when there is none saved", func() {
+			It("should come back empty", func() {
+				results, err := store.GetActualStates()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(results).Should(BeEmpty())
+			})
+		})
+
+		Context("when there is actual state saved", func() {
+			BeforeEach(func() {
+				store.SaveHeartbeat(dea.HeartbeatWith(
+					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+				))
+
+				store.SaveHeartbeat(otherDea.HeartbeatWith(
+					otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat(),
+				))
+			})
+
+			Context("when the DEA heartbeats have not expired", func() {
+				It("should return the instance heartbeats", func() {
+					results, err := store.GetActualStates()
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(results).Should(HaveLen(4))
+					Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Ω(results).Should(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
+				})
+			})
+
+			Context("when a DEA heartbeat has expired", func() {
+				BeforeEach(func() {
+					etcdAdapter.Delete("/dea-presence/" + dea.DeaGuid)
+				})
+
+				It("should not return any expired instance heartbeats", func() {
+					results, err := store.GetActualStates()
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(results).Should(HaveLen(2))
+					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Ω(results).Should(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
+				})
+
+				It("should remove expired instance heartbeats from the store", func() {
+					_, err := etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
+					Ω(err).ShouldNot(HaveOccured())
+					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
+					Ω(err).ShouldNot(HaveOccured())
+
+					_, err = store.GetActualStates()
+					Ω(err).ShouldNot(HaveOccured())
+
+					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
+					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
+					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+				})
+			})
+		})
+	})
+
+	Describe("Fetching actual state for a specific app guid & version", func() {
+		var app appfixture.AppFixture
+		BeforeEach(func() {
+			app = appfixture.NewAppFixture()
+		})
+
+		Context("when there is none saved", func() {
+			It("should come back empty", func() {
+				results, err := store.GetActualStateForApp(app.AppGuid, app.AppVersion)
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(results).Should(BeEmpty())
+			})
+		})
+
+		Context("when there is actual state saved", func() {
+			var heartbeatA, heartbeatB models.InstanceHeartbeat
+
+			BeforeEach(func() {
+				heartbeatA = app.InstanceAtIndex(0).Heartbeat()
+				heartbeatA.DeaGuid = "A"
+
+				store.SaveHeartbeat(models.Heartbeat{
+					DeaGuid: "A",
+					InstanceHeartbeats: []models.InstanceHeartbeat{
+						heartbeatA,
+					},
+				})
+
+				heartbeatB = app.InstanceAtIndex(1).Heartbeat()
+				heartbeatB.DeaGuid = "B"
+
+				store.SaveHeartbeat(models.Heartbeat{
+					DeaGuid: "B",
+					InstanceHeartbeats: []models.InstanceHeartbeat{
+						heartbeatB,
+					},
+				})
+			})
+
+			Context("when the corresponding DEA heartbeat has not expired", func() {
+				It("should return the instance heartbeats", func() {
+					results, err := store.GetActualStateForApp(app.AppGuid, app.AppVersion)
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(results).Should(HaveLen(2))
+					Ω(results).Should(ContainElement(heartbeatA))
+					Ω(results).Should(ContainElement(heartbeatB))
+				})
+			})
+
+			Context("when the corresponding DEA heartbeat has expired", func() {
+				BeforeEach(func() {
+					etcdAdapter.Delete("/dea-presence/A")
+				})
+
+				It("should not return any expired instance heartbeats", func() {
+					results, err := store.GetActualStateForApp(app.AppGuid, app.AppVersion)
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(results).Should(HaveLen(1))
+					Ω(results).Should(ContainElement(heartbeatB))
+				})
+
+				It("should remove expired instance heartbeats from the store", func() {
+					_, err := etcdAdapter.Get("/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
+					Ω(err).ShouldNot(HaveOccured())
+
+					_, err = store.GetActualStateForApp(app.AppGuid, app.AppVersion)
+					Ω(err).ShouldNot(HaveOccured())
+
+					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
+					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+				})
+			})
 		})
 	})
 })

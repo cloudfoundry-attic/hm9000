@@ -17,7 +17,7 @@ func (s *StoreCassandra) GetApps() (map[string]*models.App, error) {
 		return apps, err
 	}
 
-	actualStates, err := s.GetActualState()
+	actualStates, err := s.GetActualStates()
 	if err != nil {
 		return apps, err
 	}

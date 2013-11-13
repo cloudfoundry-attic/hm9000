@@ -101,13 +101,28 @@ var _ = Describe("Heartbeat", func() {
 			It("should build out a summary for the associated instance heartbeats", func() {
 				Ω(heartbeat.HeartbeatSummary()).Should(Equal(HeartbeatSummary{
 					DeaGuid: heartbeat.DeaGuid,
-					InstanceHeartbeatSummaries: map[string]InstanceState{
-						app.InstanceAtIndex(2).InstanceGuid: InstanceStateCrashed,
-						app.InstanceAtIndex(3).InstanceGuid: InstanceStateStarting,
-						app.InstanceAtIndex(4).InstanceGuid: InstanceStateEvacuating,
-						app.InstanceAtIndex(0).InstanceGuid: InstanceStateRunning,
+					InstanceHeartbeatSummaries: map[string]InstanceHeartbeatSummary{
+						app.InstanceAtIndex(2).InstanceGuid: InstanceHeartbeatSummary{app.AppGuid, app.AppVersion, InstanceStateCrashed},
+						app.InstanceAtIndex(3).InstanceGuid: InstanceHeartbeatSummary{app.AppGuid, app.AppVersion, InstanceStateStarting},
+						app.InstanceAtIndex(4).InstanceGuid: InstanceHeartbeatSummary{app.AppGuid, app.AppVersion, InstanceStateEvacuating},
+						app.InstanceAtIndex(0).InstanceGuid: InstanceHeartbeatSummary{app.AppGuid, app.AppVersion, InstanceStateRunning},
 					},
 				}))
+			})
+
+			It("should be jsonable", func() {
+				summary := heartbeat.HeartbeatSummary()
+				decodedSummary, err := NewHeartbeatSummaryFromJSON(summary.ToJSON())
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(summary).Should(Equal(decodedSummary))
+			})
+
+			It("should know wheter or not it contains an instance heartbeat", func() {
+				summary := heartbeat.HeartbeatSummary()
+				Ω(summary.ContainsInstanceHeartbeat(app.InstanceAtIndex(0).Heartbeat())).Should(BeTrue())
+				heartbeat := app.InstanceAtIndex(0).Heartbeat()
+				heartbeat.State = InstanceStateCrashed
+				Ω(summary.ContainsInstanceHeartbeat(heartbeat)).Should(BeFalse())
 			})
 		})
 
@@ -121,6 +136,5 @@ var _ = Describe("Heartbeat", func() {
 				Ω(desc["Running"]).Should(Equal("1"))
 			})
 		})
-
 	})
 })

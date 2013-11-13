@@ -6,7 +6,23 @@ import (
 )
 
 func (s *StoreCassandra) SaveHeartbeat(heartbeat models.Heartbeat) error {
+	summary := heartbeat.HeartbeatSummary()
+	iter := s.session.Query(`SELECT app_guid, app_version, instance_guid FROM ActualStates WHERE dea_guid = ?`, heartbeat.DeaGuid).Iter()
+
 	batch := s.newBatch()
+
+	var appGuid, appVersion, instanceGuid string
+	for iter.Scan(&appGuid, &appVersion, &instanceGuid) {
+		_, exists := summary.InstanceHeartbeatSummaries[instanceGuid]
+		if !exists {
+			batch.Query(`DELETE FROM ActualStates WHERE app_guid = ? AND app_version = ? AND instance_guid = ?`, appGuid, appVersion, instanceGuid)
+		}
+	}
+
+	err := iter.Close()
+	if err != nil {
+		return err
+	}
 
 	for _, state := range heartbeat.InstanceHeartbeats {
 		batch.Query(`INSERT INTO ActualStates (app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, dea_guid, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -24,19 +40,12 @@ func (s *StoreCassandra) SaveHeartbeat(heartbeat models.Heartbeat) error {
 	return s.session.ExecuteBatch(batch)
 }
 
-func (s *StoreCassandra) GetActualState() (map[string]models.InstanceHeartbeat, error) {
-	result := map[string]models.InstanceHeartbeat{}
-	actualStates, err := s.getActualState("", "")
+func (s *StoreCassandra) GetActualStates() ([]models.InstanceHeartbeat, error) {
+	return s.getActualState("", "")
+}
 
-	if err != nil {
-		return result, err
-	}
-
-	for _, actualState := range actualStates {
-		result[actualState.StoreKey()] = actualState
-	}
-
-	return result, err
+func (s *StoreCassandra) GetActualStateForApp(appGuid string, appVersion string) ([]models.InstanceHeartbeat, error) {
+	return s.getActualState(appGuid, appVersion)
 }
 
 func (s *StoreCassandra) getActualState(optionalAppGuid string, optionalAppVersion string) ([]models.InstanceHeartbeat, error) {

@@ -625,7 +625,6 @@ var _ = Describe("Sender", func() {
 				for _, message := range messages {
 					Ω(message.SentOn).Should(BeNumerically("==", 130))
 				}
-
 			})
 
 			It("should send the stop message", func() {
@@ -670,6 +669,8 @@ var _ = Describe("Sender", func() {
 							instance.InstanceGuid = models.Guid()
 
 							store.SaveHeartbeat(dea.HeartbeatWith(
+								app.InstanceAtIndex(0).Heartbeat(),
+								app.InstanceAtIndex(1).Heartbeat(),
 								instance.Heartbeat(),
 							))
 						})
@@ -680,6 +681,8 @@ var _ = Describe("Sender", func() {
 					Context("when there are other, crashed, instances on the index, and no running instances", func() {
 						BeforeEach(func() {
 							store.SaveHeartbeat(dea.HeartbeatWith(
+								app.InstanceAtIndex(0).Heartbeat(),
+								app.InstanceAtIndex(1).Heartbeat(),
 								app.CrashedInstanceHeartbeatAtIndex(0),
 							))
 						})
@@ -747,7 +750,7 @@ var _ = Describe("Sender", func() {
 				a := appfixture.NewAppFixture()
 				desiredStates = append(desiredStates, a.DesiredState(1))
 				store.SaveHeartbeat(models.Heartbeat{
-					DeaGuid:            models.Guid(),
+					DeaGuid:            a.DeaGuid,
 					InstanceHeartbeats: []models.InstanceHeartbeat{a.InstanceAtIndex(1).Heartbeat()},
 				})
 
