@@ -3,11 +3,18 @@ package store
 import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
 func (store *RealStore) Compact() error {
-	err := store.deleteExpiredDEAHeartbeatSummaries()
+	err := store.deleteOldSchemaVersions()
+	if err != nil {
+		return err
+	}
+
+	err = store.deleteExpiredDEAHeartbeatSummaries()
 	if err != nil {
 		return err
 	}
@@ -17,6 +24,34 @@ func (store *RealStore) Compact() error {
 		return err
 	}
 	return nil
+}
+
+func (store *RealStore) deleteOldSchemaVersions() error {
+	everything, err := store.adapter.ListRecursively("/")
+	if err != nil {
+		return err
+	}
+
+	re := regexp.MustCompile(`^/v(\d+)$`)
+
+	keysToDelete := []string{}
+	for _, childNode := range everything.ChildNodes {
+		matches := re.FindStringSubmatch(childNode.Key)
+		if len(matches) == 2 {
+			schemaVersion, err := strconv.Atoi(matches[1])
+			if err != nil {
+				keysToDelete = append(keysToDelete, childNode.Key)
+				continue
+			}
+			if schemaVersion < store.config.StoreSchemaVersion {
+				keysToDelete = append(keysToDelete, childNode.Key)
+			}
+		} else {
+			keysToDelete = append(keysToDelete, childNode.Key)
+		}
+	}
+
+	return store.adapter.Delete(keysToDelete...)
 }
 
 func (store *RealStore) deleteExpiredDEAHeartbeatSummaries() error {
