@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (store *RealStore) SaveHeartbeat(newHeartbeat models.Heartbeat) error {
+func (store *RealStore) SyncHeartbeat(newHeartbeat models.Heartbeat) error {
 	t := time.Now()
 
 	newHeartbeatSummary := newHeartbeat.HeartbeatSummary()

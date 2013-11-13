@@ -33,8 +33,8 @@ var _ = Describe("Compact", func() {
 		BeforeEach(func() {
 			dea1 = appfixture.NewDeaFixture()
 			dea2 = appfixture.NewDeaFixture()
-			store.SaveHeartbeat(dea1.HeartbeatWith(dea1.GetApp(0).InstanceAtIndex(0).Heartbeat()))
-			store.SaveHeartbeat(dea2.HeartbeatWith(dea2.GetApp(0).InstanceAtIndex(0).Heartbeat()))
+			store.SyncHeartbeat(dea1.HeartbeatWith(dea1.GetApp(0).InstanceAtIndex(0).Heartbeat()))
+			store.SyncHeartbeat(dea2.HeartbeatWith(dea2.GetApp(0).InstanceAtIndex(0).Heartbeat()))
 
 			storeAdapter.Delete("/dea-presence/" + dea1.DeaGuid)
 			err := store.Compact()

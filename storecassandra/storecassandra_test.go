@@ -92,7 +92,7 @@ var _ = Describe("Storecassandra", func() {
 				app3 = dea.GetApp(2)
 
 				heartbeat = dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat(), app3.InstanceAtIndex(0).Heartbeat())
-				err := store.SaveHeartbeat(heartbeat)
+				err := store.SyncHeartbeat(heartbeat)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
@@ -138,7 +138,7 @@ var _ = Describe("Storecassandra", func() {
 
 					heartbeat = dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app2.InstanceAtIndex(1).Heartbeat())
 					heartbeat.InstanceHeartbeats[1].State = models.InstanceStateCrashed
-					err := store.SaveHeartbeat(heartbeat)
+					err := store.SyncHeartbeat(heartbeat)
 
 					Ω(err).ShouldNot(HaveOccured())
 				})
@@ -533,7 +533,7 @@ var _ = Describe("Storecassandra", func() {
 			}
 
 			store.SyncDesiredState(app1.DesiredState(1), app2.DesiredState(3))
-			store.SaveHeartbeat(dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app3.InstanceAtIndex(2).Heartbeat()))
+			store.SyncHeartbeat(dea.HeartbeatWith(app1.InstanceAtIndex(0).Heartbeat(), app3.InstanceAtIndex(2).Heartbeat()))
 			store.SaveCrashCounts(crashCount1, crashCount2)
 
 		})

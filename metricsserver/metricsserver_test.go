@@ -120,7 +120,7 @@ var _ = Describe("Metrics Server", func() {
 			Context("when a desired app has all instances running", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
-					store.SaveHeartbeat(a.Heartbeat(3))
+					store.SyncHeartbeat(a.Heartbeat(3))
 				})
 
 				It("should report the app as 100 %% reporting", func() {
@@ -143,7 +143,7 @@ var _ = Describe("Metrics Server", func() {
 
 					startingHB := a.InstanceAtIndex(1).Heartbeat()
 					startingHB.State = models.InstanceStateStarting
-					store.SaveHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						startingHB,
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -168,7 +168,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(1).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -196,7 +196,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(1).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -223,7 +223,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 						a.CrashedInstanceHeartbeatAtIndex(1),
@@ -249,7 +249,7 @@ var _ = Describe("Metrics Server", func() {
 				BeforeEach(func() {
 					store.SyncDesiredState(a.DesiredState(3))
 
-					store.SaveHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.InstanceAtIndex(2).Heartbeat(),
 					))
@@ -291,7 +291,7 @@ var _ = Describe("Metrics Server", func() {
 			Context("when there is an undesired app that is reporting as running", func() {
 				BeforeEach(func() {
 					b := dea.GetApp(1)
-					store.SaveHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeat(dea.HeartbeatWith(
 						a.InstanceAtIndex(0).Heartbeat(),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 						a.InstanceAtIndex(2).Heartbeat(),
@@ -315,7 +315,7 @@ var _ = Describe("Metrics Server", func() {
 
 			Context("when there is an undesired app that is reporting as crashed", func() {
 				BeforeEach(func() {
-					store.SaveHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeat(dea.HeartbeatWith(
 						a.CrashedInstanceHeartbeatAtIndex(0),
 						a.CrashedInstanceHeartbeatAtIndex(1),
 					))

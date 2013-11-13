@@ -80,7 +80,7 @@ var _ = Describe("Analyzer", func() {
 				store.SyncDesiredState(
 					desired,
 				)
-				store.SaveHeartbeat(app.Heartbeat(3))
+				store.SyncHeartbeat(app.Heartbeat(3))
 			})
 
 			It("should not send any start or stop messages", func() {
@@ -140,7 +140,7 @@ var _ = Describe("Analyzer", func() {
 
 			Context("but only some of the instances are running", func() {
 				BeforeEach(func() {
-					store.SaveHeartbeat(app.Heartbeat(1))
+					store.SyncHeartbeat(app.Heartbeat(1))
 				})
 
 				It("should return a start message containing only the missing indices", func() {
@@ -166,7 +166,7 @@ var _ = Describe("Analyzer", func() {
 
 	Describe("Stopping extra instances (index >= numDesired)", func() {
 		BeforeEach(func() {
-			store.SaveHeartbeat(app.Heartbeat(3))
+			store.SyncHeartbeat(app.Heartbeat(3))
 		})
 
 		Context("when there are no desired instances", func() {
@@ -269,7 +269,7 @@ var _ = Describe("Analyzer", func() {
 		Context("When there are missing instances on other indices", func() {
 			It("should not schedule any stops but should start the missing indices", func() {
 				//[-,-,2|2|2|2]
-				store.SaveHeartbeat(dea.HeartbeatWith(
+				store.SyncHeartbeat(dea.HeartbeatWith(
 					app.InstanceAtIndex(2).Heartbeat(),
 					duplicateInstance1.Heartbeat(),
 					duplicateInstance2.Heartbeat(),
@@ -295,7 +295,7 @@ var _ = Describe("Analyzer", func() {
 				//[0,1,2|2|2] < stop 2,2,2 with increasing delays etc...
 				crashedHeartbeat := duplicateInstance3.Heartbeat()
 				crashedHeartbeat.State = models.InstanceStateCrashed
-				store.SaveHeartbeat(dea.HeartbeatWith(
+				store.SyncHeartbeat(dea.HeartbeatWith(
 					app.InstanceAtIndex(0).Heartbeat(),
 					app.InstanceAtIndex(1).Heartbeat(),
 					app.InstanceAtIndex(2).Heartbeat(),
@@ -361,7 +361,7 @@ var _ = Describe("Analyzer", func() {
 
 			It("should terminate the extra indices with extreme prejudice", func() {
 				//[0,1,2,3,3,3] < stop 3,3,3
-				store.SaveHeartbeat(dea.HeartbeatWith(
+				store.SyncHeartbeat(dea.HeartbeatWith(
 					app.InstanceAtIndex(0).Heartbeat(),
 					app.InstanceAtIndex(1).Heartbeat(),
 					app.InstanceAtIndex(2).Heartbeat(),
@@ -398,7 +398,7 @@ var _ = Describe("Analyzer", func() {
 				app.InstanceAtIndex(0).Heartbeat(),
 				evacuatingHeartbeat,
 			)
-			store.SaveHeartbeat(heartbeat)
+			store.SyncHeartbeat(heartbeat)
 		})
 
 		Context("when the app is no longer desired", func() {
@@ -460,7 +460,7 @@ var _ = Describe("Analyzer", func() {
 					runningInstanceHeartbeat := app.InstanceAtIndex(1).Heartbeat()
 					runningInstanceHeartbeat.InstanceGuid = models.Guid()
 					heartbeat.InstanceHeartbeats = append(heartbeat.InstanceHeartbeats, runningInstanceHeartbeat)
-					store.SaveHeartbeat(heartbeat)
+					store.SyncHeartbeat(heartbeat)
 				})
 
 				It("should schedule an immediate stop for the EVACUATING instance", func() {
@@ -483,7 +483,7 @@ var _ = Describe("Analyzer", func() {
 						otherEvacuatingHeartbeat.InstanceGuid = models.Guid()
 						otherEvacuatingHeartbeat.State = models.InstanceStateEvacuating
 						heartbeat.InstanceHeartbeats = append(heartbeat.InstanceHeartbeats, otherEvacuatingHeartbeat)
-						store.SaveHeartbeat(heartbeat)
+						store.SyncHeartbeat(heartbeat)
 					})
 
 					It("should schedule an immediate stop for both EVACUATING instances", func() {
@@ -508,7 +508,7 @@ var _ = Describe("Analyzer", func() {
 					startingInstanceHeartbeat.InstanceGuid = models.Guid()
 					startingInstanceHeartbeat.State = models.InstanceStateStarting
 					heartbeat.InstanceHeartbeats = append(heartbeat.InstanceHeartbeats, startingInstanceHeartbeat)
-					store.SaveHeartbeat(heartbeat)
+					store.SyncHeartbeat(heartbeat)
 				})
 
 				It("should not schedule anything", func() {
@@ -556,7 +556,7 @@ var _ = Describe("Analyzer", func() {
 
 			BeforeEach(func() {
 				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(0))
-				store.SaveHeartbeat(heartbeat)
+				store.SyncHeartbeat(heartbeat)
 			})
 
 			Context("when the app is desired", func() {
@@ -579,7 +579,7 @@ var _ = Describe("Analyzer", func() {
 				Context("when there is a running instance on the same index", func() {
 					BeforeEach(func() {
 						heartbeat.InstanceHeartbeats = append(heartbeat.InstanceHeartbeats, app.InstanceAtIndex(0).Heartbeat())
-						store.SaveHeartbeat(heartbeat)
+						store.SyncHeartbeat(heartbeat)
 					})
 
 					It("should not try to stop the running instance!", func() {
@@ -606,7 +606,7 @@ var _ = Describe("Analyzer", func() {
 		Describe("applying the backoff", func() {
 			BeforeEach(func() {
 				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0))
-				store.SaveHeartbeat(heartbeat)
+				store.SyncHeartbeat(heartbeat)
 				store.SyncDesiredState(
 					app.DesiredState(1),
 				)
@@ -628,7 +628,7 @@ var _ = Describe("Analyzer", func() {
 		Context("When all instances are crashed", func() {
 			BeforeEach(func() {
 				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(1))
-				store.SaveHeartbeat(heartbeat)
+				store.SyncHeartbeat(heartbeat)
 
 				store.SyncDesiredState(
 					app.DesiredState(2),
@@ -646,7 +646,7 @@ var _ = Describe("Analyzer", func() {
 		Context("When at least one instance is running and all others are crashed", func() {
 			BeforeEach(func() {
 				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(1), app.InstanceAtIndex(2).Heartbeat())
-				store.SaveHeartbeat(heartbeat)
+				store.SyncHeartbeat(heartbeat)
 
 				store.SyncDesiredState(
 					app.DesiredState(3),
@@ -685,7 +685,7 @@ var _ = Describe("Analyzer", func() {
 				otherApp.DesiredState(3),
 				yetAnotherApp.DesiredState(2),
 			)
-			store.SaveHeartbeat(dea.HeartbeatWith(
+			store.SyncHeartbeat(dea.HeartbeatWith(
 				app.InstanceAtIndex(0).Heartbeat(),
 				app.InstanceAtIndex(1).Heartbeat(),
 				undesiredApp.InstanceAtIndex(0).Heartbeat(),
@@ -728,7 +728,7 @@ var _ = Describe("Analyzer", func() {
 			store.SyncDesiredState(
 				desired,
 			)
-			store.SaveHeartbeat(
+			store.SyncHeartbeat(
 				appfixture.NewAppFixture().Heartbeat(0),
 			)
 		})

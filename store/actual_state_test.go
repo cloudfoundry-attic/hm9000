@@ -40,7 +40,7 @@ var _ = Describe("Actual State", func() {
 
 	Describe("Saving actual state", func() {
 		BeforeEach(func() {
-			store.SaveHeartbeat(dea.HeartbeatWith(
+			store.SyncHeartbeat(dea.HeartbeatWith(
 				dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 				dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
 			))
@@ -59,7 +59,7 @@ var _ = Describe("Actual State", func() {
 			BeforeEach(func() {
 				modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
 				modifiedHeartbeat.State = models.InstanceStateEvacuating
-				store.SaveHeartbeat(dea.HeartbeatWith(
+				store.SyncHeartbeat(dea.HeartbeatWith(
 					modifiedHeartbeat,
 					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
 				))
@@ -86,12 +86,12 @@ var _ = Describe("Actual State", func() {
 
 		Context("when there is actual state saved", func() {
 			BeforeEach(func() {
-				store.SaveHeartbeat(dea.HeartbeatWith(
+				store.SyncHeartbeat(dea.HeartbeatWith(
 					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
 				))
 
-				store.SaveHeartbeat(otherDea.HeartbeatWith(
+				store.SyncHeartbeat(otherDea.HeartbeatWith(
 					otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat(),
 				))
@@ -161,7 +161,7 @@ var _ = Describe("Actual State", func() {
 				heartbeatA = app.InstanceAtIndex(0).Heartbeat()
 				heartbeatA.DeaGuid = "A"
 
-				store.SaveHeartbeat(models.Heartbeat{
+				store.SyncHeartbeat(models.Heartbeat{
 					DeaGuid: "A",
 					InstanceHeartbeats: []models.InstanceHeartbeat{
 						heartbeatA,
@@ -171,7 +171,7 @@ var _ = Describe("Actual State", func() {
 				heartbeatB = app.InstanceAtIndex(1).Heartbeat()
 				heartbeatB.DeaGuid = "B"
 
-				store.SaveHeartbeat(models.Heartbeat{
+				store.SyncHeartbeat(models.Heartbeat{
 					DeaGuid: "B",
 					InstanceHeartbeats: []models.InstanceHeartbeat{
 						heartbeatB,

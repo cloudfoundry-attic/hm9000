@@ -37,7 +37,7 @@ type Store interface {
 	SyncDesiredState(desiredStates ...models.DesiredAppState) error
 	GetDesiredState() (map[string]models.DesiredAppState, error)
 
-	SaveHeartbeat(heartbeat models.Heartbeat) error
+	SyncHeartbeat(heartbeat models.Heartbeat) error
 	GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
 	GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
 

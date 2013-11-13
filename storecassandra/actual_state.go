@@ -5,7 +5,7 @@ import (
 	"tux21b.org/v1/gocql"
 )
 
-func (s *StoreCassandra) SaveHeartbeat(heartbeat models.Heartbeat) error {
+func (s *StoreCassandra) SyncHeartbeat(heartbeat models.Heartbeat) error {
 	summary := heartbeat.HeartbeatSummary()
 	iter := s.session.Query(`SELECT app_guid, app_version, instance_guid FROM ActualStates WHERE dea_guid = ?`, heartbeat.DeaGuid).Iter()
 
