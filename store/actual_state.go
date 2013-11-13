@@ -79,7 +79,7 @@ func (store *RealStore) SaveHeartbeat(newHeartbeat models.Heartbeat) error {
 	return nil
 }
 
-func (store *RealStore) GetActualStates() (results []models.InstanceHeartbeat, err error) {
+func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
 	node, err := store.adapter.ListRecursively("/apps/actual")
 	if err == storeadapter.ErrorKeyNotFound {
 		return results, nil
@@ -106,7 +106,7 @@ func (store *RealStore) GetActualStates() (results []models.InstanceHeartbeat, e
 	return results, err
 }
 
-func (store *RealStore) GetActualStateForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
+func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
 	node, err := store.adapter.ListRecursively("/apps/actual/" + store.AppKey(appGuid, appVersion))
 	if err == storeadapter.ErrorKeyNotFound {
 		return []models.InstanceHeartbeat{}, nil

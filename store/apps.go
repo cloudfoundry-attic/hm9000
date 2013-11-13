@@ -29,7 +29,7 @@ func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, 
 	dtDesired := time.Since(tDesired).Seconds()
 
 	tActual := time.Now()
-	representation.actualState, err = store.GetActualStateForApp(appGuid, appVersion)
+	representation.actualState, err = store.GetInstanceHeartbeatsForApp(appGuid, appVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 	}
 
 	tActual := time.Now()
-	actualStates, err := store.GetActualStates()
+	actualStates, err := store.GetInstanceHeartbeats()
 	dtActual := time.Since(tActual).Seconds()
 	if err != nil {
 		return results, err

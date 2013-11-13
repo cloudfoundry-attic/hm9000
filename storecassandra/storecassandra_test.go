@@ -97,7 +97,7 @@ var _ = Describe("Storecassandra", func() {
 			})
 
 			It("should return the stored actual state", func() {
-				state, err := store.GetActualStates()
+				state, err := store.GetInstanceHeartbeats()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(state).Should(HaveLen(3))
 
@@ -107,14 +107,14 @@ var _ = Describe("Storecassandra", func() {
 			})
 
 			It("should also return the state queried by individual app", func() {
-				state, err := store.GetActualStateForApp(app1.AppGuid, app1.AppVersion)
+				state, err := store.GetInstanceHeartbeatsForApp(app1.AppGuid, app1.AppVersion)
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(state).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
 			})
 
 			Context("when the app is not present", func() {
 				It("should also return the state queried by individual app", func() {
-					state, err := store.GetActualStateForApp("abc", "def")
+					state, err := store.GetInstanceHeartbeatsForApp("abc", "def")
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(state).Should(BeEmpty())
 				})
@@ -126,7 +126,7 @@ var _ = Describe("Storecassandra", func() {
 				})
 
 				It("should expire the nodes appropriately", func() {
-					state, err := store.GetActualStates()
+					state, err := store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(state).Should(HaveLen(0))
 				})
@@ -144,7 +144,7 @@ var _ = Describe("Storecassandra", func() {
 				})
 
 				It("should update the correct entry and delete any missing entries", func() {
-					state, err := store.GetActualStates()
+					state, err := store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(state).Should(HaveLen(2))
 
@@ -154,7 +154,7 @@ var _ = Describe("Storecassandra", func() {
 
 				It("should bump the TTL", func() {
 					timeProvider.IncrementBySeconds(10)
-					state, err := store.GetActualStates()
+					state, err := store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(state).Should(HaveLen(2))
 					Ω(state).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))

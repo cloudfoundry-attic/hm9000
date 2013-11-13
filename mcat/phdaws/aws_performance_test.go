@@ -59,7 +59,7 @@ var _ = Describe("Benchmarking AWS MCAT ", func() {
 				})
 
 				b.Time("READ", func() {
-					nodes, err := store.GetActualStates()
+					nodes, err := store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(len(nodes)).Should(Equal(numApps*numberOfInstancesPerApp), "Didn't find the correct number of entries in the store")
 				}, StorePerformanceReport{

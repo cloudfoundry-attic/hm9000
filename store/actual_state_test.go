@@ -47,7 +47,7 @@ var _ = Describe("Actual State", func() {
 		})
 
 		It("should save the instance heartbeats for the passed-in heartbeat", func() {
-			results, err := store.GetActualStates()
+			results, err := store.GetInstanceHeartbeats()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(results).Should(HaveLen(2))
 			Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
@@ -66,7 +66,7 @@ var _ = Describe("Actual State", func() {
 			})
 
 			It("should sync the heartbeats (add new ones, adjust ones that have changed state, and delete old ones)", func() {
-				results, err := store.GetActualStates()
+				results, err := store.GetInstanceHeartbeats()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(results).Should(HaveLen(2))
 				Ω(results).Should(ContainElement(modifiedHeartbeat))
@@ -78,7 +78,7 @@ var _ = Describe("Actual State", func() {
 	Describe("Fetching all actual state", func() {
 		Context("when there is none saved", func() {
 			It("should come back empty", func() {
-				results, err := store.GetActualStates()
+				results, err := store.GetInstanceHeartbeats()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(results).Should(BeEmpty())
 			})
@@ -99,7 +99,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when the DEA heartbeats have not expired", func() {
 				It("should return the instance heartbeats", func() {
-					results, err := store.GetActualStates()
+					results, err := store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(results).Should(HaveLen(4))
 					Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
@@ -115,7 +115,7 @@ var _ = Describe("Actual State", func() {
 				})
 
 				It("should not return any expired instance heartbeats", func() {
-					results, err := store.GetActualStates()
+					results, err := store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(results).Should(HaveLen(2))
 					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
@@ -128,7 +128,7 @@ var _ = Describe("Actual State", func() {
 					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
 					Ω(err).ShouldNot(HaveOccured())
 
-					_, err = store.GetActualStates()
+					_, err = store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 
 					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
@@ -148,7 +148,7 @@ var _ = Describe("Actual State", func() {
 
 		Context("when there is none saved", func() {
 			It("should come back empty", func() {
-				results, err := store.GetActualStateForApp(app.AppGuid, app.AppVersion)
+				results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(results).Should(BeEmpty())
 			})
@@ -181,7 +181,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when the corresponding DEA heartbeat has not expired", func() {
 				It("should return the instance heartbeats", func() {
-					results, err := store.GetActualStateForApp(app.AppGuid, app.AppVersion)
+					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(results).Should(HaveLen(2))
 					Ω(results).Should(ContainElement(heartbeatA))
@@ -195,7 +195,7 @@ var _ = Describe("Actual State", func() {
 				})
 
 				It("should not return any expired instance heartbeats", func() {
-					results, err := store.GetActualStateForApp(app.AppGuid, app.AppVersion)
+					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Ω(err).ShouldNot(HaveOccured())
 					Ω(results).Should(HaveLen(1))
 					Ω(results).Should(ContainElement(heartbeatB))
@@ -205,7 +205,7 @@ var _ = Describe("Actual State", func() {
 					_, err := etcdAdapter.Get("/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
 					Ω(err).ShouldNot(HaveOccured())
 
-					_, err = store.GetActualStateForApp(app.AppGuid, app.AppVersion)
+					_, err = store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Ω(err).ShouldNot(HaveOccured())
 
 					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())

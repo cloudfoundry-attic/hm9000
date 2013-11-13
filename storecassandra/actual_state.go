@@ -40,11 +40,11 @@ func (s *StoreCassandra) SaveHeartbeat(heartbeat models.Heartbeat) error {
 	return s.session.ExecuteBatch(batch)
 }
 
-func (s *StoreCassandra) GetActualStates() ([]models.InstanceHeartbeat, error) {
+func (s *StoreCassandra) GetInstanceHeartbeats() ([]models.InstanceHeartbeat, error) {
 	return s.getActualState("", "")
 }
 
-func (s *StoreCassandra) GetActualStateForApp(appGuid string, appVersion string) ([]models.InstanceHeartbeat, error) {
+func (s *StoreCassandra) GetInstanceHeartbeatsForApp(appGuid string, appVersion string) ([]models.InstanceHeartbeat, error) {
 	return s.getActualState(appGuid, appVersion)
 }
 
