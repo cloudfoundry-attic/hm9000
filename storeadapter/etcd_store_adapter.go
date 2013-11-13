@@ -174,8 +174,27 @@ func (adapter *ETCDStoreAdapter) makeStoreNode(kvPair etcd.KeyValuePair) StoreNo
 	}
 }
 
-func (adapter *ETCDStoreAdapter) Delete(key string) error {
-	_, err := adapter.client.DeleteAll(key)
+func (adapter *ETCDStoreAdapter) Delete(keys ...string) error {
+	results := make(chan error, len(keys))
+
+	for _, key := range keys {
+		key := key
+		adapter.workerPool.ScheduleWork(func() {
+			_, err := adapter.client.DeleteAll(key)
+			results <- err
+		})
+	}
+
+	var err error
+	numReceived := 0
+	for numReceived < len(keys) {
+		result := <-results
+		numReceived++
+		if err == nil {
+			err = result
+		}
+	}
+
 	if adapter.isTimeoutError(err) {
 		return ErrorTimeout
 	}

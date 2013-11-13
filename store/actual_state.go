@@ -60,7 +60,7 @@ func (store *RealStore) SaveHeartbeat(newHeartbeat models.Heartbeat) error {
 	}
 
 	tDelete := time.Now()
-	err = store.deleteKeys(keysToDelete)
+	err = store.adapter.Delete(keysToDelete...)
 	dtDelete := time.Since(tDelete).Seconds()
 
 	if err != nil {
@@ -102,7 +102,7 @@ func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartb
 		expiredKeys = append(expiredKeys, toDelete...)
 	}
 
-	err = store.deleteKeys(expiredKeys)
+	err = store.adapter.Delete(expiredKeys...)
 	return results, err
 }
 
@@ -124,7 +124,7 @@ func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion s
 		return []models.InstanceHeartbeat{}, err
 	}
 
-	err = store.deleteKeys(expiredKeys)
+	err = store.adapter.Delete(expiredKeys...)
 	return results, err
 }
 
@@ -204,17 +204,4 @@ func (store *RealStore) storeNodeForInstanceHeartbeat(instanceHeartbeat models.I
 		Key:   store.instanceHeartbeatStoreKey(instanceHeartbeat.AppGuid, instanceHeartbeat.AppVersion, instanceHeartbeat.InstanceGuid),
 		Value: instanceHeartbeat.ToJSON(),
 	}
-}
-
-func (store *RealStore) deleteKeys(keys []string) error {
-	var err error
-
-	for _, key := range keys {
-		delErr := store.adapter.Delete(key)
-		if err == nil {
-			err = delErr
-		}
-	}
-
-	return err
 }

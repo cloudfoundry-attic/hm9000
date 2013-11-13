@@ -237,10 +237,13 @@ var _ = Describe("Fakestoreadapter", func() {
 	Describe("Deleting", func() {
 		Context("when the key is present", func() {
 			It("should delete the node", func() {
-				err := adapter.Delete("/menu/breakfast")
+				err := adapter.Delete("/menu/breakfast", "/menu/lunch")
 				Ω(err).ShouldNot(HaveOccured())
 
 				_, err = adapter.Get("/menu/breakfast")
+				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+
+				_, err = adapter.Get("/menu/lunch")
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 		})

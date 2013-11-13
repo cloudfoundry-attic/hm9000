@@ -458,15 +458,23 @@ var _ = Describe("ZooKeeperStoreAdapter", func() {
 				TTL:   10,
 			}
 
+			nodeArr = append(nodeArr, StoreNode{
+				Key:   "/menu/lunch",
+				Value: []byte("steak"),
+				TTL:   10,
+			})
+
 			err := adapter.Set(nodeArr)
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
-		Context("when the key exists", func() {
-			It("should delete the key", func() {
-				err := adapter.Delete("/menu/breakfast")
+		Context("when the keys exist", func() {
+			It("should delete the keys", func() {
+				err := adapter.Delete("/menu/breakfast", "/menu/lunch")
 				Ω(err).ShouldNot(HaveOccured())
 				_, err = adapter.Get("/menu/breakfast")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+				_, err = adapter.Get("/menu/lunch")
 				Ω(err).Should(Equal(ErrorKeyNotFound))
 			})
 		})

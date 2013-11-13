@@ -285,16 +285,20 @@ var _ = Describe("ETCD Store Adapter", func() {
 
 	Describe("Delete", func() {
 		BeforeEach(func() {
-			err := adapter.Set([]StoreNode{breakfastNode})
+			err := adapter.Set([]StoreNode{breakfastNode, lunchNode})
 			Ω(err).ShouldNot(HaveOccured())
 		})
 
-		Context("when deleting an existing key", func() {
-			It("should delete the key", func() {
-				err := adapter.Delete("/menu/breakfast")
+		Context("when deleting existing keys", func() {
+			It("should delete the keys", func() {
+				err := adapter.Delete("/menu/breakfast", "/menu/lunch")
 				Ω(err).ShouldNot(HaveOccured())
 
 				value, err := adapter.Get("/menu/breakfast")
+				Ω(err).Should(Equal(ErrorKeyNotFound))
+				Ω(value).Should(BeZero())
+
+				value, err = adapter.Get("/menu/lunch")
 				Ω(err).Should(Equal(ErrorKeyNotFound))
 				Ω(value).Should(BeZero())
 			})

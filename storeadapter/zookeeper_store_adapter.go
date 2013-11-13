@@ -165,36 +165,57 @@ func (adapter *ZookeeperStoreAdapter) ListRecursively(key string) (StoreNode, er
 	}, nil
 }
 
-func (adapter *ZookeeperStoreAdapter) Delete(key string) error {
-	exists, stat, err := adapter.client.Exists(key)
-	if adapter.isTimeoutError(err) {
-		return ErrorTimeout
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return ErrorKeyNotFound
-	}
-
-	if stat.NumChildren > 0 {
-		nodeKeys, _, err := adapter.client.Children(key)
+func (adapter *ZookeeperStoreAdapter) Delete(keys ...string) error {
+	//TODO: this can be optimized if we choose to go with zookeeper (can use the worker pool)
+	var finalErr error
+	for _, key := range keys {
+		exists, stat, err := adapter.client.Exists(key)
+		if adapter.isTimeoutError(err) {
+			return ErrorTimeout
+		}
 
 		if err != nil {
-			return err
+			if finalErr == nil {
+				finalErr = ErrorKeyNotFound
+			}
+			continue
 		}
 
-		for _, child := range nodeKeys {
-			err := adapter.Delete(adapter.combineKeys(key, child))
-			if err != nil {
-				return err
+		if !exists {
+			if finalErr == nil {
+				finalErr = ErrorKeyNotFound
 			}
+			continue
+		}
+
+		if stat.NumChildren > 0 {
+			nodeKeys, _, err := adapter.client.Children(key)
+
+			if err != nil {
+				if finalErr == nil {
+					finalErr = err
+				}
+				continue
+			}
+
+			for _, child := range nodeKeys {
+				err := adapter.Delete(adapter.combineKeys(key, child))
+				if err != nil {
+					if finalErr == nil {
+						finalErr = err
+					}
+					continue
+				}
+			}
+		}
+
+		err = adapter.client.Delete(key, -1)
+		if finalErr == nil {
+			finalErr = err
 		}
 	}
 
-	return adapter.client.Delete(key, -1)
+	return finalErr
 }
 
 func (adapter *ZookeeperStoreAdapter) isMissingKeyError(err error) bool {
