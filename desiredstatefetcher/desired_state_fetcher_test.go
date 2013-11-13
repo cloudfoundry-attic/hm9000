@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakemetricsaccountant"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 
 	"github.com/cloudfoundry/hm9000/testhelpers/fakehttpclient"
@@ -33,19 +34,22 @@ func (b *brokenReader) Close() error {
 
 var _ = Describe("DesiredStateFetcher", func() {
 	var (
-		conf         config.Config
-		fetcher      *DesiredStateFetcher
-		httpClient   *fakehttpclient.FakeHttpClient
-		timeProvider *faketimeprovider.FakeTimeProvider
-		store        storepackage.Store
-		storeAdapter *fakestoreadapter.FakeStoreAdapter
-		resultChan   chan DesiredStateFetcherResult
+		conf              config.Config
+		fetcher           *DesiredStateFetcher
+		httpClient        *fakehttpclient.FakeHttpClient
+		timeProvider      *faketimeprovider.FakeTimeProvider
+		store             storepackage.Store
+		storeAdapter      *fakestoreadapter.FakeStoreAdapter
+		resultChan        chan DesiredStateFetcherResult
+		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
 	)
 
 	BeforeEach(func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
+
+		metricsAccountant = fakemetricsaccountant.New()
 
 		resultChan = make(chan DesiredStateFetcherResult, 1)
 		timeProvider = &faketimeprovider.FakeTimeProvider{
@@ -56,14 +60,14 @@ var _ = Describe("DesiredStateFetcher", func() {
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
-		fetcher = New(conf, store, httpClient, timeProvider, fakelogger.NewFakeLogger())
+		fetcher = New(conf, store, metricsAccountant, httpClient, timeProvider, fakelogger.NewFakeLogger())
 		fetcher.Fetch(resultChan)
 	})
 
 	Describe("Fetching with an invalid URL", func() {
 		BeforeEach(func() {
 			conf.CCBaseURL = "http://example.com/#%ZZ"
-			fetcher = New(conf, store, httpClient, timeProvider, fakelogger.NewFakeLogger())
+			fetcher = New(conf, store, metricsAccountant, httpClient, timeProvider, fakelogger.NewFakeLogger())
 			fetcher.Fetch(resultChan)
 		})
 
@@ -210,6 +214,10 @@ var _ = Describe("DesiredStateFetcher", func() {
 					Ω(desired).Should(HaveLen(2))
 					Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState(1))))
 					Ω(desired).Should(ContainElement(EqualDesiredState(a2.DesiredState(1))))
+				})
+
+				It("should track the time taken to sync desired state", func() {
+					Ω(metricsAccountant.TrackedDesiredStateSyncTime).ShouldNot(BeZero())
 				})
 
 				It("should send a succesful result down the result channel", func(done Done) {

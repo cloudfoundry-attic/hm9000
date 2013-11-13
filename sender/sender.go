@@ -79,7 +79,7 @@ func (sender *Sender) Send() error {
 	sender.sendStartMessages(pendingStartMessages)
 	sender.sendStopMessages(pendingStopMessages)
 
-	err = sender.metricsAccountant.IncrementMetrics(sender.sentStartMessages, sender.sentStopMessages)
+	err = sender.metricsAccountant.IncrementSentMessageMetrics(sender.sentStartMessages, sender.sentStopMessages)
 	if err != nil {
 		sender.logger.Error("Failed to increment metrics", err)
 		sender.didSucceed = false

@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/store"
 	"os"
 	"strconv"
@@ -37,6 +38,7 @@ func fetchDesiredState(l logger.Logger, conf config.Config, store store.Store) e
 	l.Info("Fetching Desired State")
 	fetcher := desiredstatefetcher.New(conf,
 		store,
+		metricsaccountant.New(store),
 		httpclient.NewHttpClient(conf.FetcherNetworkTimeout()),
 		buildTimeProvider(l),
 		l,

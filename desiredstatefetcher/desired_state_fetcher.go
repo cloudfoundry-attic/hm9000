@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DesiredStateFetcherResult struct {
@@ -24,27 +26,30 @@ type DesiredStateFetcherResult struct {
 const initialBulkToken = "{}"
 
 type DesiredStateFetcher struct {
-	config       config.Config
-	httpClient   httpclient.HttpClient
-	store        store.Store
-	timeProvider timeprovider.TimeProvider
-	cache        map[string]models.DesiredAppState
-	logger       logger.Logger
+	config            config.Config
+	httpClient        httpclient.HttpClient
+	store             store.Store
+	metricsAccountant metricsaccountant.MetricsAccountant
+	timeProvider      timeprovider.TimeProvider
+	cache             map[string]models.DesiredAppState
+	logger            logger.Logger
 }
 
 func New(config config.Config,
 	store store.Store,
+	metricsAccountant metricsaccountant.MetricsAccountant,
 	httpClient httpclient.HttpClient,
 	timeProvider timeprovider.TimeProvider,
 	logger logger.Logger) *DesiredStateFetcher {
 
 	return &DesiredStateFetcher{
-		config:       config,
-		httpClient:   httpClient,
-		store:        store,
-		timeProvider: timeProvider,
-		cache:        map[string]models.DesiredAppState{},
-		logger:       logger,
+		config:            config,
+		httpClient:        httpClient,
+		store:             store,
+		metricsAccountant: metricsAccountant,
+		timeProvider:      timeProvider,
+		cache:             map[string]models.DesiredAppState{},
+		logger:            logger,
 	}
 }
 
@@ -101,7 +106,9 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 		}
 
 		if len(response.Results) == 0 {
+			tSync := time.Now()
 			err = fetcher.syncStore()
+			fetcher.metricsAccountant.TrackDesiredStateSyncTime(time.Since(tSync))
 			if err != nil {
 				resultChan <- DesiredStateFetcherResult{Message: "Failed to sync desired state to the store", Error: err}
 				return

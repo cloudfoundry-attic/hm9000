@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("Metrics Accountant", func() {
@@ -31,12 +32,13 @@ var _ = Describe("Metrics Accountant", func() {
 				metrics, err := accountant.GetMetrics()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(metrics).Should(Equal(map[string]int{
-					"StartCrashed":           0,
-					"StartMissing":           0,
-					"StartEvacuating":        0,
-					"StopExtra":              0,
-					"StopDuplicate":          0,
-					"StopEvacuationComplete": 0,
+					"StartCrashed":                       0,
+					"StartMissing":                       0,
+					"StartEvacuating":                    0,
+					"StopExtra":                          0,
+					"StopDuplicate":                      0,
+					"StopEvacuationComplete":             0,
+					"DesiredStateSyncTimeInMilliseconds": 0,
 				}))
 			})
 		})
@@ -54,7 +56,17 @@ var _ = Describe("Metrics Accountant", func() {
 		})
 	})
 
-	Describe("IncrementMetrics", func() {
+	Describe("TrackDesiredStateSyncTime", func() {
+		It("should record the passed in time duration appropriately", func() {
+			err := accountant.TrackDesiredStateSyncTime(1138 * time.Millisecond)
+			Ω(err).ShouldNot(HaveOccured())
+			metrics, err := accountant.GetMetrics()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(metrics["DesiredStateSyncTimeInMilliseconds"]).Should(Equal(1138))
+		})
+	})
+
+	Describe("IncrementSentMessageMetrics", func() {
 		var starts []models.PendingStartMessage
 		var stops []models.PendingStopMessage
 		BeforeEach(func() {
@@ -79,43 +91,39 @@ var _ = Describe("Metrics Accountant", func() {
 
 		Context("when the store is empty", func() {
 			BeforeEach(func() {
-				err := accountant.IncrementMetrics(starts, stops)
+				err := accountant.IncrementSentMessageMetrics(starts, stops)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
 			It("should increment the metrics and return them when GettingMetrics", func() {
 				metrics, err := accountant.GetMetrics()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(metrics).Should(Equal(map[string]int{
-					"StartCrashed":           1,
-					"StartMissing":           2,
-					"StartEvacuating":        3,
-					"StopExtra":              1,
-					"StopDuplicate":          2,
-					"StopEvacuationComplete": 3,
-				}))
+				Ω(metrics["StartCrashed"]).Should(Equal(1))
+				Ω(metrics["StartMissing"]).Should(Equal(2))
+				Ω(metrics["StartEvacuating"]).Should(Equal(3))
+				Ω(metrics["StopExtra"]).Should(Equal(1))
+				Ω(metrics["StopDuplicate"]).Should(Equal(2))
+				Ω(metrics["StopEvacuationComplete"]).Should(Equal(3))
 			})
 		})
 
 		Context("when the metric already exists", func() {
 			BeforeEach(func() {
-				err := accountant.IncrementMetrics(starts, stops)
+				err := accountant.IncrementSentMessageMetrics(starts, stops)
 				Ω(err).ShouldNot(HaveOccured())
-				err = accountant.IncrementMetrics(starts, stops)
+				err = accountant.IncrementSentMessageMetrics(starts, stops)
 				Ω(err).ShouldNot(HaveOccured())
 			})
 
 			It("should increment the metrics and return them when GettingMetrics", func() {
 				metrics, err := accountant.GetMetrics()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(metrics).Should(Equal(map[string]int{
-					"StartCrashed":           2,
-					"StartMissing":           4,
-					"StartEvacuating":        6,
-					"StopExtra":              2,
-					"StopDuplicate":          4,
-					"StopEvacuationComplete": 6,
-				}))
+				Ω(metrics["StartCrashed"]).Should(Equal(2))
+				Ω(metrics["StartMissing"]).Should(Equal(4))
+				Ω(metrics["StartEvacuating"]).Should(Equal(6))
+				Ω(metrics["StopExtra"]).Should(Equal(2))
+				Ω(metrics["StopDuplicate"]).Should(Equal(4))
+				Ω(metrics["StopEvacuationComplete"]).Should(Equal(6))
 			})
 		})
 
@@ -125,7 +133,7 @@ var _ = Describe("Metrics Accountant", func() {
 			})
 
 			It("should return an error", func() {
-				err := accountant.IncrementMetrics(starts, stops)
+				err := accountant.IncrementSentMessageMetrics(starts, stops)
 				Ω(err).Should(Equal(errors.New("oops")))
 			})
 		})
@@ -136,7 +144,7 @@ var _ = Describe("Metrics Accountant", func() {
 			})
 
 			It("should return an error", func() {
-				err := accountant.IncrementMetrics(starts, stops)
+				err := accountant.IncrementSentMessageMetrics(starts, stops)
 				Ω(err).Should(Equal(errors.New("oops")))
 			})
 		})

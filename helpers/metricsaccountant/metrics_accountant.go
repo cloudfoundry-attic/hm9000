@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"time"
 )
 
 var startMetrics = map[models.PendingStartMessageReason]string{
@@ -19,7 +20,8 @@ var stopMetrics = map[models.PendingStopMessageReason]string{
 }
 
 type MetricsAccountant interface {
-	IncrementMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error
+	IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error
+	TrackDesiredStateSyncTime(dt time.Duration) error
 	GetMetrics() (map[string]int, error)
 }
 
@@ -33,7 +35,11 @@ func New(store store.Store) *RealMetricsAccountant {
 	}
 }
 
-func (m *RealMetricsAccountant) IncrementMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {
+func (m *RealMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) error {
+	return m.store.SaveMetric("DesiredStateSyncTimeInMilliseconds", int(dt/time.Millisecond))
+}
+
+func (m *RealMetricsAccountant) IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {
 	metrics, err := m.GetMetrics()
 	if err != nil {
 		return err
@@ -65,6 +71,8 @@ func (m *RealMetricsAccountant) GetMetrics() (map[string]int, error) {
 	for _, key := range stopMetrics {
 		metrics[key] = 0
 	}
+
+	metrics["DesiredStateSyncTimeInMilliseconds"] = 0
 
 	for key, _ := range metrics {
 		value, err := m.store.GetMetric(key)
