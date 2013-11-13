@@ -2,6 +2,7 @@ package hm_test
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	. "github.com/cloudfoundry/hm9000/hm"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
@@ -18,7 +19,7 @@ var _ = Describe("Store", func() {
 
 	BeforeEach(func() {
 		conf, _ = config.DefaultConfig()
-		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err := etcdStoreAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 

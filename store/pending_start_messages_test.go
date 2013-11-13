@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
@@ -13,19 +14,19 @@ import (
 
 var _ = Describe("Storing PendingStartMessages", func() {
 	var (
-		store       Store
+		store        Store
 		storeAdapter storeadapter.StoreAdapter
-		conf        config.Config
-		message1    models.PendingStartMessage
-		message2    models.PendingStartMessage
-		message3    models.PendingStartMessage
+		conf         config.Config
+		message1     models.PendingStartMessage
+		message2     models.PendingStartMessage
+		message3     models.PendingStartMessage
 	)
 
 	BeforeEach(func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
-		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 

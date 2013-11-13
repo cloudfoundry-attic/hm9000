@@ -27,10 +27,10 @@ type ZookeeperStoreAdapter struct {
 	connectionTimeout time.Duration
 }
 
-func NewZookeeperStoreAdapter(urls []string, maxConcurrentRequests int, timeProvider timeprovider.TimeProvider, connectionTimeout time.Duration) *ZookeeperStoreAdapter {
+func NewZookeeperStoreAdapter(urls []string, workerPool *workerpool.WorkerPool, timeProvider timeprovider.TimeProvider, connectionTimeout time.Duration) *ZookeeperStoreAdapter {
 	return &ZookeeperStoreAdapter{
 		urls:              urls,
-		workerPool:        workerpool.NewWorkerPool(maxConcurrentRequests),
+		workerPool:        workerPool,
 		timeProvider:      timeProvider,
 		connectionTimeout: connectionTimeout,
 	}

@@ -25,7 +25,7 @@ func Dump(l logger.Logger, conf config.Config, raw bool) {
 
 func dumpStructured(l logger.Logger, conf config.Config) {
 	timeProvider := buildTimeProvider(l)
-	store := connectToStore(l, conf)
+	store, _ := connectToStore(l, conf)
 	fmt.Printf("Dump - Current timestamp %d\n", timeProvider.Time().Unix())
 	err := store.VerifyFreshness(timeProvider.Time())
 	if err == nil {
@@ -147,7 +147,7 @@ func dumpRaw(l logger.Logger, conf config.Config) {
 		os.Exit(1)
 	}
 
-	storeAdapter := connectToStoreAdapter(l, conf)
+	storeAdapter, _ := connectToStoreAdapter(l, conf)
 	fmt.Printf("Raw Dump - Current timestamp %d\n", time.Now().Unix())
 
 	entries := sort.StringSlice{}
@@ -182,7 +182,7 @@ func Clear(l logger.Logger, conf config.Config) {
 		os.Exit(1)
 	}
 
-	storeAdapter := connectToStoreAdapter(l, conf)
+	storeAdapter, _ := connectToStoreAdapter(l, conf)
 	l.Info(fmt.Sprintf("Clear - Current timestamp %d\n", time.Now().Unix()))
 
 	node, err := storeAdapter.ListRecursively("/")

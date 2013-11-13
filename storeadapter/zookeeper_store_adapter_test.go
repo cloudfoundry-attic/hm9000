@@ -1,6 +1,7 @@
 package storeadapter_test
 
 import (
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	. "github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	. "github.com/onsi/ginkgo"
@@ -27,7 +28,7 @@ var _ = Describe("ZooKeeperStoreAdapter", func() {
 
 		timeProvider = &faketimeprovider.FakeTimeProvider{}
 
-		adapter = NewZookeeperStoreAdapter(zookeeperRunner.NodeURLS(), 100, timeProvider, time.Second)
+		adapter = NewZookeeperStoreAdapter(zookeeperRunner.NodeURLS(), workerpool.NewWorkerPool(100), timeProvider, time.Second)
 		err = adapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 

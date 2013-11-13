@@ -3,6 +3,7 @@ package md_test
 import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	"github.com/cloudfoundry/hm9000/testhelpers/natsrunner"
@@ -96,7 +97,7 @@ func (coordinator *MDCoordinator) StartETCD() {
 	coordinator.StoreRunner = storerunner.NewETCDClusterRunner(etcdPort, 1)
 	coordinator.StoreRunner.Start()
 
-	coordinator.StoreAdapter = storeadapter.NewETCDStoreAdapter(coordinator.StoreRunner.NodeURLS(), coordinator.Conf.StoreMaxConcurrentRequests)
+	coordinator.StoreAdapter = storeadapter.NewETCDStoreAdapter(coordinator.StoreRunner.NodeURLS(), workerpool.NewWorkerPool(coordinator.Conf.StoreMaxConcurrentRequests))
 	err := coordinator.StoreAdapter.Connect()
 	Ω(err).ShouldNot(HaveOccured())
 }
@@ -116,7 +117,7 @@ func (coordinator *MDCoordinator) StartZooKeeper() {
 	coordinator.StoreRunner = storerunner.NewZookeeperClusterRunner(zookeeperPort, 1)
 	coordinator.StoreRunner.Start()
 
-	coordinator.StoreAdapter = storeadapter.NewZookeeperStoreAdapter(coordinator.StoreRunner.NodeURLS(), coordinator.Conf.StoreMaxConcurrentRequests, &timeprovider.RealTimeProvider{}, time.Second)
+	coordinator.StoreAdapter = storeadapter.NewZookeeperStoreAdapter(coordinator.StoreRunner.NodeURLS(), workerpool.NewWorkerPool(coordinator.Conf.StoreMaxConcurrentRequests), &timeprovider.RealTimeProvider{}, time.Second)
 	err := coordinator.StoreAdapter.Connect()
 	Ω(err).ShouldNot(HaveOccured())
 }

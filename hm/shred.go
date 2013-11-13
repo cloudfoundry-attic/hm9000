@@ -9,7 +9,7 @@ import (
 )
 
 func Shred(l logger.Logger, conf config.Config, poll bool) {
-	store := connectToStore(l, conf)
+	store, _ := connectToStore(l, conf)
 
 	if poll {
 		l.Info("Starting Shredder Daemon...")

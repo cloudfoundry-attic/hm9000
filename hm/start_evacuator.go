@@ -8,7 +8,7 @@ import (
 
 func StartEvacuator(l logger.Logger, conf config.Config) {
 	messageBus := connectToMessageBus(l, conf)
-	store := connectToStore(l, conf)
+	store, _ := connectToStore(l, conf)
 
 	evacuator := evacuatorpackage.New(messageBus, store, buildTimeProvider(l), l)
 

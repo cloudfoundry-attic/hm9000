@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+type UsageTracker interface {
+	StartTrackingUsage()
+	MeasureUsage() (usage float64, measurementDuration time.Duration)
+}
+
 var startMetrics = map[models.PendingStartMessageReason]string{
 	models.PendingStartMessageReasonCrashed:    "StartCrashed",
 	models.PendingStartMessageReasonMissing:    "StartMissing",
@@ -22,6 +27,7 @@ var stopMetrics = map[models.PendingStopMessageReason]string{
 type MetricsAccountant interface {
 	IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error
 	TrackDesiredStateSyncTime(dt time.Duration) error
+	TrackActualStateListenerStoreUsageFraction(usage float64) error
 	GetMetrics() (map[string]int, error)
 }
 
@@ -37,6 +43,10 @@ func New(store store.Store) *RealMetricsAccountant {
 
 func (m *RealMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) error {
 	return m.store.SaveMetric("DesiredStateSyncTimeInMilliseconds", int(dt/time.Millisecond))
+}
+
+func (m *RealMetricsAccountant) TrackActualStateListenerStoreUsageFraction(usage float64) error {
+	return m.store.SaveMetric("ActualStateListenerStoreUsagePercentage", int(usage*100.0))
 }
 
 func (m *RealMetricsAccountant) IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {
@@ -73,6 +83,7 @@ func (m *RealMetricsAccountant) GetMetrics() (map[string]int, error) {
 	}
 
 	metrics["DesiredStateSyncTimeInMilliseconds"] = 0
+	metrics["ActualStateListenerStoreUsagePercentage"] = 0
 
 	for key, _ := range metrics {
 		value, err := m.store.GetMetric(key)

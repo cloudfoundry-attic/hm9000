@@ -13,7 +13,7 @@ import (
 
 func Send(l logger.Logger, conf config.Config, poll bool) {
 	messageBus := connectToMessageBus(l, conf)
-	store := connectToStore(l, conf)
+	store, _ := connectToStore(l, conf)
 
 	if poll {
 		l.Info("Starting Sender Daemon...")

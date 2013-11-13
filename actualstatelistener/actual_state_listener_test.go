@@ -15,23 +15,27 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakemetricsaccountant"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakeusagetracker"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 )
 
 var _ = Describe("Actual state listener", func() {
 	var (
-		app          AppFixture
-		anotherApp   AppFixture
-		store        storepackage.Store
-		storeAdapter *fakestoreadapter.FakeStoreAdapter
-		listener     *ActualStateListener
-		timeProvider *faketimeprovider.FakeTimeProvider
-		messageBus   *fakeyagnats.FakeYagnats
-		logger       *fakelogger.FakeLogger
-		conf         config.Config
-		freshByTime  time.Time
+		app               AppFixture
+		anotherApp        AppFixture
+		store             storepackage.Store
+		storeAdapter      *fakestoreadapter.FakeStoreAdapter
+		listener          *ActualStateListener
+		timeProvider      *faketimeprovider.FakeTimeProvider
+		messageBus        *fakeyagnats.FakeYagnats
+		logger            *fakelogger.FakeLogger
+		conf              config.Config
+		freshByTime       time.Time
+		usageTracker      *fakeusagetracker.FakeUsageTracker
+		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
 	)
 
 	BeforeEach(func() {
@@ -53,7 +57,11 @@ var _ = Describe("Actual state listener", func() {
 		messageBus = fakeyagnats.New()
 		logger = fakelogger.NewFakeLogger()
 
-		listener = New(conf, messageBus, store, timeProvider, logger)
+		usageTracker = fakeusagetracker.New()
+		usageTracker.UsageToReturn = 0.7
+		metricsAccountant = fakemetricsaccountant.New()
+
+		listener = New(conf, messageBus, store, usageTracker, metricsAccountant, timeProvider, logger)
 		listener.Start()
 	})
 
@@ -65,6 +73,24 @@ var _ = Describe("Actual state listener", func() {
 	It("should subscribe to the dea.advertise subject", func() {
 		Ω(messageBus.Subscriptions).Should(HaveKey("dea.advertise"))
 		Ω(messageBus.Subscriptions["dea.advertise"]).Should(HaveLen(1))
+	})
+
+	It("should start tracking store usage", func() {
+		Ω(usageTracker.DidStart).Should(BeTrue())
+		Ω(metricsAccountant.TrackedActualStateListenerStoreUsageFraction).Should(Equal(0.7))
+	})
+
+	Context("when the usage tracker is nil", func() {
+		It("should not track metrics (or blow up!)", func() {
+			metricsAccountant.TrackedActualStateListenerStoreUsageFraction = -1.0
+
+			listener = New(conf, messageBus, store, nil, metricsAccountant, timeProvider, logger)
+			Ω(func() {
+				listener.Start()
+			}).ShouldNot(Panic())
+
+			Ω(metricsAccountant.TrackedActualStateListenerStoreUsageFraction).Should(Equal(-1.0))
+		})
 	})
 
 	Context("When it receives a dea advertisement over the message bus", func() {

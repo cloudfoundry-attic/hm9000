@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	. "github.com/cloudfoundry/hm9000/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,7 +23,7 @@ var _ = Describe("Compact", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
-		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())

@@ -1,6 +1,7 @@
 package storeadapter_test
 
 import (
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	. "github.com/cloudfoundry/hm9000/storeadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,7 +25,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 			Value: []byte("burgers"),
 		}
 
-		adapter = NewETCDStoreAdapter(etcdRunner.NodeURLS(), 100)
+		adapter = NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(100))
 		err := adapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 	})

@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/storecassandra"
@@ -70,11 +71,12 @@ func connectToCFMessageBus(l logger.Logger, conf config.Config) cfmessagebus.Mes
 	return messageBus
 }
 
-func connectToStoreAdapter(l logger.Logger, conf config.Config) (adapter storeadapter.StoreAdapter) {
+func connectToStoreAdapter(l logger.Logger, conf config.Config) (adapter storeadapter.StoreAdapter, workerPool *workerpool.WorkerPool) {
+	workerPool = workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests)
 	if conf.StoreType == "etcd" {
-		adapter = storeadapter.NewETCDStoreAdapter(conf.StoreURLs, conf.StoreMaxConcurrentRequests)
+		adapter = storeadapter.NewETCDStoreAdapter(conf.StoreURLs, workerPool)
 	} else if conf.StoreType == "ZooKeeper" {
-		adapter = storeadapter.NewZookeeperStoreAdapter(conf.StoreURLs, conf.StoreMaxConcurrentRequests, buildTimeProvider(l), time.Second)
+		adapter = storeadapter.NewZookeeperStoreAdapter(conf.StoreURLs, workerPool, buildTimeProvider(l), time.Second)
 	} else {
 		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd' or 'ZooKeeper'", conf.StoreType), fmt.Errorf("Unkown store type"))
 		os.Exit(1)
@@ -85,24 +87,24 @@ func connectToStoreAdapter(l logger.Logger, conf config.Config) (adapter storead
 		os.Exit(1)
 	}
 
-	return adapter
+	return adapter, workerPool
 }
 
-func connectToStore(l logger.Logger, conf config.Config) store.Store {
+func connectToStore(l logger.Logger, conf config.Config) (store.Store, *workerpool.WorkerPool) {
 	if conf.StoreType == "etcd" || conf.StoreType == "ZooKeeper" {
-		adapter := connectToStoreAdapter(l, conf)
-		return store.NewStore(conf, adapter, l)
+		adapter, workerPool := connectToStoreAdapter(l, conf)
+		return store.NewStore(conf, adapter, l), workerPool
 	} else if conf.StoreType == "Cassandra" {
 		store, err := storecassandra.New(conf.StoreURLs, conf.CassandraConsistency(), conf, buildTimeProvider(l))
 		if err != nil {
 			l.Error("Failed to connect to the store", err)
 			os.Exit(1)
 		}
-		return store
+		return store, nil
 	} else {
 		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd', 'ZooKeeper' or 'Cassandra'", conf.StoreType), fmt.Errorf("Unkown store type"))
 		os.Exit(1)
 	}
 
-	return nil
+	return nil, nil
 }

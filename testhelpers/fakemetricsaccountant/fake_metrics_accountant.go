@@ -10,7 +10,8 @@ type FakeMetricsAccountant struct {
 	IncrementedStarts                []models.PendingStartMessage
 	IncrementedStops                 []models.PendingStopMessage
 
-	TrackedDesiredStateSyncTime time.Duration
+	TrackedDesiredStateSyncTime                  time.Duration
+	TrackedActualStateListenerStoreUsageFraction float64
 
 	GetMetricsError   error
 	GetMetricsMetrics map[string]int
@@ -34,6 +35,11 @@ func (m *FakeMetricsAccountant) IncrementSentMessageMetrics(starts []models.Pend
 
 func (m *FakeMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) error {
 	m.TrackedDesiredStateSyncTime = dt
+	return nil
+}
+
+func (m *FakeMetricsAccountant) TrackActualStateListenerStoreUsageFraction(usage float64) error {
+	m.TrackedActualStateListenerStoreUsageFraction = usage
 	return nil
 }
 

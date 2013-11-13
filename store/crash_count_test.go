@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	. "github.com/cloudfoundry/hm9000/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,19 +14,19 @@ import (
 
 var _ = Describe("Crash Count", func() {
 	var (
-		store       Store
+		store        Store
 		storeAdapter storeadapter.StoreAdapter
-		conf        config.Config
-		crashCount1 models.CrashCount
-		crashCount2 models.CrashCount
-		crashCount3 models.CrashCount
+		conf         config.Config
+		crashCount1  models.CrashCount
+		crashCount2  models.CrashCount
+		crashCount3  models.CrashCount
 	)
 
 	BeforeEach(func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
-		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 

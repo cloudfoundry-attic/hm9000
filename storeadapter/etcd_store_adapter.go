@@ -11,10 +11,10 @@ type ETCDStoreAdapter struct {
 	workerPool *workerpool.WorkerPool
 }
 
-func NewETCDStoreAdapter(urls []string, maxConcurrentRequests int) *ETCDStoreAdapter {
+func NewETCDStoreAdapter(urls []string, workerPool *workerpool.WorkerPool) *ETCDStoreAdapter {
 	return &ETCDStoreAdapter{
 		urls:       urls,
-		workerPool: workerpool.NewWorkerPool(maxConcurrentRequests),
+		workerPool: workerPool,
 	}
 }
 
@@ -92,7 +92,18 @@ func (adapter *ETCDStoreAdapter) Get(key string) (StoreNode, error) {
 		key = "/?garbage=foo&"
 	}
 
-	response, err := adapter.client.Get(key, false)
+	done := make(chan bool, 1)
+	var response *etcd.Response
+	var err error
+
+	//we route through the worker pool to enable usage tracking
+	adapter.workerPool.ScheduleWork(func() {
+		response, err = adapter.client.Get(key, false)
+		done <- true
+	})
+
+	<-done
+
 	if adapter.isTimeoutError(err) {
 		return StoreNode{}, ErrorTimeout
 	}
@@ -121,7 +132,19 @@ func (adapter *ETCDStoreAdapter) ListRecursively(key string) (StoreNode, error) 
 	if key == "/" {
 		key = "/?recursive=true&garbage=foo&"
 	}
-	response, err := adapter.client.GetAll(key, false)
+
+	done := make(chan bool, 1)
+	var response *etcd.Response
+	var err error
+
+	//we route through the worker pool to enable usage tracking
+	adapter.workerPool.ScheduleWork(func() {
+		response, err = adapter.client.GetAll(key, false)
+		done <- true
+	})
+
+	<-done
+
 	if adapter.isTimeoutError(err) {
 		return StoreNode{}, ErrorTimeout
 	}

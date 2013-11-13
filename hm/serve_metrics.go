@@ -10,7 +10,7 @@ import (
 )
 
 func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf config.Config) {
-	store := connectToStore(l, conf)
+	store, _ := connectToStore(l, conf)
 	cfMessageBus := connectToCFMessageBus(l, conf)
 
 	collectorRegistrar := collectorregistrar.NewCollectorRegistrar(cfMessageBus, steno)

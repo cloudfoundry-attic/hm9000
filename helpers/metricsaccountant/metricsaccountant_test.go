@@ -32,13 +32,14 @@ var _ = Describe("Metrics Accountant", func() {
 				metrics, err := accountant.GetMetrics()
 				Ω(err).ShouldNot(HaveOccured())
 				Ω(metrics).Should(Equal(map[string]int{
-					"StartCrashed":                       0,
-					"StartMissing":                       0,
-					"StartEvacuating":                    0,
-					"StopExtra":                          0,
-					"StopDuplicate":                      0,
-					"StopEvacuationComplete":             0,
-					"DesiredStateSyncTimeInMilliseconds": 0,
+					"StartCrashed":                            0,
+					"StartMissing":                            0,
+					"StartEvacuating":                         0,
+					"StopExtra":                               0,
+					"StopDuplicate":                           0,
+					"StopEvacuationComplete":                  0,
+					"DesiredStateSyncTimeInMilliseconds":      0,
+					"ActualStateListenerStoreUsagePercentage": 0,
 				}))
 			})
 		})
@@ -63,6 +64,16 @@ var _ = Describe("Metrics Accountant", func() {
 			metrics, err := accountant.GetMetrics()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(metrics["DesiredStateSyncTimeInMilliseconds"]).Should(Equal(1138))
+		})
+	})
+
+	Describe("TrackActualStateListenerStoreUsageFraction", func() {
+		It("should record the passed in time duration appropriately", func() {
+			err := accountant.TrackActualStateListenerStoreUsageFraction(0.723)
+			Ω(err).ShouldNot(HaveOccured())
+			metrics, err := accountant.GetMetrics()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(metrics["ActualStateListenerStoreUsagePercentage"]).Should(Equal(72))
 		})
 	})
 
