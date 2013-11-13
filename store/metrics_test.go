@@ -12,18 +12,18 @@ import (
 var _ = Describe("Metrics", func() {
 	var (
 		store       Store
-		etcdAdapter storeadapter.StoreAdapter
+		storeAdapter storeadapter.StoreAdapter
 		conf        config.Config
 	)
 
 	conf, _ = config.DefaultConfig()
 
 	BeforeEach(func() {
-		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err := etcdAdapter.Connect()
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err := storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 	})
 
 	Describe("Getting and setting a metric", func() {
@@ -33,7 +33,7 @@ var _ = Describe("Metrics", func() {
 		})
 
 		It("should store the metric under /metrics", func() {
-			_, err := etcdAdapter.Get("/metrics/sprockets")
+			_, err := storeAdapter.Get("/metrics/sprockets")
 			Ω(err).ShouldNot(HaveOccured())
 		})
 

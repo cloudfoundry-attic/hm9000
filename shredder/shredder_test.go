@@ -1,7 +1,9 @@
 package shredder_test
 
 import (
+	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/shredder"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakestoreadapter"
@@ -17,67 +19,40 @@ var _ = Describe("Shredder", func() {
 
 	BeforeEach(func() {
 		storeAdapter = fakestoreadapter.New()
-		shredder = New(storeAdapter, fakelogger.NewFakeLogger())
+		conf, _ := config.DefaultConfig()
+		store := storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
+		shredder = New(store)
 
 		storeAdapter.Set([]storeadapter.StoreNode{
 			{Key: "/pokemon/geodude", Value: []byte{}},
 			{Key: "/deep-pokemon/abra/kadabra/alakazam", Value: []byte{}},
 			{Key: "/pokemonCount", Value: []byte("151")},
+			{Key: "/dea-presence/ABC", Value: []byte("ABC")},
+			{Key: "/dea-summary/ABC", Value: []byte("summary...")},
+			{Key: "/dea-summary/DEF", Value: []byte("summary...")},
 		})
+
+		storeAdapter.Delete("/pokemon/geodude", "/deep-pokemon/abra/kadabra/alakazam")
+		err := shredder.Shred()
+		Ω(err).ShouldNot(HaveOccured())
 	})
 
-	Describe("recursing through the store", func() {
-		Context("when the node is a directory", func() {
-			Context("and it is empty", func() {
-				BeforeEach(func() {
-					storeAdapter.Delete("/pokemon/geodude")
-				})
+	It("should delete empty directories", func() {
+		_, err := storeAdapter.Get("/pokemon")
+		Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-				It("shreds it mercilessly", func() {
-					err := shredder.Shred()
-					Ω(err).ShouldNot(HaveOccured())
+		_, err = storeAdapter.Get("/deep-pokemon")
+		Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-					_, err = storeAdapter.Get("/pokemon")
-					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-				})
-			})
+		_, err = storeAdapter.Get("/pokemonCount")
+		Ω(err).ShouldNot(HaveOccured())
+	})
 
-			Context("and it is non-empty", func() {
-				It("spares it", func() {
-					err := shredder.Shred()
-					Ω(err).ShouldNot(HaveOccured())
+	It("should delete expired dea summaries", func() {
+		_, err := storeAdapter.Get("/dea-summary/DEF")
+		Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-					_, err = storeAdapter.Get("/pokemon/geodude")
-					Ω(err).ShouldNot(HaveOccured())
-				})
-
-				Context("but all of its children are empty", func() {
-					BeforeEach(func() {
-						storeAdapter.Delete("/deep-pokemon/abra/kadabra/alakazam")
-					})
-
-					It("shreds it mercilessly", func() {
-						err := shredder.Shred()
-						Ω(err).ShouldNot(HaveOccured())
-
-						_, err = storeAdapter.Get("/deep-pokemon/abra/kadabra")
-						Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-
-						_, err = storeAdapter.Get("/deep-pokemon/abra")
-						Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-					})
-				})
-			})
-		})
-
-		Context("when the node is NOT a directory", func() {
-			It("spares it", func() {
-				err := shredder.Shred()
-				Ω(err).ShouldNot(HaveOccured())
-
-				_, err = storeAdapter.Get("/pokemonCount")
-				Ω(err).ShouldNot(HaveOccured())
-			})
-		})
+		_, err = storeAdapter.Get("/dea-summary/ABC")
+		Ω(err).ShouldNot(HaveOccured())
 	})
 })

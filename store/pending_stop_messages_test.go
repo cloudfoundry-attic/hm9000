@@ -14,7 +14,7 @@ import (
 var _ = Describe("Storing PendingStopMessages", func() {
 	var (
 		store       Store
-		etcdAdapter storeadapter.StoreAdapter
+		storeAdapter storeadapter.StoreAdapter
 		conf        config.Config
 		message1    models.PendingStopMessage
 		message2    models.PendingStopMessage
@@ -25,19 +25,19 @@ var _ = Describe("Storing PendingStopMessages", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
-		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdAdapter.Connect()
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		message1 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "ABC", "123", "XYZ", models.PendingStopMessageReasonInvalid)
 		message2 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "DEF", "456", "ALPHA", models.PendingStopMessageReasonInvalid)
 		message3 = models.NewPendingStopMessage(time.Unix(100, 0), 10, 4, "GHI", "789", "BETA", models.PendingStopMessageReasonInvalid)
 
-		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 	})
 
 	AfterEach(func() {
-		etcdAdapter.Disconnect()
+		storeAdapter.Disconnect()
 	})
 
 	Describe("Saving stop messages", func() {
@@ -50,7 +50,7 @@ var _ = Describe("Storing PendingStopMessages", func() {
 		})
 
 		It("stores the passed in stop messages", func() {
-			node, err := etcdAdapter.ListRecursively("/stop")
+			node, err := storeAdapter.ListRecursively("/stop")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(node.ChildNodes).Should(HaveLen(2))
 			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
@@ -103,7 +103,7 @@ var _ = Describe("Storing PendingStopMessages", func() {
 
 		Context("When the stop message key is missing", func() {
 			BeforeEach(func() {
-				_, err := etcdAdapter.ListRecursively("/stop")
+				_, err := storeAdapter.ListRecursively("/stop")
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 

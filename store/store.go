@@ -53,6 +53,8 @@ type Store interface {
 
 	SaveMetric(metric string, value int) error
 	GetMetric(metric string) (int, error)
+
+	Compact() error
 }
 
 type RealStore struct {

@@ -4,21 +4,17 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/shredder"
-	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/store"
 	"os"
 )
 
 func Shred(l logger.Logger, conf config.Config, poll bool) {
-	if conf.StoreType == "Cassandra" {
-		l.Info("No Shredder neccessary for Cassandra")
-		select {}
-	}
-	adapter := connectToStoreAdapter(l, conf)
+	store := connectToStore(l, conf)
 
 	if poll {
 		l.Info("Starting Shredder Daemon...")
 		err := Daemonize("Shredder", func() error {
-			return shred(l, conf, adapter)
+			return shred(l, store)
 		}, conf.ShredderPollingInterval(), conf.ShredderTimeout(), l)
 		if err != nil {
 			l.Error("Shredder Errored", err)
@@ -26,7 +22,7 @@ func Shred(l logger.Logger, conf config.Config, poll bool) {
 		l.Info("Shredder Daemon is Down")
 		os.Exit(1)
 	} else {
-		err := shred(l, conf, adapter)
+		err := shred(l, store)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -35,8 +31,8 @@ func Shred(l logger.Logger, conf config.Config, poll bool) {
 	}
 }
 
-func shred(l logger.Logger, conf config.Config, adapter storeadapter.StoreAdapter) error {
+func shred(l logger.Logger, store store.Store) error {
 	l.Info("Shredding Store")
-	theShredder := shredder.New(adapter, l)
+	theShredder := shredder.New(store)
 	return theShredder.Shred()
 }

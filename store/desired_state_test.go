@@ -15,7 +15,7 @@ import (
 var _ = Describe("Desired State", func() {
 	var (
 		store       Store
-		etcdAdapter storeadapter.StoreAdapter
+		storeAdapter storeadapter.StoreAdapter
 		conf        config.Config
 		app1        appfixture.AppFixture
 		app2        appfixture.AppFixture
@@ -26,19 +26,19 @@ var _ = Describe("Desired State", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
-		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdAdapter.Connect()
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		app1 = appfixture.NewAppFixture()
 		app2 = appfixture.NewAppFixture()
 		app3 = appfixture.NewAppFixture()
 
-		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 	})
 
 	AfterEach(func() {
-		etcdAdapter.Disconnect()
+		storeAdapter.Disconnect()
 	})
 
 	Describe("Syncing desired state", func() {

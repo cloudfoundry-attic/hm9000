@@ -16,18 +16,18 @@ import (
 var _ = Describe("Freshness", func() {
 	var (
 		store       Store
-		etcdAdapter storeadapter.StoreAdapter
+		storeAdapter storeadapter.StoreAdapter
 		conf        config.Config
 	)
 
 	conf, _ = config.DefaultConfig()
 
 	BeforeEach(func() {
-		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err := etcdAdapter.Connect()
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err := storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 	})
 
 	Describe("Bumping freshness", func() {
@@ -40,7 +40,7 @@ var _ = Describe("Freshness", func() {
 
 			Context("when the key is missing", func() {
 				BeforeEach(func() {
-					_, err := etcdAdapter.Get(key)
+					_, err := storeAdapter.Get(key)
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 					err = bump(store, timestamp)
@@ -48,7 +48,7 @@ var _ = Describe("Freshness", func() {
 				})
 
 				It("should create the key with the current timestamp and a TTL", func() {
-					value, err := etcdAdapter.Get(key)
+					value, err := storeAdapter.Get(key)
 
 					Ω(err).ShouldNot(HaveOccured())
 
@@ -70,7 +70,7 @@ var _ = Describe("Freshness", func() {
 				})
 
 				It("should bump the key's TTL but not change the timestamp", func() {
-					value, err := etcdAdapter.Get(key)
+					value, err := storeAdapter.Get(key)
 
 					Ω(err).ShouldNot(HaveOccured())
 
@@ -151,7 +151,7 @@ var _ = Describe("Freshness", func() {
 
 		Context("when the store returns an error", func() {
 			BeforeEach(func() {
-				err := etcdAdapter.Set([]storeadapter.StoreNode{
+				err := storeAdapter.Set([]storeadapter.StoreNode{
 					storeadapter.StoreNode{
 						Key:   "/desired-fresh/mwahaha",
 						Value: []byte("i'm a directory...."),
@@ -200,7 +200,7 @@ var _ = Describe("Freshness", func() {
 
 			Context("if the freshness key fails to parse", func() {
 				BeforeEach(func() {
-					etcdAdapter.Set([]storeadapter.StoreNode{
+					storeAdapter.Set([]storeadapter.StoreNode{
 						storeadapter.StoreNode{
 							Key:   "/actual-fresh",
 							Value: []byte("ß"),
@@ -218,7 +218,7 @@ var _ = Describe("Freshness", func() {
 
 		Context("when the store returns an error", func() {
 			BeforeEach(func() {
-				err := etcdAdapter.Set([]storeadapter.StoreNode{
+				err := storeAdapter.Set([]storeadapter.StoreNode{
 					storeadapter.StoreNode{
 						Key:   "/actual-fresh/mwahaha",
 						Value: []byte("i'm a directory...."),

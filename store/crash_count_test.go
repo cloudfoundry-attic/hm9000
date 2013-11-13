@@ -14,7 +14,7 @@ import (
 var _ = Describe("Crash Count", func() {
 	var (
 		store       Store
-		etcdAdapter storeadapter.StoreAdapter
+		storeAdapter storeadapter.StoreAdapter
 		conf        config.Config
 		crashCount1 models.CrashCount
 		crashCount2 models.CrashCount
@@ -25,19 +25,19 @@ var _ = Describe("Crash Count", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
-		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdAdapter.Connect()
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		crashCount1 = models.CrashCount{AppGuid: models.Guid(), AppVersion: models.Guid(), InstanceIndex: 1, CrashCount: 17}
 		crashCount2 = models.CrashCount{AppGuid: models.Guid(), AppVersion: models.Guid(), InstanceIndex: 4, CrashCount: 17}
 		crashCount3 = models.CrashCount{AppGuid: models.Guid(), AppVersion: models.Guid(), InstanceIndex: 3, CrashCount: 17}
 
-		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 	})
 
 	AfterEach(func() {
-		etcdAdapter.Disconnect()
+		storeAdapter.Disconnect()
 	})
 
 	Describe("Saving crash state", func() {
@@ -49,7 +49,7 @@ var _ = Describe("Crash Count", func() {
 		It("stores the passed in crash state", func() {
 			expectedTTL := uint64(conf.MaximumBackoffDelay().Seconds()) * 2
 
-			node, err := etcdAdapter.Get("/apps/crashes/" + crashCount1.AppGuid + "-" + crashCount1.AppVersion + "/1")
+			node, err := storeAdapter.Get("/apps/crashes/" + crashCount1.AppGuid + "-" + crashCount1.AppVersion + "/1")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(node).Should(Equal(storeadapter.StoreNode{
 				Key:   "/apps/crashes/" + crashCount1.AppGuid + "-" + crashCount1.AppVersion + "/1",
@@ -57,7 +57,7 @@ var _ = Describe("Crash Count", func() {
 				TTL:   expectedTTL,
 			}))
 
-			node, err = etcdAdapter.Get("/apps/crashes/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/4")
+			node, err = storeAdapter.Get("/apps/crashes/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/4")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(node).Should(Equal(storeadapter.StoreNode{
 				Key:   "/apps/crashes/" + crashCount2.AppGuid + "-" + crashCount2.AppVersion + "/4",

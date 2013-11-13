@@ -15,7 +15,7 @@ import (
 var _ = Describe("Apps", func() {
 	var (
 		store       Store
-		etcdAdapter storeadapter.StoreAdapter
+		storeAdapter storeadapter.StoreAdapter
 		conf        config.Config
 
 		dea        appfixture.DeaFixture
@@ -29,11 +29,11 @@ var _ = Describe("Apps", func() {
 	conf, _ = config.DefaultConfig()
 
 	BeforeEach(func() {
-		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err := etcdAdapter.Connect()
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err := storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
-		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
 		dea = appfixture.NewDeaFixture()
 		app1 = dea.GetApp(0)
@@ -127,7 +127,7 @@ var _ = Describe("Apps", func() {
 
 		Context("when there is an empty app directory", func() {
 			It("should ignore that app directory", func() {
-				etcdAdapter.Set([]storeadapter.StoreNode{storeadapter.StoreNode{
+				storeAdapter.Set([]storeadapter.StoreNode{storeadapter.StoreNode{
 					Key:   "/apps/actual/foo-bar",
 					Value: []byte("foo"),
 				}})
@@ -194,12 +194,12 @@ var _ = Describe("Apps", func() {
 
 			Context("when the app directory is empty", func() {
 				It("should return the app not found error", func() {
-					etcdAdapter.Set([]storeadapter.StoreNode{storeadapter.StoreNode{
+					storeAdapter.Set([]storeadapter.StoreNode{storeadapter.StoreNode{
 						Key:   "/apps/actual/foo-bar/baz",
 						Value: []byte("foo"),
 					}})
 
-					etcdAdapter.Delete("/apps/actual/foo-bar/baz")
+					storeAdapter.Delete("/apps/actual/foo-bar/baz")
 
 					app, err := store.GetApp("foo", "bar")
 					Ω(err).Should(Equal(AppNotFoundError))

@@ -114,3 +114,7 @@ func (s *StoreCassandra) newBatch() *gocql.Batch {
 	batch.Cons = s.consistency
 	return batch
 }
+
+func (s *StoreCassandra) Compact() error {
+	return nil
+}

@@ -15,7 +15,7 @@ import (
 var _ = Describe("Actual State", func() {
 	var (
 		store       Store
-		etcdAdapter storeadapter.StoreAdapter
+		storeAdapter storeadapter.StoreAdapter
 		conf        config.Config
 		dea         appfixture.DeaFixture
 		otherDea    appfixture.DeaFixture
@@ -25,17 +25,17 @@ var _ = Describe("Actual State", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
-		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdAdapter.Connect()
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
-		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
 		dea = appfixture.NewDeaFixture()
 		otherDea = appfixture.NewDeaFixture()
 	})
 
 	AfterEach(func() {
-		etcdAdapter.Disconnect()
+		storeAdapter.Disconnect()
 	})
 
 	Describe("Saving actual state", func() {
@@ -111,7 +111,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when a DEA heartbeat has expired", func() {
 				BeforeEach(func() {
-					etcdAdapter.Delete("/dea-presence/" + dea.DeaGuid)
+					storeAdapter.Delete("/dea-presence/" + dea.DeaGuid)
 				})
 
 				It("should not return any expired instance heartbeats", func() {
@@ -123,17 +123,17 @@ var _ = Describe("Actual State", func() {
 				})
 
 				It("should remove expired instance heartbeats from the store", func() {
-					_, err := etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
+					_, err := storeAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
 					Ω(err).ShouldNot(HaveOccured())
-					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
+					_, err = storeAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
 					Ω(err).ShouldNot(HaveOccured())
 
 					_, err = store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 
-					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
+					_, err = storeAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
+					_, err = storeAdapter.Get("/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 				})
 			})
@@ -191,7 +191,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when the corresponding DEA heartbeat has expired", func() {
 				BeforeEach(func() {
-					etcdAdapter.Delete("/dea-presence/A")
+					storeAdapter.Delete("/dea-presence/A")
 				})
 
 				It("should not return any expired instance heartbeats", func() {
@@ -202,13 +202,13 @@ var _ = Describe("Actual State", func() {
 				})
 
 				It("should remove expired instance heartbeats from the store", func() {
-					_, err := etcdAdapter.Get("/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
+					_, err := storeAdapter.Get("/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
 					Ω(err).ShouldNot(HaveOccured())
 
 					_, err = store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Ω(err).ShouldNot(HaveOccured())
 
-					_, err = etcdAdapter.Get("/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
+					_, err = storeAdapter.Get("/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 				})
 			})

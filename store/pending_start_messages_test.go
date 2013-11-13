@@ -14,7 +14,7 @@ import (
 var _ = Describe("Storing PendingStartMessages", func() {
 	var (
 		store       Store
-		etcdAdapter storeadapter.StoreAdapter
+		storeAdapter storeadapter.StoreAdapter
 		conf        config.Config
 		message1    models.PendingStartMessage
 		message2    models.PendingStartMessage
@@ -25,19 +25,19 @@ var _ = Describe("Storing PendingStartMessages", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccured())
-		etcdAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
-		err = etcdAdapter.Connect()
+		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), conf.StoreMaxConcurrentRequests)
+		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
 
 		message1 = models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "123", 1, 1.0, models.PendingStartMessageReasonInvalid)
 		message2 = models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "DEF", "123", 1, 1.0, models.PendingStartMessageReasonInvalid)
 		message3 = models.NewPendingStartMessage(time.Unix(100, 0), 10, 4, "ABC", "456", 1, 1.0, models.PendingStartMessageReasonInvalid)
 
-		store = NewStore(conf, etcdAdapter, fakelogger.NewFakeLogger())
+		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 	})
 
 	AfterEach(func() {
-		etcdAdapter.Disconnect()
+		storeAdapter.Disconnect()
 	})
 
 	Describe("Saving start messages", func() {
@@ -50,7 +50,7 @@ var _ = Describe("Storing PendingStartMessages", func() {
 		})
 
 		It("stores the passed in start messages", func() {
-			node, err := etcdAdapter.ListRecursively("/start")
+			node, err := storeAdapter.ListRecursively("/start")
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(node.ChildNodes).Should(HaveLen(2))
 			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
@@ -103,7 +103,7 @@ var _ = Describe("Storing PendingStartMessages", func() {
 
 		Context("When the start message key is missing", func() {
 			BeforeEach(func() {
-				_, err := etcdAdapter.ListRecursively("/start")
+				_, err := storeAdapter.ListRecursively("/start")
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 
