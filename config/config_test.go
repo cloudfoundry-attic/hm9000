@@ -25,6 +25,7 @@ var _ = Describe("Config", func() {
         "cc_auth_user": "mcat",
         "cc_auth_password": "testing",
         "cc_base_url": "http://127.0.0.1:6001",
+        "store_schema_version": 1,
         "store_type": "etcd",
         "store_urls": ["http://127.0.0.1:4001"],
         "cassandra_consistency": "QUORUM",
@@ -90,6 +91,7 @@ var _ = Describe("Config", func() {
 			Ω(config.CCAuthPassword).Should(Equal("testing"))
 			Ω(config.CCBaseURL).Should(Equal("http://127.0.0.1:6001"))
 
+			Ω(config.StoreSchemaVersion).Should(Equal(1))
 			Ω(config.StoreType).Should(Equal("etcd"))
 			Ω(config.StoreURLs).Should(Equal([]string{"http://127.0.0.1:4001"}))
 			Ω(config.StoreMaxConcurrentRequests).Should(Equal(30))

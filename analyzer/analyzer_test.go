@@ -228,7 +228,7 @@ var _ = Describe("Analyzer", func() {
 
 			Context("and desired instances are missing", func() {
 				BeforeEach(func() {
-					storeAdapter.Delete("/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + app.InstanceAtIndex(0).InstanceGuid)
+					storeAdapter.Delete("/v1/apps/actual/" + app.AppGuid + "-" + app.AppVersion + "/" + app.InstanceAtIndex(0).InstanceGuid)
 				})
 
 				It("should return a start message containing the missing indices and no stop messages", func() {

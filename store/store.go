@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"reflect"
+	"strconv"
 	"time"
 )
 
@@ -69,6 +70,10 @@ func NewStore(config config.Config, adapter storeadapter.StoreAdapter, logger lo
 		adapter: adapter,
 		logger:  logger,
 	}
+}
+
+func (store *RealStore) SchemaRoot() string {
+	return "/v" + strconv.Itoa(store.config.StoreSchemaVersion)
 }
 
 func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
@@ -136,19 +141,18 @@ func (store *RealStore) delete(stuff interface{}, root string) error {
 	t := time.Now()
 	arrValue := reflect.ValueOf(stuff)
 
+	keysToDelete := []string{}
 	for i := 0; i < arrValue.Len(); i++ {
 		item := arrValue.Index(i).Interface().(Storeable)
-
-		err := store.adapter.Delete(root + "/" + item.StoreKey())
-		if err != nil {
-			return err
-		}
+		keysToDelete = append(keysToDelete, root+"/"+item.StoreKey())
 	}
+
+	err := store.adapter.Delete(keysToDelete...)
 
 	store.logger.Debug(fmt.Sprintf("Delete Duration %s", root), map[string]string{
 		"Number of Items": fmt.Sprintf("%d", arrValue.Len()),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
 
-	return nil
+	return err
 }

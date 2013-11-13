@@ -3,7 +3,6 @@ package store
 import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
-	"strings"
 	"time"
 )
 
@@ -75,7 +74,7 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 		return results, err
 	}
 	for _, desiredState := range desiredStates {
-		representation := representations.representationForKey(store.AppKey(desiredState.AppGuid, desiredState.AppVersion))
+		representation := representations.representationForAppGuidVersion(desiredState.AppGuid, desiredState.AppVersion)
 		representation.desiredState = desiredState
 	}
 
@@ -86,7 +85,7 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 		return results, err
 	}
 	for _, actualState := range actualStates {
-		representation := representations.representationForKey(store.AppKey(actualState.AppGuid, actualState.AppVersion))
+		representation := representations.representationForAppGuidVersion(actualState.AppGuid, actualState.AppVersion)
 		representation.actualState = append(representation.actualState, actualState)
 	}
 
@@ -98,7 +97,7 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 		return results, err
 	}
 	for _, crashCount := range crashCounts {
-		representation := representations.representationForKey(store.AppKey(crashCount.AppGuid, crashCount.AppVersion))
+		representation := representations.representationForAppGuidVersion(crashCount.AppGuid, crashCount.AppVersion)
 		representation.crashCounts = append(representation.crashCounts, crashCount)
 	}
 
@@ -127,9 +126,8 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 
 type appRepresentations map[string]*appRepresentation
 
-func (representations appRepresentations) representationForKey(key string) *appRepresentation {
-	splitKeys := strings.Split(key, "/")
-	id := splitKeys[len(splitKeys)-1]
+func (representations appRepresentations) representationForAppGuidVersion(appGuid string, appVersion string) *appRepresentation {
+	id := appGuid + "-" + appVersion
 	_, exists := representations[id]
 	if !exists {
 		representations[id] = &appRepresentation{

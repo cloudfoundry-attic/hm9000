@@ -7,14 +7,14 @@ import (
 
 func (store *RealStore) SaveMetric(metric string, value int) error {
 	node := storeadapter.StoreNode{
-		Key:   "/metrics/" + metric,
+		Key:   store.SchemaRoot() + "/metrics/" + metric,
 		Value: []byte(strconv.Itoa(value)),
 	}
 	return store.adapter.Set([]storeadapter.StoreNode{node})
 }
 
 func (store *RealStore) GetMetric(metric string) (int, error) {
-	node, err := store.adapter.Get("/metrics/" + metric)
+	node, err := store.adapter.Get(store.SchemaRoot() + "/metrics/" + metric)
 	if err != nil {
 		return -1, err
 	}

@@ -34,7 +34,7 @@ var _ = Describe("Metrics", func() {
 		})
 
 		It("should store the metric under /metrics", func() {
-			_, err := storeAdapter.Get("/metrics/sprockets")
+			_, err := storeAdapter.Get("/v1/metrics/sprockets")
 			Ω(err).ShouldNot(HaveOccured())
 		})
 

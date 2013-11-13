@@ -34,6 +34,7 @@ type Config struct {
 	CCAuthPassword                 string `json:"cc_auth_password"`
 	CCBaseURL                      string `json:"cc_base_url"`
 
+	StoreSchemaVersion         int      `json:"store_schema_version"`
 	StoreType                  string   `json:"store_type"`
 	StoreURLs                  []string `json:"store_urls"`
 	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`

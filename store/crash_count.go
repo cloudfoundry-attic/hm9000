@@ -9,7 +9,7 @@ import (
 )
 
 func (store *RealStore) crashCountStoreKey(crashCount models.CrashCount) string {
-	return "/apps/crashes/" + store.AppKey(crashCount.AppGuid, crashCount.AppVersion) + "/" + strconv.Itoa(crashCount.InstanceIndex)
+	return store.SchemaRoot() + "/apps/crashes/" + store.AppKey(crashCount.AppGuid, crashCount.AppVersion) + "/" + strconv.Itoa(crashCount.InstanceIndex)
 }
 
 func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error {
@@ -34,7 +34,7 @@ func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error 
 }
 
 func (store *RealStore) getCrashCounts() (results []models.CrashCount, err error) {
-	node, err := store.adapter.ListRecursively("/apps/crashes")
+	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/crashes")
 
 	if err == storeadapter.ErrorKeyNotFound {
 		return results, nil
@@ -54,7 +54,7 @@ func (store *RealStore) getCrashCounts() (results []models.CrashCount, err error
 }
 
 func (store *RealStore) getCrashCountForApp(appGuid string, appVersion string) (results []models.CrashCount, err error) {
-	node, err := store.adapter.ListRecursively("/apps/crashes/" + store.AppKey(appGuid, appVersion))
+	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/crashes/" + store.AppKey(appGuid, appVersion))
 	if err == storeadapter.ErrorKeyNotFound {
 		return []models.CrashCount{}, nil
 	} else if err != nil {

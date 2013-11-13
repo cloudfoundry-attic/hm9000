@@ -80,7 +80,7 @@ func (store *RealStore) SyncHeartbeat(newHeartbeat models.Heartbeat) error {
 }
 
 func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
-	node, err := store.adapter.ListRecursively("/apps/actual")
+	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/actual")
 	if err == storeadapter.ErrorKeyNotFound {
 		return results, nil
 	} else if err != nil {
@@ -107,7 +107,7 @@ func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartb
 }
 
 func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
-	node, err := store.adapter.ListRecursively("/apps/actual/" + store.AppKey(appGuid, appVersion))
+	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/actual/" + store.AppKey(appGuid, appVersion))
 	if err == storeadapter.ErrorKeyNotFound {
 		return []models.InstanceHeartbeat{}, nil
 	} else if err != nil {
@@ -149,7 +149,7 @@ func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode, unexpired
 func (store *RealStore) unexpiredDeas() (results map[string]bool, err error) {
 	results = map[string]bool{}
 
-	summaryNodes, err := store.adapter.ListRecursively("/dea-presence")
+	summaryNodes, err := store.adapter.ListRecursively(store.SchemaRoot() + "/dea-presence")
 	if err == storeadapter.ErrorKeyNotFound {
 		return results, nil
 	} else if err != nil {
@@ -164,12 +164,12 @@ func (store *RealStore) unexpiredDeas() (results map[string]bool, err error) {
 }
 
 func (store *RealStore) instanceHeartbeatStoreKey(appGuid string, appVersion string, instanceGuid string) string {
-	return "/apps/actual/" + store.AppKey(appGuid, appVersion) + "/" + instanceGuid
+	return store.SchemaRoot() + "/apps/actual/" + store.AppKey(appGuid, appVersion) + "/" + instanceGuid
 }
 
 func (store *RealStore) getExistingHeartbeatSummary(deaGuid string) (models.HeartbeatSummary, error) {
 	existingSummary := models.HeartbeatSummary{}
-	deaSummaryNode, err := store.adapter.Get("/dea-summary/" + deaGuid)
+	deaSummaryNode, err := store.adapter.Get(store.SchemaRoot() + "/dea-summary/" + deaGuid)
 	if err == storeadapter.ErrorKeyNotFound {
 		return existingSummary, nil
 	} else if err != nil {
@@ -186,7 +186,7 @@ func (store *RealStore) getExistingHeartbeatSummary(deaGuid string) (models.Hear
 
 func (store *RealStore) deaPresenceNode(deaGuid string) storeadapter.StoreNode {
 	return storeadapter.StoreNode{
-		Key:   "/dea-presence/" + deaGuid,
+		Key:   store.SchemaRoot() + "/dea-presence/" + deaGuid,
 		Value: []byte(deaGuid),
 		TTL:   store.config.HeartbeatTTL(),
 	}
@@ -194,7 +194,7 @@ func (store *RealStore) deaPresenceNode(deaGuid string) storeadapter.StoreNode {
 
 func (store *RealStore) deaSummaryNode(deaSummary models.HeartbeatSummary) storeadapter.StoreNode {
 	return storeadapter.StoreNode{
-		Key:   "/dea-summary/" + deaSummary.DeaGuid,
+		Key:   store.SchemaRoot() + "/dea-summary/" + deaSummary.DeaGuid,
 		Value: deaSummary.ToJSON(),
 	}
 }

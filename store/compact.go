@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"strings"
 )
@@ -19,14 +20,14 @@ func (store *RealStore) Compact() error {
 }
 
 func (store *RealStore) deleteExpiredDEAHeartbeatSummaries() error {
-	summaries, err := store.adapter.ListRecursively("/dea-summary")
+	summaries, err := store.adapter.ListRecursively(store.SchemaRoot() + "/dea-summary")
 	if err == storeadapter.ErrorKeyNotFound {
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	presence, err := store.adapter.ListRecursively("/dea-presence")
+	presence, err := store.adapter.ListRecursively(store.SchemaRoot() + "/dea-presence")
 	if err != nil && err != storeadapter.ErrorKeyNotFound {
 		return err
 	}
@@ -51,9 +52,9 @@ func (store *RealStore) deleteExpiredDEAHeartbeatSummaries() error {
 }
 
 func (store *RealStore) deleteEmptyDirectories() error {
-	node, err := store.adapter.ListRecursively("/")
+	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/")
 	if err != nil {
-		store.logger.Error("Failed to recursively fetch /", err)
+		store.logger.Error(fmt.Sprintf("Failed to recursively fetch %s/", store.SchemaRoot()), err)
 		return err
 	}
 

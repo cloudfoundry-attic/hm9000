@@ -63,7 +63,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 
 	It("bumps the freshness", func() {
 		Eventually(func() error {
-			_, err := storeAdapter.Get(conf.DesiredFreshnessKey)
+			_, err := storeAdapter.Get("/v1" + conf.DesiredFreshnessKey)
 			return err
 		}, 1, 0.1).ShouldNot(HaveOccured())
 	})

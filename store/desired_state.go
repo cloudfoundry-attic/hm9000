@@ -8,7 +8,7 @@ import (
 )
 
 func (store *RealStore) desiredStateStoreKey(desiredState models.DesiredAppState) string {
-	return "/apps/desired/" + store.AppKey(desiredState.AppGuid, desiredState.AppVersion)
+	return store.SchemaRoot() + "/apps/desired/" + store.AppKey(desiredState.AppGuid, desiredState.AppVersion)
 }
 
 func (store *RealStore) SyncDesiredState(newDesiredStates ...models.DesiredAppState) error {
@@ -77,7 +77,7 @@ func (store *RealStore) GetDesiredState() (results map[string]models.DesiredAppS
 
 	results = make(map[string]models.DesiredAppState)
 
-	node, err := store.adapter.ListRecursively("/apps/desired")
+	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/desired")
 
 	if err == storeadapter.ErrorKeyNotFound {
 		return results, nil
@@ -102,7 +102,7 @@ func (store *RealStore) GetDesiredState() (results map[string]models.DesiredAppS
 }
 
 func (store *RealStore) getDesiredStateForApp(appGuid string, appVersion string) (desired models.DesiredAppState, err error) {
-	node, err := store.adapter.Get("/apps/desired/" + store.AppKey(appGuid, appVersion))
+	node, err := store.adapter.Get(store.SchemaRoot() + "/apps/desired/" + store.AppKey(appGuid, appVersion))
 	if err == storeadapter.ErrorKeyNotFound {
 		return desired, nil
 	} else if err != nil {
