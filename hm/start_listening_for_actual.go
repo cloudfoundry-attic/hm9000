@@ -9,12 +9,12 @@ import (
 
 func StartListeningForActual(l logger.Logger, conf config.Config) {
 	messageBus := connectToMessageBus(l, conf)
-	store, workerPool := connectToStore(l, conf)
+	store, usageTracker := connectToStore(l, conf)
 
 	listener := actualstatelistener.New(conf,
 		messageBus,
 		store,
-		workerPool,
+		usageTracker,
 		metricsaccountant.New(store),
 		buildTimeProvider(l),
 		l)

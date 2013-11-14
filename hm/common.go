@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/cloudfoundry/hm9000/store"
@@ -71,8 +72,9 @@ func connectToCFMessageBus(l logger.Logger, conf config.Config) cfmessagebus.Mes
 	return messageBus
 }
 
-func connectToStoreAdapter(l logger.Logger, conf config.Config) (adapter storeadapter.StoreAdapter, workerPool *workerpool.WorkerPool) {
-	workerPool = workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests)
+func connectToStoreAdapter(l logger.Logger, conf config.Config) (storeadapter.StoreAdapter, metricsaccountant.UsageTracker) {
+	var adapter storeadapter.StoreAdapter
+	workerPool := workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests)
 	if conf.StoreType == "etcd" {
 		adapter = storeadapter.NewETCDStoreAdapter(conf.StoreURLs, workerPool)
 	} else if conf.StoreType == "ZooKeeper" {
@@ -90,7 +92,7 @@ func connectToStoreAdapter(l logger.Logger, conf config.Config) (adapter storead
 	return adapter, workerPool
 }
 
-func connectToStore(l logger.Logger, conf config.Config) (store.Store, *workerpool.WorkerPool) {
+func connectToStore(l logger.Logger, conf config.Config) (store.Store, metricsaccountant.UsageTracker) {
 	if conf.StoreType == "etcd" || conf.StoreType == "ZooKeeper" {
 		adapter, workerPool := connectToStoreAdapter(l, conf)
 		return store.NewStore(conf, adapter, l), workerPool
