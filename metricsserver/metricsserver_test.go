@@ -39,7 +39,7 @@ var _ = Describe("Metrics Server", func() {
 
 	Describe("message metrics", func() {
 		BeforeEach(func() {
-			metricsAccountant.GetMetricsMetrics = map[string]int{
+			metricsAccountant.GetMetricsMetrics = map[string]float64{
 				"foo": 1,
 				"bar": 2,
 			}
@@ -48,8 +48,8 @@ var _ = Describe("Metrics Server", func() {
 		Context("when the metrics fetch succesfully", func() {
 			It("should return them", func() {
 				context := metricsServer.Emit()
-				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "foo", Value: 1}))
-				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "bar", Value: 2}))
+				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "foo", Value: float64(1.0)}))
+				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "bar", Value: float64(2.0)}))
 			})
 		})
 
@@ -60,8 +60,8 @@ var _ = Describe("Metrics Server", func() {
 
 			It("should not return them", func() {
 				context := metricsServer.Emit()
-				Ω(context.Metrics).ShouldNot(ContainElement(instrumentation.Metric{Name: "foo", Value: 1}))
-				Ω(context.Metrics).ShouldNot(ContainElement(instrumentation.Metric{Name: "bar", Value: 2}))
+				Ω(context.Metrics).ShouldNot(ContainElement(instrumentation.Metric{Name: "foo", Value: float64(1.0)}))
+				Ω(context.Metrics).ShouldNot(ContainElement(instrumentation.Metric{Name: "bar", Value: float64(2.0)}))
 			})
 		})
 	})

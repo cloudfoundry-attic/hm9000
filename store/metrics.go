@@ -5,19 +5,19 @@ import (
 	"strconv"
 )
 
-func (store *RealStore) SaveMetric(metric string, value int) error {
+func (store *RealStore) SaveMetric(metric string, value float64) error {
 	node := storeadapter.StoreNode{
 		Key:   store.SchemaRoot() + "/metrics/" + metric,
-		Value: []byte(strconv.Itoa(value)),
+		Value: []byte(strconv.FormatFloat(value, 'f', 5, 64)),
 	}
 	return store.adapter.Set([]storeadapter.StoreNode{node})
 }
 
-func (store *RealStore) GetMetric(metric string) (int, error) {
+func (store *RealStore) GetMetric(metric string) (float64, error) {
 	node, err := store.adapter.Get(store.SchemaRoot() + "/metrics/" + metric)
 	if err != nil {
 		return -1, err
 	}
 
-	return strconv.Atoi(string(node.Value))
+	return strconv.ParseFloat(string(node.Value), 64)
 }

@@ -342,7 +342,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 	})
 
 	Context("When setting a key with a non-zero TTL", func() {
-		It("should stay in the adapter for its TTL and then disappear", func() {
+		It("should stay in the store for the duration of its TTL and then disappear", func() {
 			breakfastNode.TTL = 1
 			err := adapter.Set([]StoreNode{breakfastNode})
 			Ω(err).ShouldNot(HaveOccured())
@@ -353,7 +353,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 			Eventually(func() interface{} {
 				_, err = adapter.Get("/menu/breakfast")
 				return err
-			}, 1.05, 0.01).Should(Equal(ErrorKeyNotFound))
+			}, 2, 0.01).Should(Equal(ErrorKeyNotFound)) // as of etcd v0.2rc1, etcd seems to take an extra 0.5 seconds to expire its TTLs
 		})
 	})
 })

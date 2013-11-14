@@ -31,7 +31,7 @@ var _ = Describe("Metrics Accountant", func() {
 			It("should return a map of 0s", func() {
 				metrics, err := accountant.GetMetrics()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(metrics).Should(Equal(map[string]int{
+				Ω(metrics).Should(Equal(map[string]float64{
 					"StartCrashed":                            0,
 					"StartMissing":                            0,
 					"StartEvacuating":                         0,
@@ -63,7 +63,7 @@ var _ = Describe("Metrics Accountant", func() {
 			Ω(err).ShouldNot(HaveOccured())
 			metrics, err := accountant.GetMetrics()
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(metrics["DesiredStateSyncTimeInMilliseconds"]).Should(Equal(1138))
+			Ω(metrics["DesiredStateSyncTimeInMilliseconds"]).Should(BeNumerically("==", 1138))
 		})
 	})
 
@@ -73,7 +73,7 @@ var _ = Describe("Metrics Accountant", func() {
 			Ω(err).ShouldNot(HaveOccured())
 			metrics, err := accountant.GetMetrics()
 			Ω(err).ShouldNot(HaveOccured())
-			Ω(metrics["ActualStateListenerStoreUsagePercentage"]).Should(Equal(72))
+			Ω(metrics["ActualStateListenerStoreUsagePercentage"]).Should(BeNumerically("==", 72.3))
 		})
 	})
 
@@ -109,12 +109,12 @@ var _ = Describe("Metrics Accountant", func() {
 			It("should increment the metrics and return them when GettingMetrics", func() {
 				metrics, err := accountant.GetMetrics()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(metrics["StartCrashed"]).Should(Equal(1))
-				Ω(metrics["StartMissing"]).Should(Equal(2))
-				Ω(metrics["StartEvacuating"]).Should(Equal(3))
-				Ω(metrics["StopExtra"]).Should(Equal(1))
-				Ω(metrics["StopDuplicate"]).Should(Equal(2))
-				Ω(metrics["StopEvacuationComplete"]).Should(Equal(3))
+				Ω(metrics["StartCrashed"]).Should(BeNumerically("==", 1))
+				Ω(metrics["StartMissing"]).Should(BeNumerically("==", 2))
+				Ω(metrics["StartEvacuating"]).Should(BeNumerically("==", 3))
+				Ω(metrics["StopExtra"]).Should(BeNumerically("==", 1))
+				Ω(metrics["StopDuplicate"]).Should(BeNumerically("==", 2))
+				Ω(metrics["StopEvacuationComplete"]).Should(BeNumerically("==", 3))
 			})
 		})
 
@@ -129,12 +129,12 @@ var _ = Describe("Metrics Accountant", func() {
 			It("should increment the metrics and return them when GettingMetrics", func() {
 				metrics, err := accountant.GetMetrics()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(metrics["StartCrashed"]).Should(Equal(2))
-				Ω(metrics["StartMissing"]).Should(Equal(4))
-				Ω(metrics["StartEvacuating"]).Should(Equal(6))
-				Ω(metrics["StopExtra"]).Should(Equal(2))
-				Ω(metrics["StopDuplicate"]).Should(Equal(4))
-				Ω(metrics["StopEvacuationComplete"]).Should(Equal(6))
+				Ω(metrics["StartCrashed"]).Should(BeNumerically("==", 2))
+				Ω(metrics["StartMissing"]).Should(BeNumerically("==", 4))
+				Ω(metrics["StartEvacuating"]).Should(BeNumerically("==", 6))
+				Ω(metrics["StopExtra"]).Should(BeNumerically("==", 2))
+				Ω(metrics["StopDuplicate"]).Should(BeNumerically("==", 4))
+				Ω(metrics["StopEvacuationComplete"]).Should(BeNumerically("==", 6))
 			})
 		})
 

@@ -626,19 +626,19 @@ var _ = Describe("Storecassandra", func() {
 				It("should return the stored value and no error", func() {
 					value, err := store.GetMetric("sprockets")
 					Ω(err).ShouldNot(HaveOccured())
-					Ω(value).Should(Equal(17))
+					Ω(value).Should(BeNumerically("==", 17))
 				})
 
 				Context("and it is overwritten", func() {
 					BeforeEach(func() {
-						err := store.SaveMetric("sprockets", 23)
+						err := store.SaveMetric("sprockets", 23.5)
 						Ω(err).ShouldNot(HaveOccured())
 					})
 
 					It("should return the new value", func() {
 						value, err := store.GetMetric("sprockets")
 						Ω(err).ShouldNot(HaveOccured())
-						Ω(value).Should(Equal(23))
+						Ω(value).Should(BeNumerically("==", 23.5))
 					})
 				})
 			})
@@ -647,7 +647,7 @@ var _ = Describe("Storecassandra", func() {
 				It("should return -1 and an error", func() {
 					value, err := store.GetMetric("nonexistent")
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-					Ω(value).Should(Equal(-1))
+					Ω(value).Should(BeNumerically("==", -1))
 				})
 			})
 		})

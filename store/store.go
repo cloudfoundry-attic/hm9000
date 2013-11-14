@@ -52,8 +52,8 @@ type Store interface {
 	GetPendingStopMessages() (map[string]models.PendingStopMessage, error)
 	DeletePendingStopMessages(stopMessages ...models.PendingStopMessage) error
 
-	SaveMetric(metric string, value int) error
-	GetMetric(metric string) (int, error)
+	SaveMetric(metric string, value float64) error
+	GetMetric(metric string) (float64, error)
 
 	Compact() error
 }

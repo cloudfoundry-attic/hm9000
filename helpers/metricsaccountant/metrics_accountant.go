@@ -28,7 +28,7 @@ type MetricsAccountant interface {
 	IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error
 	TrackDesiredStateSyncTime(dt time.Duration) error
 	TrackActualStateListenerStoreUsageFraction(usage float64) error
-	GetMetrics() (map[string]int, error)
+	GetMetrics() (map[string]float64, error)
 }
 
 type RealMetricsAccountant struct {
@@ -42,11 +42,11 @@ func New(store store.Store) *RealMetricsAccountant {
 }
 
 func (m *RealMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) error {
-	return m.store.SaveMetric("DesiredStateSyncTimeInMilliseconds", int(dt/time.Millisecond))
+	return m.store.SaveMetric("DesiredStateSyncTimeInMilliseconds", float64(dt)/float64(time.Millisecond))
 }
 
 func (m *RealMetricsAccountant) TrackActualStateListenerStoreUsageFraction(usage float64) error {
-	return m.store.SaveMetric("ActualStateListenerStoreUsagePercentage", int(usage*100.0))
+	return m.store.SaveMetric("ActualStateListenerStoreUsagePercentage", usage*100.0)
 }
 
 func (m *RealMetricsAccountant) IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {
@@ -64,7 +64,7 @@ func (m *RealMetricsAccountant) IncrementSentMessageMetrics(starts []models.Pend
 	}
 
 	for key, value := range metrics {
-		err := m.store.SaveMetric(key, value)
+		err := m.store.SaveMetric(key, float64(value))
 		if err != nil {
 			return err
 		}
@@ -73,8 +73,8 @@ func (m *RealMetricsAccountant) IncrementSentMessageMetrics(starts []models.Pend
 	return nil
 }
 
-func (m *RealMetricsAccountant) GetMetrics() (map[string]int, error) {
-	metrics := map[string]int{}
+func (m *RealMetricsAccountant) GetMetrics() (map[string]float64, error) {
+	metrics := map[string]float64{}
 	for _, key := range startMetrics {
 		metrics[key] = 0
 	}
@@ -90,7 +90,7 @@ func (m *RealMetricsAccountant) GetMetrics() (map[string]int, error) {
 		if err == storeadapter.ErrorKeyNotFound {
 			value = 0
 		} else if err != nil {
-			return map[string]int{}, err
+			return map[string]float64{}, err
 		}
 		metrics[key] = value
 	}
