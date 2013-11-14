@@ -35,10 +35,10 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 			Ω(startStopListener.Stops).Should(BeEmpty())
 		})
 
-		Context("after a grace period", func() {
+		Context("after four grace periods", func() {
 			Context("if both instances are still running", func() {
 				BeforeEach(func() {
-					simulator.Tick(simulator.GracePeriod)
+					simulator.Tick(simulator.GracePeriod * 4)
 				})
 
 				It("should stop one of them", func() {
@@ -79,7 +79,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 					heartbeat = dea.HeartbeatWith(instance0.Heartbeat(), instance1.Heartbeat())
 					simulator.SetCurrentHeartbeats(heartbeat)
 					startStopListener.Reset()
-					simulator.Tick(simulator.GracePeriod * 2) //after a long time
+					simulator.Tick(simulator.GracePeriod * 5) //after a long time
 				})
 
 				It("should not stop any instances", func() {

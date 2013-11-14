@@ -324,9 +324,9 @@ var _ = Describe("Analyzer", func() {
 				Ω(instanceGuids).Should(ContainElement(duplicateInstance1.InstanceGuid))
 				Ω(instanceGuids).Should(ContainElement(duplicateInstance2.InstanceGuid))
 
-				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()))
-				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()*2))
-				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()*3))
+				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()*4))
+				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()*5))
+				Ω(sendOns).Should(ContainElement(1000 + conf.GracePeriod()*6))
 			})
 
 			Context("when there is an existing stop message", func() {

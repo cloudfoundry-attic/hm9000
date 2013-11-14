@@ -111,8 +111,10 @@ func (a *appAnalyzer) generatePendingStopsForDuplicateInstances() {
 	for index := 0; a.app.IsIndexDesired(index); index++ {
 		instances := a.app.StartingOrRunningInstancesAtIndex(index)
 		if len(instances) > 1 {
+			minimumDuplicateInstanceStopDelay := 4 * a.conf.GracePeriod()
+
 			for i, instance := range instances {
-				delay := (i + 1) * a.conf.GracePeriod()
+				delay := i*a.conf.GracePeriod() + minimumDuplicateInstanceStopDelay
 				message := models.NewPendingStopMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, instance.InstanceGuid, models.PendingStopMessageReasonDuplicate)
 
 				a.appendStopMessageIfNotDuplicate(message, "Identified duplicate running instance", map[string]string{
