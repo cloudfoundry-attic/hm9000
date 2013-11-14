@@ -5,16 +5,19 @@ import (
 	"tux21b.org/v1/gocql"
 )
 
-func (s *StoreCassandra) SyncHeartbeat(heartbeat models.Heartbeat) error {
-	summary := heartbeat.HeartbeatSummary()
-	iter := s.session.Query(`SELECT app_guid, app_version, instance_guid FROM ActualStates WHERE dea_guid = ?`, heartbeat.DeaGuid).Iter()
+func (s *StoreCassandra) SyncHeartbeat(incomingHeartbeat models.Heartbeat) error {
+	iter := s.session.Query(`SELECT app_guid, app_version, instance_guid FROM ActualStates WHERE dea_guid = ?`, incomingHeartbeat.DeaGuid).Iter()
 
 	batch := s.newBatch()
 
+	incomingInstanceGuids := map[string]bool{}
+	for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
+		incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
+	}
+
 	var appGuid, appVersion, instanceGuid string
 	for iter.Scan(&appGuid, &appVersion, &instanceGuid) {
-		_, exists := summary.InstanceHeartbeatSummaries[instanceGuid]
-		if !exists {
+		if !incomingInstanceGuids[instanceGuid] {
 			batch.Query(`DELETE FROM ActualStates WHERE app_guid = ? AND app_version = ? AND instance_guid = ?`, appGuid, appVersion, instanceGuid)
 		}
 	}
@@ -24,7 +27,7 @@ func (s *StoreCassandra) SyncHeartbeat(heartbeat models.Heartbeat) error {
 		return err
 	}
 
-	for _, state := range heartbeat.InstanceHeartbeats {
+	for _, state := range incomingHeartbeat.InstanceHeartbeats {
 		batch.Query(`INSERT INTO ActualStates (app_guid, app_version, instance_guid, instance_index, state, state_timestamp, cc_partition, dea_guid, expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			state.AppGuid,
 			state.AppVersion,

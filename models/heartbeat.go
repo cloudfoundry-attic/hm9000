@@ -5,17 +5,6 @@ import (
 	"strconv"
 )
 
-type HeartbeatSummary struct {
-	DeaGuid                    string                              `json:"dea"`
-	InstanceHeartbeatSummaries map[string]InstanceHeartbeatSummary `json:"summary"`
-}
-
-type InstanceHeartbeatSummary struct {
-	AppGuid    string        `json:"droplet"`
-	AppVersion string        `json:"version"`
-	State      InstanceState `json:"state"`
-}
-
 type Heartbeat struct {
 	DeaGuid            string              `json:"dea"`
 	InstanceHeartbeats []InstanceHeartbeat `json:"droplets"`
@@ -60,40 +49,4 @@ func (heartbeat Heartbeat) LogDescription() map[string]string {
 		"Running":    strconv.Itoa(running),
 		"Starting":   strconv.Itoa(starting),
 	}
-}
-
-func (heartbeat Heartbeat) HeartbeatSummary() HeartbeatSummary {
-	summary := HeartbeatSummary{
-		DeaGuid:                    heartbeat.DeaGuid,
-		InstanceHeartbeatSummaries: make(map[string]InstanceHeartbeatSummary),
-	}
-
-	for _, instanceHeartbeat := range heartbeat.InstanceHeartbeats {
-		summary.InstanceHeartbeatSummaries[instanceHeartbeat.InstanceGuid] = InstanceHeartbeatSummary{
-			AppGuid:    instanceHeartbeat.AppGuid,
-			AppVersion: instanceHeartbeat.AppVersion,
-			State:      instanceHeartbeat.State,
-		}
-	}
-
-	return summary
-}
-
-func NewHeartbeatSummaryFromJSON(encoded []byte) (HeartbeatSummary, error) {
-	var summary HeartbeatSummary
-	err := json.Unmarshal(encoded, &summary)
-	if err != nil {
-		return HeartbeatSummary{}, err
-	}
-	return summary, nil
-}
-
-func (summary HeartbeatSummary) ToJSON() []byte {
-	encoded, _ := json.Marshal(summary)
-	return encoded
-}
-
-func (summary HeartbeatSummary) ContainsInstanceHeartbeat(instanceHeartbeat InstanceHeartbeat) bool {
-	existing, exists := summary.InstanceHeartbeatSummaries[instanceHeartbeat.InstanceGuid]
-	return exists && existing.State == instanceHeartbeat.State
 }

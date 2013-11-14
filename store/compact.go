@@ -5,16 +5,10 @@ import (
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 func (store *RealStore) Compact() error {
 	err := store.deleteOldSchemaVersions()
-	if err != nil {
-		return err
-	}
-
-	err = store.deleteExpiredDEAHeartbeatSummaries()
 	if err != nil {
 		return err
 	}
@@ -48,38 +42,6 @@ func (store *RealStore) deleteOldSchemaVersions() error {
 			}
 		} else {
 			keysToDelete = append(keysToDelete, childNode.Key)
-		}
-	}
-
-	return store.adapter.Delete(keysToDelete...)
-}
-
-func (store *RealStore) deleteExpiredDEAHeartbeatSummaries() error {
-	summaries, err := store.adapter.ListRecursively(store.SchemaRoot() + "/dea-summary")
-	if err == storeadapter.ErrorKeyNotFound {
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	presence, err := store.adapter.ListRecursively(store.SchemaRoot() + "/dea-presence")
-	if err != nil && err != storeadapter.ErrorKeyNotFound {
-		return err
-	}
-
-	presentDeaGuids := map[string]bool{}
-	for _, node := range presence.ChildNodes {
-		keyComponents := strings.Split(node.Key, "/")
-		guid := keyComponents[len(keyComponents)-1]
-		presentDeaGuids[guid] = true
-	}
-
-	keysToDelete := []string{}
-	for _, node := range summaries.ChildNodes {
-		keyComponents := strings.Split(node.Key, "/")
-		guid := keyComponents[len(keyComponents)-1]
-		if !presentDeaGuids[guid] {
-			keysToDelete = append(keysToDelete, node.Key)
 		}
 	}
 

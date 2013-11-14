@@ -42,8 +42,8 @@ var _ = Describe("Actual State", func() {
 	Describe("Saving actual state", func() {
 		BeforeEach(func() {
 			store.SyncHeartbeat(dea.HeartbeatWith(
-				dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
-				dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+				dea.GetApp(0).InstanceAtIndex(1).Heartbeat(), //bob
+				dea.GetApp(1).InstanceAtIndex(3).Heartbeat(), //charlie
 			))
 		})
 
@@ -51,8 +51,8 @@ var _ = Describe("Actual State", func() {
 			results, err := store.GetInstanceHeartbeats()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(results).Should(HaveLen(2))
-			Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-			Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+			Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat())) //bob
+			Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat())) //charlie
 		})
 
 		Context("when there are already instance heartbeats stored for the DEA in question", func() {
@@ -61,17 +61,17 @@ var _ = Describe("Actual State", func() {
 				modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
 				modifiedHeartbeat.State = models.InstanceStateEvacuating
 				store.SyncHeartbeat(dea.HeartbeatWith(
-					modifiedHeartbeat,
-					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
+					modifiedHeartbeat,                            //bob'
+					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(), //evan
 				))
 			})
 
 			It("should sync the heartbeats (add new ones, adjust ones that have changed state, and delete old ones)", func() {
 				results, err := store.GetInstanceHeartbeats()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(results).Should(HaveLen(2))
-				Ω(results).Should(ContainElement(modifiedHeartbeat))
-				Ω(results).Should(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+				Ω(results).Should(HaveLen(2))                                                   //charlie is gone
+				Ω(results).Should(ContainElement(modifiedHeartbeat))                            //bob' (not bob)
+				Ω(results).Should(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat())) //evan
 			})
 		})
 	})

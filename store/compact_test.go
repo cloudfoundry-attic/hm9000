@@ -8,7 +8,6 @@ import (
 
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 )
 
@@ -77,29 +76,6 @@ var _ = Describe("Compact", func() {
 
 			_, err = storeAdapter.Get("/delete/me/too")
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-		})
-	})
-
-	Describe("Removing expired DEA heartbeat summaries", func() {
-		var dea1, dea2 appfixture.DeaFixture
-		BeforeEach(func() {
-			dea1 = appfixture.NewDeaFixture()
-			dea2 = appfixture.NewDeaFixture()
-			store.SyncHeartbeat(dea1.HeartbeatWith(dea1.GetApp(0).InstanceAtIndex(0).Heartbeat()))
-			store.SyncHeartbeat(dea2.HeartbeatWith(dea2.GetApp(0).InstanceAtIndex(0).Heartbeat()))
-
-			storeAdapter.Delete("/v17/dea-presence/" + dea1.DeaGuid)
-			err := store.Compact()
-
-			Ω(err).ShouldNot(HaveOccured())
-		})
-
-		It("should remove DEA summaries that have expired", func() {
-			_, err := storeAdapter.Get("/v17/dea-summary/" + dea1.DeaGuid)
-			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-
-			_, err = storeAdapter.Get("/v17/dea-summary/" + dea2.DeaGuid)
-			Ω(err).ShouldNot(HaveOccured())
 		})
 	})
 

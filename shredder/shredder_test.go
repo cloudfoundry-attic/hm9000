@@ -28,9 +28,6 @@ var _ = Describe("Shredder", func() {
 			{Key: "/v2/pokemon/geodude", Value: []byte{}},
 			{Key: "/v2/deep-pokemon/abra/kadabra/alakazam", Value: []byte{}},
 			{Key: "/v2/pokemonCount", Value: []byte("151")},
-			{Key: "/v2/dea-presence/ABC", Value: []byte("ABC")},
-			{Key: "/v2/dea-summary/ABC", Value: []byte("summary...")},
-			{Key: "/v2/dea-summary/DEF", Value: []byte("summary...")},
 			{Key: "/v1/nuke/me/cause/im/an/old/version", Value: []byte("abc")},
 			{Key: "/v3/leave/me/alone/since/im/a/new/version", Value: []byte("abc")},
 			{Key: "/nuke/me/cause/im/not/versioned", Value: []byte("abc")},
@@ -49,14 +46,6 @@ var _ = Describe("Shredder", func() {
 		Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 		_, err = storeAdapter.Get("/v2/pokemonCount")
-		Ω(err).ShouldNot(HaveOccured())
-	})
-
-	It("should delete expired dea summaries", func() {
-		_, err := storeAdapter.Get("/v2/dea-summary/DEF")
-		Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-
-		_, err = storeAdapter.Get("/v2/dea-summary/ABC")
 		Ω(err).ShouldNot(HaveOccured())
 	})
 

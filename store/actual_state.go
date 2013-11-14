@@ -4,43 +4,39 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"reflect"
 	"time"
 )
 
-func (store *RealStore) SyncHeartbeat(newHeartbeat models.Heartbeat) error {
+func (store *RealStore) SyncHeartbeat(incomingHeartbeat models.Heartbeat) error {
 	t := time.Now()
 
-	newHeartbeatSummary := newHeartbeat.HeartbeatSummary()
-	existingHeartbeatSummary, err := store.getExistingHeartbeatSummary(newHeartbeat.DeaGuid)
+	existingInstanceHeartbeats, err := store.GetInstanceHeartbeats()
 	if err != nil {
 		return err
 	}
 
-	nodesToSave := []storeadapter.StoreNode{}
-	nodesToSave = append(nodesToSave, store.deaPresenceNode(newHeartbeat.DeaGuid))
+	filteredExistingInstanceHeartbeats := map[string]models.InstanceHeartbeat{}
 
-	if reflect.DeepEqual(existingHeartbeatSummary, newHeartbeatSummary) {
-		//no changes!
-		err := store.adapter.Set(nodesToSave)
-
-		store.logger.Debug(fmt.Sprintf("Save Duration Actual - Store is already up-to-date"), map[string]string{
-			"Duration": fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
-		})
-
-		return err
+	for _, existingInstanceHeartbeat := range existingInstanceHeartbeats {
+		if existingInstanceHeartbeat.DeaGuid == incomingHeartbeat.DeaGuid {
+			filteredExistingInstanceHeartbeats[existingInstanceHeartbeat.InstanceGuid] = existingInstanceHeartbeat
+		}
 	}
 
-	nodesToSave = append(nodesToSave, store.deaSummaryNode(newHeartbeatSummary))
+	incomingInstanceGuids := map[string]bool{}
+	nodesToSave := []storeadapter.StoreNode{
+		store.deaPresenceNode(incomingHeartbeat.DeaGuid),
+	}
 
-	//sync two sets:
-	newInstanceHeartbeatGuids := map[string]bool{}
-	for _, instanceHeartbeat := range newHeartbeat.InstanceHeartbeats {
-		newInstanceHeartbeatGuids[instanceHeartbeat.InstanceGuid] = true
+	for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
+		incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
+		existingInstanceHeartbeat, found := filteredExistingInstanceHeartbeats[incomingInstanceHeartbeat.InstanceGuid]
 
-		if !existingHeartbeatSummary.ContainsInstanceHeartbeat(instanceHeartbeat) {
-			nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(instanceHeartbeat))
+		if found && existingInstanceHeartbeat.State == incomingInstanceHeartbeat.State {
+			continue
 		}
+
+		nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
 	}
 
 	tSave := time.Now()
@@ -52,11 +48,14 @@ func (store *RealStore) SyncHeartbeat(newHeartbeat models.Heartbeat) error {
 	}
 
 	keysToDelete := []string{}
-	for instanceGuid, existingInstanceHeartbeatSummary := range existingHeartbeatSummary.InstanceHeartbeatSummaries {
-		_, stillPresent := newInstanceHeartbeatGuids[instanceGuid]
-		if !stillPresent {
-			keysToDelete = append(keysToDelete, store.instanceHeartbeatStoreKey(existingInstanceHeartbeatSummary.AppGuid, existingInstanceHeartbeatSummary.AppVersion, instanceGuid))
+
+	for _, existingInstanceHeartbeat := range filteredExistingInstanceHeartbeats {
+		if incomingInstanceGuids[existingInstanceHeartbeat.InstanceGuid] {
+			continue
 		}
+
+		key := store.instanceHeartbeatStoreKey(existingInstanceHeartbeat.AppGuid, existingInstanceHeartbeat.AppVersion, existingInstanceHeartbeat.InstanceGuid)
+		keysToDelete = append(keysToDelete, key)
 	}
 
 	tDelete := time.Now()
@@ -68,7 +67,7 @@ func (store *RealStore) SyncHeartbeat(newHeartbeat models.Heartbeat) error {
 	}
 
 	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), map[string]string{
-		"Number of Items":         fmt.Sprintf("%d", len(newHeartbeat.InstanceHeartbeats)),
+		"Number of Items":         fmt.Sprintf("%d", len(incomingHeartbeat.InstanceHeartbeats)),
 		"Number of Items Saved":   fmt.Sprintf("%d", len(nodesToSave)),
 		"Number of Items Deleted": fmt.Sprintf("%d", len(keysToDelete)),
 		"Duration":                fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
@@ -167,35 +166,11 @@ func (store *RealStore) instanceHeartbeatStoreKey(appGuid string, appVersion str
 	return store.SchemaRoot() + "/apps/actual/" + store.AppKey(appGuid, appVersion) + "/" + instanceGuid
 }
 
-func (store *RealStore) getExistingHeartbeatSummary(deaGuid string) (models.HeartbeatSummary, error) {
-	existingSummary := models.HeartbeatSummary{}
-	deaSummaryNode, err := store.adapter.Get(store.SchemaRoot() + "/dea-summary/" + deaGuid)
-	if err == storeadapter.ErrorKeyNotFound {
-		return existingSummary, nil
-	} else if err != nil {
-		return existingSummary, err
-	}
-
-	existingSummary, err = models.NewHeartbeatSummaryFromJSON(deaSummaryNode.Value)
-	if err != nil {
-		existingSummary = models.HeartbeatSummary{}
-	}
-
-	return existingSummary, nil
-}
-
 func (store *RealStore) deaPresenceNode(deaGuid string) storeadapter.StoreNode {
 	return storeadapter.StoreNode{
 		Key:   store.SchemaRoot() + "/dea-presence/" + deaGuid,
 		Value: []byte(deaGuid),
 		TTL:   store.config.HeartbeatTTL(),
-	}
-}
-
-func (store *RealStore) deaSummaryNode(deaSummary models.HeartbeatSummary) storeadapter.StoreNode {
-	return storeadapter.StoreNode{
-		Key:   store.SchemaRoot() + "/dea-summary/" + deaSummary.DeaGuid,
-		Value: deaSummary.ToJSON(),
 	}
 }
 
