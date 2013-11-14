@@ -26,7 +26,7 @@ func (store *RealStore) bumpFreshness(key string, ttl uint64, timestamp time.Tim
 	}
 
 	return store.adapter.Set([]storeadapter.StoreNode{
-		storeadapter.StoreNode{
+		{
 			Key:   key,
 			Value: jsonTimestamp,
 			TTL:   ttl,

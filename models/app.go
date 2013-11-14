@@ -250,7 +250,7 @@ func (a *App) NumberOfCrashedInstances() (count int) {
 
 func (a *App) NumberOfCrashedIndices() (count int) {
 	a.verifyInstanceHeartbeatsByIndexIsReady()
-	for index, _ := range a.instanceHeartbeatsByIndex {
+	for index := range a.instanceHeartbeatsByIndex {
 		if a.HasCrashedInstanceAtIndex(index) && !a.HasStartingOrRunningInstanceAtIndex(index) {
 			count++
 		}

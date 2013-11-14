@@ -232,7 +232,7 @@ var _ = Describe("ETCD Store Adapter", func() {
 		Context("when listing an empty directory", func() {
 			It("should return an empty list of breakfastNodes, and not error", func() {
 				err := adapter.Set([]StoreNode{
-					StoreNode{
+					{
 						Key:   "/empty_dir/temp",
 						Value: []byte("foo"),
 					},

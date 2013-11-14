@@ -82,21 +82,21 @@ var _ = Describe("Metrics Accountant", func() {
 		var stops []models.PendingStopMessage
 		BeforeEach(func() {
 			starts = []models.PendingStartMessage{
-				models.PendingStartMessage{StartReason: models.PendingStartMessageReasonCrashed},
-				models.PendingStartMessage{StartReason: models.PendingStartMessageReasonMissing},
-				models.PendingStartMessage{StartReason: models.PendingStartMessageReasonMissing},
-				models.PendingStartMessage{StartReason: models.PendingStartMessageReasonEvacuating},
-				models.PendingStartMessage{StartReason: models.PendingStartMessageReasonEvacuating},
-				models.PendingStartMessage{StartReason: models.PendingStartMessageReasonEvacuating},
+				{StartReason: models.PendingStartMessageReasonCrashed},
+				{StartReason: models.PendingStartMessageReasonMissing},
+				{StartReason: models.PendingStartMessageReasonMissing},
+				{StartReason: models.PendingStartMessageReasonEvacuating},
+				{StartReason: models.PendingStartMessageReasonEvacuating},
+				{StartReason: models.PendingStartMessageReasonEvacuating},
 			}
 
 			stops = []models.PendingStopMessage{
-				models.PendingStopMessage{StopReason: models.PendingStopMessageReasonExtra},
-				models.PendingStopMessage{StopReason: models.PendingStopMessageReasonDuplicate},
-				models.PendingStopMessage{StopReason: models.PendingStopMessageReasonDuplicate},
-				models.PendingStopMessage{StopReason: models.PendingStopMessageReasonEvacuationComplete},
-				models.PendingStopMessage{StopReason: models.PendingStopMessageReasonEvacuationComplete},
-				models.PendingStopMessage{StopReason: models.PendingStopMessageReasonEvacuationComplete},
+				{StopReason: models.PendingStopMessageReasonExtra},
+				{StopReason: models.PendingStopMessageReasonDuplicate},
+				{StopReason: models.PendingStopMessageReasonDuplicate},
+				{StopReason: models.PendingStopMessageReasonEvacuationComplete},
+				{StopReason: models.PendingStopMessageReasonEvacuationComplete},
+				{StopReason: models.PendingStopMessageReasonEvacuationComplete},
 			}
 		})
 

@@ -18,7 +18,7 @@ func main() {
 	app.Usage = "Start the various HM9000 components"
 	app.Version = "0.0.9000"
 	app.Commands = []cli.Command{
-		cli.Command{
+		{
 			Name:        "fetch_desired",
 			Description: "Fetches desired state",
 			Usage:       "hm fetch_desired --config=/path/to/config --poll",
@@ -31,7 +31,7 @@ func main() {
 				hm.FetchDesiredState(logger, conf, c.Bool("poll"))
 			},
 		},
-		cli.Command{
+		{
 			Name:        "listen",
 			Description: "Listens over the NATS for the actual state",
 			Usage:       "hm listen --config=/path/to/config",
@@ -43,7 +43,7 @@ func main() {
 				hm.StartListeningForActual(logger, conf)
 			},
 		},
-		cli.Command{
+		{
 			Name:        "analyze",
 			Description: "Analyze the desired and actual state and enqueue start/stop messages",
 			Usage:       "hm analyze --config=/path/to/config --poll",
@@ -56,7 +56,7 @@ func main() {
 				hm.Analyze(logger, conf, c.Bool("poll"))
 			},
 		},
-		cli.Command{
+		{
 			Name:        "send",
 			Description: "Send the enqueued start/stop messages",
 			Usage:       "hm send --config=/path/to/config --poll",
@@ -69,7 +69,7 @@ func main() {
 				hm.Send(logger, conf, c.Bool("poll"))
 			},
 		},
-		cli.Command{
+		{
 			Name:        "evacuator",
 			Description: "Listens for Varz calls to serve metrics",
 			Usage:       "hm evacuator --config=/path/to/config",
@@ -81,7 +81,7 @@ func main() {
 				hm.StartEvacuator(logger, conf)
 			},
 		},
-		cli.Command{
+		{
 			Name:        "serve_metrics",
 			Description: "Listens for Varz calls to serve metrics",
 			Usage:       "hm serve_metrics --config=/path/to/config",
@@ -93,7 +93,7 @@ func main() {
 				hm.ServeMetrics(steno, logger, conf)
 			},
 		},
-		cli.Command{
+		{
 			Name:        "serve_api",
 			Description: "Serve app API over http",
 			Usage:       "hm serve_api --config=/path/to/config",
@@ -105,7 +105,7 @@ func main() {
 				hm.ServeAPI(logger, conf)
 			},
 		},
-		cli.Command{
+		{
 			Name:        "shred",
 			Description: "Deletes empty directories from the store",
 			Usage:       "hm shred --config=/path/to/config --poll",
@@ -118,7 +118,7 @@ func main() {
 				hm.Shred(logger, conf, c.Bool("poll"))
 			},
 		},
-		cli.Command{
+		{
 			Name:        "dump",
 			Description: "Dumps contents of the data store",
 			Usage:       "hm dump --config=/path/to/config",
@@ -131,7 +131,7 @@ func main() {
 				hm.Dump(logger, conf, c.Bool("raw"))
 			},
 		},
-		cli.Command{
+		{
 			Name:        "clear_store",
 			Description: "Clears contents of the data store",
 			Usage:       "hm clear_store --config=/path/to/config",

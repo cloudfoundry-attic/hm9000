@@ -55,25 +55,25 @@ var _ = Describe("Apps", func() {
 		}
 
 		crashCount = []models.CrashCount{
-			models.CrashCount{
+			{
 				AppGuid:       app1.AppGuid,
 				AppVersion:    app1.AppVersion,
 				InstanceIndex: 1,
 				CrashCount:    12,
 			},
-			models.CrashCount{
+			{
 				AppGuid:       app1.AppGuid,
 				AppVersion:    app1.AppVersion,
 				InstanceIndex: 2,
 				CrashCount:    17,
 			},
-			models.CrashCount{
+			{
 				AppGuid:       app2.AppGuid,
 				AppVersion:    app2.AppVersion,
 				InstanceIndex: 0,
 				CrashCount:    3,
 			},
-			models.CrashCount{
+			{
 				AppGuid:       app4.AppGuid,
 				AppVersion:    app4.AppVersion,
 				InstanceIndex: 1,
@@ -128,7 +128,7 @@ var _ = Describe("Apps", func() {
 
 		Context("when there is an empty app directory", func() {
 			It("should ignore that app directory", func() {
-				storeAdapter.Set([]storeadapter.StoreNode{storeadapter.StoreNode{
+				storeAdapter.Set([]storeadapter.StoreNode{{
 					Key:   "/apps/actual/foo-bar",
 					Value: []byte("foo"),
 				}})
@@ -195,7 +195,7 @@ var _ = Describe("Apps", func() {
 
 			Context("when the app directory is empty", func() {
 				It("should return the app not found error", func() {
-					storeAdapter.Set([]storeadapter.StoreNode{storeadapter.StoreNode{
+					storeAdapter.Set([]storeadapter.StoreNode{{
 						Key:   "/apps/actual/foo-bar/baz",
 						Value: []byte("foo"),
 					}})

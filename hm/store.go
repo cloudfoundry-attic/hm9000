@@ -54,7 +54,7 @@ func dumpStructured(l logger.Logger, conf config.Config) {
 	}
 
 	appKeys := sort.StringSlice{}
-	for appKey, _ := range apps {
+	for appKey := range apps {
 		appKeys = append(appKeys, appKey)
 	}
 	sort.Sort(appKeys)

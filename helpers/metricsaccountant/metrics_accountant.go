@@ -85,7 +85,7 @@ func (m *RealMetricsAccountant) GetMetrics() (map[string]int, error) {
 	metrics["DesiredStateSyncTimeInMilliseconds"] = 0
 	metrics["ActualStateListenerStoreUsagePercentage"] = 0
 
-	for key, _ := range metrics {
+	for key := range metrics {
 		value, err := m.store.GetMetric(key)
 		if err == storeadapter.ErrorKeyNotFound {
 			value = 0

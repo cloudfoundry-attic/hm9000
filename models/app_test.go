@@ -249,14 +249,14 @@ var _ = Describe("App", func() {
 			}
 
 			Ω(app().HeartbeatsByIndex()).Should(Equal(map[int][]InstanceHeartbeat{
-				0: []InstanceHeartbeat{
+				0: {
 					heartbeat(0, InstanceStateCrashed),
 				},
-				1: []InstanceHeartbeat{
+				1: {
 					heartbeat(1, InstanceStateRunning),
 					heartbeat(1, InstanceStateCrashed),
 				},
-				2: []InstanceHeartbeat{
+				2: {
 					heartbeat(2, InstanceStateStarting),
 					heartbeat(2, InstanceStateCrashed),
 				},

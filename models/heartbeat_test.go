@@ -14,7 +14,7 @@ var _ = Describe("Heartbeat", func() {
 		heartbeat = Heartbeat{
 			DeaGuid: "dea_abc",
 			InstanceHeartbeats: []InstanceHeartbeat{
-				InstanceHeartbeat{
+				{
 					CCPartition:    "default",
 					AppGuid:        "abc",
 					AppVersion:     "xyz-123",

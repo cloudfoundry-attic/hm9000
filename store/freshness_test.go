@@ -153,7 +153,7 @@ var _ = Describe("Freshness", func() {
 		Context("when the store returns an error", func() {
 			BeforeEach(func() {
 				err := storeAdapter.Set([]storeadapter.StoreNode{
-					storeadapter.StoreNode{
+					{
 						Key:   "/v1/desired-fresh/mwahaha",
 						Value: []byte("i'm a directory...."),
 					},
@@ -202,7 +202,7 @@ var _ = Describe("Freshness", func() {
 			Context("if the freshness key fails to parse", func() {
 				BeforeEach(func() {
 					storeAdapter.Set([]storeadapter.StoreNode{
-						storeadapter.StoreNode{
+						{
 							Key:   "/v1/actual-fresh",
 							Value: []byte("ß"),
 						},
@@ -220,7 +220,7 @@ var _ = Describe("Freshness", func() {
 		Context("when the store returns an error", func() {
 			BeforeEach(func() {
 				err := storeAdapter.Set([]storeadapter.StoreNode{
-					storeadapter.StoreNode{
+					{
 						Key:   "/v1/actual-fresh/mwahaha",
 						Value: []byte("i'm a directory...."),
 					},

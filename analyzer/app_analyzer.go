@@ -128,7 +128,7 @@ func (a *appAnalyzer) generatePendingStopsForDuplicateInstances() {
 func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
 	heartbeatsByIndex := a.app.HeartbeatsByIndex()
 
-	for index, _ := range heartbeatsByIndex {
+	for index := range heartbeatsByIndex {
 		evacuatingInstances := a.app.EvacuatingInstancesAtIndex(index)
 
 		if len(evacuatingInstances) > 0 {
