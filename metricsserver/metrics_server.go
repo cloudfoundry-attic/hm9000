@@ -150,12 +150,12 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 	for _, app := range apps {
 		numberOfMissingIndicesForApp := app.NumberOfDesiredInstances() - app.NumberOfDesiredIndicesReporting()
 		if app.IsDesired() {
-			NumberOfDesiredApps += 1
-			NumberOfDesiredInstances += app.NumberOfDesiredInstances()
-
 			if app.Desired.PackageState == models.AppPackageStatePending {
 				NumberOfDesiredAppsPendingStaging++
 			} else {
+				NumberOfDesiredApps += 1
+				NumberOfDesiredInstances += app.NumberOfDesiredInstances()
+
 				if numberOfMissingIndicesForApp == 0 {
 					NumberOfAppsWithAllInstancesReporting++
 				} else {
