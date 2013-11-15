@@ -18,6 +18,23 @@ HM9000 solves the high-availability problem by relying on a robust high-availabi
 
 To avoid the singleton problem, we will allow multiple copies of each HM9000 component across multiple nodes.  These copies will vie for a lock in the high-availability store.  The copy that grabs the lock gets to run and is responsible for maintaining the lock.  Should that copy enter a bad state or die, the lock becomes available allowing another copy to pick up the slack.  Since all state is stored in the store, the backup component should be able to function independently of the failed component.
 
+## Deployment
+
+### Recovering from Failure
+
+If HM9000 enters a bad state, the simplest solution - typically - is to delete the contents of the data store.  Here's how:
+
+    local  $ bosh_ssh hm9000_z1/0 #for example
+    hm9000 $ sudo su -
+    hm9000 $ monit stop etcd
+    hm9000 $ mkdir /var/vcap/store/etcdstorage-bad #for example
+    hm9000 $ mv /var/vcap/store/etcdstorage/* /var/vcap/store/etcdstorage-bad
+    hm9000 $ monit start etcd
+
+all the other components should recover gracefully.
+
+The data files in etcdstorage-bad can then be downloaded and analyzed to try to understand what went wrong to put HM9000/etcd in a bad state.  If you don't think this is necessary: just blow away the contents of `/var/vcap/store/etcdstorage`.
+
 ## Installing HM9000
 
 Assuming you have `go` v1.1.* installed:
