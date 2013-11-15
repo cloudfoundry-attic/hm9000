@@ -133,6 +133,30 @@ var _ = Describe("App", func() {
 		})
 	})
 
+	Describe("IsStaged", func() {
+		Context("when the app is desired", func() {
+			BeforeEach(func() {
+				desired = fixture.DesiredState(1)
+			})
+			It("should be true only when the package state is staged", func() {
+				desired.PackageState = AppPackageStateStaged
+				Ω(app().IsStaged()).Should(BeTrue())
+
+				desired.PackageState = AppPackageStatePending
+				Ω(app().IsStaged()).Should(BeFalse())
+
+				desired.PackageState = AppPackageStateFailed
+				Ω(app().IsStaged()).Should(BeFalse())
+			})
+		})
+
+		Context("when the app is not desired", func() {
+			It("should be false", func() {
+				Ω(app().IsStaged()).Should(BeFalse())
+			})
+		})
+	})
+
 	Describe("IsIndexDesired", func() {
 		It("should be true if the index is less than the number of desired instances", func() {
 			Ω(app().IsIndexDesired(0)).Should(BeFalse())

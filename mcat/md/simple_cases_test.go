@@ -1,6 +1,7 @@
 package md_test
 
 import (
+	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,6 +26,24 @@ var _ = Describe("Simple Cases Test", func() {
 		It("should not send any messages", func() {
 			Ω(startStopListener.Starts).Should(BeEmpty())
 			Ω(startStopListener.Stops).Should(BeEmpty())
+		})
+	})
+
+	Context("when a desired app is pending staging", func() {
+		Context("and it has a running instance", func() {
+			BeforeEach(func() {
+				desired := app1.DesiredState(1)
+				desired.PackageState = models.AppPackageStatePending
+				simulator.SetDesiredState(desired)
+				simulator.SetCurrentHeartbeats(app1.Heartbeat(1))
+				simulator.Tick(simulator.TicksToAttainFreshness)
+				simulator.Tick(1)
+			})
+
+			It("should not try to stop that instance", func() {
+				Ω(startStopListener.Starts).Should(BeEmpty())
+				Ω(startStopListener.Stops).Should(BeEmpty())
+			})
 		})
 	})
 

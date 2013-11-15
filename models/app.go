@@ -83,6 +83,10 @@ func (a *App) LogDescription() map[string]string {
 	}
 }
 
+func (a *App) IsStaged() bool {
+	return a.Desired.PackageState == AppPackageStateStaged
+}
+
 func (a *App) IsDesired() bool {
 	return a.Desired.AppGuid != ""
 }

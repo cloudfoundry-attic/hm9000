@@ -131,6 +131,8 @@ var _ = Describe("DesiredStateFetcher", func() {
 				pendingStagingApp appfixture.AppFixture
 				failedToStageApp  appfixture.AppFixture
 				deletedApp        appfixture.AppFixture
+
+				pendingStagingDesiredState models.DesiredAppState
 			)
 
 			BeforeEach(func() {
@@ -145,7 +147,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 				stoppedDesiredState.State = models.AppStateStopped
 
 				pendingStagingApp = appfixture.NewAppFixture()
-				pendingStagingDesiredState := pendingStagingApp.DesiredState(1)
+				pendingStagingDesiredState = pendingStagingApp.DesiredState(1)
 				pendingStagingDesiredState.PackageState = models.AppPackageStatePending
 
 				failedToStageApp = appfixture.NewAppFixture()
@@ -211,9 +213,10 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 				It("should store any desired state that is in the STARTED appstate and STAGED package state, and delete any stale data", func() {
 					desired, _ := store.GetDesiredState()
-					Ω(desired).Should(HaveLen(2))
+					Ω(desired).Should(HaveLen(3))
 					Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState(1))))
 					Ω(desired).Should(ContainElement(EqualDesiredState(a2.DesiredState(1))))
+					Ω(desired).Should(ContainElement(EqualDesiredState(pendingStagingDesiredState)))
 				})
 
 				It("should track the time taken to sync desired state", func() {

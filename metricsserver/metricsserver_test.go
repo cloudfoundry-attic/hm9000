@@ -84,6 +84,7 @@ var _ = Describe("Metrics Server", func() {
 				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: -1}))
 				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: -1}))
 				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: -1}))
+				Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: -1}))
 			})
 		})
 
@@ -114,6 +115,30 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: -1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: -1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: -1}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: -1}))
+				})
+			})
+
+			Context("When a desired app is pending staging", func() {
+				BeforeEach(func() {
+					desired := a.DesiredState(3)
+					desired.PackageState = models.AppPackageStatePending
+					store.SyncDesiredState(desired)
+					store.SyncHeartbeat(a.Heartbeat(1))
+				})
+
+				It("should report the app as 100 %% reporting", func() {
+					context := metricsServer.Emit()
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithAllInstancesReporting", Value: 0}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfAppsWithMissingInstances", Value: 1}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfUndesiredRunningApps", Value: 0}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfRunningInstances", Value: 1}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfMissingIndices", Value: 2}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedInstances", Value: 0}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 0}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 1}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 3}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 1}))
 				})
 			})
 
@@ -134,6 +159,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 3}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 
@@ -161,6 +187,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 3}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 
@@ -189,6 +216,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 3}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 
@@ -216,6 +244,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 3}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 
@@ -242,6 +271,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 3}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 
@@ -266,6 +296,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 3}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 
@@ -285,6 +316,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 3}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 
@@ -310,6 +342,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 1}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 0}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 
@@ -332,6 +365,7 @@ var _ = Describe("Metrics Server", func() {
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfCrashedIndices", Value: 2}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredApps", Value: 0}))
 					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredInstances", Value: 0}))
+					Ω(context.Metrics).Should(ContainElement(instrumentation.Metric{Name: "NumberOfDesiredAppsPendingStaging", Value: 0}))
 				})
 			})
 		})

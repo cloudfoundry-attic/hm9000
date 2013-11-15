@@ -159,7 +159,7 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 
 func (fetcher *DesiredStateFetcher) cacheResponse(response DesiredStateServerResponse) {
 	for _, desiredState := range response.Results {
-		if desiredState.State == models.AppStateStarted && desiredState.PackageState == models.AppPackageStateStaged {
+		if desiredState.State == models.AppStateStarted && (desiredState.PackageState == models.AppPackageStateStaged || desiredState.PackageState == models.AppPackageStatePending) {
 			fetcher.cache[desiredState.StoreKey()] = desiredState
 		}
 	}

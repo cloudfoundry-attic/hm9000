@@ -51,6 +51,10 @@ func (a *appAnalyzer) analyzeApp() (map[string]models.PendingStartMessage, map[s
 }
 
 func (a *appAnalyzer) generatePendingStartsForMissingInstances(priority float64) {
+	if !a.app.IsStaged() {
+		return
+	}
+
 	for index := 0; a.app.IsIndexDesired(index); index++ {
 		if !a.app.HasStartingOrRunningInstanceAtIndex(index) && !a.app.HasCrashedInstanceAtIndex(index) {
 			message := models.NewPendingStartMessage(a.currentTime, a.conf.GracePeriod(), 0, a.app.AppGuid, a.app.AppVersion, index, priority, models.PendingStartMessageReasonMissing)
@@ -65,6 +69,10 @@ func (a *appAnalyzer) generatePendingStartsForMissingInstances(priority float64)
 }
 
 func (a *appAnalyzer) generatePendingStartsForCrashedInstances(priority float64) (crashCounts []models.CrashCount) {
+	if !a.app.IsStaged() {
+		return
+	}
+
 	for index := 0; a.app.IsIndexDesired(index); index++ {
 		if !a.app.HasStartingOrRunningInstanceAtIndex(index) && a.app.HasCrashedInstanceAtIndex(index) {
 			if index != 0 && !a.app.HasStartingOrRunningInstances() {
@@ -145,6 +153,10 @@ func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
 			if !a.app.IsIndexDesired(index) {
 				addStopMessages("Identified undesired evacuating instance.", models.PendingStopMessageReasonExtra)
 				continue
+			}
+
+			if !a.app.IsStaged() {
+				addStopMessages("Identified evacuating instance that is not staged.", models.PendingStopMessageReasonEvacuationComplete)
 			}
 
 			if a.app.HasRunningInstanceAtIndex(index) {

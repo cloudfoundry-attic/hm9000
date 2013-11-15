@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
+	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -50,6 +51,7 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 	NumberOfCrashedIndices := 0
 	NumberOfDesiredApps := 0
 	NumberOfDesiredInstances := 0
+	NumberOfDesiredAppsPendingStaging := 0
 
 	defer func() {
 		context.Metrics = append(context.Metrics, instrumentation.Metric{
@@ -96,6 +98,11 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 			Name:  "NumberOfDesiredInstances",
 			Value: NumberOfDesiredInstances,
 		})
+
+		context.Metrics = append(context.Metrics, instrumentation.Metric{
+			Name:  "NumberOfDesiredAppsPendingStaging",
+			Value: NumberOfDesiredAppsPendingStaging,
+		})
 	}()
 
 	messageMetrics, err := s.metricsAccountant.GetMetrics()
@@ -120,6 +127,7 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		NumberOfCrashedIndices = -1
 		NumberOfDesiredApps = -1
 		NumberOfDesiredInstances = -1
+		NumberOfDesiredAppsPendingStaging = -1
 		return
 	}
 
@@ -135,6 +143,7 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		NumberOfCrashedIndices = -1
 		NumberOfDesiredApps = -1
 		NumberOfDesiredInstances = -1
+		NumberOfDesiredAppsPendingStaging = -1
 		return
 	}
 
@@ -147,6 +156,10 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 				NumberOfAppsWithAllInstancesReporting++
 			} else {
 				NumberOfAppsWithMissingInstances++
+			}
+
+			if app.Desired.PackageState == models.AppPackageStatePending {
+				NumberOfDesiredAppsPendingStaging++
 			}
 		} else {
 			if app.HasStartingOrRunningInstances() {

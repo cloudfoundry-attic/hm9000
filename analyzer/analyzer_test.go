@@ -161,6 +161,21 @@ var _ = Describe("Analyzer", func() {
 					}
 				})
 			})
+
+			Context("When the app has not finished staging", func() {
+				BeforeEach(func() {
+					desiredState := app.DesiredState(2)
+					desiredState.PackageState = models.AppPackageStatePending
+					store.SyncDesiredState(desiredState)
+				})
+
+				It("should not start any missing instances", func() {
+					err := analyzer.Analyze()
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(stopMessages()).Should(BeEmpty())
+					Ω(startMessages()).Should(BeEmpty())
+				})
+			})
 		})
 	})
 
@@ -418,6 +433,28 @@ var _ = Describe("Analyzer", func() {
 			})
 		})
 
+		Context("when the app hasn't finished staging", func() {
+			BeforeEach(func() {
+				desired := app.DesiredState(2)
+				desired.PackageState = models.AppPackageStatePending
+				store.SyncDesiredState(desired)
+			})
+
+			It("should send an immediate start & stop (as the EVACUATING instance cannot be started on another DEA, but we're going to try...)", func() {
+				err := analyzer.Analyze()
+				Ω(err).ShouldNot(HaveOccured())
+
+				Ω(startMessages()).Should(HaveLen(1))
+				Ω(stopMessages()).Should(HaveLen(1))
+
+				expectedMessageForIndex1 := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+				Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessageForIndex1)))
+
+				expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
+				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
+			})
+		})
+
 		Context("when the EVACUTING instance is no longer in the desired range", func() {
 			BeforeEach(func() {
 				store.SyncDesiredState(app.DesiredState(1))
@@ -598,6 +635,21 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should not try to start the instance", func() {
+					Ω(startMessages()).Should(BeEmpty())
+				})
+			})
+
+			Context("when the app package state is pending", func() {
+				BeforeEach(func() {
+					desiredState := app.DesiredState(1)
+					desiredState.PackageState = models.AppPackageStatePending
+					store.SyncDesiredState(
+						desiredState,
+					)
+				})
+
+				It("should not try to start/stop the instance", func() {
+					Ω(stopMessages()).Should(BeEmpty())
 					Ω(startMessages()).Should(BeEmpty())
 				})
 			})
