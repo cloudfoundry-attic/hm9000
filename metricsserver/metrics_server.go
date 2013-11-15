@@ -152,14 +152,16 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		if app.IsDesired() {
 			NumberOfDesiredApps += 1
 			NumberOfDesiredInstances += app.NumberOfDesiredInstances()
-			if numberOfMissingIndicesForApp == 0 {
-				NumberOfAppsWithAllInstancesReporting++
-			} else {
-				NumberOfAppsWithMissingInstances++
-			}
 
 			if app.Desired.PackageState == models.AppPackageStatePending {
 				NumberOfDesiredAppsPendingStaging++
+			} else {
+				if numberOfMissingIndicesForApp == 0 {
+					NumberOfAppsWithAllInstancesReporting++
+				} else {
+					NumberOfAppsWithMissingInstances++
+				}
+				NumberOfMissingIndices += numberOfMissingIndicesForApp
 			}
 		} else {
 			if app.HasStartingOrRunningInstances() {
@@ -168,7 +170,6 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		}
 
 		NumberOfRunningInstances += app.NumberOfStartingOrRunningInstances()
-		NumberOfMissingIndices += numberOfMissingIndicesForApp
 		NumberOfCrashedInstances += app.NumberOfCrashedInstances()
 		NumberOfCrashedIndices += app.NumberOfCrashedIndices()
 	}
