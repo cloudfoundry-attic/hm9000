@@ -32,7 +32,7 @@ var _ = Describe("Config", func() {
         "store_max_concurrent_requests": 30,
         "sender_nats_start_subject": "hm9000.start",
         "sender_nats_stop_subject": "hm9000.stop",
-        "sender_message_limit": 30,
+        "sender_message_limit": 60,
         "sender_polling_interval_in_heartbeats": 1,
         "sender_timeout_in_heartbeats": 10,
         "fetcher_polling_interval_in_heartbeats": 6,
@@ -99,7 +99,7 @@ var _ = Describe("Config", func() {
 
 			Ω(config.SenderNatsStartSubject).Should(Equal("hm9000.start"))
 			Ω(config.SenderNatsStopSubject).Should(Equal("hm9000.stop"))
-			Ω(config.SenderMessageLimit).Should(Equal(30))
+			Ω(config.SenderMessageLimit).Should(Equal(60))
 
 			Ω(config.MetricsServerPort).Should(Equal(7879))
 			Ω(config.MetricsServerUser).Should(Equal("metrics_server_user"))
