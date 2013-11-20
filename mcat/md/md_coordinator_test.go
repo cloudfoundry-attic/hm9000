@@ -4,8 +4,10 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
+	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/natsrunner"
 	"github.com/cloudfoundry/hm9000/testhelpers/startstoplistener"
 	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
@@ -71,7 +73,8 @@ func (coordinator *MDCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *st
 		coordinator.currentCLIRunner.Cleanup()
 	}
 	coordinator.currentCLIRunner = NewCLIRunner(coordinator.CurrentStoreType, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.MetricsServerPort, coordinator.Verbose)
-	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus)
+	store := storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
+	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus)
 
 	return coordinator.currentCLIRunner, simulator, coordinator.startStopListener
 }

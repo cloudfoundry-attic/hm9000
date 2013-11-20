@@ -276,7 +276,7 @@ var _ = Describe("Sender", func() {
 		var storeSetErrInjector *fakestoreadapter.FakeStoreAdapterErrorInjector
 
 		JustBeforeEach(func() {
-			store.SyncHeartbeat(app.Heartbeat(2))
+			store.SyncHeartbeats(app.Heartbeat(2))
 
 			pendingMessage = models.NewPendingStopMessage(time.Unix(100, 0), 30, keepAliveTime, app.AppGuid, app.AppVersion, app.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonInvalid)
 			pendingMessage.SentOn = sentOn
@@ -525,7 +525,7 @@ var _ = Describe("Sender", func() {
 
 				Context("when there is no running instance reporting at that index", func() {
 					BeforeEach(func() {
-						store.SyncHeartbeat(dea.HeartbeatWith(
+						store.SyncHeartbeats(dea.HeartbeatWith(
 							app.InstanceAtIndex(1).Heartbeat(),
 							app.InstanceAtIndex(2).Heartbeat(),
 						))
@@ -535,7 +535,7 @@ var _ = Describe("Sender", func() {
 
 				Context("when there are crashed instances reporting at that index", func() {
 					BeforeEach(func() {
-						store.SyncHeartbeat(dea.HeartbeatWith(
+						store.SyncHeartbeats(dea.HeartbeatWith(
 							app.CrashedInstanceHeartbeatAtIndex(0),
 							app.CrashedInstanceHeartbeatAtIndex(0),
 							app.InstanceAtIndex(1).Heartbeat(),
@@ -548,7 +548,7 @@ var _ = Describe("Sender", func() {
 
 				Context("when there *is* a running instance reporting at that index", func() {
 					BeforeEach(func() {
-						store.SyncHeartbeat(dea.HeartbeatWith(
+						store.SyncHeartbeats(dea.HeartbeatWith(
 							app.InstanceAtIndex(0).Heartbeat(),
 						))
 					})
@@ -652,7 +652,7 @@ var _ = Describe("Sender", func() {
 
 			Context("When instance is still running", func() {
 				BeforeEach(func() {
-					store.SyncHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeats(dea.HeartbeatWith(
 						app.InstanceAtIndex(0).Heartbeat(),
 						app.InstanceAtIndex(1).Heartbeat(),
 					))
@@ -668,7 +668,7 @@ var _ = Describe("Sender", func() {
 							instance := app.InstanceAtIndex(0)
 							instance.InstanceGuid = models.Guid()
 
-							store.SyncHeartbeat(dea.HeartbeatWith(
+							store.SyncHeartbeats(dea.HeartbeatWith(
 								app.InstanceAtIndex(0).Heartbeat(),
 								app.InstanceAtIndex(1).Heartbeat(),
 								instance.Heartbeat(),
@@ -680,7 +680,7 @@ var _ = Describe("Sender", func() {
 
 					Context("when there are other, crashed, instances on the index, and no running instances", func() {
 						BeforeEach(func() {
-							store.SyncHeartbeat(dea.HeartbeatWith(
+							store.SyncHeartbeats(dea.HeartbeatWith(
 								app.InstanceAtIndex(0).Heartbeat(),
 								app.InstanceAtIndex(1).Heartbeat(),
 								app.CrashedInstanceHeartbeatAtIndex(0),
@@ -708,7 +708,7 @@ var _ = Describe("Sender", func() {
 				BeforeEach(func() {
 					heartbeat := app.InstanceAtIndex(0).Heartbeat()
 					heartbeat.State = models.InstanceStateEvacuating
-					store.SyncHeartbeat(dea.HeartbeatWith(
+					store.SyncHeartbeats(dea.HeartbeatWith(
 						heartbeat,
 						app.InstanceAtIndex(1).Heartbeat(),
 					))
@@ -725,7 +725,7 @@ var _ = Describe("Sender", func() {
 		Context("When the app is no longer desired", func() {
 			Context("when the instance is still running", func() {
 				BeforeEach(func() {
-					store.SyncHeartbeat(app.Heartbeat(2))
+					store.SyncHeartbeats(app.Heartbeat(2))
 				})
 				assertMessageWasSent(0, false)
 			})
@@ -749,7 +749,7 @@ var _ = Describe("Sender", func() {
 			for i := 0; i < 40; i += 1 {
 				a := appfixture.NewAppFixture()
 				desiredStates = append(desiredStates, a.DesiredState(1))
-				store.SyncHeartbeat(models.Heartbeat{
+				store.SyncHeartbeats(models.Heartbeat{
 					DeaGuid:            a.DeaGuid,
 					InstanceHeartbeats: []models.InstanceHeartbeat{a.InstanceAtIndex(1).Heartbeat()},
 				})

@@ -51,7 +51,7 @@ var _ = Describe("Benchmarking AWS MCAT ", func() {
 				}
 
 				b.Time("WRITE", func() {
-					err := store.SyncHeartbeat(heartbeat)
+					err := store.SyncHeartbeats(heartbeat)
 					Ω(err).ShouldNot(HaveOccured())
 				}, StorePerformanceReport{
 					NumApps: numApps,

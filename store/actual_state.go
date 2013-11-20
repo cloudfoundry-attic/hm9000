@@ -8,36 +8,45 @@ import (
 	"time"
 )
 
-func (store *RealStore) SyncHeartbeat(incomingHeartbeat models.Heartbeat) error {
+func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...models.Heartbeat) error {
 	t := time.Now()
 
-	existingInstanceHeartbeats, err := store.GetInstanceHeartbeats()
+	existingInstanceHeartbeatsArray, err := store.GetInstanceHeartbeats()
 	if err != nil {
 		return err
 	}
 
-	filteredExistingInstanceHeartbeats := map[string]models.InstanceHeartbeat{}
+	existingInstanceHeartbeats := map[string]models.InstanceHeartbeat{}
 
-	for _, existingInstanceHeartbeat := range existingInstanceHeartbeats {
-		if existingInstanceHeartbeat.DeaGuid == incomingHeartbeat.DeaGuid {
-			filteredExistingInstanceHeartbeats[existingInstanceHeartbeat.InstanceGuid] = existingInstanceHeartbeat
-		}
+	for _, existingInstanceHeartbeat := range existingInstanceHeartbeatsArray {
+		existingInstanceHeartbeats[existingInstanceHeartbeat.InstanceGuid] = existingInstanceHeartbeat
 	}
 
-	incomingInstanceGuids := map[string]bool{}
-	nodesToSave := []storeadapter.StoreNode{
-		store.deaPresenceNode(incomingHeartbeat.DeaGuid),
-	}
+	nodesToSave := []storeadapter.StoreNode{}
+	keysToDelete := []string{}
+	numberOfInstanceHeartbeats := 0
 
-	for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
-		incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
-		existingInstanceHeartbeat, found := filteredExistingInstanceHeartbeats[incomingInstanceHeartbeat.InstanceGuid]
+	for _, incomingHeartbeat := range incomingHeartbeats {
+		numberOfInstanceHeartbeats += len(incomingHeartbeat.InstanceHeartbeats)
+		incomingInstanceGuids := map[string]bool{}
+		nodesToSave = append(nodesToSave, store.deaPresenceNode(incomingHeartbeat.DeaGuid))
+		for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
+			incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
+			existingInstanceHeartbeat, found := existingInstanceHeartbeats[incomingInstanceHeartbeat.InstanceGuid]
 
-		if found && existingInstanceHeartbeat.State == incomingInstanceHeartbeat.State {
-			continue
+			if found && existingInstanceHeartbeat.State == incomingInstanceHeartbeat.State {
+				continue
+			}
+
+			nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
 		}
 
-		nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
+		for _, existingInstanceHeartbeat := range existingInstanceHeartbeats {
+			if existingInstanceHeartbeat.DeaGuid == incomingHeartbeat.DeaGuid && !incomingInstanceGuids[existingInstanceHeartbeat.InstanceGuid] {
+				key := store.instanceHeartbeatStoreKey(existingInstanceHeartbeat.AppGuid, existingInstanceHeartbeat.AppVersion, existingInstanceHeartbeat.InstanceGuid)
+				keysToDelete = append(keysToDelete, key)
+			}
+		}
 	}
 
 	tSave := time.Now()
@@ -48,32 +57,24 @@ func (store *RealStore) SyncHeartbeat(incomingHeartbeat models.Heartbeat) error 
 		return err
 	}
 
-	keysToDelete := []string{}
-
-	for _, existingInstanceHeartbeat := range filteredExistingInstanceHeartbeats {
-		if incomingInstanceGuids[existingInstanceHeartbeat.InstanceGuid] {
-			continue
-		}
-
-		key := store.instanceHeartbeatStoreKey(existingInstanceHeartbeat.AppGuid, existingInstanceHeartbeat.AppVersion, existingInstanceHeartbeat.InstanceGuid)
-		keysToDelete = append(keysToDelete, key)
-	}
-
 	tDelete := time.Now()
 	err = store.adapter.Delete(keysToDelete...)
 	dtDelete := time.Since(tDelete).Seconds()
 
-	if err != nil {
+	if err == storeadapter.ErrorKeyNotFound {
+		store.logger.Debug("Failed to delete a key, soldiering on...")
+	} else if err != nil {
 		return err
 	}
 
 	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), map[string]string{
-		"Number of Items":         fmt.Sprintf("%d", len(incomingHeartbeat.InstanceHeartbeats)),
-		"Number of Items Saved":   fmt.Sprintf("%d", len(nodesToSave)),
-		"Number of Items Deleted": fmt.Sprintf("%d", len(keysToDelete)),
-		"Duration":                fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
-		"Save Duration":           fmt.Sprintf("%.4f seconds", dtSave),
-		"Delete Duration":         fmt.Sprintf("%.4f seconds", dtDelete),
+		"Number of Heartbeats":          fmt.Sprintf("%d", len(incomingHeartbeats)),
+		"Number of Instance Heartbeats": fmt.Sprintf("%d", numberOfInstanceHeartbeats),
+		"Number of Items Saved":         fmt.Sprintf("%d", len(nodesToSave)),
+		"Number of Items Deleted":       fmt.Sprintf("%d", len(keysToDelete)),
+		"Duration":                      fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Save Duration":                 fmt.Sprintf("%.4f seconds", dtSave),
+		"Delete Duration":               fmt.Sprintf("%.4f seconds", dtDelete),
 	})
 
 	return nil

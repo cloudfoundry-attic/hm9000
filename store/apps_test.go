@@ -81,7 +81,7 @@ var _ = Describe("Apps", func() {
 			},
 		}
 
-		store.SyncHeartbeat(dea.HeartbeatWith(actualState...))
+		store.SyncHeartbeats(dea.HeartbeatWith(actualState...))
 		store.SyncDesiredState(desiredState...)
 		store.SaveCrashCounts(crashCount...)
 	})

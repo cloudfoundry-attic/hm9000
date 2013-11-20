@@ -40,6 +40,8 @@ var _ = Describe("Metrics Accountant", func() {
 					"StopEvacuationComplete":                  0,
 					"DesiredStateSyncTimeInMilliseconds":      0,
 					"ActualStateListenerStoreUsagePercentage": 0,
+					"ReceivedHeartbeats":                      0,
+					"SavedHeartbeats":                         0,
 				}))
 			})
 		})
@@ -54,6 +56,73 @@ var _ = Describe("Metrics Accountant", func() {
 				Ω(err).Should(Equal(errors.New("oops")))
 				Ω(metrics).Should(BeEmpty())
 			})
+		})
+	})
+
+	Describe("IncrementReceivedHeartbeats", func() {
+		It("should increment the number of received metrics by 1", func() {
+			err := accountant.IncrementReceivedHeartbeats()
+			Ω(err).ShouldNot(HaveOccured())
+			metrics, err := accountant.GetMetrics()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(metrics["ReceivedHeartbeats"]).Should(BeNumerically("==", 1))
+		})
+
+		Context("when the metric is already set", func() {
+			It("should increment the number of received metrics by 1", func() {
+				store.SaveMetric("ReceivedHeartbeats", 6.0)
+				err := accountant.IncrementReceivedHeartbeats()
+				Ω(err).ShouldNot(HaveOccured())
+				metrics, err := accountant.GetMetrics()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(metrics["ReceivedHeartbeats"]).Should(BeNumerically("==", 7))
+			})
+		})
+	})
+
+	Describe("IncrementSavedHeartbeats", func() {
+		Context("when the metric is not already set", func() {
+			It("should record the passed in time duration appropriately", func() {
+				err := accountant.IncrementSavedHeartbeats(3)
+				Ω(err).ShouldNot(HaveOccured())
+				metrics, err := accountant.GetMetrics()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(metrics["SavedHeartbeats"]).Should(BeNumerically("==", 3))
+			})
+		})
+
+		Context("when the metric is already set", func() {
+			BeforeEach(func() {
+				store.SaveMetric("SavedHeartbeats", 6.0)
+			})
+
+			It("should record the passed in time duration appropriately", func() {
+				err := accountant.IncrementSavedHeartbeats(3)
+				Ω(err).ShouldNot(HaveOccured())
+				metrics, err := accountant.GetMetrics()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(metrics["SavedHeartbeats"]).Should(BeNumerically("==", 9))
+			})
+		})
+	})
+
+	Describe("TrackDesiredStateSyncTime", func() {
+		It("should record the passed in time duration appropriately", func() {
+			err := accountant.TrackDesiredStateSyncTime(1138 * time.Millisecond)
+			Ω(err).ShouldNot(HaveOccured())
+			metrics, err := accountant.GetMetrics()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(metrics["DesiredStateSyncTimeInMilliseconds"]).Should(BeNumerically("==", 1138))
+		})
+	})
+
+	Describe("TrackActualStateListenerStoreUsageFraction", func() {
+		It("should record the passed in time duration appropriately", func() {
+			err := accountant.TrackActualStateListenerStoreUsageFraction(0.723)
+			Ω(err).ShouldNot(HaveOccured())
+			metrics, err := accountant.GetMetrics()
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(metrics["ActualStateListenerStoreUsagePercentage"]).Should(BeNumerically("==", 72.3))
 		})
 	})
 

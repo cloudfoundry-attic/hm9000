@@ -41,9 +41,9 @@ var _ = Describe("Actual State", func() {
 
 	Describe("Saving actual state", func() {
 		BeforeEach(func() {
-			store.SyncHeartbeat(dea.HeartbeatWith(
-				dea.GetApp(0).InstanceAtIndex(1).Heartbeat(), //bob
-				dea.GetApp(1).InstanceAtIndex(3).Heartbeat(), //charlie
+			store.SyncHeartbeats(dea.HeartbeatWith(
+				dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+				dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
 			))
 		})
 
@@ -51,8 +51,8 @@ var _ = Describe("Actual State", func() {
 			results, err := store.GetInstanceHeartbeats()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(results).Should(HaveLen(2))
-			Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat())) //bob
-			Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat())) //charlie
+			Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+			Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
 		})
 
 		Context("when there are already instance heartbeats stored for the DEA in question", func() {
@@ -60,18 +60,86 @@ var _ = Describe("Actual State", func() {
 			BeforeEach(func() {
 				modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
 				modifiedHeartbeat.State = models.InstanceStateEvacuating
-				store.SyncHeartbeat(dea.HeartbeatWith(
-					modifiedHeartbeat,                            //bob'
-					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(), //evan
+				store.SyncHeartbeats(dea.HeartbeatWith(
+					modifiedHeartbeat,
+					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
 				))
 			})
 
 			It("should sync the heartbeats (add new ones, adjust ones that have changed state, and delete old ones)", func() {
 				results, err := store.GetInstanceHeartbeats()
 				Ω(err).ShouldNot(HaveOccured())
-				Ω(results).Should(HaveLen(2))                                                   //charlie is gone
-				Ω(results).Should(ContainElement(modifiedHeartbeat))                            //bob' (not bob)
-				Ω(results).Should(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat())) //evan
+				Ω(results).Should(HaveLen(2))
+				Ω(results).Should(ContainElement(modifiedHeartbeat))
+				Ω(results).Should(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+			})
+		})
+
+		Context("when saving multiple heartbeats at once", func() {
+			var modifiedHeartbeat models.InstanceHeartbeat
+			var yetAnotherDea appfixture.DeaFixture
+
+			BeforeEach(func() {
+				yetAnotherDea = appfixture.NewDeaFixture()
+
+				store.SyncHeartbeats(dea.HeartbeatWith(
+					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+				), otherDea.HeartbeatWith(
+					otherDea.GetApp(3).InstanceAtIndex(0).Heartbeat(),
+					otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
+				), yetAnotherDea.HeartbeatWith(
+					yetAnotherDea.GetApp(0).InstanceAtIndex(0).Heartbeat(),
+				))
+
+				modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+				modifiedHeartbeat.State = models.InstanceStateEvacuating
+				store.SyncHeartbeats(dea.HeartbeatWith(
+					modifiedHeartbeat,
+					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
+				), otherDea.HeartbeatWith(
+					otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
+					otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat(),
+				))
+			})
+
+			It("should work", func() {
+				results, err := store.GetInstanceHeartbeats()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(results).Should(HaveLen(5))
+				Ω(results).Should(ContainElement(modifiedHeartbeat))
+				Ω(results).Should(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+				Ω(results).Should(ContainElement(otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat()))
+				Ω(results).Should(ContainElement(otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat()))
+				Ω(results).Should(ContainElement(yetAnotherDea.GetApp(0).InstanceAtIndex(0).Heartbeat()))
+			})
+		})
+
+		Context("when one of the keys fails to delete", func() {
+			It("should soldier on", func() {
+				store.SyncHeartbeats(dea.HeartbeatWith(
+					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+				))
+
+				done := make(chan error, 2)
+
+				go func() {
+					done <- store.SyncHeartbeats(dea.HeartbeatWith(
+						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					))
+				}()
+
+				go func() {
+					done <- store.SyncHeartbeats(dea.HeartbeatWith(
+						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					))
+				}()
+
+				err1 := <-done
+				err2 := <-done
+				Ω(err1).ShouldNot(HaveOccured())
+				Ω(err2).ShouldNot(HaveOccured())
 			})
 		})
 	})
@@ -87,12 +155,12 @@ var _ = Describe("Actual State", func() {
 
 		Context("when there is actual state saved", func() {
 			BeforeEach(func() {
-				store.SyncHeartbeat(dea.HeartbeatWith(
+				store.SyncHeartbeats(dea.HeartbeatWith(
 					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
 				))
 
-				store.SyncHeartbeat(otherDea.HeartbeatWith(
+				store.SyncHeartbeats(otherDea.HeartbeatWith(
 					otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat(),
 				))
@@ -162,7 +230,7 @@ var _ = Describe("Actual State", func() {
 				heartbeatA = app.InstanceAtIndex(0).Heartbeat()
 				heartbeatA.DeaGuid = "A"
 
-				store.SyncHeartbeat(models.Heartbeat{
+				store.SyncHeartbeats(models.Heartbeat{
 					DeaGuid: "A",
 					InstanceHeartbeats: []models.InstanceHeartbeat{
 						heartbeatA,
@@ -172,7 +240,7 @@ var _ = Describe("Actual State", func() {
 				heartbeatB = app.InstanceAtIndex(1).Heartbeat()
 				heartbeatB.DeaGuid = "B"
 
-				store.SyncHeartbeat(models.Heartbeat{
+				store.SyncHeartbeats(models.Heartbeat{
 					DeaGuid: "B",
 					InstanceHeartbeats: []models.InstanceHeartbeat{
 						heartbeatB,

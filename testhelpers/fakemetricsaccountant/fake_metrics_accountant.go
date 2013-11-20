@@ -15,6 +15,9 @@ type FakeMetricsAccountant struct {
 
 	GetMetricsError   error
 	GetMetricsMetrics map[string]float64
+
+	ReceivedHeartbeats float64
+	SavedHeartbeats    float64
 }
 
 func New() *FakeMetricsAccountant {
@@ -24,6 +27,16 @@ func New() *FakeMetricsAccountant {
 
 		GetMetricsMetrics: map[string]float64{},
 	}
+}
+
+func (m *FakeMetricsAccountant) IncrementReceivedHeartbeats() error {
+	m.ReceivedHeartbeats++
+	return nil
+}
+
+func (m *FakeMetricsAccountant) IncrementSavedHeartbeats(by int) error {
+	m.SavedHeartbeats += float64(by)
+	return nil
 }
 
 func (m *FakeMetricsAccountant) IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {

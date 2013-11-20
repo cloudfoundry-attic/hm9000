@@ -5,7 +5,17 @@ import (
 	"tux21b.org/v1/gocql"
 )
 
-func (s *StoreCassandra) SyncHeartbeat(incomingHeartbeat models.Heartbeat) error {
+func (s *StoreCassandra) SyncHeartbeats(incomingHeartbeats ...models.Heartbeat) error {
+	for _, incomingHeartbeat := range incomingHeartbeats {
+		err := s.syncHeartbeat(incomingHeartbeat)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *StoreCassandra) syncHeartbeat(incomingHeartbeat models.Heartbeat) error {
 	iter := s.session.Query(`SELECT app_guid, app_version, instance_guid FROM ActualStates WHERE dea_guid = ?`, incomingHeartbeat.DeaGuid).Iter()
 
 	batch := s.newBatch()

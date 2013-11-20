@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"sync"
 	"time"
 
 	"github.com/cloudfoundry/yagnats"
@@ -20,6 +21,8 @@ type ActualStateListener struct {
 	timeProvider      timeprovider.TimeProvider
 	storeUsageTracker metricsaccountant.UsageTracker
 	metricsAccountant metricsaccountant.MetricsAccountant
+	heartbeatsToSave  []models.Heartbeat
+	heartbeatMutex    *sync.Mutex
 }
 
 func New(config config.Config,
@@ -38,6 +41,8 @@ func New(config config.Config,
 		storeUsageTracker: storeUsageTracker,
 		metricsAccountant: metricsAccountant,
 		timeProvider:      timeProvider,
+		heartbeatsToSave:  []models.Heartbeat{},
+		heartbeatMutex:    &sync.Mutex{},
 	}
 }
 
@@ -59,20 +64,43 @@ func (listener *ActualStateListener) Start() {
 		}
 
 		listener.logger.Debug("Decoded the heartbeat")
-		err = listener.store.SyncHeartbeat(heartbeat)
-		if err != nil {
-			listener.logger.Error("Could not put instance heartbeats in store:", err)
-			return
-		}
 
-		listener.logger.Info("Saved a Heartbeat", heartbeat.LogDescription())
-		listener.bumpFreshness()
-		listener.logger.Debug("Received dea.heartbeat") //Leave this here: the integration test uses this to ensure the heartbeat has been processed
+		listener.metricsAccountant.IncrementReceivedHeartbeats()
+
+		listener.heartbeatMutex.Lock()
+		listener.heartbeatsToSave = append(listener.heartbeatsToSave, heartbeat)
+		listener.heartbeatMutex.Unlock()
 	})
+
+	go listener.syncHeartbeats()
 
 	if listener.storeUsageTracker != nil {
 		listener.storeUsageTracker.StartTrackingUsage()
 		listener.measureStoreUsage()
+	}
+}
+
+func (listener *ActualStateListener) syncHeartbeats() {
+	syncInterval := time.NewTicker(listener.config.ListenerHeartbeatSyncInterval())
+
+	for {
+		listener.heartbeatMutex.Lock()
+		heartbeatsToSave := listener.heartbeatsToSave
+		listener.heartbeatsToSave = []models.Heartbeat{}
+		listener.heartbeatMutex.Unlock()
+
+		if len(heartbeatsToSave) > 0 {
+			err := listener.store.SyncHeartbeats(heartbeatsToSave...)
+			if err != nil {
+				listener.logger.Error("Could not put instance heartbeats in store:", err)
+				return
+			}
+
+			listener.bumpFreshness()
+			listener.metricsAccountant.IncrementSavedHeartbeats(len(heartbeatsToSave))
+		}
+
+		<-syncInterval.C
 	}
 }
 

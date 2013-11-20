@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/vito/cmdtest"
 	. "github.com/vito/cmdtest/matchers"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -52,7 +53,7 @@ func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, cc
 	conf.MetricsServerUser = "bob"
 	conf.MetricsServerPassword = "password"
 	conf.StoreMaxConcurrentRequests = 10
-	conf.LogLevelString = "DEBUG"
+	conf.ListenerHeartbeatSyncIntervalInMilliseconds = 1
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccured())
@@ -102,21 +103,19 @@ func (runner *CLIRunner) start(command string, timestamp int) (*exec.Cmd, *cmdte
 	cmd := exec.Command("hm9000", command, fmt.Sprintf("--config=%s", runner.configPath))
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
 
-	session, err := cmdtest.Start(cmd)
+	var session *cmdtest.Session
+	var err error
+	if runner.verbose {
+		session, err = cmdtest.StartWrapped(cmd, teeToStdout, teeToStdout)
+	} else {
+		session, err = cmdtest.Start(cmd)
+	}
+
 	Ω(err).ShouldNot(HaveOccured())
 
 	Ω(session).Should(SayWithTimeout(".", 5*time.Second))
 
 	return cmd, session
-}
-
-func (runner *CLIRunner) WaitForHeartbeats(num int) {
-	for i := 0; i < num; i++ {
-		receivedHeartbeat := Ω(runner.listenerSession).Should(SayWithTimeout("Received dea.heartbeat", 5*time.Second), "Failed to see heartbeat %d of %d", i, num)
-		if !receivedHeartbeat {
-			break
-		}
-	}
 }
 
 func (runner *CLIRunner) Run(command string, timestamp int) {
@@ -131,4 +130,8 @@ func (runner *CLIRunner) Run(command string, timestamp int) {
 		fmt.Printf("\n")
 	}
 	time.Sleep(50 * time.Millisecond)
+}
+
+func teeToStdout(out io.Reader) io.Reader {
+	return io.TeeReader(out, os.Stdout)
 }

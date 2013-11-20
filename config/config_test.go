@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"time"
 	"github.com/cloudfoundry/gosteno"
 	. "github.com/cloudfoundry/hm9000/config"
 	. "github.com/onsi/ginkgo"
@@ -42,6 +43,7 @@ var _ = Describe("Config", func() {
         "analyzer_polling_interval_in_heartbeats": 1,
         "analyzer_timeout_in_heartbeats": 10,
         "number_of_crashes_before_backoff_begins": 3,
+        "listener_heartbeat_sync_interval_in_milliseconds": 1000,
         "starting_backoff_delay_in_heartbeats": 3,
         "maximum_backoff_delay_in_heartbeats": 96,
         "metrics_server_port": 7879,
@@ -90,6 +92,8 @@ var _ = Describe("Config", func() {
 			Ω(config.CCAuthUser).Should(Equal("mcat"))
 			Ω(config.CCAuthPassword).Should(Equal("testing"))
 			Ω(config.CCBaseURL).Should(Equal("http://127.0.0.1:6001"))
+
+			Ω(config.ListenerHeartbeatSyncInterval()).Should(Equal(time.Second))
 
 			Ω(config.StoreSchemaVersion).Should(Equal(1))
 			Ω(config.StoreType).Should(Equal("etcd"))

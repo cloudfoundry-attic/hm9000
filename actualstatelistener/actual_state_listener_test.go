@@ -116,6 +116,11 @@ var _ = Describe("Actual state listener", func() {
 		})
 
 		It("puts it in the store", func() {
+			Eventually(func() error {
+				_, err := store.GetApp(app.AppGuid, app.AppVersion)
+				return err
+			}).ShouldNot(HaveOccured())
+
 			foundApp, err := store.GetApp(app.AppGuid, app.AppVersion)
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(foundApp.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
@@ -124,7 +129,7 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a complex heartbeat with multiple apps and instances", func() {
 		var heartbeat Heartbeat
-		JustBeforeEach(func() {
+		BeforeEach(func() {
 			isFresh, _ := store.IsActualStateFresh(freshByTime)
 			Ω(isFresh).Should(BeFalse())
 
@@ -136,30 +141,31 @@ var _ = Describe("Actual state listener", func() {
 					anotherApp.InstanceAtIndex(0).Heartbeat(),
 				},
 			}
-
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-				Payload: string(heartbeat.ToJSON()),
-			})
 		})
-
-		It("puts it in the store", func() {
-			foundApp1, err := store.GetApp(app.AppGuid, app.AppVersion)
-			Ω(err).ShouldNot(HaveOccured())
-
-			Ω(foundApp1.InstanceHeartbeats).Should(HaveLen(2))
-			Ω(foundApp1.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
-			Ω(foundApp1.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(1).Heartbeat()))
-
-			foundApp2, err := store.GetApp(anotherApp.AppGuid, anotherApp.AppVersion)
-			Ω(err).ShouldNot(HaveOccured())
-
-			Ω(foundApp2.InstanceHeartbeats).Should(ContainElement(anotherApp.InstanceAtIndex(0).Heartbeat()))
-		})
-
 		Context("when the save succeeds", func() {
-			It("should log about the heartbeat", func() {
-				Ω(logger.LoggedSubjects).Should(ContainElement("Saved a Heartbeat"))
-				Ω(logger.LoggedMessages).Should(ContainElement(ContainSubstring(`"DEA":"%s"`, heartbeat.DeaGuid)))
+			BeforeEach(func() {
+				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
+					Payload: string(heartbeat.ToJSON()),
+				})
+
+				Eventually(func() error {
+					_, err := store.GetApp(app.AppGuid, app.AppVersion)
+					return err
+				}).ShouldNot(HaveOccured())
+			})
+
+			It("puts it in the store", func() {
+				foundApp1, err := store.GetApp(app.AppGuid, app.AppVersion)
+				Ω(err).ShouldNot(HaveOccured())
+
+				Ω(foundApp1.InstanceHeartbeats).Should(HaveLen(2))
+				Ω(foundApp1.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(0).Heartbeat()))
+				Ω(foundApp1.InstanceHeartbeats).Should(ContainElement(app.InstanceAtIndex(1).Heartbeat()))
+
+				foundApp2, err := store.GetApp(anotherApp.AppGuid, anotherApp.AppVersion)
+				Ω(err).ShouldNot(HaveOccured())
+
+				Ω(foundApp2.InstanceHeartbeats).Should(ContainElement(anotherApp.InstanceAtIndex(0).Heartbeat()))
 			})
 
 			It("bumps the freshness", func() {
@@ -167,20 +173,45 @@ var _ = Describe("Actual state listener", func() {
 				Ω(isFresh).Should(BeTrue())
 			})
 
-			Context("when the freshness bump fails", func() {
-				BeforeEach(func() {
-					storeAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("actual-fresh", errors.New("oops"))
+			It("bumps the SavedHeartbeats metric", func() {
+				Ω(metricsAccountant.SavedHeartbeats).Should(Equal(1.0))
+			})
+
+			It("bumps the ReceivedHeartbeats metric", func() {
+				Ω(metricsAccountant.ReceivedHeartbeats).Should(Equal(1.0))
+			})
+		})
+
+		Context("when the save succeeds, but the freshness bump fails", func() {
+			BeforeEach(func() {
+				storeAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("actual-fresh", errors.New("oops"))
+
+				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
+					Payload: string(heartbeat.ToJSON()),
 				})
 
-				It("logs about the failed freshness bump", func() {
-					Ω(logger.LoggedSubjects).Should(ContainElement("Could not update actual freshness"))
-				})
+				Eventually(func() error {
+					_, err := store.GetApp(app.AppGuid, app.AppVersion)
+					return err
+				}).ShouldNot(HaveOccured())
+			})
+
+			It("logs about the failed freshness bump", func() {
+				Ω(logger.LoggedSubjects).Should(ContainElement("Could not update actual freshness"))
 			})
 		})
 
 		Context("when the save fails", func() {
 			BeforeEach(func() {
 				storeAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector(app.InstanceAtIndex(0).InstanceGuid, errors.New("oops"))
+
+				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
+					Payload: string(heartbeat.ToJSON()),
+				})
+
+				Eventually(func() []string {
+					return logger.LoggedSubjects
+				}).Should(ContainElement(ContainSubstring("Could not put instance heartbeats in store")))
 			})
 
 			It("does not bump the freshness", func() {
@@ -191,6 +222,22 @@ var _ = Describe("Actual state listener", func() {
 			It("logs about the failed save", func() {
 				Ω(logger.LoggedSubjects).Should(ContainElement(ContainSubstring("Could not put instance heartbeats in store")))
 			})
+
+			It("does not bump the SavedHeartbeats metric", func() {
+				Ω(metricsAccountant.SavedHeartbeats).Should(Equal(0.0))
+			})
+
+			It("does bump the ReceivedHeartbeats metric", func() {
+				Ω(metricsAccountant.ReceivedHeartbeats).Should(Equal(1.0))
+			})
+		})
+	})
+
+	Context("when no heartbeats are received", func() {
+		It("should not mistakenly bump the freshness", func() {
+			time.Sleep(50 * time.Millisecond) //let syncHeartbeats run...
+			isFresh, _ := store.IsActualStateFresh(freshByTime)
+			Ω(isFresh).Should(BeFalse())
 		})
 	})
 
