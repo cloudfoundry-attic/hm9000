@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -62,13 +63,20 @@ type RealStore struct {
 	config  config.Config
 	adapter storeadapter.StoreAdapter
 	logger  logger.Logger
+
+	instanceHeartbeatCache          map[string]models.InstanceHeartbeat
+	instanceHeartbeatCacheMutex     *sync.Mutex
+	instanceHeartbeatCacheTimestamp time.Time
 }
 
 func NewStore(config config.Config, adapter storeadapter.StoreAdapter, logger logger.Logger) *RealStore {
 	return &RealStore{
-		config:  config,
-		adapter: adapter,
-		logger:  logger,
+		config:                          config,
+		adapter:                         adapter,
+		logger:                          logger,
+		instanceHeartbeatCache:          map[string]models.InstanceHeartbeat{},
+		instanceHeartbeatCacheMutex:     &sync.Mutex{},
+		instanceHeartbeatCacheTimestamp: time.Unix(0, 0),
 	}
 }
 

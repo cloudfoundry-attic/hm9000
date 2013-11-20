@@ -29,6 +29,7 @@ var _ = Describe("Actual State", func() {
 		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
+		conf.StoreHeartbeatCacheRefreshIntervalInMilliseconds = 50
 		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
 		dea = appfixture.NewDeaFixture()
@@ -142,6 +143,42 @@ var _ = Describe("Actual State", func() {
 				Ω(err2).ShouldNot(HaveOccured())
 			})
 		})
+
+		Context("when something goes wrong and the in-memory cache no longer matches the store", func() {
+			It("should eventually recover", func() {
+				//Delete one of the heartbeats
+				corruptedHeartbeat := dea.GetApp(0).InstanceAtIndex(1).Heartbeat()
+				storeAdapter.Delete("/v1/apps/actual/" + store.AppKey(corruptedHeartbeat.AppGuid, corruptedHeartbeat.AppVersion) + "/" + corruptedHeartbeat.InstanceGuid)
+
+				//See that it's gone
+				results, err := store.GetInstanceHeartbeats()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(results).Should(HaveLen(1))
+
+				//Try to put it back
+				store.SyncHeartbeats(dea.HeartbeatWith(
+					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+				))
+
+				//See that we didn't... because it's still in the cache...
+				results, err = store.GetInstanceHeartbeats()
+				Ω(err).ShouldNot(HaveOccured())
+				Ω(results).Should(HaveLen(1))
+
+				//Eventually the cache should be reloaded...
+				Eventually(func() []models.InstanceHeartbeat {
+					store.SyncHeartbeats(dea.HeartbeatWith(
+						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+						dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+					))
+
+					results, err = store.GetInstanceHeartbeats()
+					Ω(err).ShouldNot(HaveOccured())
+					return results
+				}, 0.2, 0.05).Should(HaveLen(2)) //...and the heartbeat should return
+			})
+		})
 	})
 
 	Describe("Fetching all actual state", func() {
@@ -204,6 +241,29 @@ var _ = Describe("Actual State", func() {
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 					_, err = storeAdapter.Get("/v1/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+				})
+
+				Context("if it fails to remove them", func() {
+					It("should soldier on", func() {
+						resultChan := make(chan []models.InstanceHeartbeat, 2)
+						errChan := make(chan error, 2)
+						go func() {
+							results, err := store.GetInstanceHeartbeats()
+							resultChan <- results
+							errChan <- err
+						}()
+
+						go func() {
+							results, err := store.GetInstanceHeartbeats()
+							resultChan <- results
+							errChan <- err
+						}()
+
+						Ω(<-resultChan).Should(HaveLen(2))
+						Ω(<-resultChan).Should(HaveLen(2))
+						Ω(<-errChan).ShouldNot(HaveOccured())
+						Ω(<-errChan).ShouldNot(HaveOccured())
+					})
 				})
 			})
 		})
@@ -279,6 +339,29 @@ var _ = Describe("Actual State", func() {
 
 					_, err = storeAdapter.Get("/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+				})
+
+				Context("if it fails to remove them", func() {
+					It("should soldier on", func() {
+						resultChan := make(chan []models.InstanceHeartbeat, 2)
+						errChan := make(chan error, 2)
+						go func() {
+							results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+							resultChan <- results
+							errChan <- err
+						}()
+
+						go func() {
+							results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+							resultChan <- results
+							errChan <- err
+						}()
+
+						Ω(<-resultChan).Should(HaveLen(1))
+						Ω(<-resultChan).Should(HaveLen(1))
+						Ω(<-errChan).ShouldNot(HaveOccured())
+						Ω(<-errChan).ShouldNot(HaveOccured())
+					})
 				})
 			})
 		})

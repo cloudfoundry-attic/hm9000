@@ -26,7 +26,8 @@ type Config struct {
 	AnalyzerPollingIntervalInHeartbeats int `json:"analyzer_polling_interval_in_heartbeats"`
 	AnalyzerTimeoutInHeartbeats         int `json:"analyzer_timeout_in_heartbeats"`
 
-	ListenerHeartbeatSyncIntervalInMilliseconds int `json:"listener_heartbeat_sync_interval_in_milliseconds"`
+	ListenerHeartbeatSyncIntervalInMilliseconds      int `json:"listener_heartbeat_sync_interval_in_milliseconds"`
+	StoreHeartbeatCacheRefreshIntervalInMilliseconds int `json:"store_heartbeat_cache_refresh_interval_in_milliseconds"`
 
 	DesiredStateBatchSize          int    `json:"desired_state_batch_size"`
 	FetcherNetworkTimeoutInSeconds int    `json:"fetcher_network_timeout_in_seconds"`
@@ -126,6 +127,10 @@ func (conf *Config) MaximumBackoffDelay() time.Duration {
 
 func (conf *Config) ListenerHeartbeatSyncInterval() time.Duration {
 	return time.Millisecond * time.Duration(conf.ListenerHeartbeatSyncIntervalInMilliseconds)
+}
+
+func (conf *Config) StoreHeartbeatCacheRefreshInterval() time.Duration {
+	return time.Millisecond * time.Duration(conf.StoreHeartbeatCacheRefreshIntervalInMilliseconds)
 }
 
 func (conf *Config) CassandraConsistency() gocql.Consistency {

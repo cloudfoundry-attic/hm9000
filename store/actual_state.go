@@ -8,23 +8,39 @@ import (
 	"time"
 )
 
+func (store *RealStore) ensureCacheIsReady() error {
+	store.instanceHeartbeatCacheMutex.Lock()
+	defer store.instanceHeartbeatCacheMutex.Unlock()
+
+	if time.Since(store.instanceHeartbeatCacheTimestamp) >= store.config.StoreHeartbeatCacheRefreshInterval() {
+		heartbeats, err := store.GetInstanceHeartbeats()
+		if err != nil {
+			return err
+		}
+
+		store.instanceHeartbeatCache = map[string]models.InstanceHeartbeat{}
+		for _, heartbeat := range heartbeats {
+			store.instanceHeartbeatCache[heartbeat.InstanceGuid] = heartbeat
+		}
+		store.instanceHeartbeatCacheTimestamp = time.Now()
+	}
+
+	return nil
+}
+
 func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...models.Heartbeat) error {
 	t := time.Now()
 
-	existingInstanceHeartbeatsArray, err := store.GetInstanceHeartbeats()
+	err := store.ensureCacheIsReady()
 	if err != nil {
 		return err
-	}
-
-	existingInstanceHeartbeats := map[string]models.InstanceHeartbeat{}
-
-	for _, existingInstanceHeartbeat := range existingInstanceHeartbeatsArray {
-		existingInstanceHeartbeats[existingInstanceHeartbeat.InstanceGuid] = existingInstanceHeartbeat
 	}
 
 	nodesToSave := []storeadapter.StoreNode{}
 	keysToDelete := []string{}
 	numberOfInstanceHeartbeats := 0
+
+	store.instanceHeartbeatCacheMutex.Lock()
 
 	for _, incomingHeartbeat := range incomingHeartbeats {
 		numberOfInstanceHeartbeats += len(incomingHeartbeat.InstanceHeartbeats)
@@ -32,22 +48,32 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...models.Heartbeat) e
 		nodesToSave = append(nodesToSave, store.deaPresenceNode(incomingHeartbeat.DeaGuid))
 		for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
 			incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
-			existingInstanceHeartbeat, found := existingInstanceHeartbeats[incomingInstanceHeartbeat.InstanceGuid]
+			existingInstanceHeartbeat, found := store.instanceHeartbeatCache[incomingInstanceHeartbeat.InstanceGuid]
 
 			if found && existingInstanceHeartbeat.State == incomingInstanceHeartbeat.State {
 				continue
 			}
 
 			nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
+			store.instanceHeartbeatCache[incomingInstanceHeartbeat.InstanceGuid] = incomingInstanceHeartbeat
 		}
 
-		for _, existingInstanceHeartbeat := range existingInstanceHeartbeats {
+		cacheKeysToDelete := []string{}
+
+		for _, existingInstanceHeartbeat := range store.instanceHeartbeatCache {
 			if existingInstanceHeartbeat.DeaGuid == incomingHeartbeat.DeaGuid && !incomingInstanceGuids[existingInstanceHeartbeat.InstanceGuid] {
 				key := store.instanceHeartbeatStoreKey(existingInstanceHeartbeat.AppGuid, existingInstanceHeartbeat.AppVersion, existingInstanceHeartbeat.InstanceGuid)
 				keysToDelete = append(keysToDelete, key)
+				cacheKeysToDelete = append(cacheKeysToDelete, existingInstanceHeartbeat.InstanceGuid)
 			}
 		}
+
+		for _, key := range cacheKeysToDelete {
+			delete(store.instanceHeartbeatCache, key)
+		}
 	}
+
+	store.instanceHeartbeatCacheMutex.Unlock()
 
 	tSave := time.Now()
 	err = store.adapter.Set(nodesToSave)
@@ -62,7 +88,7 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...models.Heartbeat) e
 	dtDelete := time.Since(tDelete).Seconds()
 
 	if err == storeadapter.ErrorKeyNotFound {
-		store.logger.Debug("Failed to delete a key, soldiering on...")
+		store.logger.Debug("store.SyncHeartbeats Failed to delete a key, soldiering on...")
 	} else if err != nil {
 		return err
 	}
@@ -104,7 +130,13 @@ func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartb
 	}
 
 	err = store.adapter.Delete(expiredKeys...)
-	return results, err
+	if err == storeadapter.ErrorKeyNotFound {
+		store.logger.Debug("store.GetInstanceHeartbeats Failed to delete a key, soldiering on...")
+	} else if err != nil {
+		return []models.InstanceHeartbeat{}, err
+	}
+
+	return results, nil
 }
 
 func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
@@ -126,7 +158,13 @@ func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion s
 	}
 
 	err = store.adapter.Delete(expiredKeys...)
-	return results, err
+	if err == storeadapter.ErrorKeyNotFound {
+		store.logger.Debug("store.GetInstanceHeartbeatsForApp Failed to delete a key, soldiering on...")
+	} else if err != nil {
+		return []models.InstanceHeartbeat{}, err
+	}
+
+	return results, nil
 }
 
 func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode, unexpiredDeas map[string]bool) (results []models.InstanceHeartbeat, toDelete []string, err error) {

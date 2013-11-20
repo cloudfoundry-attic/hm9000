@@ -1,12 +1,12 @@
 package config_test
 
 import (
-	"time"
 	"github.com/cloudfoundry/gosteno"
 	. "github.com/cloudfoundry/hm9000/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"
+	"time"
 	"tux21b.org/v1/gocql"
 )
 
@@ -44,6 +44,7 @@ var _ = Describe("Config", func() {
         "analyzer_timeout_in_heartbeats": 10,
         "number_of_crashes_before_backoff_begins": 3,
         "listener_heartbeat_sync_interval_in_milliseconds": 1000,
+        "store_heartbeat_cache_refresh_interval_in_milliseconds": 20000,
         "starting_backoff_delay_in_heartbeats": 3,
         "maximum_backoff_delay_in_heartbeats": 96,
         "metrics_server_port": 7879,
@@ -94,6 +95,7 @@ var _ = Describe("Config", func() {
 			Ω(config.CCBaseURL).Should(Equal("http://127.0.0.1:6001"))
 
 			Ω(config.ListenerHeartbeatSyncInterval()).Should(Equal(time.Second))
+			Ω(config.StoreHeartbeatCacheRefreshInterval()).Should(Equal(20 * time.Second))
 
 			Ω(config.StoreSchemaVersion).Should(Equal(1))
 			Ω(config.StoreType).Should(Equal("etcd"))
