@@ -89,7 +89,7 @@ var _ = Describe("Apps", func() {
 	Describe("AppKey", func() {
 		It("should concatenate the app guid and app version appropriately", func() {
 			key := store.AppKey("abc", "123")
-			Ω(key).Should(Equal("abc-123"))
+			Ω(key).Should(Equal("abc,123"))
 		})
 	})
 
@@ -100,11 +100,11 @@ var _ = Describe("Apps", func() {
 				Ω(err).ShouldNot(HaveOccured())
 
 				Ω(apps).Should(HaveLen(3))
-				Ω(apps).Should(HaveKey(app1.AppGuid + "-" + app1.AppVersion))
-				Ω(apps).Should(HaveKey(app2.AppGuid + "-" + app2.AppVersion))
-				Ω(apps).Should(HaveKey(app3.AppGuid + "-" + app3.AppVersion))
+				Ω(apps).Should(HaveKey(app1.AppGuid + "," + app1.AppVersion))
+				Ω(apps).Should(HaveKey(app2.AppGuid + "," + app2.AppVersion))
+				Ω(apps).Should(HaveKey(app3.AppGuid + "," + app3.AppVersion))
 
-				a1 := apps[app1.AppGuid+"-"+app1.AppVersion]
+				a1 := apps[app1.AppGuid+","+app1.AppVersion]
 				Ω(a1.Desired).Should(EqualDesiredState(app1.DesiredState(1)))
 				Ω(a1.InstanceHeartbeats).Should(HaveLen(3))
 				Ω(a1.InstanceHeartbeats).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
@@ -113,13 +113,13 @@ var _ = Describe("Apps", func() {
 				Ω(a1.CrashCounts[1]).Should(Equal(crashCount[0]))
 				Ω(a1.CrashCounts[2]).Should(Equal(crashCount[1]))
 
-				a2 := apps[app2.AppGuid+"-"+app2.AppVersion]
+				a2 := apps[app2.AppGuid+","+app2.AppVersion]
 				Ω(a2.Desired).Should(BeZero())
 				Ω(a2.InstanceHeartbeats).Should(HaveLen(1))
 				Ω(a2.InstanceHeartbeats).Should(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
 				Ω(a2.CrashCounts[0]).Should(Equal(crashCount[2]))
 
-				a3 := apps[app3.AppGuid+"-"+app3.AppVersion]
+				a3 := apps[app3.AppGuid+","+app3.AppVersion]
 				Ω(a3.Desired).Should(EqualDesiredState(app3.DesiredState(1)))
 				Ω(a3.InstanceHeartbeats).Should(HaveLen(0))
 				Ω(a3.CrashCounts).Should(BeEmpty())

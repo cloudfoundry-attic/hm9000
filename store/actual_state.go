@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"strings"
 	"time"
 )
 
@@ -129,7 +130,10 @@ func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion s
 
 func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode, unexpiredDeas map[string]bool) (results []models.InstanceHeartbeat, toDelete []string, err error) {
 	for _, heartbeatNode := range node.ChildNodes {
-		heartbeat, err := models.NewInstanceHeartbeatFromJSON(heartbeatNode.Value)
+		components := strings.Split(heartbeatNode.Key, "/")
+		instanceGuid := components[len(components)-1]
+		appGuidVersion := strings.Split(components[len(components)-2], ",")
+		heartbeat, err := models.NewInstanceHeartbeatFromCSV(appGuidVersion[0], appGuidVersion[1], instanceGuid, heartbeatNode.Value)
 		if err != nil {
 			return []models.InstanceHeartbeat{}, []string{}, err
 		}
@@ -177,6 +181,6 @@ func (store *RealStore) deaPresenceNode(deaGuid string) storeadapter.StoreNode {
 func (store *RealStore) storeNodeForInstanceHeartbeat(instanceHeartbeat models.InstanceHeartbeat) storeadapter.StoreNode {
 	return storeadapter.StoreNode{
 		Key:   store.instanceHeartbeatStoreKey(instanceHeartbeat.AppGuid, instanceHeartbeat.AppVersion, instanceHeartbeat.InstanceGuid),
-		Value: instanceHeartbeat.ToJSON(),
+		Value: instanceHeartbeat.ToCSV(),
 	}
 }

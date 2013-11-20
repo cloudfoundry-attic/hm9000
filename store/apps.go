@@ -7,7 +7,7 @@ import (
 )
 
 func (store *RealStore) AppKey(appGuid string, appVersion string) string {
-	return appGuid + "-" + appVersion
+	return appGuid + "," + appVersion
 }
 
 func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, error) {

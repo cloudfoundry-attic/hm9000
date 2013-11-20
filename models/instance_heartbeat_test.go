@@ -11,7 +11,6 @@ var _ = Describe("InstanceHeartbeat", func() {
 
 	BeforeEach(func() {
 		instance = InstanceHeartbeat{
-			CCPartition:    "default",
 			AppGuid:        "abc",
 			AppVersion:     "xyz-123",
 			InstanceGuid:   "def",
@@ -26,7 +25,6 @@ var _ = Describe("InstanceHeartbeat", func() {
 		Context("When all is well", func() {
 			It("should, like, totally build from JSON", func() {
 				jsonInstance, err := NewInstanceHeartbeatFromJSON([]byte(`{
-                    "cc_partition":"default",
                     "droplet":"abc",
                     "version":"xyz-123",
                     "instance":"def",
@@ -52,6 +50,59 @@ var _ = Describe("InstanceHeartbeat", func() {
 		})
 	})
 
+	Describe("ToJSON", func() {
+		It("should, like, totally encode JSON", func() {
+			jsonInstance, err := NewInstanceHeartbeatFromJSON(instance.ToJSON())
+
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(jsonInstance).Should(Equal(instance))
+		})
+	})
+
+	Describe("Building from CSV", func() {
+		Context("When all is well", func() {
+			It("should, like, totally build from CSV", func() {
+				jsonInstance, err := NewInstanceHeartbeatFromCSV("abc", "xyz-123", "def", []byte(`3,RUNNING,1123.2,dea_abc`))
+
+				Ω(err).ShouldNot(HaveOccured())
+
+				Ω(jsonInstance).Should(Equal(instance))
+			})
+		})
+
+		Context("When the CSV is invalid", func() {
+			It("returns a zero heartbeat and an error", func() {
+				instance, err := NewInstanceHeartbeatFromCSV("abc", "xyz-123", "def", []byte(`3,RUNNING,1123.2`))
+
+				Ω(instance).Should(BeZero())
+				Ω(err).Should(HaveOccured())
+
+				instance, err = NewInstanceHeartbeatFromCSV("abc", "xyz-123", "def", []byte(`oops,RUNNING,1123.2,dea_abc`))
+				Ω(instance).Should(BeZero())
+				Ω(err).Should(HaveOccured())
+
+				instance, err = NewInstanceHeartbeatFromCSV("abc", "xyz-123", "def", []byte(`3,RUNNING,oops,dea_abc`))
+				Ω(instance).Should(BeZero())
+				Ω(err).Should(HaveOccured())
+			})
+		})
+	})
+
+	Describe("ToCSV", func() {
+		It("should, like, totally encode to CSV", func() {
+			jsonInstance, err := NewInstanceHeartbeatFromCSV("abc", "xyz-123", "def", instance.ToCSV())
+
+			Ω(err).ShouldNot(HaveOccured())
+			Ω(jsonInstance).Should(Equal(instance))
+		})
+	})
+
+	Describe("StoreKey", func() {
+		It("returns the key for the store", func() {
+			Ω(instance.StoreKey()).Should(Equal("def"))
+		})
+	})
+
 	Describe("LogDescription", func() {
 		It("should return correct message", func() {
 			logDescription := instance.LogDescription()
@@ -65,21 +116,6 @@ var _ = Describe("InstanceHeartbeat", func() {
 				"StateTimestamp": "1123",
 				"DeaGuid":        "dea_abc",
 			}))
-		})
-	})
-
-	Describe("ToJson", func() {
-		It("should, like, totally encode JSON", func() {
-			jsonInstance, err := NewInstanceHeartbeatFromJSON(instance.ToJSON())
-
-			Ω(err).ShouldNot(HaveOccured())
-			Ω(jsonInstance).Should(Equal(instance))
-		})
-	})
-
-	Describe("StoreKey", func() {
-		It("returns the key for the store", func() {
-			Ω(instance.StoreKey()).Should(Equal("def"))
 		})
 	})
 

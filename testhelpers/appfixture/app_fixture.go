@@ -36,7 +36,6 @@ func newAppForDeaGuid(deaGuid string) AppFixture {
 func (app AppFixture) CrashedInstanceHeartbeatAtIndex(index int) InstanceHeartbeat {
 	return InstanceHeartbeat{
 		State:         InstanceStateCrashed,
-		CCPartition:   "default",
 		AppGuid:       app.AppGuid,
 		AppVersion:    app.AppVersion,
 		InstanceGuid:  Guid(),
@@ -73,7 +72,6 @@ func (app AppFixture) DesiredState(numberOfInstances int) DesiredAppState {
 
 func (instance Instance) Heartbeat() InstanceHeartbeat {
 	return InstanceHeartbeat{
-		CCPartition:   "default",
 		AppGuid:       instance.AppGuid,
 		AppVersion:    instance.AppVersion,
 		InstanceGuid:  instance.InstanceGuid,

@@ -70,7 +70,7 @@ func (s *StoreCassandra) createTables() error {
 		return err
 	}
 
-	err = s.session.Query(`CREATE TABLE IF NOT EXISTS ActualStates (app_guid text, app_version text, instance_guid text, dea_guid text, instance_index int, state text, state_timestamp bigint, cc_partition text, expires bigint, PRIMARY KEY (app_guid, app_version, instance_guid))`).Exec()
+	err = s.session.Query(`CREATE TABLE IF NOT EXISTS ActualStates (app_guid text, app_version text, instance_guid text, dea_guid text, instance_index int, state text, state_timestamp bigint, expires bigint, PRIMARY KEY (app_guid, app_version, instance_guid))`).Exec()
 	if err != nil {
 		return err
 	}
