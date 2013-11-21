@@ -13,6 +13,7 @@ func (store *RealStore) ensureCacheIsReady() error {
 	defer store.instanceHeartbeatCacheMutex.Unlock()
 
 	if time.Since(store.instanceHeartbeatCacheTimestamp) >= store.config.StoreHeartbeatCacheRefreshInterval() {
+		t := time.Now()
 		heartbeats, err := store.GetInstanceHeartbeats()
 		if err != nil {
 			return err
@@ -23,6 +24,11 @@ func (store *RealStore) ensureCacheIsReady() error {
 			store.instanceHeartbeatCache[heartbeat.InstanceGuid] = heartbeat
 		}
 		store.instanceHeartbeatCacheTimestamp = time.Now()
+		store.logger.Debug("Busting store cache", map[string]string{
+			"Duration":                   time.Since(t).String(),
+			"Instance Heartbeats Loaded": fmt.Sprintf("%d", len(store.instanceHeartbeatCache)),
+		})
+
 	}
 
 	return nil

@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"strconv"
 	"sync"
 	"time"
 
@@ -69,6 +70,9 @@ func (listener *ActualStateListener) Start() {
 
 		listener.heartbeatMutex.Lock()
 		listener.heartbeatsToSave = append(listener.heartbeatsToSave, heartbeat)
+		listener.logger.Debug("Received a heartbeat", map[string]string{
+			"Heartbeats Pending Save": strconv.Itoa(len(listener.heartbeatsToSave)),
+		})
 		listener.heartbeatMutex.Unlock()
 	})
 
@@ -90,6 +94,11 @@ func (listener *ActualStateListener) syncHeartbeats() {
 		listener.heartbeatMutex.Unlock()
 
 		if len(heartbeatsToSave) > 0 {
+			listener.logger.Debug("Saving Heartbeats", map[string]string{
+				"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
+			})
+
+			t := time.Now()
 			err := listener.store.SyncHeartbeats(heartbeatsToSave...)
 			if err != nil {
 				listener.logger.Error("Could not put instance heartbeats in store:", err)
@@ -98,6 +107,11 @@ func (listener *ActualStateListener) syncHeartbeats() {
 
 			listener.bumpFreshness()
 			listener.metricsAccountant.IncrementSavedHeartbeats(len(heartbeatsToSave))
+			dt := time.Since(t)
+			listener.logger.Debug("Saved Heartbeats", map[string]string{
+				"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
+				"Duration":           dt.String(),
+			})
 		}
 
 		<-syncInterval.C
