@@ -15,15 +15,17 @@ import (
 )
 
 type ActualStateListener struct {
-	logger            logger.Logger
-	config            config.Config
-	messageBus        yagnats.NATSClient
-	store             store.Store
-	timeProvider      timeprovider.TimeProvider
-	storeUsageTracker metricsaccountant.UsageTracker
-	metricsAccountant metricsaccountant.MetricsAccountant
-	heartbeatsToSave  []models.Heartbeat
-	heartbeatMutex    *sync.Mutex
+	logger             logger.Logger
+	config             config.Config
+	messageBus         yagnats.NATSClient
+	store              store.Store
+	timeProvider       timeprovider.TimeProvider
+	storeUsageTracker  metricsaccountant.UsageTracker
+	metricsAccountant  metricsaccountant.MetricsAccountant
+	heartbeatsToSave   []models.Heartbeat
+	receivedHeartbeats int
+	savedHeartbeats    int
+	heartbeatMutex     *sync.Mutex
 }
 
 func New(config config.Config,
@@ -66,14 +68,21 @@ func (listener *ActualStateListener) Start() {
 
 		listener.logger.Debug("Decoded the heartbeat")
 
-		listener.metricsAccountant.IncrementReceivedHeartbeats()
-
 		listener.heartbeatMutex.Lock()
+
+		listener.receivedHeartbeats++
 		listener.heartbeatsToSave = append(listener.heartbeatsToSave, heartbeat)
-		listener.logger.Info("Received a heartbeat", map[string]string{
-			"Heartbeats Pending Save": strconv.Itoa(len(listener.heartbeatsToSave)),
-		})
+
+		receivedHeartbeats := listener.receivedHeartbeats
+		numToSave := len(listener.heartbeatsToSave)
+
 		listener.heartbeatMutex.Unlock()
+
+		listener.logger.Info("Received a heartbeat", map[string]string{
+			"Heartbeats Pending Save": strconv.Itoa(numToSave),
+		})
+
+		listener.metricsAccountant.TrackReceivedHeartbeats(receivedHeartbeats)
 	})
 
 	go listener.syncHeartbeats()
@@ -88,10 +97,8 @@ func (listener *ActualStateListener) syncHeartbeats() {
 	syncInterval := time.NewTicker(listener.config.ListenerHeartbeatSyncInterval())
 
 	for {
-		listener.heartbeatMutex.Lock()
 		heartbeatsToSave := listener.heartbeatsToSave
 		listener.heartbeatsToSave = []models.Heartbeat{}
-		listener.heartbeatMutex.Unlock()
 
 		if len(heartbeatsToSave) > 0 {
 			listener.logger.Info("Saving Heartbeats", map[string]string{
@@ -106,12 +113,18 @@ func (listener *ActualStateListener) syncHeartbeats() {
 			}
 
 			listener.bumpFreshness()
-			listener.metricsAccountant.IncrementSavedHeartbeats(len(heartbeatsToSave))
 			dt := time.Since(t)
 			listener.logger.Info("Saved Heartbeats", map[string]string{
 				"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
 				"Duration":           dt.String(),
 			})
+
+			listener.heartbeatMutex.Lock()
+			listener.savedHeartbeats += len(heartbeatsToSave)
+			savedHeartbeats := listener.savedHeartbeats
+			listener.heartbeatMutex.Unlock()
+
+			listener.metricsAccountant.TrackSavedHeartbeats(savedHeartbeats)
 		}
 
 		<-syncInterval.C

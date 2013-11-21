@@ -174,11 +174,11 @@ var _ = Describe("Actual state listener", func() {
 			})
 
 			It("bumps the SavedHeartbeats metric", func() {
-				Ω(metricsAccountant.SavedHeartbeats).Should(Equal(1.0))
+				Ω(metricsAccountant.SavedHeartbeats).Should(Equal(1))
 			})
 
 			It("bumps the ReceivedHeartbeats metric", func() {
-				Ω(metricsAccountant.ReceivedHeartbeats).Should(Equal(1.0))
+				Ω(metricsAccountant.ReceivedHeartbeats).Should(Equal(1))
 			})
 		})
 
@@ -224,11 +224,11 @@ var _ = Describe("Actual state listener", func() {
 			})
 
 			It("does not bump the SavedHeartbeats metric", func() {
-				Ω(metricsAccountant.SavedHeartbeats).Should(Equal(0.0))
+				Ω(metricsAccountant.SavedHeartbeats).Should(Equal(0))
 			})
 
 			It("does bump the ReceivedHeartbeats metric", func() {
-				Ω(metricsAccountant.ReceivedHeartbeats).Should(Equal(1.0))
+				Ω(metricsAccountant.ReceivedHeartbeats).Should(Equal(1))
 			})
 		})
 	})

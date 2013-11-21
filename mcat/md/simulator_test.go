@@ -55,7 +55,7 @@ func (s *Simulator) Tick(numTicks int) {
 }
 
 func (s *Simulator) sendHeartbeats() {
-	originalNHeartbeats, _ := s.store.GetMetric("SavedHeartbeats")
+	s.store.SaveMetric("SavedHeartbeats", 0)
 	s.cliRunner.StartListener(s.currentTimestamp)
 	for _, heartbeat := range s.currentHeartbeats {
 		s.messageBus.Publish("dea.heartbeat", string(heartbeat.ToJSON()))
@@ -64,7 +64,7 @@ func (s *Simulator) sendHeartbeats() {
 	Eventually(func() float64 {
 		nHeartbeats, _ := s.store.GetMetric("SavedHeartbeats")
 		return nHeartbeats
-	}, 5.0, 0.05).Should(BeNumerically(">=", originalNHeartbeats+float64(len(s.currentHeartbeats))))
+	}, 5.0, 0.05).Should(BeNumerically("==", len(s.currentHeartbeats)))
 
 	s.cliRunner.StopListener()
 }
