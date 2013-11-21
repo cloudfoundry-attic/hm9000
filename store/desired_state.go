@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"strings"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func (store *RealStore) SyncDesiredState(newDesiredStates ...models.DesiredAppSt
 		if !(present && newDesiredState.Equal(currentDesiredState)) {
 			nodesToSave = append(nodesToSave, storeadapter.StoreNode{
 				Key:   store.desiredStateStoreKey(newDesiredState),
-				Value: newDesiredState.ToJSON(),
+				Value: newDesiredState.ToCSV(),
 			})
 		}
 	}
@@ -86,7 +87,10 @@ func (store *RealStore) GetDesiredState() (results map[string]models.DesiredAppS
 	}
 
 	for _, desiredNode := range node.ChildNodes {
-		desiredState, err := models.NewDesiredAppStateFromJSON(desiredNode.Value)
+		components := strings.Split(desiredNode.Key, "/")
+		appGuidVersion := strings.Split(components[len(components)-1], ",")
+
+		desiredState, err := models.NewDesiredAppStateFromCSV(appGuidVersion[0], appGuidVersion[1], desiredNode.Value)
 		if err != nil {
 			return results, err
 		}
@@ -109,5 +113,5 @@ func (store *RealStore) getDesiredStateForApp(appGuid string, appVersion string)
 		return desired, err
 	}
 
-	return models.NewDesiredAppStateFromJSON(node.Value)
+	return models.NewDesiredAppStateFromCSV(appGuid, appVersion, node.Value)
 }

@@ -56,9 +56,9 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			return desired
 		}, 1, 0.1).ShouldNot(BeEmpty())
 
-		Ω(desired).Should(HaveKey(a1.AppGuid + "-" + a1.AppVersion))
-		Ω(desired).Should(HaveKey(a2.AppGuid + "-" + a2.AppVersion))
-		Ω(desired).Should(HaveKey(a3.AppGuid + "-" + a3.AppVersion))
+		Ω(desired).Should(HaveKey(a1.AppGuid + "," + a1.AppVersion))
+		Ω(desired).Should(HaveKey(a2.AppGuid + "," + a2.AppVersion))
+		Ω(desired).Should(HaveKey(a3.AppGuid + "," + a3.AppVersion))
 	})
 
 	It("bumps the freshness", func() {
@@ -97,7 +97,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 			desired, err := store.GetDesiredState()
 			Ω(err).ShouldNot(HaveOccured())
 			Ω(desired).Should(HaveLen(1))
-			Ω(desired).Should(HaveKey(a3.AppGuid + "-" + a3.AppVersion))
+			Ω(desired).Should(HaveKey(a3.AppGuid + "," + a3.AppVersion))
 		})
 	})
 })

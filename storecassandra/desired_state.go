@@ -2,7 +2,6 @@ package storecassandra
 
 import (
 	"github.com/cloudfoundry/hm9000/models"
-	"time"
 	"tux21b.org/v1/gocql"
 )
 
@@ -16,7 +15,7 @@ func (s *StoreCassandra) SyncDesiredState(newDesiredStates ...models.DesiredAppS
 	newDesiredStateKeys := make(map[string]bool, 0)
 	for _, state := range newDesiredStates {
 		newDesiredStateKeys[state.StoreKey()] = true
-		batch.Query(`INSERT INTO DesiredStates (app_guid, app_version, number_of_instances, state, package_state, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, state.AppGuid, state.AppVersion, state.NumberOfInstances, state.State, state.PackageState, int64(state.UpdatedAt.Unix()))
+		batch.Query(`INSERT INTO DesiredStates (app_guid, app_version, number_of_instances, state, package_state) VALUES (?, ?, ?, ?, ?)`, state.AppGuid, state.AppVersion, state.NumberOfInstances, state.State, state.PackageState)
 	}
 
 	for key, existingDesiredState := range existingDesiredStates {
@@ -49,25 +48,23 @@ func (s *StoreCassandra) getDesiredState(optionalAppGuid string, optionalAppVers
 	var iter *gocql.Iter
 
 	if optionalAppGuid == "" {
-		iter = s.session.Query(`SELECT app_guid, app_version, number_of_instances, state, package_state, updated_at FROM DesiredStates`).Iter()
+		iter = s.session.Query(`SELECT app_guid, app_version, number_of_instances, state, package_state FROM DesiredStates`).Iter()
 	} else {
-		iter = s.session.Query(`SELECT app_guid, app_version, number_of_instances, state, package_state, updated_at FROM DesiredStates WHERE app_guid = ? AND app_version = ?`, optionalAppGuid, optionalAppVersion).Iter()
+		iter = s.session.Query(`SELECT app_guid, app_version, number_of_instances, state, package_state FROM DesiredStates WHERE app_guid = ? AND app_version = ?`, optionalAppGuid, optionalAppVersion).Iter()
 	}
 
 	var appGuid, appVersion, state, packageState string
 	var numberOfInstances int32
-	var updatedAt int64
 
 	batch := s.newBatch()
 
-	for iter.Scan(&appGuid, &appVersion, &numberOfInstances, &state, &packageState, &updatedAt) {
+	for iter.Scan(&appGuid, &appVersion, &numberOfInstances, &state, &packageState) {
 		desiredState := models.DesiredAppState{
 			AppGuid:           appGuid,
 			AppVersion:        appVersion,
 			NumberOfInstances: int(numberOfInstances),
 			State:             models.AppState(state),
 			PackageState:      models.AppPackageState(packageState),
-			UpdatedAt:         time.Unix(updatedAt, 0),
 		}
 		result = append(result, desiredState)
 	}

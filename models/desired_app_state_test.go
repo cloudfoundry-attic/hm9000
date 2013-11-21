@@ -7,8 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"encoding/json"
-	"fmt"
-	"time"
 )
 
 var _ = Describe("DesiredAppState", func() {
@@ -23,23 +21,19 @@ var _ = Describe("DesiredAppState", func() {
 				NumberOfInstances: 3,
 				State:             AppStateStopped,
 				PackageState:      AppPackageStateStaged,
-				UpdatedAt:         time.Unix(0, 0),
 			}
 		})
 
 		Describe("loading JSON", func() {
 			Context("When all is well", func() {
 				It("should, like, totally build from JSON", func() {
-					timeAsJson, _ := desiredAppState.UpdatedAt.MarshalJSON()
-					json := fmt.Sprintf(`{
+					jsonDesired, err := NewDesiredAppStateFromJSON([]byte(`{
 	                    "id":"app_guid_abc",
 	                    "version":"app_version_123",
 	                    "instances":3,
 	                    "state":"STOPPED",
-	                    "package_state":"STAGED",
-	                    "updated_at":%s
-	                }`, timeAsJson)
-					jsonDesired, err := NewDesiredAppStateFromJSON([]byte(json))
+	                    "package_state":"STAGED"
+	                }`))
 
 					Ω(err).ShouldNot(HaveOccured())
 
@@ -65,6 +59,34 @@ var _ = Describe("DesiredAppState", func() {
 				Ω(decoded).Should(EqualDesiredState(desiredAppState))
 			})
 		})
+
+		Describe("loading CSV", func() {
+			Context("When all is well", func() {
+				It("should, like, totally build from CSV", func() {
+					csvDesired, err := NewDesiredAppStateFromCSV("app_guid_abc", "app_version_123", []byte("3,STOPPED,STAGED"))
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(csvDesired).Should(EqualDesiredState(desiredAppState))
+				})
+			})
+
+			Context("When the CSV is invalid", func() {
+				It("returns a zero desired state and an error", func() {
+					desired, err := NewDesiredAppStateFromCSV("app_guid_abc", "app_version_123", []byte(`1,STOPPED`))
+					Ω(desired).Should(BeZero())
+					Ω(err).Should(HaveOccured())
+
+					desired, err = NewDesiredAppStateFromCSV("app_guid_abc", "app_version_123", []byte(`LOL,STOPPED`))
+					Ω(desired).Should(BeZero())
+					Ω(err).Should(HaveOccured())
+				})
+			})
+		})
+
+		Describe("writing CSV", func() {
+			It("outputs to CSV", func() {
+				Ω(string(desiredAppState.ToCSV())).Should(Equal("3,STOPPED,STAGED"))
+			})
+		})
 	})
 
 	Describe("StoreKey", func() {
@@ -78,7 +100,7 @@ var _ = Describe("DesiredAppState", func() {
 		})
 
 		It("returns the key for the store", func() {
-			Ω(appstate.StoreKey()).Should(Equal("XYZ-ABC-DEF-123"))
+			Ω(appstate.StoreKey()).Should(Equal("XYZ-ABC,DEF-123"))
 		})
 	})
 
@@ -94,7 +116,6 @@ var _ = Describe("DesiredAppState", func() {
 				NumberOfInstances: 1,
 				State:             AppStateStarted,
 				PackageState:      AppPackageStateStaged,
-				UpdatedAt:         time.Unix(0, 0),
 			}
 
 			other = actual
@@ -128,11 +149,6 @@ var _ = Describe("DesiredAppState", func() {
 			other.PackageState = AppPackageStateFailed
 			Ω(actual.Equal(other)).Should(BeFalse())
 		})
-
-		It("is inequal when the updated at is different", func() {
-			other.UpdatedAt = time.Unix(9000, 9000)
-			Ω(actual.Equal(other)).Should(BeFalse())
-		})
 	})
 
 	Describe("LogDescription", func() {
@@ -145,7 +161,6 @@ var _ = Describe("DesiredAppState", func() {
 				NumberOfInstances: 3,
 				State:             AppStateStopped,
 				PackageState:      AppPackageStateStaged,
-				UpdatedAt:         time.Unix(10, 0),
 			}
 		})
 
@@ -156,7 +171,6 @@ var _ = Describe("DesiredAppState", func() {
 				"NumberOfInstances": "3",
 				"State":             "STOPPED",
 				"PackageState":      "STAGED",
-				"UpdatedAt":         "10",
 			}))
 		})
 	})
