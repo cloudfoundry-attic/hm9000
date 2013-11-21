@@ -109,22 +109,21 @@ func (listener *ActualStateListener) syncHeartbeats() {
 			err := listener.store.SyncHeartbeats(heartbeatsToSave...)
 			if err != nil {
 				listener.logger.Error("Could not put instance heartbeats in store:", err)
-				return
+			} else {
+				listener.bumpFreshness()
+				dt := time.Since(t)
+				listener.logger.Info("Saved Heartbeats", map[string]string{
+					"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
+					"Duration":           dt.String(),
+				})
+
+				listener.heartbeatMutex.Lock()
+				listener.savedHeartbeats += len(heartbeatsToSave)
+				savedHeartbeats := listener.savedHeartbeats
+				listener.heartbeatMutex.Unlock()
+
+				listener.metricsAccountant.TrackSavedHeartbeats(savedHeartbeats)
 			}
-
-			listener.bumpFreshness()
-			dt := time.Since(t)
-			listener.logger.Info("Saved Heartbeats", map[string]string{
-				"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
-				"Duration":           dt.String(),
-			})
-
-			listener.heartbeatMutex.Lock()
-			listener.savedHeartbeats += len(heartbeatsToSave)
-			savedHeartbeats := listener.savedHeartbeats
-			listener.heartbeatMutex.Unlock()
-
-			listener.metricsAccountant.TrackSavedHeartbeats(savedHeartbeats)
 		}
 
 		<-syncInterval.C
