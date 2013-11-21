@@ -59,7 +59,7 @@ func (a *App) ToJSON() []byte {
 func (a *App) LogDescription() map[string]string {
 	var desired string
 	if a.IsDesired() {
-		desired = fmt.Sprintf(`{"NumberOfInstances":%d,"Memory":%d,"State":"%s","PackageState":"%s"}`, a.Desired.NumberOfInstances, a.Desired.Memory, a.Desired.State, a.Desired.PackageState)
+		desired = fmt.Sprintf(`{"NumberOfInstances":%d,"State":"%s","PackageState":"%s"}`, a.Desired.NumberOfInstances, a.Desired.State, a.Desired.PackageState)
 	} else {
 		desired = "None"
 	}

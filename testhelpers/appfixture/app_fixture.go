@@ -64,7 +64,6 @@ func (app AppFixture) DesiredState(numberOfInstances int) DesiredAppState {
 		AppGuid:           app.AppGuid,
 		AppVersion:        app.AppVersion,
 		NumberOfInstances: numberOfInstances,
-		Memory:            1024,
 		State:             AppStateStarted,
 		PackageState:      AppPackageStateStaged,
 	}

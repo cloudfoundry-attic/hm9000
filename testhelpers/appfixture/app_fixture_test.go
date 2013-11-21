@@ -26,7 +26,6 @@ var _ = Describe("App Fixture", func() {
 			Ω(desired.AppGuid).Should(Equal(app.AppGuid))
 			Ω(desired.AppVersion).Should(Equal(app.AppVersion))
 			Ω(desired.NumberOfInstances).Should(BeNumerically("==", 1))
-			Ω(desired.Memory).Should(BeNumerically("==", 1024))
 			Ω(desired.State).Should(Equal(AppStateStarted))
 			Ω(desired.PackageState).Should(Equal(AppPackageStateStaged))
 		})

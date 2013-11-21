@@ -16,7 +16,7 @@ func (s *StoreCassandra) SyncDesiredState(newDesiredStates ...models.DesiredAppS
 	newDesiredStateKeys := make(map[string]bool, 0)
 	for _, state := range newDesiredStates {
 		newDesiredStateKeys[state.StoreKey()] = true
-		batch.Query(`INSERT INTO DesiredStates (app_guid, app_version, number_of_instances, memory, state, package_state, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, state.AppGuid, state.AppVersion, state.NumberOfInstances, state.Memory, state.State, state.PackageState, int64(state.UpdatedAt.Unix()))
+		batch.Query(`INSERT INTO DesiredStates (app_guid, app_version, number_of_instances, state, package_state, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, state.AppGuid, state.AppVersion, state.NumberOfInstances, state.State, state.PackageState, int64(state.UpdatedAt.Unix()))
 	}
 
 	for key, existingDesiredState := range existingDesiredStates {
@@ -49,23 +49,22 @@ func (s *StoreCassandra) getDesiredState(optionalAppGuid string, optionalAppVers
 	var iter *gocql.Iter
 
 	if optionalAppGuid == "" {
-		iter = s.session.Query(`SELECT app_guid, app_version, number_of_instances, memory, state, package_state, updated_at FROM DesiredStates`).Iter()
+		iter = s.session.Query(`SELECT app_guid, app_version, number_of_instances, state, package_state, updated_at FROM DesiredStates`).Iter()
 	} else {
-		iter = s.session.Query(`SELECT app_guid, app_version, number_of_instances, memory, state, package_state, updated_at FROM DesiredStates WHERE app_guid = ? AND app_version = ?`, optionalAppGuid, optionalAppVersion).Iter()
+		iter = s.session.Query(`SELECT app_guid, app_version, number_of_instances, state, package_state, updated_at FROM DesiredStates WHERE app_guid = ? AND app_version = ?`, optionalAppGuid, optionalAppVersion).Iter()
 	}
 
 	var appGuid, appVersion, state, packageState string
-	var numberOfInstances, memory int32
+	var numberOfInstances int32
 	var updatedAt int64
 
 	batch := s.newBatch()
 
-	for iter.Scan(&appGuid, &appVersion, &numberOfInstances, &memory, &state, &packageState, &updatedAt) {
+	for iter.Scan(&appGuid, &appVersion, &numberOfInstances, &state, &packageState, &updatedAt) {
 		desiredState := models.DesiredAppState{
 			AppGuid:           appGuid,
 			AppVersion:        appVersion,
 			NumberOfInstances: int(numberOfInstances),
-			Memory:            int(memory),
 			State:             models.AppState(state),
 			PackageState:      models.AppPackageState(packageState),
 			UpdatedAt:         time.Unix(updatedAt, 0),

@@ -21,7 +21,6 @@ var _ = Describe("DesiredAppState", func() {
 				AppGuid:           "app_guid_abc",
 				AppVersion:        "app_version_123",
 				NumberOfInstances: 3,
-				Memory:            1024,
 				State:             AppStateStopped,
 				PackageState:      AppPackageStateStaged,
 				UpdatedAt:         time.Unix(0, 0),
@@ -36,7 +35,6 @@ var _ = Describe("DesiredAppState", func() {
 	                    "id":"app_guid_abc",
 	                    "version":"app_version_123",
 	                    "instances":3,
-	                    "memory":1024,
 	                    "state":"STOPPED",
 	                    "package_state":"STAGED",
 	                    "updated_at":%s
@@ -94,7 +92,6 @@ var _ = Describe("DesiredAppState", func() {
 				AppGuid:           "a guid",
 				AppVersion:        "a version",
 				NumberOfInstances: 1,
-				Memory:            256,
 				State:             AppStateStarted,
 				PackageState:      AppPackageStateStaged,
 				UpdatedAt:         time.Unix(0, 0),
@@ -122,11 +119,6 @@ var _ = Describe("DesiredAppState", func() {
 			Ω(actual.Equal(other)).Should(BeFalse())
 		})
 
-		It("is inequal when the memory is different", func() {
-			other.Memory = 4096
-			Ω(actual.Equal(other)).Should(BeFalse())
-		})
-
 		It("is inequal when the state is different", func() {
 			other.State = AppStateStopped
 			Ω(actual.Equal(other)).Should(BeFalse())
@@ -151,7 +143,6 @@ var _ = Describe("DesiredAppState", func() {
 				AppGuid:           "app_guid_abc",
 				AppVersion:        "app_version_123",
 				NumberOfInstances: 3,
-				Memory:            1024,
 				State:             AppStateStopped,
 				PackageState:      AppPackageStateStaged,
 				UpdatedAt:         time.Unix(10, 0),
@@ -163,7 +154,6 @@ var _ = Describe("DesiredAppState", func() {
 				"AppGuid":           "app_guid_abc",
 				"AppVersion":        "app_version_123",
 				"NumberOfInstances": "3",
-				"Memory":            "1024",
 				"State":             "STOPPED",
 				"PackageState":      "STAGED",
 				"UpdatedAt":         "10",

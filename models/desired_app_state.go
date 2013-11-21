@@ -28,7 +28,6 @@ type DesiredAppState struct {
 	AppGuid           string          `json:"id"`
 	AppVersion        string          `json:"version"`
 	NumberOfInstances int             `json:"instances"`
-	Memory            int             `json:"memory"`
 	State             AppState        `json:"state"`
 	PackageState      AppPackageState `json:"package_state"`
 	UpdatedAt         time.Time       `json:"updated_at"`
@@ -53,7 +52,6 @@ func (state DesiredAppState) LogDescription() map[string]string {
 		"AppGuid":           state.AppGuid,
 		"AppVersion":        state.AppVersion,
 		"NumberOfInstances": strconv.Itoa(state.NumberOfInstances),
-		"Memory":            strconv.Itoa(state.Memory),
 		"State":             string(state.State),
 		"PackageState":      string(state.PackageState),
 		"UpdatedAt":         strconv.Itoa(int(state.UpdatedAt.Unix())),
@@ -64,7 +62,6 @@ func (state DesiredAppState) Equal(other DesiredAppState) bool {
 	return state.AppGuid == other.AppGuid &&
 		state.AppVersion == other.AppVersion &&
 		state.NumberOfInstances == other.NumberOfInstances &&
-		state.Memory == other.Memory &&
 		state.State == other.State &&
 		state.PackageState == other.PackageState &&
 		state.UpdatedAt.Equal(other.UpdatedAt)
