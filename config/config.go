@@ -155,28 +155,28 @@ func (conf *Config) LogLevel() gosteno.LogLevel {
 	}
 }
 
-func DefaultConfig() (Config, error) {
+func DefaultConfig() (*Config, error) {
 	_, file, _, _ := runtime.Caller(0)
 	pathToJSON := filepath.Clean(filepath.Join(filepath.Dir(file), "default_config.json"))
 
 	return FromFile(pathToJSON)
 }
 
-func FromFile(path string) (Config, error) {
+func FromFile(path string) (*Config, error) {
 	json, err := ioutil.ReadFile(path)
 	if err != nil {
-		return Config{}, err
+		return nil, err
 	}
 
 	return FromJSON(json)
 }
 
-func FromJSON(JSON []byte) (Config, error) {
+func FromJSON(JSON []byte) (*Config, error) {
 	var config Config
 	err := json.Unmarshal(JSON, &config)
 	if err == nil {
-		return config, nil
+		return &config, nil
 	} else {
-		return Config{}, err
+		return nil, err
 	}
 }

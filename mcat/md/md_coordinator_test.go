@@ -26,7 +26,7 @@ type MDCoordinator struct {
 	natsRunner        *natsrunner.NATSRunner
 	startStopListener *startstoplistener.StartStopListener
 
-	Conf config.Config
+	Conf *config.Config
 
 	CurrentStoreType          string
 	DesiredStateServerBaseUrl string

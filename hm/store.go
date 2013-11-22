@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func Dump(l logger.Logger, conf config.Config, raw bool) {
+func Dump(l logger.Logger, conf *config.Config, raw bool) {
 	if raw {
 		dumpRaw(l, conf)
 	} else {
@@ -23,7 +23,7 @@ func Dump(l logger.Logger, conf config.Config, raw bool) {
 	}
 }
 
-func dumpStructured(l logger.Logger, conf config.Config) {
+func dumpStructured(l logger.Logger, conf *config.Config) {
 	timeProvider := buildTimeProvider(l)
 	store, _ := connectToStore(l, conf)
 	fmt.Printf("Dump - Current timestamp %d\n", timeProvider.Time().Unix())
@@ -141,7 +141,7 @@ func dumpApp(app *models.App, starts map[string]models.PendingStartMessage, stop
 	}
 }
 
-func dumpRaw(l logger.Logger, conf config.Config) {
+func dumpRaw(l logger.Logger, conf *config.Config) {
 	if conf.StoreType == "Cassandra" {
 		fmt.Printf("Cannot perform a raw dump for Cassandra")
 		os.Exit(1)
@@ -176,7 +176,7 @@ func dumpRaw(l logger.Logger, conf config.Config) {
 	}
 }
 
-func Clear(l logger.Logger, conf config.Config) {
+func Clear(l logger.Logger, conf *config.Config) {
 	if conf.StoreType == "Cassandra" {
 		fmt.Printf("Cannot clear Cassandra")
 		os.Exit(1)

@@ -10,12 +10,12 @@ import (
 type StoreCassandra struct {
 	clusterConfig *gocql.ClusterConfig
 	session       *gocql.Session
-	conf          config.Config
+	conf          *config.Config
 	timeProvider  timeprovider.TimeProvider
 	consistency   gocql.Consistency
 }
 
-func New(clusterURLs []string, consistency gocql.Consistency, conf config.Config, timeProvider timeprovider.TimeProvider) (*StoreCassandra, error) {
+func New(clusterURLs []string, consistency gocql.Consistency, conf *config.Config, timeProvider timeprovider.TimeProvider) (*StoreCassandra, error) {
 	s := &StoreCassandra{
 		conf:         conf,
 		timeProvider: timeProvider,

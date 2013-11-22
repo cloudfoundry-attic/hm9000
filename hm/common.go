@@ -34,7 +34,7 @@ func buildTimeProvider(l logger.Logger) timeprovider.TimeProvider {
 	}
 }
 
-func connectToMessageBus(l logger.Logger, conf config.Config) yagnats.NATSClient {
+func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSClient {
 	connectionInfo := &yagnats.ConnectionInfo{
 		Addr: fmt.Sprintf("%s:%d", conf.NATS.Host, conf.NATS.Port),
 
@@ -54,7 +54,7 @@ func connectToMessageBus(l logger.Logger, conf config.Config) yagnats.NATSClient
 	return natsClient
 }
 
-func connectToCFMessageBus(l logger.Logger, conf config.Config) cfmessagebus.MessageBus {
+func connectToCFMessageBus(l logger.Logger, conf *config.Config) cfmessagebus.MessageBus {
 	messageBus, err := cfmessagebus.NewMessageBus("NATS")
 	if err != nil {
 		l.Error("Failed to initialize the CF message bus", err)
@@ -72,7 +72,7 @@ func connectToCFMessageBus(l logger.Logger, conf config.Config) cfmessagebus.Mes
 	return messageBus
 }
 
-func connectToStoreAdapter(l logger.Logger, conf config.Config) (storeadapter.StoreAdapter, metricsaccountant.UsageTracker) {
+func connectToStoreAdapter(l logger.Logger, conf *config.Config) (storeadapter.StoreAdapter, metricsaccountant.UsageTracker) {
 	var adapter storeadapter.StoreAdapter
 	workerPool := workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests)
 	if conf.StoreType == "etcd" {
@@ -92,7 +92,7 @@ func connectToStoreAdapter(l logger.Logger, conf config.Config) (storeadapter.St
 	return adapter, workerPool
 }
 
-func connectToStore(l logger.Logger, conf config.Config) (store.Store, metricsaccountant.UsageTracker) {
+func connectToStore(l logger.Logger, conf *config.Config) (store.Store, metricsaccountant.UsageTracker) {
 	if conf.StoreType == "etcd" || conf.StoreType == "ZooKeeper" {
 		adapter, workerPool := connectToStoreAdapter(l, conf)
 		return store.NewStore(conf, adapter, l), workerPool

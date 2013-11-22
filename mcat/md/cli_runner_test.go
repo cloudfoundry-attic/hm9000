@@ -53,7 +53,7 @@ func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, cc
 	conf.MetricsServerUser = "bob"
 	conf.MetricsServerPassword = "password"
 	conf.StoreMaxConcurrentRequests = 10
-	conf.ListenerHeartbeatSyncIntervalInMilliseconds = 1
+	conf.ListenerHeartbeatSyncIntervalInMilliseconds = 100
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccured())

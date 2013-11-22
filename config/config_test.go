@@ -168,11 +168,11 @@ var _ = Describe("Config", func() {
 		})
 	})
 
-	Context("when passed valid JSON", func() {
-		It("deserializes", func() {
+	Context("when passed invalid JSON", func() {
+		It("should not deserialize", func() {
 			config, err := FromJSON([]byte("¥"))
 			Ω(err).Should(HaveOccured())
-			Ω(config).Should(BeZero())
+			Ω(config).Should(BeNil())
 		})
 	})
 })

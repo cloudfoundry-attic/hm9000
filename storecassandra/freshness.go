@@ -29,6 +29,10 @@ func (s *StoreCassandra) IsDesiredStateFresh() (bool, error) {
 	return true, nil
 }
 
+func (s *StoreCassandra) RevokeActualFreshness() error {
+	return s.session.Query(`DELETE FROM Freshness WHERE key=?`, s.conf.ActualFreshnessKey).Exec()
+}
+
 func (s *StoreCassandra) BumpActualFreshness(timestamp time.Time) error {
 	shouldBumpCreatedAt := false
 	var expires int64

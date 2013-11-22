@@ -11,7 +11,7 @@ import (
 )
 
 type Simulator struct {
-	conf                   config.Config
+	conf                   *config.Config
 	storeRunner            storerunner.StoreRunner
 	store                  store.Store
 	desiredStateServer     *desiredstateserver.DesiredStateServer
@@ -24,7 +24,7 @@ type Simulator struct {
 	messageBus             yagnats.NATSClient
 }
 
-func NewSimulator(conf config.Config, storeRunner storerunner.StoreRunner, store store.Store, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.NATSClient) *Simulator {
+func NewSimulator(conf *config.Config, storeRunner storerunner.StoreRunner, store store.Store, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.NATSClient) *Simulator {
 	desiredStateServer.Reset()
 
 	return &Simulator{

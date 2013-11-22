@@ -14,7 +14,7 @@ import (
 
 type Sender struct {
 	store  store.Store
-	conf   config.Config
+	conf   *config.Config
 	logger logger.Logger
 
 	apps         map[string]*models.App
@@ -33,7 +33,7 @@ type Sender struct {
 	didSucceed bool
 }
 
-func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf config.Config, messageBus yagnats.NATSClient, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
+func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.NATSClient, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
 	return &Sender{
 		store:                 store,
 		conf:                  conf,

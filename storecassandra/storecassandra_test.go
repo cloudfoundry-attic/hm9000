@@ -424,6 +424,19 @@ var _ = Describe("Storecassandra", func() {
 							Ω(isFresh).Should(BeTrue())
 						})
 
+						Context("when we revoke freshness", func() {
+							BeforeEach(func() {
+								err := store.RevokeActualFreshness()
+								Ω(err).ShouldNot(HaveOccured())
+							})
+
+							It("should not be fresh", func() {
+								isFresh, err := store.IsActualStateFresh(timeProvider.Time())
+								Ω(err).ShouldNot(HaveOccured())
+								Ω(isFresh).Should(BeFalse())
+							})
+						})
+
 						Context("when we run past expiration time", func() {
 							BeforeEach(func() {
 								timeProvider.IncrementBySeconds(10)
