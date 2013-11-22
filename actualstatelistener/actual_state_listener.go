@@ -120,6 +120,8 @@ func (listener *ActualStateListener) syncHeartbeats() {
 				dt := time.Since(t)
 				if dt < listener.config.ListenerHeartbeatSyncInterval() {
 					listener.bumpFreshness()
+				} else {
+					listener.logger.Info("Save took too long.  Not bumping freshness.")
 				}
 				listener.logger.Info("Saved Heartbeats", map[string]string{
 					"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
