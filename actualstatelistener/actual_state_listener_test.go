@@ -111,17 +111,48 @@ var _ = Describe("Actual state listener", func() {
 	})
 
 	Context("When it receives a dea advertisement over the message bus", func() {
-		BeforeEach(func() {
-			isFresh, _ := store.IsActualStateFresh(freshByTime)
-			Ω(isFresh).Should(BeFalse())
-			messageBus.Subscriptions["dea.advertise"][0].Callback(&yagnats.Message{
-				Payload: "doesn't matter",
+		Context("and no heartbeat has been received recently", func() {
+			BeforeEach(func() {
+				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
+					Payload: string(app.Heartbeat(1).ToJSON()),
+				})
+
+				store.RevokeActualFreshness()
+
+				timeProvider.IncrementBySeconds(conf.ActualFreshnessTTL())
+
+				messageBus.Subscriptions["dea.advertise"][0].Callback(&yagnats.Message{
+					Payload: "doesn't matter",
+				})
+			})
+
+			It("Bumps the actual state freshness", func() {
+				timeProvider.IncrementBySeconds(conf.ActualFreshnessTTL())
+				isFresh, _ := store.IsActualStateFresh(timeProvider.Time())
+				Ω(isFresh).Should(BeTrue())
 			})
 		})
 
-		It("Bumps the actual state freshness", func() {
-			isFresh, _ := store.IsActualStateFresh(freshByTime)
-			Ω(isFresh).Should(BeTrue())
+		Context("and a heartbeat was received recently", func() {
+			BeforeEach(func() {
+				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
+					Payload: string(app.Heartbeat(1).ToJSON()),
+				})
+
+				store.RevokeActualFreshness()
+
+				timeProvider.IncrementBySeconds(conf.ActualFreshnessTTL() - 1)
+
+				messageBus.Subscriptions["dea.advertise"][0].Callback(&yagnats.Message{
+					Payload: "doesn't matter",
+				})
+			})
+
+			It("does not bump the actual state freshness", func() {
+				timeProvider.IncrementBySeconds(conf.ActualFreshnessTTL())
+				isFresh, _ := store.IsActualStateFresh(timeProvider.Time())
+				Ω(isFresh).Should(BeFalse())
+			})
 		})
 	})
 

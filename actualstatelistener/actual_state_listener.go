@@ -28,6 +28,8 @@ type ActualStateListener struct {
 	totalReceivedHeartbeats int
 	totalSavedHeartbeats    int
 
+	lastReceivedHeartbeat time.Time
+
 	heartbeatMutex *sync.Mutex
 }
 
@@ -53,8 +55,17 @@ func New(config *config.Config,
 }
 
 func (listener *ActualStateListener) Start() {
+	heartbeatThreshold := time.Duration(listener.config.ActualFreshnessTTL()) * time.Second
+
 	listener.messageBus.Subscribe("dea.advertise", func(message *yagnats.Message) {
-		listener.bumpFreshness()
+		listener.heartbeatMutex.Lock()
+		lastReceived := listener.lastReceivedHeartbeat
+		listener.heartbeatMutex.Unlock()
+
+		if listener.timeProvider.Time().Sub(lastReceived) >= heartbeatThreshold {
+			listener.bumpFreshness()
+		}
+
 		listener.logger.Debug("Received dea.advertise")
 	})
 
@@ -72,6 +83,8 @@ func (listener *ActualStateListener) Start() {
 		listener.logger.Debug("Decoded the heartbeat")
 
 		listener.heartbeatMutex.Lock()
+
+		listener.lastReceivedHeartbeat = listener.timeProvider.Time()
 
 		listener.totalReceivedHeartbeats++
 		listener.heartbeatsToSave = append(listener.heartbeatsToSave, heartbeat)
