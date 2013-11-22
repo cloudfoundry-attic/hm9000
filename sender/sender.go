@@ -143,7 +143,7 @@ func (sender *Sender) sendStartMessage(startMessage models.PendingStartMessage) 
 	if shouldSend {
 		if sender.numberOfStartMessagesSent < sender.conf.SenderMessageLimit {
 			sender.logger.Info("Sending message", startMessage.LogDescription())
-			err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, string(messageToSend.ToJSON()))
+			err := sender.messageBus.Publish(sender.conf.SenderNatsStartSubject, messageToSend.ToJSON())
 
 			if err != nil {
 				sender.logger.Error("Failed to send start message", err, startMessage.LogDescription())
@@ -169,7 +169,7 @@ func (sender *Sender) sendStartMessage(startMessage models.PendingStartMessage) 
 func (sender *Sender) sendStopMessage(stopMessage models.PendingStopMessage) {
 	messageToSend, shouldSend := sender.stopMessageToSend(stopMessage)
 	if shouldSend {
-		err := sender.messageBus.Publish(sender.conf.SenderNatsStopSubject, string(messageToSend.ToJSON()))
+		err := sender.messageBus.Publish(sender.conf.SenderNatsStopSubject, messageToSend.ToJSON())
 
 		if err != nil {
 			sender.logger.Error("Failed to send stop message", err, stopMessage.LogDescription())

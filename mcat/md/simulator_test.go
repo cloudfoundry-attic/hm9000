@@ -58,7 +58,7 @@ func (s *Simulator) sendHeartbeats() {
 	s.store.SaveMetric("SavedHeartbeats", 0)
 	s.cliRunner.StartListener(s.currentTimestamp)
 	for _, heartbeat := range s.currentHeartbeats {
-		s.messageBus.Publish("dea.heartbeat", string(heartbeat.ToJSON()))
+		s.messageBus.Publish("dea.heartbeat", heartbeat.ToJSON())
 	}
 
 	Eventually(func() float64 {

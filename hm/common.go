@@ -35,11 +35,19 @@ func buildTimeProvider(l logger.Logger) timeprovider.TimeProvider {
 }
 
 func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSClient {
-	connectionInfo := &yagnats.ConnectionInfo{
-		Addr: fmt.Sprintf("%s:%d", conf.NATS.Host, conf.NATS.Port),
+	members := []yagnats.ConnectionProvider{}
 
-		Username: conf.NATS.User,
-		Password: conf.NATS.Password,
+	for _, natsConf := range conf.NATS {
+		members = append(members, &yagnats.ConnectionInfo{
+			Addr: fmt.Sprintf("%s:%d", natsConf.Host, natsConf.Port),
+
+			Username: natsConf.User,
+			Password: natsConf.Password,
+		})
+	}
+
+	connectionInfo := &yagnats.ConnectionCluster{
+		Members: members,
 	}
 
 	natsClient := yagnats.NewClient()
@@ -61,7 +69,8 @@ func connectToCFMessageBus(l logger.Logger, conf *config.Config) cfmessagebus.Me
 		os.Exit(1)
 	}
 
-	messageBus.Configure(conf.NATS.Host, conf.NATS.Port, conf.NATS.User, conf.NATS.Password)
+	//TODO: No more gocfmessagebus please!  This is a terrible way to "use" clustered nats.
+	messageBus.Configure(conf.NATS[0].Host, conf.NATS[0].Port, conf.NATS[0].User, conf.NATS[0].Password)
 	err = messageBus.Connect()
 
 	if err != nil {

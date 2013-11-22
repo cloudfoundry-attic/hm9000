@@ -23,7 +23,7 @@ var _ = Describe("Evacuation and Shutdown", func() {
 		Context("when a SHUTDOWN droplet.exited message comes in", func() {
 			BeforeEach(func() {
 				cliRunner.StartEvacuator(simulator.currentTimestamp)
-				coordinator.MessageBus.Publish("droplet.exited", string(app.InstanceAtIndex(0).DropletExited(models.DropletExitedReasonDEAShutdown).ToJSON()))
+				coordinator.MessageBus.Publish("droplet.exited", app.InstanceAtIndex(0).DropletExited(models.DropletExitedReasonDEAShutdown).ToJSON())
 			})
 
 			AfterEach(func() {

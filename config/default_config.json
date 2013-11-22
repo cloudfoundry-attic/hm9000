@@ -45,10 +45,10 @@
 
     "sender_nats_start_subject": "hm9000.start",
     "sender_nats_stop_subject": "hm9000.stop",
-    "nats": {
+    "nats": [{
         "host": "127.0.0.1",
         "port": 4222,
         "user": "",
         "password": ""
-    }
+    }]
 }

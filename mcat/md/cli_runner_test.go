@@ -46,7 +46,7 @@ func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, cc
 	conf.StoreType = storeType
 	conf.StoreURLs = storeURLs
 	conf.CCBaseURL = ccBaseURL
-	conf.NATS.Port = natsPort
+	conf.NATS[0].Port = natsPort
 	conf.SenderMessageLimit = 8
 	conf.MaximumBackoffDelayInHeartbeats = 6
 	conf.MetricsServerPort = metricsServerPort

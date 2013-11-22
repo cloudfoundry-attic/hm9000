@@ -54,12 +54,12 @@ var _ = Describe("Config", func() {
         "api_server_user": "magnet",
         "api_server_password": "orangutan4sale",
         "log_level": "INFO",
-        "nats": {
+        "nats": [{
             "host": "127.0.0.1",
             "port": 4222,
             "user": "",
             "password": ""
-        }
+        }]
     }
     `
 
@@ -111,10 +111,10 @@ var _ = Describe("Config", func() {
 			Ω(config.MetricsServerUser).Should(Equal("metrics_server_user"))
 			Ω(config.MetricsServerPassword).Should(Equal("canHazMetrics?"))
 
-			Ω(config.NATS.Host).Should(Equal("127.0.0.1"))
-			Ω(config.NATS.Port).Should(Equal(4222))
-			Ω(config.NATS.User).Should(Equal(""))
-			Ω(config.NATS.Password).Should(Equal(""))
+			Ω(config.NATS[0].Host).Should(Equal("127.0.0.1"))
+			Ω(config.NATS[0].Port).Should(Equal(4222))
+			Ω(config.NATS[0].User).Should(Equal(""))
+			Ω(config.NATS[0].Password).Should(Equal(""))
 
 			Ω(config.LogLevelString).Should(Equal("INFO"))
 		})

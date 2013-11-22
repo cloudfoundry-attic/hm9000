@@ -71,11 +71,11 @@ func (listener *ActualStateListener) Start() {
 
 	listener.messageBus.Subscribe("dea.heartbeat", func(message *yagnats.Message) {
 		listener.logger.Debug("Got a heartbeat")
-		heartbeat, err := models.NewHeartbeatFromJSON([]byte(message.Payload))
+		heartbeat, err := models.NewHeartbeatFromJSON(message.Payload)
 		if err != nil {
 			listener.logger.Error("Could not unmarshal heartbeat", err,
 				map[string]string{
-					"MessageBody": message.Payload,
+					"MessageBody": string(message.Payload),
 				})
 			return
 		}

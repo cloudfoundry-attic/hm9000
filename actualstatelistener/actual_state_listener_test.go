@@ -114,7 +114,7 @@ var _ = Describe("Actual state listener", func() {
 		Context("and no heartbeat has been received recently", func() {
 			BeforeEach(func() {
 				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: string(app.Heartbeat(1).ToJSON()),
+					Payload: app.Heartbeat(1).ToJSON(),
 				})
 
 				store.RevokeActualFreshness()
@@ -122,7 +122,7 @@ var _ = Describe("Actual state listener", func() {
 				timeProvider.IncrementBySeconds(conf.ActualFreshnessTTL())
 
 				messageBus.Subscriptions["dea.advertise"][0].Callback(&yagnats.Message{
-					Payload: "doesn't matter",
+					Payload: []byte("doesn't matter"),
 				})
 			})
 
@@ -136,7 +136,7 @@ var _ = Describe("Actual state listener", func() {
 		Context("and a heartbeat was received recently", func() {
 			BeforeEach(func() {
 				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: string(app.Heartbeat(1).ToJSON()),
+					Payload: app.Heartbeat(1).ToJSON(),
 				})
 
 				store.RevokeActualFreshness()
@@ -144,7 +144,7 @@ var _ = Describe("Actual state listener", func() {
 				timeProvider.IncrementBySeconds(conf.ActualFreshnessTTL() - 1)
 
 				messageBus.Subscriptions["dea.advertise"][0].Callback(&yagnats.Message{
-					Payload: "doesn't matter",
+					Payload: []byte("doesn't matter"),
 				})
 			})
 
@@ -159,7 +159,7 @@ var _ = Describe("Actual state listener", func() {
 	Context("When it receives a simple heartbeat over the message bus", func() {
 		BeforeEach(func() {
 			messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-				Payload: string(app.Heartbeat(1).ToJSON()),
+				Payload: app.Heartbeat(1).ToJSON(),
 			})
 
 			forceHeartbeatSync()
@@ -194,7 +194,7 @@ var _ = Describe("Actual state listener", func() {
 		Context("when the save succeeds", func() {
 			BeforeEach(func() {
 				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: string(heartbeat.ToJSON()),
+					Payload: heartbeat.ToJSON(),
 				})
 
 				forceHeartbeatSync()
@@ -231,7 +231,7 @@ var _ = Describe("Actual state listener", func() {
 		Context("when the save succeeds, but takes too long", func() {
 			BeforeEach(func() {
 				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: string(heartbeat.ToJSON()),
+					Payload: heartbeat.ToJSON(),
 				})
 
 				conf.ListenerHeartbeatSyncIntervalInMilliseconds = 0
@@ -251,7 +251,7 @@ var _ = Describe("Actual state listener", func() {
 				storeAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector(app.InstanceAtIndex(0).InstanceGuid, errors.New("oops"))
 
 				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: string(heartbeat.ToJSON()),
+					Payload: heartbeat.ToJSON(),
 				})
 
 				forceHeartbeatSync()
@@ -279,7 +279,7 @@ var _ = Describe("Actual state listener", func() {
 	Context("When it fails to parse the heartbeat message", func() {
 		BeforeEach(func() {
 			messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-				Payload: "ß",
+				Payload: []byte("ß"),
 			})
 
 			forceHeartbeatSync()
