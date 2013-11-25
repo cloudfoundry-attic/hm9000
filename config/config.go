@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
-	"tux21b.org/v1/gocql"
 )
 
 type Config struct {
@@ -41,7 +40,6 @@ type Config struct {
 	StoreType                  string   `json:"store_type"`
 	StoreURLs                  []string `json:"store_urls"`
 	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`
-	CassandraConsistencyString string   `json:"cassandra_consistency"`
 
 	SenderNatsStartSubject string `json:"sender_nats_start_subject"`
 	SenderNatsStopSubject  string `json:"sender_nats_stop_subject"`
@@ -131,17 +129,6 @@ func (conf *Config) ListenerHeartbeatSyncInterval() time.Duration {
 
 func (conf *Config) StoreHeartbeatCacheRefreshInterval() time.Duration {
 	return time.Millisecond * time.Duration(conf.StoreHeartbeatCacheRefreshIntervalInMilliseconds)
-}
-
-func (conf *Config) CassandraConsistency() gocql.Consistency {
-	switch conf.CassandraConsistencyString {
-	case "ONE":
-		return gocql.One
-	case "ALL":
-		return gocql.All
-	default:
-		return gocql.Quorum
-	}
 }
 
 func (conf *Config) LogLevel() gosteno.LogLevel {

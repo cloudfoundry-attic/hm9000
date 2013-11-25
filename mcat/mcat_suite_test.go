@@ -35,20 +35,15 @@ func TestMCAT(t *testing.T) {
 	coordinator.StartDesiredStateServer()
 	coordinator.StartStartStopListener()
 
-	//run the suite for Cassandra...
-	// coordinator.StartCassandra()
-	// RunSpecs(t, "MCAT Cassandra MD Suite")
-	// coordinator.StopStore()
-
 	//run the suite for ETCD...
 	coordinator.StartETCD()
 	RunSpecs(t, "MCAT ETCD MD Suite")
 	coordinator.StopStore()
 
 	//...and then for zookeeper
-	// coordinator.StartZooKeeper()
-	// RunSpecs(t, "MCAT ZooKeeper MD Suite")
-	// coordinator.StopStore()
+	coordinator.StartZooKeeper()
+	RunSpecs(t, "MCAT ZooKeeper MD Suite")
+	coordinator.StopStore()
 
 	coordinator.StopAllExternalProcesses()
 }

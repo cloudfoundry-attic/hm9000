@@ -10,7 +10,6 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/storecassandra"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"github.com/cloudfoundry/yagnats"
 	"strconv"
@@ -105,15 +104,8 @@ func connectToStore(l logger.Logger, conf *config.Config) (store.Store, metricsa
 	if conf.StoreType == "etcd" || conf.StoreType == "ZooKeeper" {
 		adapter, workerPool := connectToStoreAdapter(l, conf)
 		return store.NewStore(conf, adapter, l), workerPool
-	} else if conf.StoreType == "Cassandra" {
-		store, err := storecassandra.New(conf.StoreURLs, conf.CassandraConsistency(), conf, buildTimeProvider(l))
-		if err != nil {
-			l.Error("Failed to connect to the store", err)
-			os.Exit(1)
-		}
-		return store, nil
 	} else {
-		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd', 'ZooKeeper' or 'Cassandra'", conf.StoreType), fmt.Errorf("Unkown store type"))
+		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd' or 'ZooKeeper'", conf.StoreType), fmt.Errorf("Unkown store type"))
 		os.Exit(1)
 	}
 

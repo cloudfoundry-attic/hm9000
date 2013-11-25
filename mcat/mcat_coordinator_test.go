@@ -6,7 +6,6 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
-	"github.com/cloudfoundry/hm9000/storecassandra"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/natsrunner"
@@ -74,12 +73,7 @@ func (coordinator *MCATCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *
 		coordinator.currentCLIRunner.Cleanup()
 	}
 	coordinator.currentCLIRunner = NewCLIRunner(coordinator.CurrentStoreType, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.MetricsServerPort, coordinator.Verbose)
-	var store storepackage.Store
-	if coordinator.CurrentStoreType == "Cassandra" {
-		store, _ = storecassandra.New(coordinator.StoreRunner.NodeURLS(), coordinator.Conf.CassandraConsistency(), coordinator.Conf, timeprovider.NewTimeProvider())
-	} else {
-		store = storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
-	}
+	store := storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
 	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus)
 
 	return coordinator.currentCLIRunner, simulator, coordinator.startStopListener
@@ -109,15 +103,6 @@ func (coordinator *MCATCoordinator) StartETCD() {
 	coordinator.StoreAdapter = storeadapter.NewETCDStoreAdapter(coordinator.StoreRunner.NodeURLS(), workerpool.NewWorkerPool(coordinator.Conf.StoreMaxConcurrentRequests))
 	err := coordinator.StoreAdapter.Connect()
 	Ω(err).ShouldNot(HaveOccured())
-}
-
-func (coordinator *MCATCoordinator) StartCassandra() {
-	coordinator.CurrentStoreType = "Cassandra"
-	cassandraPort := 9042
-	coordinator.StoreRunner = storerunner.NewCassandraClusterRunner(cassandraPort)
-	coordinator.StoreRunner.Start()
-
-	coordinator.StoreAdapter = nil
 }
 
 func (coordinator *MCATCoordinator) StartZooKeeper() {
