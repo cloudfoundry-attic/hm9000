@@ -1,4 +1,4 @@
-package md_test
+package mcat_test
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/storecassandra"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/natsrunner"
@@ -17,7 +18,7 @@ import (
 	"time"
 )
 
-type MDCoordinator struct {
+type MCATCoordinator struct {
 	MessageBus   yagnats.NATSClient
 	StateServer  *desiredstateserver.DesiredStateServer
 	StoreRunner  storerunner.StoreRunner
@@ -40,8 +41,8 @@ type MDCoordinator struct {
 	currentCLIRunner *CLIRunner
 }
 
-func NewMDCoordinator(parallelNode int, verbose bool) *MDCoordinator {
-	coordinator := &MDCoordinator{
+func NewMCATCoordinator(parallelNode int, verbose bool) *MCATCoordinator {
+	coordinator := &MCATCoordinator{
 		ParallelNode: parallelNode,
 		Verbose:      verbose,
 	}
@@ -51,20 +52,20 @@ func NewMDCoordinator(parallelNode int, verbose bool) *MDCoordinator {
 	return coordinator
 }
 
-func (coordinator *MDCoordinator) loadConfig() {
+func (coordinator *MCATCoordinator) loadConfig() {
 	conf, err := config.DefaultConfig()
 	Ω(err).ShouldNot(HaveOccured())
 	coordinator.Conf = conf
 }
 
-func (coordinator *MDCoordinator) computePorts() {
+func (coordinator *MCATCoordinator) computePorts() {
 	coordinator.DesiredStateServerPort = 6001 + coordinator.ParallelNode
 	coordinator.DesiredStateServerBaseUrl = "http://127.0.0.1:" + strconv.Itoa(coordinator.DesiredStateServerPort)
 	coordinator.NatsPort = 4223 + coordinator.ParallelNode
 	coordinator.MetricsServerPort = 7879 + coordinator.ParallelNode
 }
 
-func (coordinator *MDCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *startstoplistener.StartStopListener) {
+func (coordinator *MCATCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *startstoplistener.StartStopListener) {
 	coordinator.StoreRunner.Reset()
 	coordinator.startStopListener.Reset()
 	coordinator.StateServer.Reset()
@@ -73,28 +74,33 @@ func (coordinator *MDCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *st
 		coordinator.currentCLIRunner.Cleanup()
 	}
 	coordinator.currentCLIRunner = NewCLIRunner(coordinator.CurrentStoreType, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.MetricsServerPort, coordinator.Verbose)
-	store := storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
+	var store storepackage.Store
+	if coordinator.CurrentStoreType == "Cassandra" {
+		store, _ = storecassandra.New(coordinator.StoreRunner.NodeURLS(), coordinator.Conf.CassandraConsistency(), coordinator.Conf, timeprovider.NewTimeProvider())
+	} else {
+		store = storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
+	}
 	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus)
 
 	return coordinator.currentCLIRunner, simulator, coordinator.startStopListener
 }
 
-func (coordinator *MDCoordinator) StartNats() {
+func (coordinator *MCATCoordinator) StartNats() {
 	coordinator.natsRunner = natsrunner.NewNATSRunner(coordinator.NatsPort)
 	coordinator.natsRunner.Start()
 	coordinator.MessageBus = coordinator.natsRunner.MessageBus
 }
 
-func (coordinator *MDCoordinator) StartDesiredStateServer() {
+func (coordinator *MCATCoordinator) StartDesiredStateServer() {
 	coordinator.StateServer = desiredstateserver.NewDesiredStateServer()
 	go coordinator.StateServer.SpinUp(coordinator.DesiredStateServerPort)
 }
 
-func (coordinator *MDCoordinator) StartStartStopListener() {
+func (coordinator *MCATCoordinator) StartStartStopListener() {
 	coordinator.startStopListener = startstoplistener.NewStartStopListener(coordinator.MessageBus, coordinator.Conf)
 }
 
-func (coordinator *MDCoordinator) StartETCD() {
+func (coordinator *MCATCoordinator) StartETCD() {
 	coordinator.CurrentStoreType = "etcd"
 	etcdPort := 5000 + (coordinator.ParallelNode-1)*10
 	coordinator.StoreRunner = storerunner.NewETCDClusterRunner(etcdPort, 1)
@@ -105,7 +111,7 @@ func (coordinator *MDCoordinator) StartETCD() {
 	Ω(err).ShouldNot(HaveOccured())
 }
 
-func (coordinator *MDCoordinator) StartCassandra() {
+func (coordinator *MCATCoordinator) StartCassandra() {
 	coordinator.CurrentStoreType = "Cassandra"
 	cassandraPort := 9042
 	coordinator.StoreRunner = storerunner.NewCassandraClusterRunner(cassandraPort)
@@ -114,7 +120,7 @@ func (coordinator *MDCoordinator) StartCassandra() {
 	coordinator.StoreAdapter = nil
 }
 
-func (coordinator *MDCoordinator) StartZooKeeper() {
+func (coordinator *MCATCoordinator) StartZooKeeper() {
 	coordinator.CurrentStoreType = "ZooKeeper"
 	zookeeperPort := 2181 + (coordinator.ParallelNode-1)*10
 	coordinator.StoreRunner = storerunner.NewZookeeperClusterRunner(zookeeperPort, 1)
@@ -125,14 +131,14 @@ func (coordinator *MDCoordinator) StartZooKeeper() {
 	Ω(err).ShouldNot(HaveOccured())
 }
 
-func (coordinator *MDCoordinator) StopStore() {
+func (coordinator *MCATCoordinator) StopStore() {
 	coordinator.StoreRunner.Stop()
 	if coordinator.StoreAdapter != nil {
 		coordinator.StoreAdapter.Disconnect()
 	}
 }
 
-func (coordinator *MDCoordinator) StopAllExternalProcesses() {
+func (coordinator *MCATCoordinator) StopAllExternalProcesses() {
 	coordinator.StoreRunner.Stop()
 	coordinator.natsRunner.Stop()
 
