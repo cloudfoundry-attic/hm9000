@@ -29,7 +29,7 @@ var _ = Describe("Actual State", func() {
 		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccured())
-		conf.StoreHeartbeatCacheRefreshIntervalInMilliseconds = 50
+		conf.StoreHeartbeatCacheRefreshIntervalInMilliseconds = 100
 		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
 		dea = appfixture.NewDeaFixture()
@@ -176,7 +176,7 @@ var _ = Describe("Actual State", func() {
 					results, err = store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
 					return results
-				}, 0.2, 0.05).Should(HaveLen(2)) //...and the heartbeat should return
+				}, 1.0, 0.05).Should(HaveLen(2)) //...and the heartbeat should return
 			})
 		})
 	})

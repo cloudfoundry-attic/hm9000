@@ -32,9 +32,9 @@ func (etcd *ETCDClusterRunner) Start() {
 	for i := 0; i < etcd.numNodes; i++ {
 		etcd.nukeArtifacts(i)
 		os.MkdirAll(etcd.tmpPath(i), 0700)
-		args := []string{"-d", etcd.tmpPath(i), "-c", etcd.clientUrl(i), "-s", etcd.serverUrl(i), "-n", etcd.nodeName(i)}
+		args := []string{"-data-dir", etcd.tmpPath(i), "-addr", etcd.clientUrl(i), "-peer-addr", etcd.serverUrl(i), "-name", etcd.nodeName(i)}
 		if i != 0 {
-			args = append(args, "-C", etcd.serverUrl(0))
+			args = append(args, "-peers", etcd.serverUrl(0))
 		}
 
 		etcd.etcdCommands[i] = exec.Command("etcd", args...)
@@ -83,38 +83,36 @@ func (etcd *ETCDClusterRunner) DiskUsage() (bytes int64, err error) {
 
 func (etcd *ETCDClusterRunner) Reset() {
 	if etcd.running {
-		response, err := etcd.client.Get("/?garbage=foo", false) //TODO: remove this terribleness when we upgrade go-etcd
+		response, err := etcd.client.Get("/", false, false)
 		Ω(err).ShouldNot(HaveOccured())
-		for _, doomed := range response.Kvs {
-			etcd.client.DeleteAll(doomed.Key)
+		for _, doomed := range response.Node.Nodes {
+			etcd.client.Delete(doomed.Key, true)
 		}
 	}
 }
 
 func (etcd *ETCDClusterRunner) FastForwardTime(seconds int) {
 	if etcd.running {
-		//TODO: can't do a recursive get (YET!) because etcd does not return TTLs when getting recursively.  This should be fixed in 0.2 soon.  For now we do a (slower) manual fetch.
-
-		etcd.fastForwardTime("/?recursive=true&", seconds)
+		response, err := etcd.client.Get("/", false, true)
+		Ω(err).ShouldNot(HaveOccured())
+		etcd.fastForwardTime(*response.Node, seconds)
 	}
 }
 
-func (etcd *ETCDClusterRunner) fastForwardTime(key string, seconds int) {
-	response, err := etcd.client.Get(key, false)
-	Ω(err).ShouldNot(HaveOccured())
-	if response.Dir == true {
-		for _, child := range response.Kvs {
-			etcd.fastForwardTime(child.Key, seconds)
+func (etcd *ETCDClusterRunner) fastForwardTime(etcdNode etcdclient.Node, seconds int) {
+	if etcdNode.Dir == true {
+		for _, child := range etcdNode.Nodes {
+			etcd.fastForwardTime(child, seconds)
 		}
 	} else {
-		if response.TTL == 0 {
+		if etcdNode.TTL == 0 {
 			return
 		}
-		if response.TTL <= int64(seconds) {
-			_, err := etcd.client.Delete(response.Key)
+		if etcdNode.TTL <= int64(seconds) {
+			_, err := etcd.client.Delete(etcdNode.Key, true)
 			Ω(err).ShouldNot(HaveOccured())
 		} else {
-			_, err := etcd.client.Set(response.Key, response.Value, uint64(response.TTL-int64(seconds)))
+			_, err := etcd.client.Set(etcdNode.Key, etcdNode.Value, uint64(etcdNode.TTL-int64(seconds)))
 			Ω(err).ShouldNot(HaveOccured())
 		}
 	}
