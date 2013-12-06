@@ -77,7 +77,7 @@ func dumpApp(app *models.App, starts map[string]models.PendingStartMessage, stop
 	} else {
 		fmt.Printf("  Heartbeats:\n")
 		for _, heartbeat := range app.InstanceHeartbeats {
-			fmt.Printf("    [%d %s] %s\n", heartbeat.InstanceIndex, heartbeat.State, heartbeat.InstanceGuid)
+			fmt.Printf("    [%d %s] %s on %s\n", heartbeat.InstanceIndex, heartbeat.State, heartbeat.InstanceGuid, heartbeat.DeaGuid[0:5])
 		}
 	}
 
