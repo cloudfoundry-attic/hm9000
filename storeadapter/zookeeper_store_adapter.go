@@ -166,7 +166,7 @@ func (adapter *ZookeeperStoreAdapter) ListRecursively(key string) (StoreNode, er
 }
 
 func (adapter *ZookeeperStoreAdapter) Delete(keys ...string) error {
-	//TODO: this can be optimized if we choose to go with zookeeper (can use the worker pool)
+	//NOTE: this can be optimized if we choose to go with zookeeper (can use the worker pool)
 	var finalErr error
 	for _, key := range keys {
 		exists, stat, err := adapter.client.Exists(key)

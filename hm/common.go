@@ -2,7 +2,6 @@ package hm
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
@@ -59,25 +58,6 @@ func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSClien
 	}
 
 	return natsClient
-}
-
-func connectToCFMessageBus(l logger.Logger, conf *config.Config) cfmessagebus.MessageBus {
-	messageBus, err := cfmessagebus.NewMessageBus("NATS")
-	if err != nil {
-		l.Error("Failed to initialize the CF message bus", err)
-		os.Exit(1)
-	}
-
-	//TODO: No more gocfmessagebus please!  This is a terrible way to "use" clustered nats.
-	messageBus.Configure(conf.NATS[0].Host, conf.NATS[0].Port, conf.NATS[0].User, conf.NATS[0].Password)
-	err = messageBus.Connect()
-
-	if err != nil {
-		l.Error("Failed to connect to the CF message bus", err)
-		os.Exit(1)
-	}
-
-	return messageBus
 }
 
 func connectToStoreAdapter(l logger.Logger, conf *config.Config) (storeadapter.StoreAdapter, metricsaccountant.UsageTracker) {

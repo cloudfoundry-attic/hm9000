@@ -11,9 +11,9 @@ import (
 
 func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf *config.Config) {
 	store, _ := connectToStore(l, conf)
-	cfMessageBus := connectToCFMessageBus(l, conf)
+	messageBus := connectToMessageBus(l, conf)
 
-	collectorRegistrar := collectorregistrar.NewCollectorRegistrar(cfMessageBus, steno)
+	collectorRegistrar := collectorregistrar.NewCollectorRegistrar(messageBus, steno)
 
 	metricsServer := metricsserver.New(
 		collectorRegistrar,
