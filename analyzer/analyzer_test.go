@@ -557,13 +557,13 @@ var _ = Describe("Analyzer", func() {
 				})
 			})
 
-			Context("and the evacuating index's crash count exceeds NumberOfCrashesBeforeBackoffBegins", func() {
+			Context("and the evacuating index's crash count is greater than 0", func() {
 				BeforeEach(func() {
 					store.SaveCrashCounts(models.CrashCount{
 						AppGuid:       app.AppGuid,
 						AppVersion:    app.AppVersion,
 						InstanceIndex: 1,
-						CrashCount:    conf.NumberOfCrashesBeforeBackoffBegins + 1,
+						CrashCount:    1,
 					})
 				})
 
