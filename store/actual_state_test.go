@@ -191,15 +191,27 @@ var _ = Describe("Actual State", func() {
 		})
 
 		Context("when there is actual state saved", func() {
+			var heartbeatOnDea, heartbeatOnOtherDea models.InstanceHeartbeat
+
 			BeforeEach(func() {
+				appOnBothDeas := appfixture.NewAppFixture()
+
+				heartbeatOnDea = appOnBothDeas.InstanceAtIndex(0).Heartbeat()
+				heartbeatOnDea.DeaGuid = dea.DeaGuid
+
+				heartbeatOnOtherDea = appOnBothDeas.InstanceAtIndex(1).Heartbeat()
+				heartbeatOnOtherDea.DeaGuid = otherDea.DeaGuid
+
 				store.SyncHeartbeats(dea.HeartbeatWith(
 					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+					heartbeatOnDea,
 				))
 
 				store.SyncHeartbeats(otherDea.HeartbeatWith(
 					otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat(),
+					heartbeatOnOtherDea,
 				))
 			})
 
@@ -207,11 +219,13 @@ var _ = Describe("Actual State", func() {
 				It("should return the instance heartbeats", func() {
 					results, err := store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
-					Ω(results).Should(HaveLen(4))
+					Ω(results).Should(HaveLen(6))
 					Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
 					Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+					Ω(results).Should(ContainElement(heartbeatOnDea))
 					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
 					Ω(results).Should(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
+					Ω(results).Should(ContainElement(heartbeatOnOtherDea))
 				})
 			})
 
@@ -223,9 +237,18 @@ var _ = Describe("Actual State", func() {
 				It("should not return any expired instance heartbeats", func() {
 					results, err := store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccured())
-					Ω(results).Should(HaveLen(2))
+					Ω(results).Should(HaveLen(3))
 					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
 					Ω(results).Should(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
+					Ω(results).Should(ContainElement(heartbeatOnOtherDea))
+
+					//we fetch twice to ensure that nothing is incorrectly deleted
+					results, err = store.GetInstanceHeartbeats()
+					Ω(err).ShouldNot(HaveOccured())
+					Ω(results).Should(HaveLen(3))
+					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Ω(results).Should(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
+					Ω(results).Should(ContainElement(heartbeatOnOtherDea))
 				})
 
 				It("should remove expired instance heartbeats from the store", func() {
@@ -259,8 +282,8 @@ var _ = Describe("Actual State", func() {
 							errChan <- err
 						}()
 
-						Ω(<-resultChan).Should(HaveLen(2))
-						Ω(<-resultChan).Should(HaveLen(2))
+						Ω(<-resultChan).Should(HaveLen(3))
+						Ω(<-resultChan).Should(HaveLen(3))
 						Ω(<-errChan).ShouldNot(HaveOccured())
 						Ω(<-errChan).ShouldNot(HaveOccured())
 					})

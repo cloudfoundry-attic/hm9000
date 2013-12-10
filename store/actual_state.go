@@ -188,7 +188,7 @@ func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode, unexpired
 		if deaIsPresent {
 			results = append(results, heartbeat)
 		} else {
-			toDelete = append(toDelete, node.Key)
+			toDelete = append(toDelete, heartbeatNode.Key)
 		}
 	}
 	return results, toDelete, nil
