@@ -25,10 +25,10 @@ var _ = Describe("Crash Count", func() {
 	BeforeEach(func() {
 		var err error
 		conf, err = config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 
 		crashCount1 = models.CrashCount{AppGuid: models.Guid(), AppVersion: models.Guid(), InstanceIndex: 1, CrashCount: 17}
 		crashCount2 = models.CrashCount{AppGuid: models.Guid(), AppVersion: models.Guid(), InstanceIndex: 4, CrashCount: 17}
@@ -44,14 +44,14 @@ var _ = Describe("Crash Count", func() {
 	Describe("Saving crash state", func() {
 		BeforeEach(func() {
 			err := store.SaveCrashCounts(crashCount1, crashCount2)
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 		})
 
 		It("stores the passed in crash state", func() {
 			expectedTTL := uint64(conf.MaximumBackoffDelay().Seconds()) * 2
 
 			node, err := storeAdapter.Get("/v1/apps/crashes/" + crashCount1.AppGuid + "," + crashCount1.AppVersion + "/1")
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 			Ω(node).Should(Equal(storeadapter.StoreNode{
 				Key:   "/v1/apps/crashes/" + crashCount1.AppGuid + "," + crashCount1.AppVersion + "/1",
 				Value: crashCount1.ToJSON(),
@@ -59,7 +59,7 @@ var _ = Describe("Crash Count", func() {
 			}))
 
 			node, err = storeAdapter.Get("/v1/apps/crashes/" + crashCount2.AppGuid + "," + crashCount2.AppVersion + "/4")
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 			Ω(node).Should(Equal(storeadapter.StoreNode{
 				Key:   "/v1/apps/crashes/" + crashCount2.AppGuid + "," + crashCount2.AppVersion + "/4",
 				Value: crashCount2.ToJSON(),

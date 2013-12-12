@@ -35,7 +35,7 @@ var _ = Describe("Shredder", func() {
 
 		storeAdapter.Delete("/v2/pokemon/geodude", "/v2/deep-pokemon/abra/kadabra/alakazam")
 		err := shredder.Shred()
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 	})
 
 	It("should delete empty directories", func() {
@@ -46,7 +46,7 @@ var _ = Describe("Shredder", func() {
 		Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
 		_, err = storeAdapter.Get("/v2/pokemonCount")
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 	})
 
 	It("should delete everything underneath older versions", func() {
@@ -61,6 +61,6 @@ var _ = Describe("Shredder", func() {
 
 	It("should not delete newer versions", func() {
 		_, err := storeAdapter.Get("/v3/leave/me/alone/since/im/a/new/version")
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 	})
 })

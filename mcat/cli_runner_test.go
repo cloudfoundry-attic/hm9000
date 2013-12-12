@@ -37,12 +37,12 @@ func NewCLIRunner(storeType string, storeURLs []string, ccBaseURL string, natsPo
 func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int) {
 	tmpFile, err := ioutil.TempFile("/tmp", "hm9000_clirunner")
 	defer tmpFile.Close()
-	Ω(err).ShouldNot(HaveOccured())
+	Ω(err).ShouldNot(HaveOccurred())
 
 	runner.configPath = tmpFile.Name()
 
 	conf, err := config.DefaultConfig()
-	Ω(err).ShouldNot(HaveOccured())
+	Ω(err).ShouldNot(HaveOccurred())
 	conf.StoreType = storeType
 	conf.StoreURLs = storeURLs
 	conf.CCBaseURL = ccBaseURL
@@ -56,7 +56,7 @@ func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, cc
 	conf.ListenerHeartbeatSyncIntervalInMilliseconds = 100
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
-	Ω(err).ShouldNot(HaveOccured())
+	Ω(err).ShouldNot(HaveOccurred())
 }
 
 func (runner *CLIRunner) StartListener(timestamp int) {
@@ -111,7 +111,7 @@ func (runner *CLIRunner) start(command string, timestamp int) (*exec.Cmd, *cmdte
 		session, err = cmdtest.Start(cmd)
 	}
 
-	Ω(err).ShouldNot(HaveOccured())
+	Ω(err).ShouldNot(HaveOccurred())
 
 	Ω(session).Should(SayWithTimeout(".", 5*time.Second))
 

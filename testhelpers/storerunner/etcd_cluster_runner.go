@@ -40,7 +40,7 @@ func (etcd *ETCDClusterRunner) Start() {
 		etcd.etcdCommands[i] = exec.Command("etcd", args...)
 
 		err := etcd.etcdCommands[i].Start()
-		Ω(err).ShouldNot(HaveOccured(), "Make sure etcd is compiled and on your $PATH.")
+		Ω(err).ShouldNot(HaveOccurred(), "Make sure etcd is compiled and on your $PATH.")
 
 		Eventually(func() bool {
 			client := etcdclient.NewClient([]string{})
@@ -84,7 +84,7 @@ func (etcd *ETCDClusterRunner) DiskUsage() (bytes int64, err error) {
 func (etcd *ETCDClusterRunner) Reset() {
 	if etcd.running {
 		response, err := etcd.client.Get("/", false, false)
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 		for _, doomed := range response.Node.Nodes {
 			etcd.client.Delete(doomed.Key, true)
 		}
@@ -94,7 +94,7 @@ func (etcd *ETCDClusterRunner) Reset() {
 func (etcd *ETCDClusterRunner) FastForwardTime(seconds int) {
 	if etcd.running {
 		response, err := etcd.client.Get("/", false, true)
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 		etcd.fastForwardTime(*response.Node, seconds)
 	}
 }
@@ -110,10 +110,10 @@ func (etcd *ETCDClusterRunner) fastForwardTime(etcdNode etcdclient.Node, seconds
 		}
 		if etcdNode.TTL <= int64(seconds) {
 			_, err := etcd.client.Delete(etcdNode.Key, true)
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 		} else {
 			_, err := etcd.client.Set(etcdNode.Key, etcdNode.Value, uint64(etcdNode.TTL-int64(seconds)))
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 		}
 	}
 }

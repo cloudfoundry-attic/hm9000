@@ -57,7 +57,7 @@ var _ = Describe("Evacuator", func() {
 				})
 
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccured())
+				Ω(err).ShouldNot(HaveOccurred())
 				Ω(pendingStarts).Should(BeEmpty())
 			})
 		})
@@ -71,7 +71,7 @@ var _ = Describe("Evacuator", func() {
 
 			It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccured())
+				Ω(err).ShouldNot(HaveOccurred())
 
 				expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 				expectedStartMessage.SkipVerification = true
@@ -89,7 +89,7 @@ var _ = Describe("Evacuator", func() {
 
 			It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccured())
+				Ω(err).ShouldNot(HaveOccurred())
 
 				expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 				expectedStartMessage.SkipVerification = true
@@ -107,7 +107,7 @@ var _ = Describe("Evacuator", func() {
 
 			It("should do nothing", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccured())
+				Ω(err).ShouldNot(HaveOccurred())
 				Ω(pendingStarts).Should(BeEmpty())
 			})
 		})
@@ -121,7 +121,7 @@ var _ = Describe("Evacuator", func() {
 
 			It("should do nothing", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccured())
+				Ω(err).ShouldNot(HaveOccurred())
 				Ω(pendingStarts).Should(BeEmpty())
 			})
 		})

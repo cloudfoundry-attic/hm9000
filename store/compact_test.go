@@ -22,10 +22,10 @@ var _ = Describe("Compact", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		conf.StoreSchemaVersion = 17
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 	})
 
@@ -43,7 +43,7 @@ var _ = Describe("Compact", func() {
 			})
 
 			err := store.Compact()
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 		})
 
 		It("should delete everything under older versions", func() {
@@ -56,15 +56,15 @@ var _ = Describe("Compact", func() {
 
 		It("should leave the current version alone", func() {
 			_, err := storeAdapter.Get("/v17/leave/me/alone")
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 
 			_, err = storeAdapter.Get("/v17/leave/me/v1/alone")
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 		})
 
 		It("should leave newer versions alone", func() {
 			_, err := storeAdapter.Get("/v18/leave/me/alone")
-			Ω(err).ShouldNot(HaveOccured())
+			Ω(err).ShouldNot(HaveOccurred())
 		})
 
 		It("should delete anything that's unversioned", func() {
@@ -96,7 +96,7 @@ var _ = Describe("Compact", func() {
 
 				It("shreds it mercilessly", func() {
 					err := store.Compact()
-					Ω(err).ShouldNot(HaveOccured())
+					Ω(err).ShouldNot(HaveOccurred())
 
 					_, err = storeAdapter.Get("/v17/pokemon")
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
@@ -106,10 +106,10 @@ var _ = Describe("Compact", func() {
 			Context("and it is non-empty", func() {
 				It("spares it", func() {
 					err := store.Compact()
-					Ω(err).ShouldNot(HaveOccured())
+					Ω(err).ShouldNot(HaveOccurred())
 
 					_, err = storeAdapter.Get("/v17/pokemon/geodude")
-					Ω(err).ShouldNot(HaveOccured())
+					Ω(err).ShouldNot(HaveOccurred())
 				})
 
 				Context("but all of its children are empty", func() {
@@ -119,7 +119,7 @@ var _ = Describe("Compact", func() {
 
 					It("shreds it mercilessly", func() {
 						err := store.Compact()
-						Ω(err).ShouldNot(HaveOccured())
+						Ω(err).ShouldNot(HaveOccurred())
 
 						_, err = storeAdapter.Get("/v17/deep-pokemon/abra/kadabra")
 						Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
@@ -134,10 +134,10 @@ var _ = Describe("Compact", func() {
 		Context("when the node is NOT a directory", func() {
 			It("spares it", func() {
 				err := store.Compact()
-				Ω(err).ShouldNot(HaveOccured())
+				Ω(err).ShouldNot(HaveOccurred())
 
 				_, err = storeAdapter.Get("/v17/pokemonCount")
-				Ω(err).ShouldNot(HaveOccured())
+				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
 

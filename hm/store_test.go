@@ -21,7 +21,7 @@ var _ = Describe("Store", func() {
 		conf, _ = config.DefaultConfig()
 		etcdStoreAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err := etcdStoreAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccured())
+		Ω(err).ShouldNot(HaveOccurred())
 
 		nodes = []storeadapter.StoreNode{
 			{Key: "/desired-fresh", Value: []byte("123"), TTL: 0},
