@@ -41,7 +41,7 @@ var _ = Describe("Evacuator", func() {
 
 		app = appfixture.NewAppFixture()
 
-		evacuator = New(messageBus, store, timeProvider, fakelogger.NewFakeLogger())
+		evacuator = New(messageBus, store, timeProvider, conf, fakelogger.NewFakeLogger())
 		evacuator.Listen()
 	})
 
@@ -73,7 +73,7 @@ var _ = Describe("Evacuator", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
 				Ω(err).ShouldNot(HaveOccured())
 
-				expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, 0, app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+				expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 				expectedStartMessage.SkipVerification = true
 
 				Ω(pendingStarts).Should(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
@@ -91,7 +91,7 @@ var _ = Describe("Evacuator", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
 				Ω(err).ShouldNot(HaveOccured())
 
-				expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, 0, app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+				expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 				expectedStartMessage.SkipVerification = true
 
 				Ω(pendingStarts).Should(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
