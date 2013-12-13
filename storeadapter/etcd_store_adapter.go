@@ -153,7 +153,7 @@ func (adapter *ETCDStoreAdapter) ListRecursively(key string) (StoreNode, error) 
 	}
 
 	if len(response.Node.Nodes) == 0 {
-		return StoreNode{Key: key, Dir: true}, nil
+		return StoreNode{Key: key, Dir: true, Value: []byte{}, ChildNodes: []StoreNode{}}, nil
 	}
 
 	return adapter.makeStoreNode(*response.Node), nil
@@ -164,6 +164,7 @@ func (adapter *ETCDStoreAdapter) makeStoreNode(etcdNode etcd.Node) StoreNode {
 		node := StoreNode{
 			Key:        etcdNode.Key,
 			Dir:        true,
+			Value:      []byte{},
 			ChildNodes: []StoreNode{},
 		}
 

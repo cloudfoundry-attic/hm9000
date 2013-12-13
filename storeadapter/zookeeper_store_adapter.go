@@ -132,7 +132,7 @@ func (adapter *ZookeeperStoreAdapter) ListRecursively(key string) (StoreNode, er
 
 	if len(nodeKeys) == 0 {
 		if adapter.isNodeDirectory(key) {
-			return StoreNode{Key: key, Dir: true}, nil
+			return StoreNode{Key: key, Dir: true, ChildNodes: []StoreNode{}}, nil
 		} else {
 			return StoreNode{}, ErrorNodeIsNotDirectory
 		}

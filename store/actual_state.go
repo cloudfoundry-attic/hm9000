@@ -113,6 +113,7 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...models.Heartbeat) e
 }
 
 func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
+	results = []models.InstanceHeartbeat{}
 	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/actual")
 	if err == storeadapter.ErrorKeyNotFound {
 		return results, nil
@@ -174,6 +175,7 @@ func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion s
 }
 
 func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode, unexpiredDeas map[string]bool) (results []models.InstanceHeartbeat, toDelete []string, err error) {
+	results = []models.InstanceHeartbeat{}
 	for _, heartbeatNode := range node.ChildNodes {
 		components := strings.Split(heartbeatNode.Key, "/")
 		instanceGuid := components[len(components)-1]
@@ -191,6 +193,7 @@ func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode, unexpired
 			toDelete = append(toDelete, heartbeatNode.Key)
 		}
 	}
+
 	return results, toDelete, nil
 }
 

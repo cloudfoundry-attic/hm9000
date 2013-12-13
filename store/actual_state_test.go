@@ -341,7 +341,7 @@ var _ = Describe("Actual State", func() {
 				})
 			})
 
-			Context("when the corresponding DEA heartbeat has expired", func() {
+			Context("when an associated DEA heartbeat has expired", func() {
 				BeforeEach(func() {
 					storeAdapter.Delete("/v1/dea-presence/A")
 				})
@@ -385,6 +385,19 @@ var _ = Describe("Actual State", func() {
 						Ω(<-errChan).ShouldNot(HaveOccurred())
 						Ω(<-errChan).ShouldNot(HaveOccurred())
 					})
+				})
+			})
+
+			Context("when all the DEA heartbeats have expired", func() {
+				BeforeEach(func() {
+					storeAdapter.Delete("/v1/dea-presence/A", "/v1/dea-presence/B")
+				})
+
+				It("should not return any instance heartbeats", func() {
+					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(results).ShouldNot(BeNil())
+					Ω(results).Should(HaveLen(0))
 				})
 			})
 		})
