@@ -129,6 +129,8 @@ func (runner *CLIRunner) Run(command string, timestamp int) {
 
 		fmt.Printf("\n")
 	}
+
+	time.Sleep(50 * time.Millisecond)
 }
 
 func (runner *CLIRunner) StartSession(command string, timestamp int, extraArgs ...string) *cmdtest.Session {
