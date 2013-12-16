@@ -64,7 +64,7 @@ func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, cc
 }
 
 func (runner *CLIRunner) StartListener(timestamp int) {
-	runner.listenerSession = runner.start("listen", timestamp)
+	runner.listenerSession = runner.start("listen", timestamp, "Listening for Actual State")
 }
 
 func (runner *CLIRunner) StopListener() {
@@ -72,7 +72,7 @@ func (runner *CLIRunner) StopListener() {
 }
 
 func (runner *CLIRunner) StartMetricsServer(timestamp int) {
-	runner.metricsSession = runner.start("serve_metrics", timestamp)
+	runner.metricsSession = runner.start("serve_metrics", timestamp, "Serving Metrics")
 }
 
 func (runner *CLIRunner) StopMetricsServer() {
@@ -80,7 +80,7 @@ func (runner *CLIRunner) StopMetricsServer() {
 }
 
 func (runner *CLIRunner) StartAPIServer(timestamp int) {
-	runner.apiServerSession = runner.start("serve_api", timestamp)
+	runner.apiServerSession = runner.start("serve_api", timestamp, "Serving API")
 }
 
 func (runner *CLIRunner) StopAPIServer() {
@@ -88,7 +88,7 @@ func (runner *CLIRunner) StopAPIServer() {
 }
 
 func (runner *CLIRunner) StartEvacuator(timestamp int) {
-	runner.evacuatorSession = runner.start("evacuator", timestamp)
+	runner.evacuatorSession = runner.start("evacuator", timestamp, "Listening for DEA Evacuations")
 }
 
 func (runner *CLIRunner) StopEvacuator() {
@@ -99,7 +99,7 @@ func (runner *CLIRunner) Cleanup() {
 	os.Remove(runner.configPath)
 }
 
-func (runner *CLIRunner) start(command string, timestamp int) *cmdtest.Session {
+func (runner *CLIRunner) start(command string, timestamp int, message string) *cmdtest.Session {
 	cmd := exec.Command("hm9000", command, fmt.Sprintf("--config=%s", runner.configPath))
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
 
@@ -113,7 +113,7 @@ func (runner *CLIRunner) start(command string, timestamp int) *cmdtest.Session {
 
 	Ω(err).ShouldNot(HaveOccurred())
 
-	Ω(session).Should(SayWithTimeout(".", 5*time.Second))
+	Ω(session).Should(SayWithTimeout(message, 5*time.Second))
 
 	return session
 }
@@ -129,7 +129,6 @@ func (runner *CLIRunner) Run(command string, timestamp int) {
 
 		fmt.Printf("\n")
 	}
-	time.Sleep(50 * time.Millisecond)
 }
 
 func (runner *CLIRunner) StartSession(command string, timestamp int, extraArgs ...string) *cmdtest.Session {
