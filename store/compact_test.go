@@ -40,6 +40,7 @@ var _ = Describe("Compact", func() {
 				{Key: "/delete/me", Value: []byte("abc")},
 				{Key: "/v1ola/delete/me", Value: []byte("abc")},
 				{Key: "/delete/me/too", Value: []byte("abc")},
+				{Key: "/locks/keep", Value: []byte("abc")},
 			})
 
 			err := store.Compact()
@@ -64,6 +65,11 @@ var _ = Describe("Compact", func() {
 
 		It("should leave newer versions alone", func() {
 			_, err := storeAdapter.Get("/v18/leave/me/alone")
+			Ω(err).ShouldNot(HaveOccurred())
+		})
+
+		It("should leave locks alone", func() {
+			_, err := storeAdapter.Get("/locks/keep")
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 

@@ -8,15 +8,23 @@ import (
 
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/nu7hatch/gouuid"
+
+	"github.com/cloudfoundry/hm9000/helpers/exiter"
 )
 
 var NoTTLError = fmt.Errorf("lock must have a nonzero TTL")
 var NoStoreError = fmt.Errorf("could not reach etcd")
 
-type Locker struct {
+type Locker interface {
+	GetAndMaintainLock() error
+	ReleaseLock()
+}
+
+type ETCDLocker struct {
 	etcdClient *etcd.Client
 	lockName   string
 	lockTTL    uint64
+	exiter     exiter.Exiter
 
 	currentLockValue string
 
@@ -24,24 +32,25 @@ type Locker struct {
 }
 
 func New(
-	etcdClient *etcd.Client, lockName string, lockTTL uint64,
-) *Locker {
+	etcdClient *etcd.Client, exiter exiter.Exiter, lockName string, lockTTL uint64,
+) *ETCDLocker {
 	guid, err := uuid.NewV4()
 	if err != nil {
 		panic("failed to construct uuid: " + err.Error())
 	}
 
-	return &Locker{
+	return &ETCDLocker{
 		etcdClient: etcdClient,
 		lockName:   lockName,
 		lockTTL:    lockTTL,
+		exiter:     exiter,
 
 		currentLockValue: guid.String(),
 		stopMaintaining:  make(chan bool),
 	}
 }
 
-func (l *Locker) GetAndMaintainLock() error {
+func (l *ETCDLocker) GetAndMaintainLock() error {
 	if l.lockTTL == 0 {
 		return NoTTLError
 	}
@@ -70,11 +79,11 @@ func (l *Locker) GetAndMaintainLock() error {
 	return nil
 }
 
-func (l *Locker) ReleaseLock() {
+func (l *ETCDLocker) ReleaseLock() {
 	l.stopMaintaining <- true
 }
 
-func (l *Locker) maintainLock() {
+func (l *ETCDLocker) maintainLock() {
 	maintenanceInterval := time.Duration(l.lockTTL) * time.Second / time.Duration(2)
 	ticker := time.NewTicker(maintenanceInterval)
 
@@ -82,7 +91,10 @@ Dance:
 	for {
 		select {
 		case <-ticker.C:
-			l.etcdClient.CompareAndSwap(l.lockKey(), l.currentLockValue, l.lockTTL, l.currentLockValue, 0)
+			_, err := l.etcdClient.CompareAndSwap(l.lockKey(), l.currentLockValue, l.lockTTL, l.currentLockValue, 0)
+			if err != nil {
+				l.exiter.Exit(17)
+			}
 		case <-l.stopMaintaining:
 			l.etcdClient.CompareAndSwap(l.lockKey(), l.currentLockValue, 1, l.currentLockValue, 0)
 			break Dance
@@ -90,6 +102,6 @@ Dance:
 	}
 }
 
-func (l *Locker) lockKey() string {
+func (l *ETCDLocker) lockKey() string {
 	return path.Join("locks", l.lockName)
 }

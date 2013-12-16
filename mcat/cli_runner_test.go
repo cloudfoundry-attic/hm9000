@@ -15,13 +15,17 @@ import (
 	"time"
 )
 
+func interruptSession(session *cmdtest.Session) {
+	session.Cmd.Process.Signal(os.Interrupt)
+	session.Wait(time.Second)
+}
+
 type CLIRunner struct {
 	configPath       string
-	listenerCmd      *exec.Cmd
 	listenerSession  *cmdtest.Session
-	metricsServerCmd *exec.Cmd
-	apiServerCmd     *exec.Cmd
-	evacuatorCmd     *exec.Cmd
+	metricsSession   *cmdtest.Session
+	apiServerSession *cmdtest.Session
+	evacuatorSession *cmdtest.Session
 
 	verbose bool
 }
@@ -60,46 +64,42 @@ func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, cc
 }
 
 func (runner *CLIRunner) StartListener(timestamp int) {
-	runner.listenerCmd, runner.listenerSession = runner.start("listen", timestamp)
+	runner.listenerSession = runner.start("listen", timestamp)
 }
 
 func (runner *CLIRunner) StopListener() {
-	runner.listenerCmd.Process.Signal(os.Interrupt)
-	runner.listenerCmd.Wait()
+	interruptSession(runner.listenerSession)
 }
 
 func (runner *CLIRunner) StartMetricsServer(timestamp int) {
-	runner.metricsServerCmd, _ = runner.start("serve_metrics", timestamp)
+	runner.metricsSession = runner.start("serve_metrics", timestamp)
 }
 
 func (runner *CLIRunner) StopMetricsServer() {
-	runner.metricsServerCmd.Process.Signal(os.Interrupt)
-	runner.metricsServerCmd.Wait()
+	interruptSession(runner.metricsSession)
 }
 
 func (runner *CLIRunner) StartAPIServer(timestamp int) {
-	runner.apiServerCmd, _ = runner.start("serve_api", timestamp)
+	runner.apiServerSession = runner.start("serve_api", timestamp)
 }
 
 func (runner *CLIRunner) StopAPIServer() {
-	runner.apiServerCmd.Process.Signal(os.Interrupt)
-	runner.apiServerCmd.Wait()
+	interruptSession(runner.apiServerSession)
 }
 
 func (runner *CLIRunner) StartEvacuator(timestamp int) {
-	runner.evacuatorCmd, _ = runner.start("evacuator", timestamp)
+	runner.evacuatorSession = runner.start("evacuator", timestamp)
 }
 
 func (runner *CLIRunner) StopEvacuator() {
-	runner.evacuatorCmd.Process.Signal(os.Interrupt)
-	runner.evacuatorCmd.Process.Wait()
+	interruptSession(runner.evacuatorSession)
 }
 
 func (runner *CLIRunner) Cleanup() {
 	os.Remove(runner.configPath)
 }
 
-func (runner *CLIRunner) start(command string, timestamp int) (*exec.Cmd, *cmdtest.Session) {
+func (runner *CLIRunner) start(command string, timestamp int) *cmdtest.Session {
 	cmd := exec.Command("hm9000", command, fmt.Sprintf("--config=%s", runner.configPath))
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
 
@@ -115,7 +115,7 @@ func (runner *CLIRunner) start(command string, timestamp int) (*exec.Cmd, *cmdte
 
 	Ω(session).Should(SayWithTimeout(".", 5*time.Second))
 
-	return cmd, session
+	return session
 }
 
 func (runner *CLIRunner) Run(command string, timestamp int) {
@@ -132,6 +132,27 @@ func (runner *CLIRunner) Run(command string, timestamp int) {
 	time.Sleep(50 * time.Millisecond)
 }
 
-func teeToStdout(out io.Reader) io.Reader {
-	return io.TeeReader(out, os.Stdout)
+func (runner *CLIRunner) StartSession(command string, timestamp int, extraArgs ...string) *cmdtest.Session {
+	args := []string{command, fmt.Sprintf("--config=%s", runner.configPath)}
+	args = append(args, extraArgs...)
+
+	cmd := exec.Command("hm9000", args...)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
+
+	var session *cmdtest.Session
+	var err error
+
+	if runner.verbose {
+		session, err = cmdtest.StartWrapped(cmd, teeToStdout, teeToStdout)
+	} else {
+		session, err = cmdtest.Start(cmd)
+	}
+
+	Ω(err).ShouldNot(HaveOccurred())
+
+	return session
+}
+
+func teeToStdout(out io.Writer) io.Writer {
+	return io.MultiWriter(out, os.Stdout)
 }

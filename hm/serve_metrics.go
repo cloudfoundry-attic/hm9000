@@ -13,6 +13,8 @@ func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf *config.Config) {
 	store, _ := connectToStore(l, conf)
 	messageBus := connectToMessageBus(l, conf)
 
+	acquireLock(l, conf, "metrics-server")
+
 	collectorRegistrar := collectorregistrar.NewCollectorRegistrar(messageBus, steno)
 
 	metricsServer := metricsserver.New(

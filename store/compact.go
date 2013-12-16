@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/hm9000/storeadapter"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 func (store *RealStore) Compact() error {
@@ -30,6 +31,9 @@ func (store *RealStore) deleteOldSchemaVersions() error {
 
 	keysToDelete := []string{}
 	for _, childNode := range everything.ChildNodes {
+		if strings.HasPrefix(childNode.Key, "/locks") {
+			continue
+		}
 		matches := re.FindStringSubmatch(childNode.Key)
 		if len(matches) == 2 {
 			schemaVersion, err := strconv.Atoi(matches[1])

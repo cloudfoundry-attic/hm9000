@@ -3,14 +3,18 @@ package hm
 import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/exiter"
+	"github.com/cloudfoundry/hm9000/helpers/locker"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelocker"
 	"github.com/cloudfoundry/hm9000/testhelpers/faketimeprovider"
 	"github.com/cloudfoundry/yagnats"
+	"github.com/coreos/go-etcd/etcd"
 	"strconv"
 	"time"
 
@@ -58,6 +62,27 @@ func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSClien
 	}
 
 	return natsClient
+}
+
+func buildLocker(l logger.Logger, conf *config.Config, lockName string) locker.Locker {
+	if conf.StoreType == "etcd" {
+		etcdClient := etcd.NewClient(conf.StoreURLs)
+		return locker.New(etcdClient, exiter.New(), lockName, 10)
+	}
+
+	l.Info("Looks like you're trying to use not-etcd with a locker...  lol!")
+	return fakelocker.New()
+}
+
+func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
+	locker := buildLocker(l, conf, lockName)
+	l.Info("Acquiring lock for " + lockName)
+	err := locker.GetAndMaintainLock()
+	if err != nil {
+		l.Error("Failed to talk to lock store", err)
+		os.Exit(1)
+	}
+	l.Info("Acquired lock for " + lockName)
 }
 
 func connectToStoreAdapter(l logger.Logger, conf *config.Config) (storeadapter.StoreAdapter, metricsaccountant.UsageTracker) {

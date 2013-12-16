@@ -10,6 +10,8 @@ func StartEvacuator(l logger.Logger, conf *config.Config) {
 	messageBus := connectToMessageBus(l, conf)
 	store, _ := connectToStore(l, conf)
 
+	acquireLock(l, conf, "evacuator")
+
 	evacuator := evacuatorpackage.New(messageBus, store, buildTimeProvider(l), conf, l)
 
 	evacuator.Listen()
