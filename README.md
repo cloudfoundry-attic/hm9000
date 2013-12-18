@@ -22,7 +22,9 @@ To avoid the singleton problem, we will turn on multiple instances of each HM900
 
 ### Recovering from Failure
 
-If HM9000 enters a bad state, the simplest solution - typically - is to delete the contents of the data store.  Here's how:
+If HM9000 enters a bad state, the simplest solution - typically - is to delete the contents of the data store.
+
+#### If you're running HM9000 against a single, local, etcd node:
 
     local  $ bosh_ssh hm9000_z1/0 #for example
     hm9000 $ sudo su -
@@ -34,6 +36,28 @@ If HM9000 enters a bad state, the simplest solution - typically - is to delete t
 all the other components should recover gracefully.
 
 The data files in etcdstorage-bad can then be downloaded and analyzed to try to understand what went wrong to put HM9000/etcd in a bad state.  If you don't think this is necessary: just blow away the contents of `/var/vcap/store/etcdstorage`.
+
+#### If you're running HM9000 against an ETCD cluster:
+
+1. `bosh ssh` into each ETCD node (`bosh vms` is your friend here.  We typically have `etcd_leader_z1/0`, `etcd_z1/0`, and `etcd_z2/0`)
+2. `monit stop etcd` on all the boxes (better to stop them all simultaenously!)
+3. Blow away (or move) ETCDs storage directory.  It's located under `/var/vcap/store`
+4. `monit start etcd` on all the boxes
+5. HM9000 should recover on its own.
+
+### If Clustered ETCD can't handle the load
+
+You can identify this scenario by looking at the Prod Application Instance Health dashboard on datadog.  If the "HM9000 Desired State Fetcher Sync Time" plots are high (> 5s)  *and* the "HM9000 Actual State Listener Datastore Load" plot is high (>50-70%) then clustered ETCD *may* be unable to handle the load.
+
+To resolve this, you'll need to pick one of the HM9000 nodes (`hm9000_z1/0` or `hm9000_z2/0`) and make it the solitary HM9000 node and point it at its local ETCD database.  Here's how - let's say we want to keep `hm9000_z1/0` around:
+
+1. `bosh ssh` onto `hm9000_z2/0` and issue a `monit stop all`
+2. `bosh ssh` onto `hm9000_z1/0` and issue a `monit stop all`
+3. Edit `/var/vcap/jobs/hm9000/config/hm9000.json` and set `store_urls` to a single entry: `"store_urls": ["http://127.0.0.1:4001"],`
+4. Now `monit start all` and tail `/var/vcap/sys/log/hm9000/hm9000_listener.stdout.log` you should see heartbeats come in and get succesfully saved to the store.
+5. Eventually, `/var/vcap/packages/hm9000/hm9000 dump --config=/var/vcap/jobs/hm9000/config/hm9000.json` should report that the store is fresh (this is near the top of the output).
+
+
 
 ## Installing HM9000 locally
 
