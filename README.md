@@ -47,7 +47,7 @@ The data files in etcdstorage-bad can then be downloaded and analyzed to try to 
 
 ### If Clustered ETCD can't handle the load
 
-You can identify this scenario by looking at the Prod Application Instance Health dashboard on datadog.  If the "HM9000 Desired State Fetcher Sync Time" plots are high (> 5s)  *and* the "HM9000 Actual State Listener Datastore Load" plot is high (>50-70%) then clustered ETCD *may* be unable to handle the load.
+You can identify this scenario by monitoring the `DesiredStateSyncTimeInMilliseconds` and the `ActualStateListenerStoreUsagePercentage` metrics.  If the `DesiredStateSyncTimeInMilliseconds` exceeds ~5000 (5 seconds)  *and* the `ActualStateListenerStoreUsagePercentage` exceeds 50-70 (this is a percentage - so out of 100) then clustered ETCD *may* be unable to handle the load.
 
 To resolve this, you'll need to pick one of the HM9000 nodes (`hm9000_z1/0` or `hm9000_z2/0`) and make it the solitary HM9000 node and point it at its local ETCD database.  Here's how - let's say we want to keep `hm9000_z1/0` around:
 
