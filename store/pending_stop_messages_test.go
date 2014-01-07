@@ -51,16 +51,16 @@ var _ = Describe("Storing PendingStopMessages", func() {
 		})
 
 		It("stores the passed in stop messages", func() {
-			node, err := storeAdapter.ListRecursively("/v1/stop")
+			node, err := storeAdapter.ListRecursively("/hm/v1/stop")
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(node.ChildNodes).Should(HaveLen(2))
 			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
-				Key:   "/v1/stop/" + message1.StoreKey(),
+				Key:   "/hm/v1/stop/" + message1.StoreKey(),
 				Value: message1.ToJSON(),
 				TTL:   0,
 			}))
 			Ω(node.ChildNodes).Should(ContainElement(storeadapter.StoreNode{
-				Key:   "/v1/stop/" + message2.StoreKey(),
+				Key:   "/hm/v1/stop/" + message2.StoreKey(),
 				Value: message2.ToJSON(),
 				TTL:   0,
 			}))
@@ -104,7 +104,7 @@ var _ = Describe("Storing PendingStopMessages", func() {
 
 		Context("When the stop message key is missing", func() {
 			BeforeEach(func() {
-				_, err := storeAdapter.ListRecursively("/v1/stop")
+				_, err := storeAdapter.ListRecursively("/hm/v1/stop")
 				Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 			})
 

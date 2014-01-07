@@ -102,7 +102,7 @@ Dance:
 }
 
 func (l *ETCDLocker) lockKey() string {
-	return path.Join("locks", l.lockName)
+	return path.Join("/hm/locks", l.lockName)
 }
 
 func (l *ETCDLocker) isTimeoutError(err error) bool {

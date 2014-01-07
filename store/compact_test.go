@@ -32,15 +32,18 @@ var _ = Describe("Compact", func() {
 	Describe("Deleting old schema version", func() {
 		BeforeEach(func() {
 			storeAdapter.Set([]storeadapter.StoreNode{
-				{Key: "/v3/delete/me", Value: []byte("abc")},
-				{Key: "/v16/delete/me", Value: []byte("abc")},
-				{Key: "/v17/leave/me/alone", Value: []byte("abc")},
-				{Key: "/v17/leave/me/v1/alone", Value: []byte("abc")},
-				{Key: "/v18/leave/me/alone", Value: []byte("abc")},
-				{Key: "/delete/me", Value: []byte("abc")},
-				{Key: "/v1ola/delete/me", Value: []byte("abc")},
-				{Key: "/delete/me/too", Value: []byte("abc")},
-				{Key: "/locks/keep", Value: []byte("abc")},
+				{Key: "/hm/v3/delete/me", Value: []byte("abc")},
+				{Key: "/hm/v16/delete/me", Value: []byte("abc")},
+				{Key: "/hm/v17/leave/me/alone", Value: []byte("abc")},
+				{Key: "/hm/v17/leave/me/v1/alone", Value: []byte("abc")},
+				{Key: "/hm/v18/leave/me/alone", Value: []byte("abc")},
+				{Key: "/hm/delete/me", Value: []byte("abc")},
+				{Key: "/hm/v1ola/delete/me", Value: []byte("abc")},
+				{Key: "/hm/delete/me/too", Value: []byte("abc")},
+				{Key: "/hm/locks/keep", Value: []byte("abc")},
+				{Key: "/other/keep", Value: []byte("abc")},
+				{Key: "/foo", Value: []byte("abc")},
+				{Key: "/v3/keep", Value: []byte("abc")},
 			})
 
 			err := store.Compact()
@@ -48,63 +51,74 @@ var _ = Describe("Compact", func() {
 		})
 
 		It("should delete everything under older versions", func() {
-			_, err := storeAdapter.Get("/v3/delete/me")
+			_, err := storeAdapter.Get("/hm/v3/delete/me")
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-			_, err = storeAdapter.Get("/v16/delete/me")
+			_, err = storeAdapter.Get("/hm/v16/delete/me")
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 		})
 
 		It("should leave the current version alone", func() {
-			_, err := storeAdapter.Get("/v17/leave/me/alone")
+			_, err := storeAdapter.Get("/hm/v17/leave/me/alone")
 			Ω(err).ShouldNot(HaveOccurred())
 
-			_, err = storeAdapter.Get("/v17/leave/me/v1/alone")
+			_, err = storeAdapter.Get("/hm/v17/leave/me/v1/alone")
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 
 		It("should leave newer versions alone", func() {
-			_, err := storeAdapter.Get("/v18/leave/me/alone")
+			_, err := storeAdapter.Get("/hm/v18/leave/me/alone")
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 
 		It("should leave locks alone", func() {
-			_, err := storeAdapter.Get("/locks/keep")
+			_, err := storeAdapter.Get("/hm/locks/keep")
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 
 		It("should delete anything that's unversioned", func() {
-			_, err := storeAdapter.Get("/delete/me")
+			_, err := storeAdapter.Get("/hm/delete/me")
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-			_, err = storeAdapter.Get("/v1ola/delete/me")
+			_, err = storeAdapter.Get("/hm/v1ola/delete/me")
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-			_, err = storeAdapter.Get("/delete/me/too")
+			_, err = storeAdapter.Get("/hm/delete/me/too")
 			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+		})
+
+		It("should not touch anything that isn't under the hm namespace", func() {
+			_, err := storeAdapter.Get("/other/keep")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			_, err = storeAdapter.Get("/foo")
+			Ω(err).ShouldNot(HaveOccurred())
+
+			_, err = storeAdapter.Get("/v3/keep")
+			Ω(err).ShouldNot(HaveOccurred())
 		})
 	})
 
 	Describe("Recursively deleting empty directories", func() {
 		BeforeEach(func() {
 			storeAdapter.Set([]storeadapter.StoreNode{
-				{Key: "/v17/pokemon/geodude", Value: []byte("foo")},
-				{Key: "/v17/deep-pokemon/abra/kadabra/alakazam", Value: []byte{}},
-				{Key: "/v17/pokemonCount", Value: []byte("151")},
+				{Key: "/hm/v17/pokemon/geodude", Value: []byte("foo")},
+				{Key: "/hm/v17/deep-pokemon/abra/kadabra/alakazam", Value: []byte{}},
+				{Key: "/hm/v17/pokemonCount", Value: []byte("151")},
 			})
 		})
 
 		Context("when the node is a directory", func() {
 			Context("and it is empty", func() {
 				BeforeEach(func() {
-					storeAdapter.Delete("/v17/pokemon/geodude")
+					storeAdapter.Delete("/hm/v17/pokemon/geodude")
 				})
 
 				It("shreds it mercilessly", func() {
 					err := store.Compact()
 					Ω(err).ShouldNot(HaveOccurred())
 
-					_, err = storeAdapter.Get("/v17/pokemon")
+					_, err = storeAdapter.Get("/hm/v17/pokemon")
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 				})
 			})
@@ -114,23 +128,23 @@ var _ = Describe("Compact", func() {
 					err := store.Compact()
 					Ω(err).ShouldNot(HaveOccurred())
 
-					_, err = storeAdapter.Get("/v17/pokemon/geodude")
+					_, err = storeAdapter.Get("/hm/v17/pokemon/geodude")
 					Ω(err).ShouldNot(HaveOccurred())
 				})
 
 				Context("but all of its children are empty", func() {
 					BeforeEach(func() {
-						storeAdapter.Delete("/v17/deep-pokemon/abra/kadabra/alakazam")
+						storeAdapter.Delete("/hm/v17/deep-pokemon/abra/kadabra/alakazam")
 					})
 
 					It("shreds it mercilessly", func() {
 						err := store.Compact()
 						Ω(err).ShouldNot(HaveOccurred())
 
-						_, err = storeAdapter.Get("/v17/deep-pokemon/abra/kadabra")
+						_, err = storeAdapter.Get("/hm/v17/deep-pokemon/abra/kadabra")
 						Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 
-						_, err = storeAdapter.Get("/v17/deep-pokemon/abra")
+						_, err = storeAdapter.Get("/hm/v17/deep-pokemon/abra")
 						Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 					})
 				})
@@ -142,7 +156,7 @@ var _ = Describe("Compact", func() {
 				err := store.Compact()
 				Ω(err).ShouldNot(HaveOccurred())
 
-				_, err = storeAdapter.Get("/v17/pokemonCount")
+				_, err = storeAdapter.Get("/hm/v17/pokemonCount")
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})

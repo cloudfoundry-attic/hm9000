@@ -78,7 +78,7 @@ var _ = Describe("Locking", func() {
 
 					Ω(listenerA).Should(Say("Acquired lock"))
 
-					coordinator.StoreAdapter.Delete("/locks")
+					coordinator.StoreAdapter.Delete("/hm/locks")
 					status, err := listenerA.Wait(20 * time.Second)
 
 					Ω(err).ShouldNot(HaveOccurred())
@@ -95,7 +95,7 @@ var _ = Describe("Locking", func() {
 
 					Ω(analyzerA).Should(Say("Acquired lock"))
 
-					coordinator.StoreAdapter.Delete("/locks")
+					coordinator.StoreAdapter.Delete("/hm/locks")
 					status, err := analyzerA.Wait(20 * time.Second)
 
 					Ω(err).ShouldNot(HaveOccurred())

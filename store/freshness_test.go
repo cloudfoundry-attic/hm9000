@@ -87,7 +87,7 @@ var _ = Describe("Freshness", func() {
 		}
 
 		Context("the actual state", func() {
-			bumpingFreshness("/v1"+conf.ActualFreshnessKey, conf.ActualFreshnessTTL(), Store.BumpActualFreshness)
+			bumpingFreshness("/hm/v1"+conf.ActualFreshnessKey, conf.ActualFreshnessTTL(), Store.BumpActualFreshness)
 
 			Context("revoking actual state freshness", func() {
 				BeforeEach(func() {
@@ -109,7 +109,7 @@ var _ = Describe("Freshness", func() {
 		})
 
 		Context("the desired state", func() {
-			bumpingFreshness("/v1"+conf.DesiredFreshnessKey, conf.DesiredFreshnessTTL(), Store.BumpDesiredFreshness)
+			bumpingFreshness("/hm/v1"+conf.DesiredFreshnessKey, conf.DesiredFreshnessTTL(), Store.BumpDesiredFreshness)
 		})
 	})
 
@@ -172,7 +172,7 @@ var _ = Describe("Freshness", func() {
 			BeforeEach(func() {
 				err := storeAdapter.Set([]storeadapter.StoreNode{
 					{
-						Key:   "/v1/desired-fresh/mwahaha",
+						Key:   "/hm/v1/desired-fresh/mwahaha",
 						Value: []byte("i'm a directory...."),
 					},
 				})
@@ -221,7 +221,7 @@ var _ = Describe("Freshness", func() {
 				BeforeEach(func() {
 					storeAdapter.Set([]storeadapter.StoreNode{
 						{
-							Key:   "/v1/actual-fresh",
+							Key:   "/hm/v1/actual-fresh",
 							Value: []byte("ß"),
 						},
 					})
@@ -239,7 +239,7 @@ var _ = Describe("Freshness", func() {
 			BeforeEach(func() {
 				err := storeAdapter.Set([]storeadapter.StoreNode{
 					{
-						Key:   "/v1/actual-fresh/mwahaha",
+						Key:   "/hm/v1/actual-fresh/mwahaha",
 						Value: []byte("i'm a directory...."),
 					},
 				})

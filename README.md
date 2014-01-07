@@ -176,12 +176,6 @@ will dump the entire contents of the store to stdout.  The output is structured 
 
 `etcd` has a very simple [curlable API](http://github.com/coreos/etcd), which you can use in lieu of `dump`.
 
-### Deleting the contents of the store
-
-   hm9000 clear_store --config=./local_config.json
-
-will delete the entire contents of the store.  Useful when testing various scenarios.
-
 ## HM9000 Config
 
 HM9000 is configured using a JSON file.  Here are the available entries:

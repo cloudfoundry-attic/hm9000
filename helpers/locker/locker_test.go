@@ -90,7 +90,7 @@ var _ = Describe("Locker", func() {
 				locker.GetAndMaintainLock()
 				Ω(exiter.DidExit).Should(BeFalse())
 
-				etcdClient.Delete("/locks", true)
+				etcdClient.Delete("/hm/locks", true)
 
 				Eventually(func() bool { return exiter.DidExit }, 5).Should(BeTrue())
 				Ω(exiter.ExitStatus).Should(Equal(17))

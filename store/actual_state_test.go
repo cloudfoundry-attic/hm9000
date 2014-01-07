@@ -148,7 +148,7 @@ var _ = Describe("Actual State", func() {
 			It("should eventually recover", func() {
 				//Delete one of the heartbeats
 				corruptedHeartbeat := dea.GetApp(0).InstanceAtIndex(1).Heartbeat()
-				storeAdapter.Delete("/v1/apps/actual/" + store.AppKey(corruptedHeartbeat.AppGuid, corruptedHeartbeat.AppVersion) + "/" + corruptedHeartbeat.InstanceGuid)
+				storeAdapter.Delete("/hm/v1/apps/actual/" + store.AppKey(corruptedHeartbeat.AppGuid, corruptedHeartbeat.AppVersion) + "/" + corruptedHeartbeat.InstanceGuid)
 
 				//See that it's gone
 				results, err := store.GetInstanceHeartbeats()
@@ -231,7 +231,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when a DEA heartbeat has expired", func() {
 				BeforeEach(func() {
-					storeAdapter.Delete("/v1/dea-presence/" + dea.DeaGuid)
+					storeAdapter.Delete("/hm/v1/dea-presence/" + dea.DeaGuid)
 				})
 
 				It("should not return any expired instance heartbeats", func() {
@@ -252,17 +252,17 @@ var _ = Describe("Actual State", func() {
 				})
 
 				It("should remove expired instance heartbeats from the store", func() {
-					_, err := storeAdapter.Get("/v1/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
+					_, err := storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
 					Ω(err).ShouldNot(HaveOccurred())
-					_, err = storeAdapter.Get("/v1/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
+					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
 					Ω(err).ShouldNot(HaveOccurred())
 
 					_, err = store.GetInstanceHeartbeats()
 					Ω(err).ShouldNot(HaveOccurred())
 
-					_, err = storeAdapter.Get("/v1/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
+					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
-					_, err = storeAdapter.Get("/v1/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
+					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 				})
 
@@ -343,7 +343,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when an associated DEA heartbeat has expired", func() {
 				BeforeEach(func() {
-					storeAdapter.Delete("/v1/dea-presence/A")
+					storeAdapter.Delete("/hm/v1/dea-presence/A")
 				})
 
 				It("should not return any expired instance heartbeats", func() {
@@ -354,13 +354,13 @@ var _ = Describe("Actual State", func() {
 				})
 
 				It("should remove expired instance heartbeats from the store", func() {
-					_, err := storeAdapter.Get("/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
+					_, err := storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
 					Ω(err).ShouldNot(HaveOccurred())
 
 					_, err = store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Ω(err).ShouldNot(HaveOccurred())
 
-					_, err = storeAdapter.Get("/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
+					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
 					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
 				})
 
@@ -390,7 +390,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when all the DEA heartbeats have expired", func() {
 				BeforeEach(func() {
-					storeAdapter.Delete("/v1/dea-presence/A", "/v1/dea-presence/B")
+					storeAdapter.Delete("/hm/v1/dea-presence/A", "/hm/v1/dea-presence/B")
 				})
 
 				It("should not return any instance heartbeats", func() {
