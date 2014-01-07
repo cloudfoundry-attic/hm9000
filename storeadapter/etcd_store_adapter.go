@@ -3,7 +3,6 @@ package storeadapter
 import (
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/coreos/go-etcd/etcd"
-	"strings"
 )
 
 type ETCDStoreAdapter struct {
@@ -31,28 +30,31 @@ func (adapter *ETCDStoreAdapter) Disconnect() error {
 	return nil
 }
 
+func (adapter *ETCDStoreAdapter) isETCDErrorWithCode(err error, code int) bool {
+	if err != nil {
+		etcdError, ok := err.(etcd.EtcdError)
+		if ok && etcdError.ErrorCode == code {
+			return true
+		}
+
+		etcdErrorP, ok := err.(*etcd.EtcdError)
+		if ok && etcdErrorP.ErrorCode == code {
+			return true
+		}
+	}
+	return false
+}
+
 func (adapter *ETCDStoreAdapter) isTimeoutError(err error) bool {
-	return err != nil && strings.HasPrefix(err.Error(), "Cannot reach servers")
+	return adapter.isETCDErrorWithCode(err, 501)
 }
 
 func (adapter *ETCDStoreAdapter) isMissingKeyError(err error) bool {
-	if err != nil {
-		etcdError, ok := err.(etcd.EtcdError)
-		if ok && etcdError.ErrorCode == 100 { //yup.  100.
-			return true
-		}
-	}
-	return false
+	return adapter.isETCDErrorWithCode(err, 100)
 }
 
 func (adapter *ETCDStoreAdapter) isNotAFileError(err error) bool {
-	if err != nil {
-		etcdError, ok := err.(etcd.EtcdError)
-		if ok && etcdError.ErrorCode == 102 { //yup.  102.
-			return true
-		}
-	}
-	return false
+	return adapter.isETCDErrorWithCode(err, 102)
 }
 
 func (adapter *ETCDStoreAdapter) Set(nodes []StoreNode) error {

@@ -3,7 +3,6 @@ package locker
 import (
 	"fmt"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/coreos/go-etcd/etcd"
@@ -62,7 +61,7 @@ func (l *ETCDLocker) GetAndMaintainLock() error {
 
 	for {
 		_, err := l.etcdClient.Create(l.lockKey(), l.currentLockValue, l.lockTTL)
-		if err != nil && strings.HasPrefix(err.Error(), "Cannot reach servers") {
+		if l.isTimeoutError(err) {
 			return NoStoreError
 		}
 
@@ -104,4 +103,19 @@ Dance:
 
 func (l *ETCDLocker) lockKey() string {
 	return path.Join("locks", l.lockName)
+}
+
+func (l *ETCDLocker) isTimeoutError(err error) bool {
+	if err != nil {
+		etcdError, ok := err.(etcd.EtcdError)
+		if ok && etcdError.ErrorCode == 501 {
+			return true
+		}
+
+		etcdErrorP, ok := err.(*etcd.EtcdError)
+		if ok && etcdErrorP.ErrorCode == 501 {
+			return true
+		}
+	}
+	return false
 }
