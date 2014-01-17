@@ -10,4 +10,5 @@ var (
 	ErrorNodeIsNotDirectory = errors.New("Node is a leaf, not a directory")
 	ErrorTimeout            = errors.New("Store request timed out")
 	ErrorInvalidFormat      = errors.New("Node has invalid format")
+	ErrorInvalidTTL         = errors.New("Got an invalid TTL")
 )

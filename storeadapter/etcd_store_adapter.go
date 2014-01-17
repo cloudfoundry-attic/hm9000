@@ -3,6 +3,9 @@ package storeadapter
 import (
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	"github.com/coreos/go-etcd/etcd"
+	"github.com/nu7hatch/gouuid"
+	"path"
+	"time"
 )
 
 type ETCDStoreAdapter struct {
@@ -214,4 +217,58 @@ func (adapter *ETCDStoreAdapter) Delete(keys ...string) error {
 	}
 
 	return err
+}
+
+func (adapter *ETCDStoreAdapter) lockKey(lockName string) string {
+	return path.Join("/hm/locks", lockName)
+}
+
+func (adapter *ETCDStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64, lostLockChannel chan bool) (releaseLock chan bool, err error) {
+	if lockTTL == 0 {
+		return nil, ErrorInvalidTTL
+	}
+
+	guid, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+	currentLockValue := guid.String()
+
+	lockKey := adapter.lockKey(lockName)
+
+	releaseLockChannel := make(chan bool, 0)
+
+	for {
+		_, err := adapter.client.Create(lockKey, currentLockValue, lockTTL)
+		if adapter.isTimeoutError(err) {
+			return nil, ErrorTimeout
+		}
+
+		if err == nil {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	go adapter.maintainLock(lockKey, currentLockValue, lockTTL, lostLockChannel, releaseLockChannel)
+
+	return releaseLockChannel, nil
+}
+
+func (adapter *ETCDStoreAdapter) maintainLock(lockKey string, currentLockValue string, lockTTL uint64, lostLockChannel chan bool, releaseLockChannel chan bool) {
+	maintenanceInterval := time.Duration(lockTTL) * time.Second / time.Duration(2)
+	ticker := time.NewTicker(maintenanceInterval)
+	for {
+		select {
+		case <-ticker.C:
+			_, err := adapter.client.CompareAndSwap(lockKey, currentLockValue, lockTTL, currentLockValue, 0)
+			if err != nil {
+				lostLockChannel <- true
+			}
+		case <-releaseLockChannel:
+			adapter.client.CompareAndSwap(lockKey, currentLockValue, 1, currentLockValue, 0)
+			return
+		}
+	}
 }

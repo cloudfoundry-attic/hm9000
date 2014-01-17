@@ -1,11 +1,16 @@
 package storeadapter_test
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
 	. "github.com/cloudfoundry/hm9000/storeadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"runtime"
+	"time"
 )
+
+var counter = 0
 
 var _ = Describe("ETCD Store Adapter", func() {
 	var (
@@ -354,6 +359,102 @@ var _ = Describe("ETCD Store Adapter", func() {
 				_, err = adapter.Get("/menu/breakfast")
 				return err
 			}, 2, 0.01).Should(Equal(ErrorKeyNotFound)) // as of etcd v0.2rc1, etcd seems to take an extra 0.5 seconds to expire its TTLs
+		})
+	})
+
+	Describe("Locking and Unlocking", func() {
+		var (
+			uniqueKeyForThisTest string //avoid collisions between test runs
+			lostLockChannel      chan bool
+		)
+
+		BeforeEach(func() {
+			uniqueKeyForThisTest = fmt.Sprintf("analyzer-%d", counter)
+			counter++
+			lostLockChannel = make(chan bool, 0)
+		})
+
+		Context("when passed a TTL of 0", func() {
+			It("should be like, no way man", func() {
+				releaseLock, err := adapter.GetAndMaintainLock(uniqueKeyForThisTest, 0, lostLockChannel)
+				Ω(err).Should(Equal(ErrorInvalidTTL))
+				Ω(releaseLock).Should(BeNil())
+			})
+		})
+
+		Context("when the store is not available", func() {
+			BeforeEach(func() {
+				etcdRunner.Stop()
+			})
+
+			AfterEach(func() {
+				etcdRunner.Start()
+			})
+
+			It("returns an error", func() {
+				releaseLock, err := adapter.GetAndMaintainLock(uniqueKeyForThisTest, 1, lostLockChannel)
+				Ω(err).Should(Equal(ErrorTimeout))
+				Ω(releaseLock).Should(BeNil())
+			})
+		})
+
+		Context("when the lock is available", func() {
+			It("should return immediately", func(done Done) {
+				releaseLock, err := adapter.GetAndMaintainLock(uniqueKeyForThisTest, 1, lostLockChannel)
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(releaseLock).ShouldNot(BeNil())
+				close(done)
+			}, 1.0)
+
+			It("should maintain the lock in the background", func(done Done) {
+				adapter.GetAndMaintainLock(uniqueKeyForThisTest, 1, lostLockChannel)
+
+				secondLockingCallDidGrabLock := false
+				go func() {
+					adapter.GetAndMaintainLock(uniqueKeyForThisTest, 1, lostLockChannel)
+					secondLockingCallDidGrabLock = true
+				}()
+
+				time.Sleep(3 * time.Second)
+
+				Ω(secondLockingCallDidGrabLock).Should(BeFalse())
+
+				close(done)
+			}, 10.0)
+
+			Context("when the lock disappears after it has been acquired (e.g. ETCD store is reset)", func() {
+				It("should send a notification down the lostLockChannel", func(done Done) {
+					adapter.GetAndMaintainLock(uniqueKeyForThisTest, 1, lostLockChannel)
+
+					adapter.Delete("/hm/locks")
+					Ω(<-lostLockChannel).Should(BeTrue())
+
+					close(done)
+				}, 1.0)
+			})
+		})
+
+		Context("when the lock is unavailable", func() {
+			It("should block until the lock becomes available", func(done Done) {
+				releaseLock, err := adapter.GetAndMaintainLock(uniqueKeyForThisTest, 1, lostLockChannel)
+				Ω(err).ShouldNot(HaveOccurred())
+
+				didRun := false
+				go func() {
+					_, err := adapter.GetAndMaintainLock(uniqueKeyForThisTest, 1, lostLockChannel)
+					Ω(err).ShouldNot(HaveOccurred())
+					didRun = true
+				}()
+
+				runtime.Gosched()
+
+				Ω(didRun).Should(BeFalse())
+				releaseLock <- true
+
+				Eventually(func() bool { return didRun }, 3).Should(BeTrue())
+
+				close(done)
+			}, 10.0)
 		})
 	})
 })

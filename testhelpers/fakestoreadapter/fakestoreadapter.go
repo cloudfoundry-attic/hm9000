@@ -37,6 +37,10 @@ type FakeStoreAdapter struct {
 	DeleteErrInjector *FakeStoreAdapterErrorInjector
 
 	rootNode *containerNode
+
+	MaintainedLockName      string
+	GetAndMaintainLockError error
+	ReleaseLockChannel      chan bool
 }
 
 func New() *FakeStoreAdapter {
@@ -205,4 +209,11 @@ func (adapter *FakeStoreAdapter) keyComponents(key string) (components []string)
 	}
 
 	return components
+}
+
+func (adapter *FakeStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64, lostLockChannel chan bool) (releaseLock chan bool, err error) {
+	adapter.MaintainedLockName = lockName
+	adapter.ReleaseLockChannel = make(chan bool, 1)
+
+	return adapter.ReleaseLockChannel, adapter.GetAndMaintainLockError
 }
