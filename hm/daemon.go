@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/hm9000/helpers/locker"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"os"
 	"time"
 )
 
@@ -18,11 +19,17 @@ func Daemonize(
 ) error {
 	logger.Info("Acquiring lock for " + component)
 
-	err := locker.GetAndMaintainLock()
+	lostLockChannel := make(chan bool, 0)
+	err := locker.GetAndMaintainLock(lostLockChannel)
 	if err != nil {
 		logger.Info(fmt.Sprintf("Failed to acquire lock: %s", err))
 		return err
 	}
+
+	go func() {
+		<-lostLockChannel
+		os.Exit(17)
+	}()
 
 	logger.Info("Acquired lock for " + component)
 

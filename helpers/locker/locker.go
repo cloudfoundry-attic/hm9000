@@ -7,15 +7,13 @@ import (
 
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/nu7hatch/gouuid"
-
-	"github.com/cloudfoundry/hm9000/helpers/exiter"
 )
 
 var NoTTLError = fmt.Errorf("lock must have a nonzero TTL")
 var NoStoreError = fmt.Errorf("could not reach etcd")
 
 type Locker interface {
-	GetAndMaintainLock() error
+	GetAndMaintainLock(lostLockChannel chan bool) error
 	ReleaseLock()
 }
 
@@ -23,7 +21,6 @@ type ETCDLocker struct {
 	etcdClient *etcd.Client
 	lockName   string
 	lockTTL    uint64
-	exiter     exiter.Exiter
 
 	currentLockValue string
 
@@ -31,7 +28,7 @@ type ETCDLocker struct {
 }
 
 func New(
-	etcdClient *etcd.Client, exiter exiter.Exiter, lockName string, lockTTL uint64,
+	etcdClient *etcd.Client, lockName string, lockTTL uint64,
 ) *ETCDLocker {
 	guid, err := uuid.NewV4()
 	if err != nil {
@@ -42,14 +39,13 @@ func New(
 		etcdClient: etcdClient,
 		lockName:   lockName,
 		lockTTL:    lockTTL,
-		exiter:     exiter,
 
 		currentLockValue: guid.String(),
 		stopMaintaining:  make(chan bool),
 	}
 }
 
-func (l *ETCDLocker) GetAndMaintainLock() error {
+func (l *ETCDLocker) GetAndMaintainLock(lostLockChannel chan bool) error {
 	if l.lockTTL == 0 {
 		return NoTTLError
 	}
@@ -70,7 +66,7 @@ func (l *ETCDLocker) GetAndMaintainLock() error {
 			continue
 		}
 
-		go l.maintainLock()
+		go l.maintainLock(lostLockChannel)
 
 		break
 	}
@@ -82,7 +78,7 @@ func (l *ETCDLocker) ReleaseLock() {
 	l.stopMaintaining <- true
 }
 
-func (l *ETCDLocker) maintainLock() {
+func (l *ETCDLocker) maintainLock(lostLockChannel chan bool) {
 	maintenanceInterval := time.Duration(l.lockTTL) * time.Second / time.Duration(2)
 	ticker := time.NewTicker(maintenanceInterval)
 
@@ -92,7 +88,7 @@ Dance:
 		case <-ticker.C:
 			_, err := l.etcdClient.CompareAndSwap(l.lockKey(), l.currentLockValue, l.lockTTL, l.currentLockValue, 0)
 			if err != nil {
-				l.exiter.Exit(17)
+				lostLockChannel <- true
 			}
 		case <-l.stopMaintaining:
 			l.etcdClient.CompareAndSwap(l.lockKey(), l.currentLockValue, 1, l.currentLockValue, 0)

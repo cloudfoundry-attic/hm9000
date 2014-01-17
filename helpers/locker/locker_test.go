@@ -3,7 +3,6 @@ package locker_test
 import (
 	"fmt"
 	. "github.com/cloudfoundry/hm9000/helpers/locker"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakeexiter"
 	"github.com/coreos/go-etcd/etcd"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,22 +17,23 @@ var _ = Describe("Locker", func() {
 		locker               Locker
 		etcdClient           *etcd.Client
 		uniqueKeyForThisTest string //avoid collisions between test runs
-		exiter               *fakeexiter.FakeExiter
+		lostLockChannel      chan bool
 	)
+
 	BeforeEach(func() {
 		etcdClient = etcd.NewClient(etcdRunner.NodeURLS())
-		exiter = fakeexiter.New()
 
 		uniqueKeyForThisTest = fmt.Sprintf("analyzer-%d", counter)
 		counter++
+		lostLockChannel = make(chan bool, 0)
 
-		locker = New(etcdClient, exiter, uniqueKeyForThisTest, 1)
+		locker = New(etcdClient, uniqueKeyForThisTest, 1)
 	})
 
 	Context("when passed a TTL of 0", func() {
 		It("should be like, no way man", func() {
-			locker = New(etcdClient, exiter, uniqueKeyForThisTest, 0)
-			err := locker.GetAndMaintainLock()
+			locker = New(etcdClient, uniqueKeyForThisTest, 0)
+			err := locker.GetAndMaintainLock(lostLockChannel)
 			Ω(err).Should(Equal(NoTTLError))
 		})
 	})
@@ -48,25 +48,25 @@ var _ = Describe("Locker", func() {
 		})
 
 		It("returns an error", func() {
-			err := locker.GetAndMaintainLock()
+			err := locker.GetAndMaintainLock(lostLockChannel)
 			Ω(err).Should(Equal(NoStoreError))
 		})
 	})
 
 	Context("when the lock is available", func() {
 		It("should return immediately", func(done Done) {
-			err := locker.GetAndMaintainLock()
+			err := locker.GetAndMaintainLock(lostLockChannel)
 			Ω(err).ShouldNot(HaveOccurred())
 			close(done)
 		}, 1.0)
 
 		It("should maintain the lock in the background", func(done Done) {
-			locker.GetAndMaintainLock()
+			locker.GetAndMaintainLock(lostLockChannel)
 
 			otherLockerDidUnlock := false
 			go func() {
-				otherLocker := New(etcdClient, exiter, uniqueKeyForThisTest, 1)
-				otherLocker.GetAndMaintainLock()
+				otherLocker := New(etcdClient, uniqueKeyForThisTest, 1)
+				otherLocker.GetAndMaintainLock(lostLockChannel)
 				otherLockerDidUnlock = true
 			}()
 			time.Sleep(3 * time.Second)
@@ -78,35 +78,34 @@ var _ = Describe("Locker", func() {
 
 		Context("when called again", func() {
 			It("should just return immediately", func(done Done) {
-				locker.GetAndMaintainLock()
-				err := locker.GetAndMaintainLock()
+				locker.GetAndMaintainLock(lostLockChannel)
+				err := locker.GetAndMaintainLock(lostLockChannel)
 				Ω(err).ShouldNot(HaveOccurred())
 				close(done)
 			}, 1.0)
 		})
 
 		Context("when the lock disappears after it has been acquired (e.g. ETCD store is reset)", func() {
-			It("should cause the process to exit", func() {
-				locker.GetAndMaintainLock()
-				Ω(exiter.DidExit).Should(BeFalse())
+			It("should cause the process to exit", func(done Done) {
+				locker.GetAndMaintainLock(lostLockChannel)
 
 				etcdClient.Delete("/hm/locks", true)
+				Ω(<-lostLockChannel).Should(BeTrue())
 
-				Eventually(func() bool { return exiter.DidExit }, 5).Should(BeTrue())
-				Ω(exiter.ExitStatus).Should(Equal(17))
-			})
+				close(done)
+			}, 1.0)
 		})
 	})
 
 	Context("when the lock is unavailable", func() {
 		It("should block until the lock becomes available", func(done Done) {
-			err := locker.GetAndMaintainLock()
+			err := locker.GetAndMaintainLock(lostLockChannel)
 			Ω(err).ShouldNot(HaveOccurred())
 
 			didRun := false
 			go func() {
-				otherLocker := New(etcdClient, exiter, uniqueKeyForThisTest, 1)
-				err := otherLocker.GetAndMaintainLock()
+				otherLocker := New(etcdClient, uniqueKeyForThisTest, 1)
+				err := otherLocker.GetAndMaintainLock(lostLockChannel)
 				Ω(err).ShouldNot(HaveOccurred())
 				didRun = true
 			}()
