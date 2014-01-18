@@ -8,7 +8,7 @@ type StoreAdapter interface {
 	Delete(keys ...string) error
 	Disconnect() error
 
-	GetAndMaintainLock(lockName string, lockTTL uint64, lostLockChannel chan bool) (releaseLock chan bool, err error)
+	GetAndMaintainLock(lockName string, lockTTL uint64) (lostLock <-chan bool, releaseLock chan<- bool, err error)
 }
 
 type StoreNode struct {

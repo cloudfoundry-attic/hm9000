@@ -19,8 +19,7 @@ func Daemonize(
 ) error {
 	logger.Info("Acquiring lock for " + component)
 
-	lostLockChannel := make(chan bool, 0)
-	releaseLockChannel, err := adapter.GetAndMaintainLock(component, 10, lostLockChannel)
+	lostLockChannel, releaseLockChannel, err := adapter.GetAndMaintainLock(component, 10)
 	if err != nil {
 		logger.Info(fmt.Sprintf("Failed to acquire lock: %s", err))
 		return err

@@ -211,9 +211,9 @@ func (adapter *FakeStoreAdapter) keyComponents(key string) (components []string)
 	return components
 }
 
-func (adapter *FakeStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64, lostLockChannel chan bool) (releaseLock chan bool, err error) {
+func (adapter *FakeStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64) (lostLockChannel <-chan bool, releaseLock chan<- bool, err error) {
 	adapter.MaintainedLockName = lockName
 	adapter.ReleaseLockChannel = make(chan bool, 1)
 
-	return adapter.ReleaseLockChannel, adapter.GetAndMaintainLockError
+	return nil, adapter.ReleaseLockChannel, adapter.GetAndMaintainLockError
 }

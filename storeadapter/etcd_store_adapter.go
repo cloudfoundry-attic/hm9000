@@ -223,25 +223,26 @@ func (adapter *ETCDStoreAdapter) lockKey(lockName string) string {
 	return path.Join("/hm/locks", lockName)
 }
 
-func (adapter *ETCDStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64, lostLockChannel chan bool) (releaseLock chan bool, err error) {
+func (adapter *ETCDStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64) (lostLock <-chan bool, releaseLock chan<- bool, err error) {
 	if lockTTL == 0 {
-		return nil, ErrorInvalidTTL
+		return nil, nil, ErrorInvalidTTL
 	}
 
 	guid, err := uuid.NewV4()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	currentLockValue := guid.String()
 
 	lockKey := adapter.lockKey(lockName)
 
 	releaseLockChannel := make(chan bool, 0)
+	lostLockChannel := make(chan bool, 0)
 
 	for {
 		_, err := adapter.client.Create(lockKey, currentLockValue, lockTTL)
 		if adapter.isTimeoutError(err) {
-			return nil, ErrorTimeout
+			return nil, nil, ErrorTimeout
 		}
 
 		if err == nil {
@@ -253,7 +254,7 @@ func (adapter *ETCDStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uin
 
 	go adapter.maintainLock(lockKey, currentLockValue, lockTTL, lostLockChannel, releaseLockChannel)
 
-	return releaseLockChannel, nil
+	return lostLockChannel, releaseLockChannel, nil
 }
 
 func (adapter *ETCDStoreAdapter) maintainLock(lockKey string, currentLockValue string, lockTTL uint64, lostLockChannel chan bool, releaseLockChannel chan bool) {

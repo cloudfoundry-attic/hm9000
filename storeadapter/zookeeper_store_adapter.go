@@ -385,6 +385,6 @@ func (adapter *ZookeeperStoreAdapter) isNodeDirectory(key string) bool {
 	return fetchedNode.node.Dir
 }
 
-func (adapter *ZookeeperStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64, lostLockChannel chan bool) (releaseLock chan bool, err error) {
-	return nil, errors.New("I haz an error")
+func (adapter *ZookeeperStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64) (lostLock <-chan bool, releaseLock chan<- bool, err error) {
+	return nil, nil, errors.New("I haz an error")
 }
