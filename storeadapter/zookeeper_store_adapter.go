@@ -1,7 +1,6 @@
 package storeadapter
 
 import (
-	"errors"
 	"fmt"
 	"github.com/cloudfoundry/hm9000/helpers/timeprovider"
 	"github.com/cloudfoundry/hm9000/helpers/workerpool"
@@ -386,5 +385,5 @@ func (adapter *ZookeeperStoreAdapter) isNodeDirectory(key string) bool {
 }
 
 func (adapter *ZookeeperStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64) (lostLock <-chan bool, releaseLock chan<- bool, err error) {
-	return nil, nil, errors.New("I haz an error")
+	return nil, nil, nil
 }
