@@ -385,5 +385,7 @@ func (adapter *ZookeeperStoreAdapter) isNodeDirectory(key string) bool {
 }
 
 func (adapter *ZookeeperStoreAdapter) GetAndMaintainLock(lockName string, lockTTL uint64) (lostLock <-chan bool, releaseLock chan<- bool, err error) {
-	return nil, nil, nil
+	fmt.Println("NO NO NO NO NO ZooKeeper's store adapter doesn't know how to do locks well!\n")
+	releaseLockChannel := make(chan bool, 10)
+	return nil, releaseLockChannel, err
 }

@@ -424,10 +424,15 @@ var _ = Describe("ETCD Store Adapter", func() {
 			}, 10.0)
 
 			Context("when the lock disappears after it has been acquired (e.g. ETCD store is reset)", func() {
+				AfterEach(func() {
+					etcdRunner.Start()
+				})
+
 				It("should send a notification down the lostLockChannel", func(done Done) {
 					lostLock, _, _ := adapter.GetAndMaintainLock(uniqueKeyForThisTest, 1)
 
-					adapter.Delete("/hm/locks")
+					etcdRunner.Stop()
+
 					Ω(<-lostLock).Should(BeTrue())
 
 					close(done)
