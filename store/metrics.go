@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/storeadapter"
 	"strconv"
 )
 

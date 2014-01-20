@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/storeadapter"
 	"os"
 	"time"
 )

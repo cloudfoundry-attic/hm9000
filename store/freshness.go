@@ -3,7 +3,7 @@ package store
 import (
 	"encoding/json"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/storeadapter"
+	"github.com/cloudfoundry/storeadapter"
 	"time"
 )
 

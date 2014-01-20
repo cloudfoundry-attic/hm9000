@@ -5,7 +5,7 @@ import (
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/hm9000/testhelpers/storerunner"
+	"github.com/cloudfoundry/storeadapter/storerunner"
 	"os"
 	"os/signal"
 
