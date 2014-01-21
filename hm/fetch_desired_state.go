@@ -42,7 +42,7 @@ func fetchDesiredState(l logger.Logger, conf *config.Config, store store.Store) 
 	fetcher := desiredstatefetcher.New(conf,
 		store,
 		metricsaccountant.New(store),
-		httpclient.NewHttpClient(conf.FetcherNetworkTimeout()),
+		httpclient.NewHttpClient(conf.SkipSSLVerification, conf.FetcherNetworkTimeout()),
 		buildTimeProvider(l),
 		l,
 	)

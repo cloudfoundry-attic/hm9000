@@ -35,6 +35,7 @@ type Config struct {
 	CCAuthUser                     string `json:"cc_auth_user"`
 	CCAuthPassword                 string `json:"cc_auth_password"`
 	CCBaseURL                      string `json:"cc_base_url"`
+	SkipSSLVerification            bool   `json:"skip_ssl_verification"`
 
 	StoreSchemaVersion         int      `json:"store_schema_version"`
 	StoreType                  string   `json:"store_type"`
@@ -64,14 +65,14 @@ type Config struct {
 }
 
 func defaults() Config {
-	return Config {
+	return Config{
 		HeartbeatPeriod: 10, // TODO: convert to time.Duration
 
 		HeartbeatTTLInHeartbeats:        3,
 		ActualFreshnessTTLInHeartbeats:  3,
 		GracePeriodInHeartbeats:         3,
 		DesiredFreshnessTTLInHeartbeats: 12,
-	 
+
 		StoreMaxConcurrentRequests: 30,
 
 		SenderNatsStartSubject: "hm9000.start",
@@ -98,7 +99,7 @@ func defaults() Config {
 
 		LogLevelString: "INFO",
 
-		ActualFreshnessKey: "/actual-fresh",
+		ActualFreshnessKey:  "/actual-fresh",
 		DesiredFreshnessKey: "/desired-fresh",
 	}
 }
