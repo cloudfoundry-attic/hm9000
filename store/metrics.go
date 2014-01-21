@@ -10,7 +10,7 @@ func (store *RealStore) SaveMetric(metric string, value float64) error {
 		Key:   store.SchemaRoot() + "/metrics/" + metric,
 		Value: []byte(strconv.FormatFloat(value, 'f', 5, 64)),
 	}
-	return store.adapter.Set([]storeadapter.StoreNode{node})
+	return store.adapter.SetMulti([]storeadapter.StoreNode{node})
 }
 
 func (store *RealStore) GetMetric(metric string) (float64, error) {

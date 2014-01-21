@@ -128,7 +128,7 @@ var _ = Describe("Apps", func() {
 
 		Context("when there is an empty app directory", func() {
 			It("should ignore that app directory", func() {
-				storeAdapter.Set([]storeadapter.StoreNode{{
+				storeAdapter.SetMulti([]storeadapter.StoreNode{{
 					Key:   "/hm/v1/apps/actual/foo-bar",
 					Value: []byte("foo"),
 				}})
@@ -195,7 +195,7 @@ var _ = Describe("Apps", func() {
 
 			Context("when the app directory is empty", func() {
 				It("should return the app not found error", func() {
-					storeAdapter.Set([]storeadapter.StoreNode{{
+					storeAdapter.SetMulti([]storeadapter.StoreNode{{
 						Key:   "/hm/v1/apps/actual/foo-bar/baz",
 						Value: []byte("foo"),
 					}})

@@ -31,7 +31,7 @@ var _ = Describe("Compact", func() {
 
 	Describe("Deleting old schema version", func() {
 		BeforeEach(func() {
-			storeAdapter.Set([]storeadapter.StoreNode{
+			storeAdapter.SetMulti([]storeadapter.StoreNode{
 				{Key: "/hm/v3/delete/me", Value: []byte("abc")},
 				{Key: "/hm/v16/delete/me", Value: []byte("abc")},
 				{Key: "/hm/v17/leave/me/alone", Value: []byte("abc")},
@@ -101,7 +101,7 @@ var _ = Describe("Compact", func() {
 
 	Describe("Recursively deleting empty directories", func() {
 		BeforeEach(func() {
-			storeAdapter.Set([]storeadapter.StoreNode{
+			storeAdapter.SetMulti([]storeadapter.StoreNode{
 				{Key: "/hm/v17/pokemon/geodude", Value: []byte("foo")},
 				{Key: "/hm/v17/deep-pokemon/abra/kadabra/alakazam", Value: []byte{}},
 				{Key: "/hm/v17/pokemonCount", Value: []byte("151")},
