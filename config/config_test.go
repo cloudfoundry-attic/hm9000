@@ -25,7 +25,7 @@ var _ = Describe("Config", func() {
         "cc_auth_user": "mcat",
         "cc_auth_password": "testing",
         "cc_base_url": "http://127.0.0.1:6001",
-        "skip_ssl_verification": true,
+        "skip_cert_verify": true,
         "store_schema_version": 1,
         "store_type": "etcd",
         "store_urls": ["http://127.0.0.1:4001"],

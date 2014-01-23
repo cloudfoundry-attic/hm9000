@@ -35,7 +35,7 @@ type Config struct {
 	CCAuthUser                     string `json:"cc_auth_user"`
 	CCAuthPassword                 string `json:"cc_auth_password"`
 	CCBaseURL                      string `json:"cc_base_url"`
-	SkipSSLVerification            bool   `json:"skip_ssl_verification"`
+	SkipSSLVerification            bool   `json:"skip_cert_verify"`
 
 	StoreSchemaVersion         int      `json:"store_schema_version"`
 	StoreType                  string   `json:"store_type"`
