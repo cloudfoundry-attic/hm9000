@@ -27,7 +27,8 @@ func Daemonize(
 
 	go func() {
 		<-lostLockChannel
-		os.Exit(17)
+		logger.Error("Lost the lock", errors.New("Lock the lock"))
+		os.Exit(197)
 	}()
 
 	logger.Info("Acquired lock for " + component)

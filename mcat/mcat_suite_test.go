@@ -50,7 +50,7 @@ func TestMCAT(t *testing.T) {
 		RunSpecs(t, "MCAT ZooKeeper MD Suite")
 		coordinator.StopStore()
 	}
-	
+
 	coordinator.StopAllExternalProcesses()
 }
 

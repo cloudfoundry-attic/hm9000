@@ -1,6 +1,7 @@
 package hm
 
 import (
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
@@ -71,7 +72,8 @@ func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
 
 	go func() {
 		<-lostLockChannel
-		os.Exit(17)
+		l.Error("Lost the lock", errors.New("Lock the lock"))
+		os.Exit(197)
 	}()
 
 	l.Info("Acquired lock for " + lockName)
