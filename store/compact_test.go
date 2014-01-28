@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
 var _ = Describe("Compact", func() {
@@ -23,7 +24,7 @@ var _ = Describe("Compact", func() {
 		conf, err = config.DefaultConfig()
 		conf.StoreSchemaVersion = 17
 		Ω(err).ShouldNot(HaveOccurred())
-		storeAdapter = storeadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
+		storeAdapter = etcdstoreadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccurred())
 		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())

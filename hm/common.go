@@ -10,7 +10,9 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
+	"github.com/cloudfoundry/storeadapter/zookeeperstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"strconv"
 	"time"
@@ -83,9 +85,9 @@ func connectToStoreAdapter(l logger.Logger, conf *config.Config) (storeadapter.S
 	var adapter storeadapter.StoreAdapter
 	workerPool := workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests)
 	if conf.StoreType == "etcd" {
-		adapter = storeadapter.NewETCDStoreAdapter(conf.StoreURLs, workerPool)
+		adapter = etcdstoreadapter.NewETCDStoreAdapter(conf.StoreURLs, workerPool)
 	} else if conf.StoreType == "ZooKeeper" {
-		adapter = storeadapter.NewZookeeperStoreAdapter(conf.StoreURLs, workerPool, buildTimeProvider(l), time.Second)
+		adapter = zookeeperstoreadapter.NewZookeeperStoreAdapter(conf.StoreURLs, workerPool, buildTimeProvider(l), time.Second)
 	} else {
 		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd' or 'ZooKeeper'", conf.StoreType), fmt.Errorf("Unkown store type"))
 		os.Exit(1)
