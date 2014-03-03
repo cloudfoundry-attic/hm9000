@@ -66,7 +66,13 @@ func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSClien
 func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
 	adapter, _ := connectToStoreAdapter(l, conf)
 	l.Info("Acquiring lock for " + lockName)
-	lostLockChannel, _, err := adapter.GetAndMaintainLock(lockName, 10)
+
+	lock := storeadapter.StoreNode{
+		Key: "/hm/locks/" + lockName,
+		TTL: 10,
+	}
+
+	lostLockChannel, _, err := adapter.MaintainNode(lock)
 	if err != nil {
 		l.Error("Failed to talk to lock store", err)
 		os.Exit(1)

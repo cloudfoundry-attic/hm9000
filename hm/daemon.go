@@ -19,7 +19,12 @@ func Daemonize(
 ) error {
 	logger.Info("Acquiring lock for " + component)
 
-	lostLockChannel, releaseLockChannel, err := adapter.GetAndMaintainLock(component, 10)
+	lock := storeadapter.StoreNode{
+		Key: "/hm/locks/" + component,
+		TTL: 10,
+	}
+
+	lostLockChannel, releaseLockChannel, err := adapter.MaintainNode(lock)
 	if err != nil {
 		logger.Info(fmt.Sprintf("Failed to acquire lock: %s", err))
 		return err
@@ -56,7 +61,10 @@ func Daemonize(
 				logger.Error("Daemon returned an error. Continuining...", err)
 			}
 		case <-timeoutChan:
-			releaseLockChannel <- true
+			released := make(chan bool)
+			releaseLockChannel <- released
+			<-released
+
 			return errors.New("Daemon timed out. Aborting!")
 		}
 
