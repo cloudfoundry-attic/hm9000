@@ -237,9 +237,7 @@ HM9000 is configured using a JSON file.  Here are the available entries:
 
 - `store_schema_version`: The schema of the store.  HM9000 does not migrate the store, instead, if the store data format/layout changes and is no longer backward compatible the schema version must be bumped.
 
-- `store_type`: One of `"etcd"` or `"ZooKeeper"`
-
-- `store_urls`: An array of ETCD/ZooKeeper server URLs to connect to.
+- `store_urls`: An array of ETCD server URLs to connect to.
 
 - `actual_freshness_key`: The key for the actual freshness in the store.  Set to `"/actual-fresh"`.
 

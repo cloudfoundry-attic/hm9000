@@ -30,15 +30,15 @@ type CLIRunner struct {
 	verbose bool
 }
 
-func NewCLIRunner(storeType string, storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int, verbose bool) *CLIRunner {
+func NewCLIRunner(storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int, verbose bool) *CLIRunner {
 	runner := &CLIRunner{
 		verbose: verbose,
 	}
-	runner.generateConfig(storeType, storeURLs, ccBaseURL, natsPort, metricsServerPort)
+	runner.generateConfig(storeURLs, ccBaseURL, natsPort, metricsServerPort)
 	return runner
 }
 
-func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int) {
+func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int) {
 	tmpFile, err := ioutil.TempFile("/tmp", "hm9000_clirunner")
 	defer tmpFile.Close()
 	Ω(err).ShouldNot(HaveOccurred())
@@ -47,7 +47,6 @@ func (runner *CLIRunner) generateConfig(storeType string, storeURLs []string, cc
 
 	conf, err := config.DefaultConfig()
 	Ω(err).ShouldNot(HaveOccurred())
-	conf.StoreType = storeType
 	conf.StoreURLs = storeURLs
 	conf.CCBaseURL = ccBaseURL
 	conf.NATS[0].Port = natsPort

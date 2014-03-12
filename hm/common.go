@@ -12,7 +12,6 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
-	"github.com/cloudfoundry/storeadapter/zookeeperstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"strconv"
 	"time"
@@ -90,14 +89,7 @@ func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
 func connectToStoreAdapter(l logger.Logger, conf *config.Config) (storeadapter.StoreAdapter, metricsaccountant.UsageTracker) {
 	var adapter storeadapter.StoreAdapter
 	workerPool := workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests)
-	if conf.StoreType == "etcd" {
-		adapter = etcdstoreadapter.NewETCDStoreAdapter(conf.StoreURLs, workerPool)
-	} else if conf.StoreType == "ZooKeeper" {
-		adapter = zookeeperstoreadapter.NewZookeeperStoreAdapter(conf.StoreURLs, workerPool, buildTimeProvider(l), time.Second)
-	} else {
-		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd' or 'ZooKeeper'", conf.StoreType), fmt.Errorf("Unkown store type"))
-		os.Exit(1)
-	}
+	adapter = etcdstoreadapter.NewETCDStoreAdapter(conf.StoreURLs, workerPool)
 	err := adapter.Connect()
 	if err != nil {
 		l.Error("Failed to connect to the store", err)
@@ -108,13 +100,6 @@ func connectToStoreAdapter(l logger.Logger, conf *config.Config) (storeadapter.S
 }
 
 func connectToStore(l logger.Logger, conf *config.Config) (store.Store, metricsaccountant.UsageTracker) {
-	if conf.StoreType == "etcd" || conf.StoreType == "ZooKeeper" {
-		adapter, workerPool := connectToStoreAdapter(l, conf)
-		return store.NewStore(conf, adapter, l), workerPool
-	} else {
-		l.Error(fmt.Sprintf("Unknown store type %s.  Choose one of 'etcd' or 'ZooKeeper'", conf.StoreType), fmt.Errorf("Unkown store type"))
-		os.Exit(1)
-	}
-
-	return nil, nil
+	adapter, workerPool := connectToStoreAdapter(l, conf)
+	return store.NewStore(conf, adapter, l), workerPool
 }

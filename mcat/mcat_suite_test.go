@@ -35,21 +35,9 @@ func TestMCAT(t *testing.T) {
 	coordinator.StartDesiredStateServer()
 	coordinator.StartStartStopListener()
 
-	store := os.Getenv("STORE")
-
-	if store == "" || store == "ETCD" {
-		//run the suite for ETCD...
-		coordinator.StartETCD()
-		RunSpecs(t, "MCAT ETCD MD Suite")
-		coordinator.StopStore()
-	}
-
-	if store == "ZooKeeper" {
-		//...and then for zookeeper
-		coordinator.StartZooKeeper()
-		RunSpecs(t, "MCAT ZooKeeper MD Suite")
-		coordinator.StopStore()
-	}
+	coordinator.StartETCD()
+	RunSpecs(t, "MCAT ETCD MD Suite")
+	coordinator.StopETCD()
 
 	coordinator.StopAllExternalProcesses()
 }
