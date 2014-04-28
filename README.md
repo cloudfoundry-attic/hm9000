@@ -6,17 +6,13 @@ HM 9000 is a rewrite of CloudFoundry's Health Manager.  HM 9000 is written in Go
 
 There are several Go Packages in this repository, each with a comprehensive set of unit tests.  In addition there is an integration test that excercises the interactions between the various components.  What follows is a detailed breakdown.
 
-## Relocation & Status Warning
-
-cloudfoundry/hm9000 will eventually be promoted and move to cloudfoundry/health_manager.  This is the temporary home while it is under development.
-
-hm9000 is not yet a complete replacement for health_manager -- we'll update this README when it's ready for primetime.
-
 ## HM9000's Architecture and High-Availability
 
 HM9000 solves the high-availability problem by relying on etcd, a robust high-availability store distributed across multiple nodes.  Individual HM9000 components are built to rely completely on the store for their knowledge of the world.  This removes the need for maintaining in-memory information and allows clarifies the relationship between the various components (all data must flow through the store).
 
 To avoid the singleton problem, we will turn on multiple instances of each HM9000 component across multiple nodes.  These instances will vie for a lock in the high-availability store.  The instance that grabs the lock gets to run and is responsible for maintaining the lock.  Should that instance enter a bad state or die, the lock becomes available allowing another instance to pick up the slack.  Since all state is stored in the store, the backup component should be able to function independently of the failed component.
+
+For more information, see [the HM9000 release announcement](http://blog.cloudfoundry.org/2014/02/22/hm9000-ready-for-launch/).
 
 ## Deployment
 
