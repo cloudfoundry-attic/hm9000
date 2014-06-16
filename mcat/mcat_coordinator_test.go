@@ -1,6 +1,8 @@
 package mcat_test
 
 import (
+	"strconv"
+
 	"github.com/cloudfoundry/hm9000/config"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
@@ -14,7 +16,6 @@ import (
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/gomega"
-	"strconv"
 )
 
 type MCATCoordinator struct {
@@ -23,6 +24,7 @@ type MCATCoordinator struct {
 	StoreRunner  storerunner.StoreRunner
 	StoreAdapter storeadapter.StoreAdapter
 
+	hm9000Binary      string
 	natsRunner        *natsrunner.NATSRunner
 	startStopListener *startstoplistener.StartStopListener
 
@@ -39,8 +41,9 @@ type MCATCoordinator struct {
 	currentCLIRunner *CLIRunner
 }
 
-func NewMCATCoordinator(parallelNode int, verbose bool) *MCATCoordinator {
+func NewMCATCoordinator(hm9000Binary string, parallelNode int, verbose bool) *MCATCoordinator {
 	coordinator := &MCATCoordinator{
+		hm9000Binary: hm9000Binary,
 		ParallelNode: parallelNode,
 		Verbose:      verbose,
 	}
@@ -71,7 +74,7 @@ func (coordinator *MCATCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *
 	if coordinator.currentCLIRunner != nil {
 		coordinator.currentCLIRunner.Cleanup()
 	}
-	coordinator.currentCLIRunner = NewCLIRunner(coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.MetricsServerPort, coordinator.Verbose)
+	coordinator.currentCLIRunner = NewCLIRunner(coordinator.hm9000Binary, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.MetricsServerPort, coordinator.Verbose)
 	store := storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
 	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus)
 

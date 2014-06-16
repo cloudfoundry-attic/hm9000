@@ -4,7 +4,8 @@ import (
 	"time"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/vito/cmdtest/matchers"
+	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Locking", func() {
@@ -13,77 +14,84 @@ var _ = Describe("Locking", func() {
 			It("one waits for the other to exit and then grabs the lock", func() {
 				listenerA := cliRunner.StartSession("listen", 1)
 
-				Ω(listenerA).Should(Say("Acquired lock"))
-				defer interruptSession(listenerA)
+				Eventually(listenerA, 10*time.Second).Should(gbytes.Say("Acquired lock"))
+
+				defer func() {
+					listenerA.Interrupt().Wait()
+				}()
 
 				listenerB := cliRunner.StartSession("listen", 1)
-				defer interruptSession(listenerB)
+				defer func() {
+					listenerB.Interrupt().Wait()
+				}()
 
-				Ω(listenerB).Should(Say("Acquiring"))
-				Ω(listenerB).ShouldNot(SayWithTimeout("Acquired", 1*time.Second))
+				Eventually(listenerB, 10*time.Second).Should(gbytes.Say("Acquiring"))
+				Consistently(listenerB).ShouldNot(gbytes.Say("Acquired"))
 
-				interruptSession(listenerA)
+				listenerA.Interrupt().Wait()
 
 				coordinator.StoreRunner.FastForwardTime(10)
 
-				Ω(listenerB).Should(SayWithTimeout("Acquired", 3*time.Second))
+				Eventually(listenerB, 20*time.Second).Should(gbytes.Say("Acquired"))
 			})
 		})
 
 		Context("when two polling processes try to run", func() {
 			It("one waits for the other to exit and then grabs the lock", func() {
 				analyzerA := cliRunner.StartSession("analyze", 1, "--poll")
-				defer interruptSession(analyzerA)
+				defer func() {
+					analyzerA.Interrupt().Wait()
+				}()
 
-				Ω(analyzerA).Should(Say("Acquired lock"))
+				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("Acquired lock"))
 
 				analyzerB := cliRunner.StartSession("analyze", 1, "--poll")
-				defer interruptSession(analyzerB)
+				defer func() {
+					analyzerB.Interrupt().Wait()
+				}()
 
-				Ω(analyzerB).Should(Say("Acquiring"))
-				Ω(analyzerB).ShouldNot(SayWithTimeout("Acquired", 1*time.Second))
+				Eventually(analyzerB, 10*time.Second).Should(gbytes.Say("Acquiring"))
+				Consistently(analyzerB).ShouldNot(gbytes.Say("Acquired"))
 
-				interruptSession(analyzerA)
+				analyzerA.Interrupt().Wait()
 
 				coordinator.StoreRunner.FastForwardTime(10)
 
-				Ω(analyzerB).Should(SayWithTimeout("Acquired", 3*time.Second))
+				Eventually(analyzerB, 20*time.Second).Should(gbytes.Say("Acquired"))
 			})
 		})
 	})
 
 	Context("when the lock disappears", func() {
 		Context("long-lived processes", func() {
-			It("should exit 17", func() {
+			It("should exit 197", func() {
 				listenerA := cliRunner.StartSession("listen", 1)
-				defer interruptSession(listenerA)
+				defer func() {
+					listenerA.Interrupt().Wait()
+				}()
 
-				Ω(listenerA).Should(Say("Acquired lock"))
+				Eventually(listenerA, 10*time.Second).Should(gbytes.Say("Acquired lock"))
 
 				coordinator.StoreAdapter.Delete("/hm/locks")
 
-				Ω(listenerA).Should(Say("Lost the lock"))
-				status, err := listenerA.Wait(20 * time.Second)
-
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(status).Should(Equal(197))
+				Eventually(listenerA, 10*time.Second).Should(gbytes.Say("Lost the lock"))
+				Eventually(listenerA, 20*time.Second).Should(gexec.Exit(197))
 			})
 		})
 
 		Context("polling processes", func() {
-			It("should exit 17", func() {
+			It("should exit 197", func() {
 				analyzerA := cliRunner.StartSession("analyze", 1, "--poll")
-				defer interruptSession(analyzerA)
+				defer func() {
+					analyzerA.Interrupt().Wait()
+				}()
 
-				Ω(analyzerA).Should(Say("Acquired lock"))
+				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("Acquired lock"))
 
 				coordinator.StoreAdapter.Delete("/hm/locks")
 
-				Ω(analyzerA).Should(Say("Lost the lock"))
-				status, err := analyzerA.Wait(20 * time.Second)
-
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(status).Should(Equal(197))
+				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("Lost the lock"))
+				Eventually(analyzerA, 20*time.Second).Should(gexec.Exit(197))
 			})
 		})
 	})
