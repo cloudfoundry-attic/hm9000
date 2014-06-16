@@ -3,6 +3,9 @@ package hm
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/hm9000/config"
@@ -13,8 +16,6 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
-	"strconv"
-	"time"
 
 	"os"
 )
@@ -71,18 +72,29 @@ func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
 		TTL: 10,
 	}
 
-	lostLockChannel, _, err := adapter.MaintainNode(lock)
+	status, _, err := adapter.MaintainNode(lock)
 	if err != nil {
 		l.Error("Failed to talk to lock store", err)
 		os.Exit(1)
 	}
 
+	lockAcquired := make(chan bool)
+
 	go func() {
-		<-lostLockChannel
-		l.Error("Lost the lock", errors.New("Lock the lock"))
-		os.Exit(197)
+		for {
+			if <-status {
+				if lockAcquired != nil {
+					close(lockAcquired)
+					lockAcquired = nil
+				}
+			} else {
+				l.Error("Lost the lock", errors.New("Lost the lock"))
+				os.Exit(197)
+			}
+		}
 	}()
 
+	<-lockAcquired
 	l.Info("Acquired lock for " + lockName)
 }
 

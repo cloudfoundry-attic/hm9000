@@ -2,12 +2,12 @@ package hm_test
 
 import (
 	"errors"
+	"time"
 	. "github.com/cloudfoundry/hm9000/hm"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var _ = Describe("Daemon", func() {
@@ -24,6 +24,8 @@ var _ = Describe("Daemon", func() {
 			released := <-adapter.ReleaseNodeChannel
 			released <- true
 		}()
+
+		adapter.MaintainNodeStatus <- true
 
 		callTimes := []float64{}
 		startTime := time.Now()
@@ -89,6 +91,8 @@ var _ = Describe("Daemon", func() {
 				released <- true
 				didRelease <- true
 			}()
+
+			adapter.MaintainNodeStatus <- true
 
 			Daemonize(
 				"Daemon Test",

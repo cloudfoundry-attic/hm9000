@@ -1,24 +1,13 @@
 package mcat_test
 
 import (
+	"time"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/vito/cmdtest/matchers"
-	"time"
 )
 
 var _ = Describe("Locking", func() {
-	Context("when etcd is down", func() {
-		It("logs an error and exits 1", func() {
-			coordinator.StopETCD()
-			listener := cliRunner.StartSession("listen", 1)
-			defer interruptSession(listener)
-			Expect(listener).To(SayWithTimeout("Failed to talk to lock store", 3*time.Second))
-			Expect(listener).To(ExitWith(1))
-			coordinator.StartETCD()
-		})
-	})
-
 	Describe("vieing for the lock", func() {
 		Context("when two long-lived processes try to run", func() {
 			It("one waits for the other to exit and then grabs the lock", func() {
