@@ -72,7 +72,7 @@ func main() {
 		},
 		{
 			Name:        "evacuator",
-			Description: "Listens for Varz calls to serve metrics",
+			Description: "Send NATS start message for evacuated apps",
 			Usage:       "hm evacuator --config=/path/to/config",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
