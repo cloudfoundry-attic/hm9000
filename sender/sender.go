@@ -3,6 +3,8 @@ package sender
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
@@ -17,9 +19,9 @@ type Sender struct {
 	conf   *config.Config
 	logger logger.Logger
 
-	apps         map[string]*models.App
-	messageBus   yagnats.NATSClient
-	timeProvider timeprovider.TimeProvider
+	apps        map[string]*models.App
+	messageBus  yagnats.NATSClient
+	currentTime time.Time
 
 	numberOfStartMessagesSent int
 	sentStartMessages         []models.PendingStartMessage
@@ -33,13 +35,12 @@ type Sender struct {
 	didSucceed bool
 }
 
-func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.NATSClient, timeProvider timeprovider.TimeProvider, logger logger.Logger) *Sender {
+func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.NATSClient, logger logger.Logger) *Sender {
 	return &Sender{
 		store:                 store,
 		conf:                  conf,
 		logger:                logger,
 		messageBus:            messageBus,
-		timeProvider:          timeProvider,
 		sentStartMessages:     []models.PendingStartMessage{},
 		startMessagesToSave:   []models.PendingStartMessage{},
 		startMessagesToDelete: []models.PendingStartMessage{},
@@ -51,8 +52,9 @@ func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountan
 	}
 }
 
-func (sender *Sender) Send() error {
-	err := sender.store.VerifyFreshness(sender.timeProvider.Time())
+func (sender *Sender) Send(timeProvider timeprovider.TimeProvider) error {
+	sender.currentTime = timeProvider.Time()
+	err := sender.store.VerifyFreshness(sender.currentTime)
 	if err != nil {
 		sender.logger.Error("Store is not fresh", err)
 		return err
@@ -120,9 +122,9 @@ func (sender *Sender) sendStartMessages(startMessages map[string]models.PendingS
 	sortedStartMessages := models.SortStartMessagesByPriority(startMessages)
 
 	for _, startMessage := range sortedStartMessages {
-		if startMessage.IsTimeToSend(sender.timeProvider.Time()) {
+		if startMessage.IsTimeToSend(sender.currentTime) {
 			sender.sendStartMessage(startMessage)
-		} else if startMessage.IsExpired(sender.timeProvider.Time()) {
+		} else if startMessage.IsExpired(sender.currentTime) {
 			sender.queueStartMessageForDeletion(startMessage, "expired start message")
 		}
 	}
@@ -130,9 +132,9 @@ func (sender *Sender) sendStartMessages(startMessages map[string]models.PendingS
 
 func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingStopMessage) {
 	for _, stopMessage := range stopMessages {
-		if stopMessage.IsTimeToSend(sender.timeProvider.Time()) {
+		if stopMessage.IsTimeToSend(sender.currentTime) {
 			sender.sendStopMessage(stopMessage)
-		} else if stopMessage.IsExpired(sender.timeProvider.Time()) {
+		} else if stopMessage.IsExpired(sender.currentTime) {
 			sender.queueStopMessageForDeletion(stopMessage, "expired stop message")
 		}
 	}
@@ -190,12 +192,12 @@ func (sender *Sender) sendStopMessage(stopMessage models.PendingStopMessage) {
 }
 
 func (sender *Sender) markStartMessageSent(startMessage models.PendingStartMessage) {
-	startMessage.SentOn = sender.timeProvider.Time().Unix()
+	startMessage.SentOn = sender.currentTime.Unix()
 	sender.startMessagesToSave = append(sender.startMessagesToSave, startMessage)
 }
 
 func (sender *Sender) markStopMessageSent(stopMessage models.PendingStopMessage) {
-	stopMessage.SentOn = sender.timeProvider.Time().Unix()
+	stopMessage.SentOn = sender.currentTime.Unix()
 	sender.stopMessagesToSave = append(sender.stopMessagesToSave, stopMessage)
 }
 

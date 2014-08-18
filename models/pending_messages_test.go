@@ -140,17 +140,17 @@ var _ = Describe("Pending Messages", func() {
 		})
 
 		Describe("Sorting start messages", func() {
-			It("should sort the passed in hash in order of decreasing priority", func() {
+			It("should sort the passed in hash in order of decreasing priority and time", func() {
 				startMessages := make(map[string]PendingStartMessage)
 				startMessages["A"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.7, PendingStartMessageReasonCrashed)
-				startMessages["B"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 0.5, PendingStartMessageReasonCrashed)
+				startMessages["B"] = NewPendingStartMessage(time.Unix(90, 0), 30, 10, "app-guid", "app-version", 1, 0.5, PendingStartMessageReasonCrashed)
 				startMessages["C"] = NewPendingStartMessage(time.Unix(100, 0), 30, 10, "app-guid", "app-version", 1, 1.0, PendingStartMessageReasonCrashed)
 
 				sortedStartMessage := SortStartMessagesByPriority(startMessages)
 				Ω(sortedStartMessage).Should(HaveLen(3))
-				Ω(sortedStartMessage[0].Priority).Should(Equal(1.0))
-				Ω(sortedStartMessage[1].Priority).Should(Equal(0.7))
-				Ω(sortedStartMessage[2].Priority).Should(Equal(0.5))
+				Ω(sortedStartMessage[0].Priority).Should(Equal(0.5))
+				Ω(sortedStartMessage[1].Priority).Should(Equal(1.0))
+				Ω(sortedStartMessage[2].Priority).Should(Equal(0.7))
 			})
 		})
 	})
