@@ -44,7 +44,7 @@ var _ = Describe("Sender", func() {
 
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		sender = New(store, metricsAccountant, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
+		sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger())
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
 	})
@@ -55,7 +55,7 @@ var _ = Describe("Sender", func() {
 		})
 
 		It("should return an error and not send any messages", func() {
-			err := sender.Send()
+			err := sender.Send(timeProvider)
 			Ω(err).Should(Equal(errors.New("oops")))
 			Ω(messageBus.PublishedMessages).Should(BeEmpty())
 		})
@@ -67,7 +67,7 @@ var _ = Describe("Sender", func() {
 		})
 
 		It("should return an error and not send any messages", func() {
-			err := sender.Send()
+			err := sender.Send(timeProvider)
 			Ω(err).Should(Equal(errors.New("oops")))
 			Ω(messageBus.PublishedMessages).Should(BeEmpty())
 		})
@@ -79,7 +79,7 @@ var _ = Describe("Sender", func() {
 		})
 
 		It("should return an error and not send any messages", func() {
-			err := sender.Send()
+			err := sender.Send(timeProvider)
 			Ω(err).Should(Equal(errors.New("oops")))
 			Ω(messageBus.PublishedMessages).Should(BeEmpty())
 		})
@@ -87,7 +87,7 @@ var _ = Describe("Sender", func() {
 
 	Context("when there are no start messages in the queue", func() {
 		It("should not send any messages", func() {
-			err := sender.Send()
+			err := sender.Send(timeProvider)
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(messageBus.PublishedMessages).Should(BeEmpty())
 		})
@@ -95,7 +95,7 @@ var _ = Describe("Sender", func() {
 
 	Context("when there are no stop messages in the queue", func() {
 		It("should not send any messages", func() {
-			err := sender.Send()
+			err := sender.Send(timeProvider)
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(messageBus.PublishedMessages).Should(BeEmpty())
 		})
@@ -116,7 +116,7 @@ var _ = Describe("Sender", func() {
 				pendingMessage,
 			)
 			storeAdapter.SetErrInjector = storeSetErrInjector
-			err = sender.Send()
+			err = sender.Send(timeProvider)
 		})
 
 		BeforeEach(func() {
@@ -286,7 +286,7 @@ var _ = Describe("Sender", func() {
 			)
 
 			storeAdapter.SetErrInjector = storeSetErrInjector
-			err = sender.Send()
+			err = sender.Send(timeProvider)
 		})
 
 		BeforeEach(func() {
@@ -461,7 +461,7 @@ var _ = Describe("Sender", func() {
 				pendingMessage,
 			)
 
-			err = sender.Send()
+			err = sender.Send(timeProvider)
 		})
 
 		BeforeEach(func() {
@@ -597,7 +597,7 @@ var _ = Describe("Sender", func() {
 				pendingMessage,
 			)
 
-			err = sender.Send()
+			err = sender.Send(timeProvider)
 		})
 
 		BeforeEach(func() {
@@ -744,7 +744,7 @@ var _ = Describe("Sender", func() {
 			conf, _ = config.DefaultConfig()
 			conf.SenderMessageLimit = 20
 
-			sender = New(store, metricsAccountant, conf, messageBus, timeProvider, fakelogger.NewFakeLogger())
+			sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger())
 
 			desiredStates := []models.DesiredAppState{}
 			for i := 0; i < 40; i += 1 {
@@ -786,7 +786,7 @@ var _ = Describe("Sender", func() {
 			store.SyncDesiredState(desiredStates...)
 
 			timeProvider.TimeToProvide = time.Unix(130, 0)
-			err := sender.Send()
+			err := sender.Send(timeProvider)
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 

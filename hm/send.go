@@ -41,8 +41,8 @@ func Send(l logger.Logger, conf *config.Config, poll bool) {
 func send(l logger.Logger, conf *config.Config, messageBus yagnats.NATSClient, store store.Store) error {
 	l.Info("Sending...")
 
-	sender := sender.New(store, metricsaccountant.New(store), conf, messageBus, buildTimeProvider(l), l)
-	err := sender.Send()
+	sender := sender.New(store, metricsaccountant.New(store), conf, messageBus, l)
+	err := sender.Send(buildTimeProvider(l))
 
 	if err != nil {
 		l.Error("Sender failed with error", err)

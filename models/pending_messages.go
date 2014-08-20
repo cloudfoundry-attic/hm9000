@@ -113,7 +113,11 @@ type sortablePendingStartMessagesByPriority []PendingStartMessage
 func (s sortablePendingStartMessagesByPriority) Len() int      { return len(s) }
 func (s sortablePendingStartMessagesByPriority) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s sortablePendingStartMessagesByPriority) Less(i, j int) bool {
-	return s[i].Priority < s[j].Priority
+	diff := s[i].SendOn - s[j].SendOn
+	if diff == 0 {
+		return s[i].Priority > s[j].Priority
+	}
+	return diff < 0
 }
 
 func SortStartMessagesByPriority(messages map[string]PendingStartMessage) []PendingStartMessage {
@@ -123,7 +127,7 @@ func SortStartMessagesByPriority(messages map[string]PendingStartMessage) []Pend
 		sortedStartMessages[i] = message
 		i++
 	}
-	sort.Sort(sort.Reverse(sortedStartMessages))
+	sort.Sort(sortedStartMessages)
 	return sortedStartMessages
 }
 
