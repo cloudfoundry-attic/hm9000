@@ -56,7 +56,7 @@ Assuming you have `go` v1.1.* installed:
 
         $ pushd ./src/github.com/coreos/etcd
         $ ./build
-        $ mv etcd $GOPATH/bin/
+        $ mv bin/etcd $GOPATH/bin/
         $ popd
 
 3. Start `etcd`.  Open a new terminal session and:
