@@ -3,6 +3,7 @@ package hm
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -35,25 +36,21 @@ func buildTimeProvider(l logger.Logger) timeprovider.TimeProvider {
 	}
 }
 
-func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSClient {
-	members := []yagnats.ConnectionProvider{}
+func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.ApceraWrapperNATSClient {
+	members := make([]string, len(conf.NATS))
 
 	for _, natsConf := range conf.NATS {
-		members = append(members, &yagnats.ConnectionInfo{
-			Addr: fmt.Sprintf("%s:%d", natsConf.Host, natsConf.Port),
-
-			Username: natsConf.User,
-			Password: natsConf.Password,
-		})
+		uri := url.URL{
+			Scheme: "nats",
+			User:   url.UserPassword(natsConf.User, natsConf.Password),
+			Host:   fmt.Sprintf("%s:%d", natsConf.Host, natsConf.Port),
+		}
+		members = append(members, uri.String())
 	}
 
-	connectionInfo := &yagnats.ConnectionCluster{
-		Members: members,
-	}
+	natsClient := yagnats.NewApceraClientWrapper(members)
 
-	natsClient := yagnats.NewClient()
-
-	err := natsClient.Connect(connectionInfo)
+	err := natsClient.Connect()
 
 	if err != nil {
 		l.Error("Failed to connect to the message bus", err)

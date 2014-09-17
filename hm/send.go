@@ -38,7 +38,7 @@ func Send(l logger.Logger, conf *config.Config, poll bool) {
 	}
 }
 
-func send(l logger.Logger, conf *config.Config, messageBus yagnats.NATSClient, store store.Store) error {
+func send(l logger.Logger, conf *config.Config, messageBus yagnats.ApceraWrapperNATSClient, store store.Store) error {
 	l.Info("Sending...")
 
 	sender := sender.New(store, metricsaccountant.New(store), conf, messageBus, l)

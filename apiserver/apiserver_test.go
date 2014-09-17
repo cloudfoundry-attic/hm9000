@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/hm9000/apiserver"
 	"github.com/cloudfoundry/hm9000/config"
@@ -13,7 +14,6 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
-	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,20 +34,20 @@ var _ = Describe("Apiserver", func() {
 	var store storepackage.Store
 	var storeAdapter *fakestoreadapter.FakeStoreAdapter
 	var timeProvider *faketimeprovider.FakeTimeProvider
-	var messageBus *fakeyagnats.FakeYagnats
+	var messageBus *fakeyagnats.FakeApceraWrapper
 
 	conf, _ := config.DefaultConfig()
 
 	makeRequest := func(request string) (response AppResponse) {
 		replyToGuid := models.Guid()
-		messageBus.Subscriptions["app.state"][0].Callback(&yagnats.Message{
-			Payload: []byte(request),
-			ReplyTo: replyToGuid,
+		messageBus.SubjectCallbacks("app.state")[0](&nats.Msg{
+			Data:  []byte(request),
+			Reply: replyToGuid,
 		})
 
-		Ω(messageBus.PublishedMessages[replyToGuid]).Should(HaveLen(1))
+		Ω(messageBus.PublishedMessages(replyToGuid)).Should(HaveLen(1))
 
-		err := json.Unmarshal(messageBus.PublishedMessages[replyToGuid][0].Payload, &response)
+		err := json.Unmarshal(messageBus.PublishedMessages(replyToGuid)[0].Data, &response)
 		Ω(err).ShouldNot(HaveOccurred())
 
 		return response
@@ -55,21 +55,21 @@ var _ = Describe("Apiserver", func() {
 
 	makeBulkRequest := func(request string) (response BulkAppResponse) {
 		replyToGuid := models.Guid()
-		messageBus.Subscriptions["app.state.bulk"][0].Callback(&yagnats.Message{
-			Payload: []byte(request),
-			ReplyTo: replyToGuid,
+		messageBus.SubjectCallbacks("app.state.bulk")[0](&nats.Msg{
+			Data:  []byte(request),
+			Reply: replyToGuid,
 		})
 
-		Ω(messageBus.PublishedMessages[replyToGuid]).Should(HaveLen(1))
+		Ω(messageBus.PublishedMessages(replyToGuid)).Should(HaveLen(1))
 
-		err := json.Unmarshal(messageBus.PublishedMessages[replyToGuid][0].Payload, &response)
+		err := json.Unmarshal(messageBus.PublishedMessages(replyToGuid)[0].Data, &response)
 		Ω(err).ShouldNot(HaveOccurred())
 
 		return response
 	}
 
 	BeforeEach(func() {
-		messageBus = fakeyagnats.New()
+		messageBus = fakeyagnats.NewApceraClientWrapper()
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 		timeProvider = &faketimeprovider.FakeTimeProvider{
@@ -81,8 +81,8 @@ var _ = Describe("Apiserver", func() {
 	})
 
 	It("should subscribe on a queue", func() {
-		Ω(messageBus.Subscriptions["app.state"]).ShouldNot(BeEmpty())
-		subscription := messageBus.Subscriptions["app.state"][0]
+		Ω(messageBus.Subscriptions("app.state")).ShouldNot(BeEmpty())
+		subscription := messageBus.Subscriptions("app.state")[0]
 		Ω(subscription.Queue).Should(Equal("hm9000"))
 	})
 
@@ -103,18 +103,18 @@ var _ = Describe("Apiserver", func() {
 
 		Context("when no reply-to is given", func() {
 			It("should drop the request on the floor", func() {
-				messageBus.Subscriptions["app.state"][0].Callback(&yagnats.Message{
-					Payload: []byte("{}"),
+				messageBus.SubjectCallbacks("app.state")[0](&nats.Msg{
+					Data: []byte("{}"),
 				})
 
-				Ω(messageBus.PublishedMessages).Should(BeEmpty())
+				Ω(messageBus.PublishedMessageCount()).Should(Equal(0))
 			})
 		})
 
 		Context("when the request contains the droplet and version", func() {
 			var app appfixture.AppFixture
 			var expectedApp AppResponse
-			var validRequestPayload string
+			var validRequestData string
 
 			BeforeEach(func() {
 				app = appfixture.NewAppFixture()
@@ -141,7 +141,7 @@ var _ = Describe("Apiserver", func() {
 				store.SyncDesiredState(app.DesiredState(3))
 				store.SyncHeartbeats(app.Heartbeat(3))
 				store.SaveCrashCounts(crashCount)
-				validRequestPayload = fmt.Sprintf(`{"droplet":"%s","version":"%s"}`, app.AppGuid, app.AppVersion)
+				validRequestData = fmt.Sprintf(`{"droplet":"%s","version":"%s"}`, app.AppGuid, app.AppVersion)
 			})
 
 			Context("when the store is fresh", func() {
@@ -159,7 +159,7 @@ var _ = Describe("Apiserver", func() {
 
 				Context("when the app query parameters correspond to an existing app", func() {
 					It("should return the actual instances and crashes of the app", func() {
-						response := makeRequest(validRequestPayload)
+						response := makeRequest(validRequestData)
 						Ω(response.AppGuid).Should(Equal(expectedApp.AppGuid))
 						Ω(response.AppVersion).Should(Equal(expectedApp.AppVersion))
 						Ω(response.Desired).Should(Equal(expectedApp.Desired))
@@ -174,7 +174,7 @@ var _ = Describe("Apiserver", func() {
 					})
 
 					It("should return an empty hash", func() {
-						response := makeRequest(validRequestPayload)
+						response := makeRequest(validRequestData)
 						Ω(response).Should(BeZero())
 					})
 				})
@@ -182,7 +182,7 @@ var _ = Describe("Apiserver", func() {
 
 			Context("when the store is not fresh", func() {
 				It("should return an empty hash", func() {
-					response := makeRequest(validRequestPayload)
+					response := makeRequest(validRequestData)
 					Ω(response).Should(BeZero())
 				})
 			})
@@ -206,18 +206,18 @@ var _ = Describe("Apiserver", func() {
 
 		Context("when no reply-to is given", func() {
 			It("should drop the request on the floor", func() {
-				messageBus.Subscriptions["app.state.bulk"][0].Callback(&yagnats.Message{
-					Payload: []byte("{}"),
+				messageBus.SubjectCallbacks("app.state.bulk")[0](&nats.Msg{
+					Data: []byte("{}"),
 				})
 
-				Ω(messageBus.PublishedMessages).Should(BeEmpty())
+				Ω(messageBus.PublishedMessageCount()).Should(Equal(0))
 			})
 		})
 
 		Context("when the request contains a valid droplet and version", func() {
 			var app appfixture.AppFixture
 			var expectedApp AppResponse
-			var validRequestPayload string
+			var validRequestData string
 
 			BeforeEach(func() {
 				app = appfixture.NewAppFixture()
@@ -244,7 +244,7 @@ var _ = Describe("Apiserver", func() {
 				store.SyncDesiredState(app.DesiredState(3))
 				store.SyncHeartbeats(app.Heartbeat(3))
 				store.SaveCrashCounts(crashCount)
-				validRequestPayload = fmt.Sprintf(`[{"droplet":"%s","version":"%s"}]`, app.AppGuid, app.AppVersion)
+				validRequestData = fmt.Sprintf(`[{"droplet":"%s","version":"%s"}]`, app.AppGuid, app.AppVersion)
 			})
 
 			Context("when the store is fresh", func() {
@@ -262,7 +262,7 @@ var _ = Describe("Apiserver", func() {
 
 				Context("when the app query parameters correspond to an existing app", func() {
 					It("should return the actual instances and crashes of the app", func() {
-						response := makeBulkRequest(validRequestPayload)
+						response := makeBulkRequest(validRequestData)
 						Ω(response).Should(HaveLen(1))
 						Ω(response).Should(HaveKey(expectedApp.AppGuid))
 						receivedApp := response[expectedApp.AppGuid]
@@ -276,8 +276,8 @@ var _ = Describe("Apiserver", func() {
 
 				Context("when some of the apps are not found", func() {
 					It("responds with the apps that are present", func() {
-						validRequestPayload = fmt.Sprintf(`[{"droplet":"%s","version":"%s"},{"droplet":"jam-sandwich","version":"123"}]`, app.AppGuid, app.AppVersion)
-						response := makeBulkRequest(validRequestPayload)
+						validRequestData = fmt.Sprintf(`[{"droplet":"%s","version":"%s"},{"droplet":"jam-sandwich","version":"123"}]`, app.AppGuid, app.AppVersion)
+						response := makeBulkRequest(validRequestData)
 						Ω(response).Should(HaveLen(1))
 						Ω(response).Should(HaveKey(expectedApp.AppGuid))
 						receivedApp := response[expectedApp.AppGuid]
@@ -292,7 +292,7 @@ var _ = Describe("Apiserver", func() {
 
 			Context("when the store is not fresh", func() {
 				It("should return an empty hash", func() {
-					response := makeBulkRequest(validRequestPayload)
+					response := makeBulkRequest(validRequestData)
 					Ω(response).Should(BeEmpty())
 				})
 			})

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
@@ -23,7 +24,7 @@ var _ = Describe("Sender", func() {
 		storeAdapter      *fakestoreadapter.FakeStoreAdapter
 		store             storepackage.Store
 		sender            *Sender
-		messageBus        *fakeyagnats.FakeYagnats
+		messageBus        *fakeyagnats.FakeApceraWrapper
 		timeProvider      *faketimeprovider.FakeTimeProvider
 		dea               appfixture.DeaFixture
 		app               appfixture.AppFixture
@@ -32,7 +33,7 @@ var _ = Describe("Sender", func() {
 	)
 
 	BeforeEach(func() {
-		messageBus = fakeyagnats.New()
+		messageBus = fakeyagnats.NewApceraClientWrapper()
 		dea = appfixture.NewDeaFixture()
 		app = dea.GetApp(0)
 		conf, _ = config.DefaultConfig()
@@ -57,7 +58,7 @@ var _ = Describe("Sender", func() {
 		It("should return an error and not send any messages", func() {
 			err := sender.Send(timeProvider)
 			Ω(err).Should(Equal(errors.New("oops")))
-			Ω(messageBus.PublishedMessages).Should(BeEmpty())
+			Ω(messageBus.PublishedMessageCount()).Should(Equal(0))
 		})
 	})
 
@@ -69,7 +70,7 @@ var _ = Describe("Sender", func() {
 		It("should return an error and not send any messages", func() {
 			err := sender.Send(timeProvider)
 			Ω(err).Should(Equal(errors.New("oops")))
-			Ω(messageBus.PublishedMessages).Should(BeEmpty())
+			Ω(messageBus.PublishedMessageCount()).Should(Equal(0))
 		})
 	})
 
@@ -81,7 +82,7 @@ var _ = Describe("Sender", func() {
 		It("should return an error and not send any messages", func() {
 			err := sender.Send(timeProvider)
 			Ω(err).Should(Equal(errors.New("oops")))
-			Ω(messageBus.PublishedMessages).Should(BeEmpty())
+			Ω(messageBus.PublishedMessageCount()).Should(Equal(0))
 		})
 	})
 
@@ -89,7 +90,7 @@ var _ = Describe("Sender", func() {
 		It("should not send any messages", func() {
 			err := sender.Send(timeProvider)
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(messageBus.PublishedMessages).Should(BeEmpty())
+			Ω(messageBus.PublishedMessageCount()).Should(Equal(0))
 		})
 	})
 
@@ -97,7 +98,7 @@ var _ = Describe("Sender", func() {
 		It("should not send any messages", func() {
 			err := sender.Send(timeProvider)
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(messageBus.PublishedMessages).Should(BeEmpty())
+			Ω(messageBus.PublishedMessageCount()).Should(Equal(0))
 		})
 	})
 
@@ -136,7 +137,7 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should not send the messages", func() {
-				Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
+				Ω(messageBus.PublishedMessages("hm9000.start")).Should(HaveLen(0))
 			})
 
 			It("should not increment the metrics", func() {
@@ -155,8 +156,8 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should send the message", func() {
-				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
-				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.start"][0].Payload))
+				Ω(messageBus.PublishedMessages("hm9000.start")).Should(HaveLen(1))
+				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.start")[0].Data))
 				Ω(message).Should(Equal(models.StartMessage{
 					AppGuid:       app.AppGuid,
 					AppVersion:    app.AppVersion,
@@ -220,7 +221,9 @@ var _ = Describe("Sender", func() {
 
 			Context("when the message fails to send", func() {
 				BeforeEach(func() {
-					messageBus.PublishError = errors.New("oops")
+					messageBus.WhenPublishing("hm9000.start", func(*nats.Msg) error {
+						return errors.New("oops")
+					})
 				})
 
 				It("should return an error", func() {
@@ -251,7 +254,7 @@ var _ = Describe("Sender", func() {
 				It("should delete the message and not send it", func() {
 					messages, _ := store.GetPendingStartMessages()
 					Ω(messages).Should(BeEmpty())
-					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
+					Ω(messageBus.PublishedMessages("hm9000.start")).Should(HaveLen(0))
 				})
 			})
 
@@ -263,7 +266,7 @@ var _ = Describe("Sender", func() {
 				It("should neither delete the message nor send it", func() {
 					messages, _ := store.GetPendingStartMessages()
 					Ω(messages).Should(HaveLen(1))
-					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
+					Ω(messageBus.PublishedMessages("hm9000.start")).Should(HaveLen(0))
 				})
 			})
 		})
@@ -306,7 +309,7 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should not send the messages", func() {
-				Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.stop"))
+				Ω(messageBus.PublishedMessages("hm9000.stop")).Should(HaveLen(0))
 			})
 
 			It("should leave the messages in the queue", func() {
@@ -329,8 +332,8 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should send the message", func() {
-				Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(1))
-				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.stop"][0].Payload))
+				Ω(messageBus.PublishedMessages("hm9000.stop")).Should(HaveLen(1))
+				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.stop")[0].Data))
 				Ω(message).Should(Equal(models.StopMessage{
 					AppGuid:       app.AppGuid,
 					AppVersion:    app.AppVersion,
@@ -392,7 +395,9 @@ var _ = Describe("Sender", func() {
 
 			Context("when the message fails to send", func() {
 				BeforeEach(func() {
-					messageBus.PublishError = errors.New("oops")
+					messageBus.WhenPublishing("hm9000.stop", func(*nats.Msg) error {
+						return errors.New("oops")
+					})
 				})
 
 				It("should return an error", func() {
@@ -427,7 +432,7 @@ var _ = Describe("Sender", func() {
 				It("should delete the message and not send it", func() {
 					messages, _ := store.GetPendingStopMessages()
 					Ω(messages).Should(BeEmpty())
-					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.stop"))
+					Ω(messageBus.PublishedMessages("hm9000.stop")).Should(HaveLen(0))
 				})
 			})
 
@@ -440,7 +445,7 @@ var _ = Describe("Sender", func() {
 					messages, _ := store.GetPendingStopMessages()
 					Ω(messages).Should(HaveLen(1))
 
-					Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.stop"))
+					Ω(messageBus.PublishedMessages("hm9000.stop")).Should(HaveLen(0))
 				})
 			})
 		})
@@ -477,7 +482,7 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should not send the start message", func() {
-				Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.start"))
+				Ω(messageBus.PublishedMessages("hm9000.start")).Should(HaveLen(0))
 			})
 
 			It("should not increment the metrics", func() {
@@ -495,8 +500,8 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should send the start message", func() {
-				Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(1))
-				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.start"][0].Payload))
+				Ω(messageBus.PublishedMessages("hm9000.start")).Should(HaveLen(1))
+				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.start")[0].Data))
 				Ω(message).Should(Equal(models.StartMessage{
 					AppGuid:       app.AppGuid,
 					AppVersion:    app.AppVersion,
@@ -611,7 +616,7 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should not send the stop message", func() {
-				Ω(messageBus.PublishedMessages).ShouldNot(HaveKey("hm9000.stop"))
+				Ω(messageBus.PublishedMessages("hm9000.stop")).Should(HaveLen(0))
 			})
 
 			It("should not increment the metrics", func() {
@@ -629,8 +634,8 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should send the stop message", func() {
-				Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(1))
-				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages["hm9000.stop"][0].Payload))
+				Ω(messageBus.PublishedMessages("hm9000.stop")).Should(HaveLen(1))
+				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.stop")[0].Data))
 				Ω(message).Should(Equal(models.StopMessage{
 					AppGuid:       app.AppGuid,
 					AppVersion:    app.AppVersion,
@@ -793,7 +798,7 @@ var _ = Describe("Sender", func() {
 		It("should limit the number of start messages that it sends", func() {
 			remainingStartMessages, _ := store.GetPendingStartMessages()
 			Ω(remainingStartMessages).Should(HaveLen(20))
-			Ω(messageBus.PublishedMessages["hm9000.start"]).Should(HaveLen(20))
+			Ω(messageBus.PublishedMessages("hm9000.start")).Should(HaveLen(20))
 			Ω(metricsAccountant.IncrementedStarts).Should(HaveLen(20))
 
 			for _, remainingStartMessage := range remainingStartMessages {
@@ -819,7 +824,7 @@ var _ = Describe("Sender", func() {
 		It("should send all the stop messages, as they are cheap to handle", func() {
 			remainingStopMessages, _ := store.GetPendingStopMessages()
 			Ω(remainingStopMessages).Should(BeEmpty())
-			Ω(messageBus.PublishedMessages["hm9000.stop"]).Should(HaveLen(40))
+			Ω(messageBus.PublishedMessages("hm9000.stop")).Should(HaveLen(40))
 			Ω(metricsAccountant.IncrementedStops).Should(HaveLen(40))
 		})
 	})

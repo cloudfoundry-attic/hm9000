@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
@@ -20,7 +21,7 @@ const HeartbeatSyncTimer = "HeartbeatSyncTimer"
 type ActualStateListener struct {
 	logger                  logger.Logger
 	config                  *config.Config
-	messageBus              yagnats.NATSClient
+	messageBus              yagnats.ApceraWrapperNATSClient
 	store                   store.Store
 	timeProvider            timeprovider.TimeProvider
 	storeUsageTracker       metricsaccountant.UsageTracker
@@ -35,7 +36,7 @@ type ActualStateListener struct {
 }
 
 func New(config *config.Config,
-	messageBus yagnats.NATSClient,
+	messageBus yagnats.ApceraWrapperNATSClient,
 	store store.Store,
 	storeUsageTracker metricsaccountant.UsageTracker,
 	metricsAccountant metricsaccountant.MetricsAccountant,
@@ -58,7 +59,7 @@ func New(config *config.Config,
 func (listener *ActualStateListener) Start() {
 	heartbeatThreshold := time.Duration(listener.config.ActualFreshnessTTL()) * time.Second
 
-	listener.messageBus.Subscribe("dea.advertise", func(message *yagnats.Message) {
+	listener.messageBus.Subscribe("dea.advertise", func(message *nats.Msg) {
 		listener.heartbeatMutex.Lock()
 		lastReceived := listener.lastReceivedHeartbeat
 		listener.heartbeatMutex.Unlock()
@@ -70,13 +71,13 @@ func (listener *ActualStateListener) Start() {
 		listener.logger.Debug("Received dea.advertise")
 	})
 
-	listener.messageBus.Subscribe("dea.heartbeat", func(message *yagnats.Message) {
+	listener.messageBus.Subscribe("dea.heartbeat", func(message *nats.Msg) {
 		listener.logger.Debug("Got a heartbeat")
-		heartbeat, err := models.NewHeartbeatFromJSON(message.Payload)
+		heartbeat, err := models.NewHeartbeatFromJSON(message.Data)
 		if err != nil {
 			listener.logger.Error("Could not unmarshal heartbeat", err,
 				map[string]string{
-					"MessageBody": string(message.Payload),
+					"MessageBody": string(message.Data),
 				})
 			return
 		}

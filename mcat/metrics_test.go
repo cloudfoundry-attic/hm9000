@@ -2,14 +2,15 @@ package mcat_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
-	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
-	"net/http"
 )
 
 var _ = Describe("Serving Metrics", func() {
@@ -37,9 +38,9 @@ var _ = Describe("Serving Metrics", func() {
 		cliRunner.StartMetricsServer(simulator.currentTimestamp)
 		guid := models.Guid()
 
-		coordinator.MessageBus.Subscribe(guid, func(message *yagnats.Message) {
-			Ω(string(message.Payload)).Should(ContainSubstring("%s:%d", ip, coordinator.MetricsServerPort))
-			Ω(string(message.Payload)).Should(ContainSubstring(`"bob","password"`))
+		coordinator.MessageBus.Subscribe(guid, func(message *nats.Msg) {
+			Ω(string(message.Data)).Should(ContainSubstring("%s:%d", ip, coordinator.MetricsServerPort))
+			Ω(string(message.Data)).Should(ContainSubstring(`"bob","password"`))
 			close(done)
 		})
 

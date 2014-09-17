@@ -1,11 +1,11 @@
 package mcat_test
 
 import (
-	"time"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"time"
 )
 
 var _ = Describe("Locking", func() {

@@ -1,11 +1,11 @@
 package desiredstateserver_test
 
 import (
-	"io/ioutil"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	. "github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"io/ioutil"
 
 	"encoding/json"
 	"fmt"

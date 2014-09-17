@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/store"
@@ -12,7 +13,7 @@ import (
 )
 
 type ApiServer struct {
-	messageBus   yagnats.NATSClient
+	messageBus   yagnats.ApceraWrapperNATSClient
 	store        store.Store
 	timeProvider timeprovider.TimeProvider
 	logger       logger.Logger
@@ -23,7 +24,7 @@ type AppStateRequest struct {
 	AppVersion string `json:"version"`
 }
 
-func New(messageBus yagnats.NATSClient, store store.Store, timeProvider timeprovider.TimeProvider, logger logger.Logger) *ApiServer {
+func New(messageBus yagnats.ApceraWrapperNATSClient, store store.Store, timeProvider timeprovider.TimeProvider, logger logger.Logger) *ApiServer {
 	return &ApiServer{
 		messageBus:   messageBus,
 		store:        store,
@@ -37,9 +38,9 @@ func (server *ApiServer) Listen() {
 	server.handle("app.state.bulk", server.handleBulkAppStateRequest)
 }
 
-func (server *ApiServer) handle(topic string, handler func(message *yagnats.Message) ([]byte, error)) {
-	server.messageBus.SubscribeWithQueue(topic, "hm9000", func(message *yagnats.Message) {
-		if message.ReplyTo == "" {
+func (server *ApiServer) handle(topic string, handler func(message *nats.Msg) ([]byte, error)) {
+	server.messageBus.SubscribeWithQueue(topic, "hm9000", func(message *nats.Msg) {
+		if message.Reply == "" {
 			return
 		}
 
@@ -54,25 +55,25 @@ func (server *ApiServer) handle(topic string, handler func(message *yagnats.Mess
 		}
 
 		if err != nil {
-			server.messageBus.Publish(message.ReplyTo, []byte("{}"))
+			server.messageBus.Publish(message.Reply, []byte("{}"))
 			server.logger.Error(fmt.Sprintf("Failed to handle %s request", topic), err, map[string]string{
-				"payload":      string(message.Payload),
+				"payload":      string(message.Data),
 				"elapsed time": fmt.Sprintf("%s", time.Since(t)),
 			})
 			return
 		} else {
-			server.messageBus.Publish(message.ReplyTo, response)
+			server.messageBus.Publish(message.Reply, response)
 			server.logger.Info(fmt.Sprintf("Responded succesfully to %s request", topic), map[string]string{
-				"payload":      string(message.Payload),
+				"payload":      string(message.Data),
 				"elapsed time": fmt.Sprintf("%s", time.Since(t)),
 			})
 		}
 	})
 }
 
-func (server *ApiServer) handleAppStateRequest(message *yagnats.Message) ([]byte, error) {
+func (server *ApiServer) handleAppStateRequest(message *nats.Msg) ([]byte, error) {
 	var request AppStateRequest
-	err := json.Unmarshal([]byte(message.Payload), &request)
+	err := json.Unmarshal([]byte(message.Data), &request)
 	if err != nil {
 		return nil, err
 	}
@@ -86,9 +87,9 @@ func (server *ApiServer) handleAppStateRequest(message *yagnats.Message) ([]byte
 	return response, err
 }
 
-func (server *ApiServer) handleBulkAppStateRequest(message *yagnats.Message) ([]byte, error) {
+func (server *ApiServer) handleBulkAppStateRequest(message *nats.Msg) ([]byte, error) {
 	requests := make([]AppStateRequest, 0)
-	err := json.Unmarshal([]byte(message.Payload), &requests)
+	err := json.Unmarshal([]byte(message.Data), &requests)
 	if err != nil {
 		return nil, err
 	}

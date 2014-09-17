@@ -21,10 +21,10 @@ type Simulator struct {
 	TicksToAttainFreshness int
 	TicksToExpireHeartbeat int
 	GracePeriod            int
-	messageBus             yagnats.NATSClient
+	messageBus             yagnats.ApceraWrapperNATSClient
 }
 
-func NewSimulator(conf *config.Config, storeRunner storerunner.StoreRunner, store store.Store, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.NATSClient) *Simulator {
+func NewSimulator(conf *config.Config, storeRunner storerunner.StoreRunner, store store.Store, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.ApceraWrapperNATSClient) *Simulator {
 	desiredStateServer.Reset()
 
 	return &Simulator{

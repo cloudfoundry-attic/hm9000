@@ -3,9 +3,9 @@ package mcat_test
 import (
 	"fmt"
 
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
-	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -37,11 +37,11 @@ var _ = Describe("Serving API", func() {
 
 			It("should return the app", func(done Done) {
 				replyTo := models.Guid()
-				_, err := coordinator.MessageBus.Subscribe(replyTo, func(message *yagnats.Message) {
+				_, err := coordinator.MessageBus.Subscribe(replyTo, func(message *nats.Msg) {
 					defer GinkgoRecover()
-					Ω(string(message.Payload)).Should(ContainSubstring(`"droplet":"%s"`, a.AppGuid))
-					Ω(string(message.Payload)).Should(ContainSubstring(`"instances":2`))
-					Ω(string(message.Payload)).Should(ContainSubstring(`"instance":"%s"`, a.InstanceAtIndex(0).InstanceGuid))
+					Ω(string(message.Data)).Should(ContainSubstring(`"droplet":"%s"`, a.AppGuid))
+					Ω(string(message.Data)).Should(ContainSubstring(`"instances":2`))
+					Ω(string(message.Data)).Should(ContainSubstring(`"instance":"%s"`, a.InstanceAtIndex(0).InstanceGuid))
 
 					close(done)
 				})
@@ -60,9 +60,9 @@ var _ = Describe("Serving API", func() {
 
 			It("should return -1 for all metrics", func(done Done) {
 				replyTo := models.Guid()
-				_, err := coordinator.MessageBus.Subscribe(replyTo, func(message *yagnats.Message) {
+				_, err := coordinator.MessageBus.Subscribe(replyTo, func(message *nats.Msg) {
 					defer GinkgoRecover()
-					Ω(string(message.Payload)).Should(BeEquivalentTo(`{}`))
+					Ω(string(message.Data)).Should(BeEquivalentTo(`{}`))
 
 					close(done)
 				})
@@ -98,12 +98,12 @@ var _ = Describe("Serving API", func() {
 
 			It("should return the apps", func(done Done) {
 				replyTo := models.Guid()
-				_, err := coordinator.MessageBus.Subscribe(replyTo, func(message *yagnats.Message) {
+				_, err := coordinator.MessageBus.Subscribe(replyTo, func(message *nats.Msg) {
 					defer GinkgoRecover()
-					Ω(string(message.Payload)).Should(ContainSubstring(`"droplet":"%s"`, a.AppGuid))
-					Ω(string(message.Payload)).Should(ContainSubstring(`"droplet":"%s"`, b.AppGuid))
-					Ω(string(message.Payload)).Should(ContainSubstring(`"instances":2`))
-					Ω(string(message.Payload)).Should(ContainSubstring(`"instances":3`))
+					Ω(string(message.Data)).Should(ContainSubstring(`"droplet":"%s"`, a.AppGuid))
+					Ω(string(message.Data)).Should(ContainSubstring(`"droplet":"%s"`, b.AppGuid))
+					Ω(string(message.Data)).Should(ContainSubstring(`"instances":2`))
+					Ω(string(message.Data)).Should(ContainSubstring(`"instances":3`))
 
 					close(done)
 				})
@@ -122,9 +122,9 @@ var _ = Describe("Serving API", func() {
 
 			It("should return -1 for all metrics", func(done Done) {
 				replyTo := models.Guid()
-				_, err := coordinator.MessageBus.Subscribe(replyTo, func(message *yagnats.Message) {
+				_, err := coordinator.MessageBus.Subscribe(replyTo, func(message *nats.Msg) {
 					defer GinkgoRecover()
-					Ω(string(message.Payload)).Should(BeEquivalentTo(`{}`))
+					Ω(string(message.Data)).Should(BeEquivalentTo(`{}`))
 
 					close(done)
 				})

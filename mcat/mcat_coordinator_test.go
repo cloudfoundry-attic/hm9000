@@ -19,7 +19,7 @@ import (
 )
 
 type MCATCoordinator struct {
-	MessageBus   yagnats.NATSClient
+	MessageBus   yagnats.ApceraWrapperNATSClient
 	StateServer  *desiredstateserver.DesiredStateServer
 	StoreRunner  storerunner.StoreRunner
 	StoreAdapter storeadapter.StoreAdapter

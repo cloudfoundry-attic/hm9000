@@ -2,8 +2,9 @@ package actualstatelistener_test
 
 import (
 	"errors"
+
+	"github.com/apcera/nats"
 	. "github.com/cloudfoundry/hm9000/actualstatelistener"
-	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -31,7 +32,7 @@ var _ = Describe("Actual state listener", func() {
 		storeAdapter      *fakestoreadapter.FakeStoreAdapter
 		listener          *ActualStateListener
 		timeProvider      *faketimeprovider.FakeTimeProvider
-		messageBus        *fakeyagnats.FakeYagnats
+		messageBus        *fakeyagnats.FakeApceraWrapper
 		logger            *fakelogger.FakeLogger
 		conf              *config.Config
 		freshByTime       time.Time
@@ -57,7 +58,7 @@ var _ = Describe("Actual state listener", func() {
 
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		messageBus = fakeyagnats.New()
+		messageBus = fakeyagnats.NewApceraClientWrapper()
 		logger = fakelogger.NewFakeLogger()
 
 		usageTracker = fakeusagetracker.New()
@@ -79,13 +80,13 @@ var _ = Describe("Actual state listener", func() {
 	}
 
 	It("should subscribe to the dea.heartbeat subject", func() {
-		Ω(messageBus.Subscriptions).Should(HaveKey("dea.heartbeat"))
-		Ω(messageBus.Subscriptions["dea.heartbeat"]).Should(HaveLen(1))
+		Ω(messageBus.Subscriptions("dea.heartbeat")).ShouldNot(BeNil())
+		Ω(messageBus.Subscriptions("dea.heartbeat")).Should(HaveLen(1))
 	})
 
 	It("should subscribe to the dea.advertise subject", func() {
-		Ω(messageBus.Subscriptions).Should(HaveKey("dea.advertise"))
-		Ω(messageBus.Subscriptions["dea.advertise"]).Should(HaveLen(1))
+		Ω(messageBus.Subscriptions("dea.advertise")).ShouldNot(BeNil())
+		Ω(messageBus.Subscriptions("dea.advertise")).Should(HaveLen(1))
 	})
 
 	It("should start tracking store usage", func() {
@@ -113,16 +114,16 @@ var _ = Describe("Actual state listener", func() {
 	Context("When it receives a dea advertisement over the message bus", func() {
 		Context("and no heartbeat has been received recently", func() {
 			BeforeEach(func() {
-				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: app.Heartbeat(1).ToJSON(),
+				messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
+					Data: app.Heartbeat(1).ToJSON(),
 				})
 
 				store.RevokeActualFreshness()
 
 				timeProvider.IncrementBySeconds(conf.ActualFreshnessTTL())
 
-				messageBus.Subscriptions["dea.advertise"][0].Callback(&yagnats.Message{
-					Payload: []byte("doesn't matter"),
+				messageBus.SubjectCallbacks("dea.advertise")[0](&nats.Msg{
+					Data: []byte("doesn't matter"),
 				})
 			})
 
@@ -135,16 +136,16 @@ var _ = Describe("Actual state listener", func() {
 
 		Context("and a heartbeat was received recently", func() {
 			BeforeEach(func() {
-				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: app.Heartbeat(1).ToJSON(),
+				messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
+					Data: app.Heartbeat(1).ToJSON(),
 				})
 
 				store.RevokeActualFreshness()
 
 				timeProvider.IncrementBySeconds(conf.ActualFreshnessTTL() - 1)
 
-				messageBus.Subscriptions["dea.advertise"][0].Callback(&yagnats.Message{
-					Payload: []byte("doesn't matter"),
+				messageBus.SubjectCallbacks("dea.advertise")[0](&nats.Msg{
+					Data: []byte("doesn't matter"),
 				})
 			})
 
@@ -158,8 +159,8 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it receives a simple heartbeat over the message bus", func() {
 		BeforeEach(func() {
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-				Payload: app.Heartbeat(1).ToJSON(),
+			messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
+				Data: app.Heartbeat(1).ToJSON(),
 			})
 
 			forceHeartbeatSync()
@@ -193,8 +194,8 @@ var _ = Describe("Actual state listener", func() {
 
 		Context("when the save succeeds", func() {
 			BeforeEach(func() {
-				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: heartbeat.ToJSON(),
+				messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
+					Data: heartbeat.ToJSON(),
 				})
 
 				forceHeartbeatSync()
@@ -230,8 +231,8 @@ var _ = Describe("Actual state listener", func() {
 
 		Context("when the save succeeds, but takes too long", func() {
 			BeforeEach(func() {
-				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: heartbeat.ToJSON(),
+				messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
+					Data: heartbeat.ToJSON(),
 				})
 
 				conf.ListenerHeartbeatSyncIntervalInMilliseconds = 0
@@ -250,8 +251,8 @@ var _ = Describe("Actual state listener", func() {
 
 				storeAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector(app.InstanceAtIndex(0).InstanceGuid, errors.New("oops"))
 
-				messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-					Payload: heartbeat.ToJSON(),
+				messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
+					Data: heartbeat.ToJSON(),
 				})
 
 				forceHeartbeatSync()
@@ -278,8 +279,8 @@ var _ = Describe("Actual state listener", func() {
 
 	Context("When it fails to parse the heartbeat message", func() {
 		BeforeEach(func() {
-			messageBus.Subscriptions["dea.heartbeat"][0].Callback(&yagnats.Message{
-				Payload: []byte("ß"),
+			messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
+				Data: []byte("ß"),
 			})
 
 			forceHeartbeatSync()
