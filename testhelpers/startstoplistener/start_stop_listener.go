@@ -10,10 +10,10 @@ import (
 type StartStopListener struct {
 	Starts     []models.StartMessage
 	Stops      []models.StopMessage
-	messageBus yagnats.ApceraWrapperNATSClient
+	messageBus yagnats.NATSConn
 }
 
-func NewStartStopListener(messageBus yagnats.ApceraWrapperNATSClient, conf *config.Config) *StartStopListener {
+func NewStartStopListener(messageBus yagnats.NATSConn, conf *config.Config) *StartStopListener {
 	listener := &StartStopListener{
 		messageBus: messageBus,
 	}

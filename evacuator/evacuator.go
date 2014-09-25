@@ -11,14 +11,14 @@ import (
 )
 
 type Evacuator struct {
-	messageBus   yagnats.ApceraWrapperNATSClient
+	messageBus   yagnats.NATSConn
 	store        store.Store
 	timeProvider timeprovider.TimeProvider
 	config       *config.Config
 	logger       logger.Logger
 }
 
-func New(messageBus yagnats.ApceraWrapperNATSClient, store store.Store, timeProvider timeprovider.TimeProvider, config *config.Config, logger logger.Logger) *Evacuator {
+func New(messageBus yagnats.NATSConn, store store.Store, timeProvider timeprovider.TimeProvider, config *config.Config, logger logger.Logger) *Evacuator {
 	return &Evacuator{
 		messageBus:   messageBus,
 		store:        store,

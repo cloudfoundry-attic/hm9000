@@ -44,7 +44,7 @@ var _ = Describe("Serving Metrics", func() {
 			close(done)
 		})
 
-		coordinator.MessageBus.PublishWithReplyTo("vcap.component.discover", guid, []byte(""))
+		coordinator.MessageBus.PublishRequest("vcap.component.discover", guid, []byte(""))
 	})
 
 	Context("when there is a desired app that failed to stage", func() {

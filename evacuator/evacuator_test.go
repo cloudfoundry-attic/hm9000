@@ -22,7 +22,7 @@ import (
 var _ = Describe("Evacuator", func() {
 	var (
 		evacuator    *Evacuator
-		messageBus   *fakeyagnats.FakeApceraWrapper
+		messageBus   *fakeyagnats.FakeNATSConn
 		storeAdapter *fakestoreadapter.FakeStoreAdapter
 		timeProvider *faketimeprovider.FakeTimeProvider
 
@@ -34,7 +34,7 @@ var _ = Describe("Evacuator", func() {
 
 	BeforeEach(func() {
 		storeAdapter = fakestoreadapter.New()
-		messageBus = fakeyagnats.NewApceraClientWrapper()
+		messageBus = fakeyagnats.Connect()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 		timeProvider = &faketimeprovider.FakeTimeProvider{
 			TimeToProvide: time.Unix(100, 0),

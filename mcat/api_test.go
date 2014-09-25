@@ -47,7 +47,7 @@ var _ = Describe("Serving API", func() {
 				})
 				Ω(err).ShouldNot(HaveOccurred())
 
-				err = coordinator.MessageBus.PublishWithReplyTo("app.state", replyTo, validRequest)
+				err = coordinator.MessageBus.PublishRequest("app.state", replyTo, validRequest)
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -68,7 +68,7 @@ var _ = Describe("Serving API", func() {
 				})
 				Ω(err).ShouldNot(HaveOccurred())
 
-				err = coordinator.MessageBus.PublishWithReplyTo("app.state", replyTo, validRequest)
+				err = coordinator.MessageBus.PublishRequest("app.state", replyTo, validRequest)
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -109,7 +109,7 @@ var _ = Describe("Serving API", func() {
 				})
 				Ω(err).ShouldNot(HaveOccurred())
 
-				err = coordinator.MessageBus.PublishWithReplyTo("app.state.bulk", replyTo, validRequest)
+				err = coordinator.MessageBus.PublishRequest("app.state.bulk", replyTo, validRequest)
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -130,7 +130,7 @@ var _ = Describe("Serving API", func() {
 				})
 				Ω(err).ShouldNot(HaveOccurred())
 
-				err = coordinator.MessageBus.PublishWithReplyTo("app.state.bulk", replyTo, validRequest)
+				err = coordinator.MessageBus.PublishRequest("app.state.bulk", replyTo, validRequest)
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})

@@ -21,7 +21,7 @@ const HeartbeatSyncTimer = "HeartbeatSyncTimer"
 type ActualStateListener struct {
 	logger                  logger.Logger
 	config                  *config.Config
-	messageBus              yagnats.ApceraWrapperNATSClient
+	messageBus              yagnats.NATSConn
 	store                   store.Store
 	timeProvider            timeprovider.TimeProvider
 	storeUsageTracker       metricsaccountant.UsageTracker
@@ -36,7 +36,7 @@ type ActualStateListener struct {
 }
 
 func New(config *config.Config,
-	messageBus yagnats.ApceraWrapperNATSClient,
+	messageBus yagnats.NATSConn,
 	store store.Store,
 	storeUsageTracker metricsaccountant.UsageTracker,
 	metricsAccountant metricsaccountant.MetricsAccountant,

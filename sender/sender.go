@@ -20,7 +20,7 @@ type Sender struct {
 	logger logger.Logger
 
 	apps        map[string]*models.App
-	messageBus  yagnats.ApceraWrapperNATSClient
+	messageBus  yagnats.NATSConn
 	currentTime time.Time
 
 	numberOfStartMessagesSent int
@@ -35,7 +35,7 @@ type Sender struct {
 	didSucceed bool
 }
 
-func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.ApceraWrapperNATSClient, logger logger.Logger) *Sender {
+func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.NATSConn, logger logger.Logger) *Sender {
 	return &Sender{
 		store:                 store,
 		conf:                  conf,

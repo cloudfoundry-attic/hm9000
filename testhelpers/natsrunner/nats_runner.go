@@ -17,7 +17,7 @@ var natsCommand *exec.Cmd
 type NATSRunner struct {
 	port        int
 	natsCommand *exec.Cmd
-	MessageBus  yagnats.ApceraWrapperNATSClient
+	MessageBus  yagnats.NATSConn
 }
 
 func NewNATSRunner(port int) *NATSRunner {
@@ -36,11 +36,10 @@ func (runner *NATSRunner) Start() {
 	runner.natsCommand = exec.Command("gnatsd", "-p", strconv.Itoa(runner.port))
 	err = runner.natsCommand.Start()
 	Ω(err).ShouldNot(HaveOccurred(), "Make sure to have gnatsd on your path")
-
-	messageBus := yagnats.NewApceraClientWrapper([]string{fmt.Sprintf("nats://127.0.0.1:%d", runner.port)})
-
+	var messageBus yagnats.NATSConn
 	Eventually(func() error {
-		return messageBus.Connect()
+		messageBus, err = yagnats.Connect([]string{fmt.Sprintf("nats://127.0.0.1:%d", runner.port)})
+		return err
 	}, 5, 0.1).ShouldNot(HaveOccurred())
 
 	runner.MessageBus = messageBus

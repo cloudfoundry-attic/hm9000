@@ -24,7 +24,7 @@ var _ = Describe("Sender", func() {
 		storeAdapter      *fakestoreadapter.FakeStoreAdapter
 		store             storepackage.Store
 		sender            *Sender
-		messageBus        *fakeyagnats.FakeApceraWrapper
+		messageBus        *fakeyagnats.FakeNATSConn
 		timeProvider      *faketimeprovider.FakeTimeProvider
 		dea               appfixture.DeaFixture
 		app               appfixture.AppFixture
@@ -33,7 +33,7 @@ var _ = Describe("Sender", func() {
 	)
 
 	BeforeEach(func() {
-		messageBus = fakeyagnats.NewApceraClientWrapper()
+		messageBus = fakeyagnats.Connect()
 		dea = appfixture.NewDeaFixture()
 		app = dea.GetApp(0)
 		conf, _ = config.DefaultConfig()

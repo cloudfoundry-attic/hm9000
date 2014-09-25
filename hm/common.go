@@ -36,7 +36,7 @@ func buildTimeProvider(l logger.Logger) timeprovider.TimeProvider {
 	}
 }
 
-func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.ApceraWrapperNATSClient {
+func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSConn {
 	members := make([]string, len(conf.NATS))
 
 	for _, natsConf := range conf.NATS {
@@ -48,10 +48,7 @@ func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.ApceraWra
 		members = append(members, uri.String())
 	}
 
-	natsClient := yagnats.NewApceraClientWrapper(members)
-
-	err := natsClient.Connect()
-
+	natsClient, err := yagnats.Connect(members)
 	if err != nil {
 		l.Error("Failed to connect to the message bus", err)
 		os.Exit(1)

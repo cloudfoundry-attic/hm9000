@@ -34,7 +34,7 @@ var _ = Describe("Apiserver", func() {
 	var store storepackage.Store
 	var storeAdapter *fakestoreadapter.FakeStoreAdapter
 	var timeProvider *faketimeprovider.FakeTimeProvider
-	var messageBus *fakeyagnats.FakeApceraWrapper
+	var messageBus *fakeyagnats.FakeNATSConn
 
 	conf, _ := config.DefaultConfig()
 
@@ -69,7 +69,7 @@ var _ = Describe("Apiserver", func() {
 	}
 
 	BeforeEach(func() {
-		messageBus = fakeyagnats.NewApceraClientWrapper()
+		messageBus = fakeyagnats.Connect()
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 		timeProvider = &faketimeprovider.FakeTimeProvider{

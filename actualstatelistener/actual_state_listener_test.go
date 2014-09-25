@@ -32,7 +32,7 @@ var _ = Describe("Actual state listener", func() {
 		storeAdapter      *fakestoreadapter.FakeStoreAdapter
 		listener          *ActualStateListener
 		timeProvider      *faketimeprovider.FakeTimeProvider
-		messageBus        *fakeyagnats.FakeApceraWrapper
+		messageBus        *fakeyagnats.FakeNATSConn
 		logger            *fakelogger.FakeLogger
 		conf              *config.Config
 		freshByTime       time.Time
@@ -58,7 +58,7 @@ var _ = Describe("Actual state listener", func() {
 
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		messageBus = fakeyagnats.NewApceraClientWrapper()
+		messageBus = fakeyagnats.Connect()
 		logger = fakelogger.NewFakeLogger()
 
 		usageTracker = fakeusagetracker.New()

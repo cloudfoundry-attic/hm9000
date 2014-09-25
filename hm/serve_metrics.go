@@ -6,7 +6,7 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/metricsserver"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	collectorregistrar "github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/legacycollectorregistrar"
 )
 
 func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf *config.Config) {

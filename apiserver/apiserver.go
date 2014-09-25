@@ -13,7 +13,7 @@ import (
 )
 
 type ApiServer struct {
-	messageBus   yagnats.ApceraWrapperNATSClient
+	messageBus   yagnats.NATSConn
 	store        store.Store
 	timeProvider timeprovider.TimeProvider
 	logger       logger.Logger
@@ -24,7 +24,7 @@ type AppStateRequest struct {
 	AppVersion string `json:"version"`
 }
 
-func New(messageBus yagnats.ApceraWrapperNATSClient, store store.Store, timeProvider timeprovider.TimeProvider, logger logger.Logger) *ApiServer {
+func New(messageBus yagnats.NATSConn, store store.Store, timeProvider timeprovider.TimeProvider, logger logger.Logger) *ApiServer {
 	return &ApiServer{
 		messageBus:   messageBus,
 		store:        store,
@@ -39,7 +39,7 @@ func (server *ApiServer) Listen() {
 }
 
 func (server *ApiServer) handle(topic string, handler func(message *nats.Msg) ([]byte, error)) {
-	server.messageBus.SubscribeWithQueue(topic, "hm9000", func(message *nats.Msg) {
+	server.messageBus.QueueSubscribe(topic, "hm9000", func(message *nats.Msg) {
 		if message.Reply == "" {
 			return
 		}
