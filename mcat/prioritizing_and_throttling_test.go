@@ -47,12 +47,13 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 		})
 
 		It("should send all the stops", func() {
-			Ω(startStopListener.Stops).Should(HaveLen(40))
+			Ω(startStopListener.StopCount()).Should(Equal(40))
 		})
 
 		It("should send up to the limit # of starts with the highest priorities first", func() {
-			Ω(startStopListener.Starts).Should(HaveLen(8))
-			for _, startMessage := range startStopListener.Starts {
+			Ω(startStopListener.StartCount()).Should(Equal(8))
+			for i := 0; i < 8; i++ {
+				startMessage := startStopListener.Start(i)
 				Ω(highPriorityAppGuids).Should(ContainElement(startMessage.AppGuid))
 			}
 		})
@@ -64,8 +65,9 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 			})
 
 			It("should send the next batch of starts", func() {
-				Ω(startStopListener.Starts).Should(HaveLen(8))
-				for i, startMessage := range startStopListener.Starts {
+				Ω(startStopListener.StartCount()).Should(Equal(8))
+				for i := 0; i < 8; i++ {
+					startMessage := startStopListener.Start(i)
 					if i == 0 {
 						Ω(highPriorityAppGuids).Should(ContainElement(startMessage.AppGuid))
 					} else {
@@ -75,7 +77,7 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 			})
 
 			It("should not send anymore stops (as they were all sent)", func() {
-				Ω(startStopListener.Stops).Should(BeEmpty())
+				Ω(startStopListener.StopCount()).Should(Equal(0))
 			})
 		})
 	})

@@ -36,12 +36,12 @@ var _ = Describe("Expiring Heartbeats Test", func() {
 
 		It("should start the instance after a grace period", func() {
 			simulator.Tick(simulator.GracePeriod)
-			Ω(startStopListener.Starts).Should(HaveLen(0))
+			Ω(startStopListener.StartCount()).Should(Equal(0))
 			simulator.Tick(1)
-			Ω(startStopListener.Starts).Should(HaveLen(1))
-			Ω(startStopListener.Starts[0].AppGuid).Should(Equal(app2.AppGuid))
+			Ω(startStopListener.StartCount()).Should(Equal(1))
+			Ω(startStopListener.Start(0).AppGuid).Should(Equal(app2.AppGuid))
 
-			Ω(startStopListener.Stops).Should(BeEmpty())
+			Ω(startStopListener.StopCount()).Should(Equal(0))
 		})
 	})
 
@@ -54,15 +54,18 @@ var _ = Describe("Expiring Heartbeats Test", func() {
 
 		It("should start all the instances on that dea after two grace periods (one to see the app is gone, the other to wait for it not to return)", func() {
 			simulator.Tick(simulator.GracePeriod)
-			Ω(startStopListener.Starts).Should(HaveLen(0))
+			Ω(startStopListener.StartCount()).Should(Equal(0))
 			simulator.Tick(simulator.GracePeriod)
-			Ω(startStopListener.Starts).Should(HaveLen(2))
+			Ω(startStopListener.StartCount()).Should(Equal(2))
 
-			appGuids := []string{startStopListener.Starts[0].AppGuid, startStopListener.Starts[1].AppGuid}
+			appGuids := []string{
+				startStopListener.Start(0).AppGuid,
+				startStopListener.Start(1).AppGuid,
+			}
 			Ω(appGuids).Should(ContainElement(app1.AppGuid))
 			Ω(appGuids).Should(ContainElement(app2.AppGuid))
 
-			Ω(startStopListener.Stops).Should(BeEmpty())
+			Ω(startStopListener.StopCount()).Should(Equal(0))
 		})
 	})
 })

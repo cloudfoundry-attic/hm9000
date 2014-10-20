@@ -13,12 +13,12 @@ import (
 
 func Send(l logger.Logger, conf *config.Config, poll bool) {
 	messageBus := connectToMessageBus(l, conf)
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 
 	if poll {
 		l.Info("Starting Sender Daemon...")
 
-		adapter, _ := connectToStoreAdapter(l, conf)
+		adapter := connectToStoreAdapter(l, conf, nil)
 
 		err := Daemonize("Sender", func() error {
 			return send(l, conf, messageBus, store)

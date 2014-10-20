@@ -2,13 +2,14 @@ package hm
 
 import (
 	"fmt"
+
 	"github.com/cloudfoundry/hm9000/apiserver"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 )
 
 func ServeAPI(l logger.Logger, conf *config.Config) {
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 	messageBus := connectToMessageBus(l, conf)
 
 	//no locking necessary for the api server.  it's ok to have multiples of these running.

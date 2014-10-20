@@ -8,7 +8,7 @@ import (
 
 func StartEvacuator(l logger.Logger, conf *config.Config) {
 	messageBus := connectToMessageBus(l, conf)
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 
 	acquireLock(l, conf, "evacuator")
 

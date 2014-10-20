@@ -1,20 +1,21 @@
 package hm
 
 import (
+	"os"
+
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/shredder"
 	"github.com/cloudfoundry/hm9000/store"
-	"os"
 )
 
 func Shred(l logger.Logger, conf *config.Config, poll bool) {
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 
 	if poll {
 		l.Info("Starting Shredder Daemon...")
 
-		adapter, _ := connectToStoreAdapter(l, conf)
+		adapter := connectToStoreAdapter(l, conf, nil)
 
 		err := Daemonize("Shredder", func() error {
 			return shred(l, store)

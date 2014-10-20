@@ -3,6 +3,7 @@ package mcat_test
 import (
 	"strconv"
 
+	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/hm9000/config"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
@@ -13,7 +14,6 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/gomega"
 )
@@ -101,7 +101,8 @@ func (coordinator *MCATCoordinator) StartETCD() {
 	coordinator.StoreRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	coordinator.StoreRunner.Start()
 
-	coordinator.StoreAdapter = etcdstoreadapter.NewETCDStoreAdapter(coordinator.StoreRunner.NodeURLS(), workerpool.NewWorkerPool(coordinator.Conf.StoreMaxConcurrentRequests))
+	coordinator.StoreAdapter = etcdstoreadapter.NewETCDStoreAdapter(coordinator.StoreRunner.NodeURLS(),
+		workpool.NewWorkPool(coordinator.Conf.StoreMaxConcurrentRequests))
 	err := coordinator.StoreAdapter.Connect()
 	Ω(err).ShouldNot(HaveOccurred())
 }

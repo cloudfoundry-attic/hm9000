@@ -10,12 +10,12 @@ import (
 )
 
 func Analyze(l logger.Logger, conf *config.Config, poll bool) {
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 
 	if poll {
 		l.Info("Starting Analyze Daemon...")
 
-		adapter, _ := connectToStoreAdapter(l, conf)
+		adapter := connectToStoreAdapter(l, conf, nil)
 		err := Daemonize("Analyzer", func() error {
 			return analyze(l, conf, store)
 		}, conf.AnalyzerPollingInterval(), conf.AnalyzerTimeout(), l, adapter)

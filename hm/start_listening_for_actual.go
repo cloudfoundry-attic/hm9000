@@ -9,7 +9,7 @@ import (
 
 func StartListeningForActual(l logger.Logger, conf *config.Config) {
 	messageBus := connectToMessageBus(l, conf)
-	store, usageTracker := connectToStore(l, conf)
+	store, usageTracker := connectToStoreAndTrack(l, conf)
 
 	acquireLock(l, conf, "listener")
 

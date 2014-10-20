@@ -24,8 +24,8 @@ var _ = Describe("Simple Cases Test", func() {
 		})
 
 		It("should not send any messages", func() {
-			Ω(startStopListener.Starts).Should(BeEmpty())
-			Ω(startStopListener.Stops).Should(BeEmpty())
+			Ω(startStopListener.StartCount()).Should(Equal(0))
+			Ω(startStopListener.StopCount()).Should(Equal(0))
 		})
 	})
 
@@ -41,8 +41,8 @@ var _ = Describe("Simple Cases Test", func() {
 			})
 
 			It("should not try to stop that instance", func() {
-				Ω(startStopListener.Starts).Should(BeEmpty())
-				Ω(startStopListener.Stops).Should(BeEmpty())
+				Ω(startStopListener.StartCount()).Should(Equal(0))
+				Ω(startStopListener.StopCount()).Should(Equal(0))
 			})
 		})
 	})
@@ -55,10 +55,10 @@ var _ = Describe("Simple Cases Test", func() {
 
 			// no message is sent during the start send message delay
 			simulator.Tick(1)
-			Ω(startStopListener.Starts).Should(BeEmpty())
+			Ω(startStopListener.StartCount()).Should(Equal(0))
 
 			simulator.Tick(1)
-			Ω(startStopListener.Starts).Should(BeEmpty())
+			Ω(startStopListener.StartCount()).Should(Equal(0))
 		})
 
 		Context("when the instance recovers on its own", func() {
@@ -68,7 +68,7 @@ var _ = Describe("Simple Cases Test", func() {
 			})
 
 			It("should not send a start message", func() {
-				Ω(startStopListener.Starts).Should(HaveLen(0))
+				Ω(startStopListener.StartCount()).Should(Equal(0))
 			})
 		})
 
@@ -79,7 +79,7 @@ var _ = Describe("Simple Cases Test", func() {
 			})
 
 			It("should not send a start message", func() {
-				Ω(startStopListener.Starts).Should(HaveLen(0))
+				Ω(startStopListener.StartCount()).Should(Equal(0))
 			})
 		})
 
@@ -89,9 +89,9 @@ var _ = Describe("Simple Cases Test", func() {
 			})
 
 			It("should send a start message, after a delay, for the missing instance", func() {
-				Ω(startStopListener.Starts).Should(HaveLen(1))
+				Ω(startStopListener.StartCount()).Should(Equal(1))
 
-				start := startStopListener.Starts[0]
+				start := startStopListener.Start(0)
 				Ω(start.AppGuid).Should(Equal(app2.AppGuid))
 				Ω(start.AppVersion).Should(Equal(app2.AppVersion))
 				Ω(start.InstanceIndex).Should(Equal(1))
@@ -114,7 +114,7 @@ var _ = Describe("Simple Cases Test", func() {
 			})
 
 			It("should not send a stop message", func() {
-				Ω(startStopListener.Stops).Should(HaveLen(0))
+				Ω(startStopListener.StopCount()).Should(Equal(0))
 			})
 		})
 
@@ -124,9 +124,9 @@ var _ = Describe("Simple Cases Test", func() {
 			})
 
 			It("should send a stop message, immediately, for the missing instance", func() {
-				Ω(startStopListener.Stops).Should(HaveLen(1))
+				Ω(startStopListener.StopCount()).Should(Equal(1))
 
-				stop := startStopListener.Stops[0]
+				stop := startStopListener.Stop(0)
 				Ω(stop.AppGuid).Should(Equal(app2.AppGuid))
 				Ω(stop.AppVersion).Should(Equal(app2.AppVersion))
 				Ω(stop.InstanceGuid).Should(Equal(app2.InstanceAtIndex(1).InstanceGuid))
