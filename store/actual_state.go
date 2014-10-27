@@ -2,10 +2,11 @@ package store
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/storeadapter"
 	"strings"
 	"time"
+
+	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/storeadapter"
 )
 
 func (store *RealStore) ensureCacheIsReady() error {

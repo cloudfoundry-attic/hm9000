@@ -2,6 +2,7 @@ package logger
 
 import (
 	"encoding/json"
+
 	"github.com/cloudfoundry/gosteno"
 )
 
