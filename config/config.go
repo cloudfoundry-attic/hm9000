@@ -2,11 +2,12 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/cloudfoundry/gosteno"
 )
 
 type Config struct {
@@ -53,6 +54,7 @@ type Config struct {
 	MetricsServerUser     string `json:"metrics_server_user"`
 	MetricsServerPassword string `json:"metrics_server_password"`
 
+	APIServerURL      string `json:"api_server_url"`
 	APIServerAddress  string `json:"api_server_addr"`
 	APIServerPort     int    `json:"api_server_port"`
 	APIServerUsername string `json:"api_server_user"`
@@ -101,6 +103,7 @@ func defaults() Config {
 
 		MetricsServerPort: 7879,
 
+		APIServerURL:      "https://example.com",
 		APIServerAddress:  "0.0.0.0",
 		APIServerPort:     5155,
 		APIServerUsername: "magnet",
