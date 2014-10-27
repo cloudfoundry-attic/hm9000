@@ -35,7 +35,7 @@ var _ = Describe("Config", func() {
         "sender_polling_interval_in_heartbeats": 1,
         "sender_timeout_in_heartbeats": 10,
         "fetcher_polling_interval_in_heartbeats": 6,
-        "fetcher_timeout_in_heartbeats": 60,        
+        "fetcher_timeout_in_heartbeats": 60,
         "shredder_polling_interval_in_heartbeats": 360,
         "shredder_timeout_in_heartbeats": 6,
         "analyzer_polling_interval_in_heartbeats": 1,
@@ -48,9 +48,10 @@ var _ = Describe("Config", func() {
         "metrics_server_port": 7879,
         "metrics_server_user": "metrics_server_user",
         "metrics_server_password": "canHazMetrics?",
-        "api_server_port": 1812,
+        "api_server_port": 5155,
         "api_server_user": "magnet",
         "api_server_password": "orangutan4sale",
+        "api_server_addr": "0.0.0.0",
         "log_level": "INFO",
         "nats": [{
             "host": "127.0.0.1",
@@ -107,6 +108,11 @@ var _ = Describe("Config", func() {
 			Ω(config.MetricsServerPort).Should(Equal(7879))
 			Ω(config.MetricsServerUser).Should(Equal("metrics_server_user"))
 			Ω(config.MetricsServerPassword).Should(Equal("canHazMetrics?"))
+
+			Ω(config.APIServerAddress).Should(Equal("0.0.0.0"))
+			Ω(config.APIServerPort).Should(Equal(5155))
+			Ω(config.APIServerUsername).Should(Equal("magnet"))
+			Ω(config.APIServerPassword).Should(Equal("orangutan4sale"))
 
 			Ω(config.NATS[0].Host).Should(Equal("127.0.0.1"))
 			Ω(config.NATS[0].Port).Should(Equal(4222))

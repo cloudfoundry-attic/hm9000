@@ -102,7 +102,7 @@ func main() {
 				cli.StringFlag{"config", "", "Path to config file"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "api_server")
+				logger, _, conf := loadLoggerAndConfig(c, "apiserver")
 				hm.ServeAPI(logger, conf)
 			},
 		},

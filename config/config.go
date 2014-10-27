@@ -53,6 +53,11 @@ type Config struct {
 	MetricsServerUser     string `json:"metrics_server_user"`
 	MetricsServerPassword string `json:"metrics_server_password"`
 
+	APIServerAddress  string `json:"api_server_addr"`
+	APIServerPort     int    `json:"api_server_port"`
+	APIServerUsername string `json:"api_server_user"`
+	APIServerPassword string `json:"api_server_password"`
+
 	LogLevelString string `json:"log_level"`
 
 	NATS []struct {
@@ -95,6 +100,11 @@ func defaults() Config {
 		StoreHeartbeatCacheRefreshIntervalInMilliseconds: 20000, // TODO: convert to time.Duration
 
 		MetricsServerPort: 7879,
+
+		APIServerAddress:  "0.0.0.0",
+		APIServerPort:     5155,
+		APIServerUsername: "magnet",
+		APIServerPassword: "orangutan4sale",
 
 		LogLevelString: "INFO",
 

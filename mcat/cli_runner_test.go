@@ -23,6 +23,7 @@ type CLIRunner struct {
 	apiServerSession *gexec.Session
 	evacuatorSession *gexec.Session
 	hm9000Binary     string
+	config           *config.Config
 
 	verbose bool
 }
@@ -32,11 +33,11 @@ func NewCLIRunner(hm9000Binary string, storeURLs []string, ccBaseURL string, nat
 		hm9000Binary: hm9000Binary,
 		verbose:      verbose,
 	}
-	runner.generateConfig(storeURLs, ccBaseURL, natsPort, metricsServerPort)
+	runner.config = runner.generateConfig(storeURLs, ccBaseURL, natsPort, metricsServerPort)
 	return runner
 }
 
-func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int) {
+func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int) *config.Config {
 	tmpFile, err := ioutil.TempFile("/tmp", "hm9000_clirunner")
 	defer tmpFile.Close()
 	Ω(err).ShouldNot(HaveOccurred())
@@ -55,9 +56,12 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.MetricsServerPassword = "password"
 	conf.StoreMaxConcurrentRequests = 10
 	conf.ListenerHeartbeatSyncIntervalInMilliseconds = 100
+	conf.APIServerPort = int(5155 + ginkgo.GinkgoParallelNode())
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccurred())
+
+	return conf
 }
 
 func (runner *CLIRunner) StartListener(timestamp int) {
@@ -77,7 +81,7 @@ func (runner *CLIRunner) StopMetricsServer() {
 }
 
 func (runner *CLIRunner) StartAPIServer(timestamp int) {
-	runner.apiServerSession = runner.start("serve_api", timestamp, "Serving API")
+	runner.apiServerSession = runner.start("serve_api", timestamp, "started")
 }
 
 func (runner *CLIRunner) StopAPIServer() {
