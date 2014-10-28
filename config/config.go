@@ -55,9 +55,9 @@ type Config struct {
 	MetricsServerPassword string `json:"metrics_server_password"`
 
 	APIServerURL      string `json:"api_server_url"`
-	APIServerAddress  string `json:"api_server_addr"`
+	APIServerAddress  string `json:"api_server_address"`
 	APIServerPort     int    `json:"api_server_port"`
-	APIServerUsername string `json:"api_server_user"`
+	APIServerUsername string `json:"api_server_username"`
 	APIServerPassword string `json:"api_server_password"`
 
 	LogLevelString string `json:"log_level"`

@@ -51,9 +51,9 @@ var _ = Describe("Config", func() {
         "metrics_server_password": "canHazMetrics?",
 				"api_server_url": "https://example.com/lol",
         "api_server_port": 5155,
-        "api_server_user": "magnet",
+        "api_server_username": "magnet",
         "api_server_password": "orangutan4sale",
-        "api_server_addr": "0.0.0.0",
+        "api_server_address": "0.0.0.0",
         "log_level": "INFO",
         "nats": [{
             "host": "127.0.0.1",
