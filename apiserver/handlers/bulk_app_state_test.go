@@ -6,9 +6,16 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"time"
 
+	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
+	"github.com/cloudfoundry/hm9000/apiserver/handlers"
+	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,6 +25,52 @@ func decodeBulkResponse(response string) (bulkAppResp map[string]AppResponse) {
 	err := json.Unmarshal([]byte(response), &bulkAppResp)
 	Expect(err).NotTo(HaveOccurred())
 	return
+}
+
+type AppResponse struct {
+	AppGuid    string `json:"droplet"`
+	AppVersion string `json:"version"`
+
+	Desired            models.DesiredAppState     `json:"desired"`
+	InstanceHeartbeats []models.InstanceHeartbeat `json:"instance_heartbeats"`
+	CrashCounts        []models.CrashCount        `json:"crash_counts"`
+}
+
+type HandlerConf struct {
+	StoreAdapter *fakestoreadapter.FakeStoreAdapter
+	TimeProvider *faketimeprovider.FakeTimeProvider
+	Logger       logger.Logger
+	MaxInFlight  int
+}
+
+func defaultConf() HandlerConf {
+	return HandlerConf{
+		StoreAdapter: fakestoreadapter.New(),
+		TimeProvider: &faketimeprovider.FakeTimeProvider{
+			TimeToProvide: time.Unix(100, 0),
+		},
+		Logger: fakelogger.NewFakeLogger(),
+	}
+}
+
+func makeHandlerAndStore(conf HandlerConf) (http.Handler, store.Store, error) {
+	config, _ := config.DefaultConfig()
+
+	store := store.NewStore(config, conf.StoreAdapter, fakelogger.NewFakeLogger())
+
+	handler, err := handlers.New(conf.Logger, store, conf.TimeProvider)
+	return handler, store, err
+}
+
+func decodeResponse(response string) (appResp AppResponse) {
+	err := json.Unmarshal([]byte(response), &appResp)
+	Ω(err).ShouldNot(HaveOccurred())
+	return appResp
+}
+
+func freshenTheStore(store store.Store) {
+	store.BumpDesiredFreshness(time.Unix(0, 0))
+	store.BumpActualFreshness(time.Unix(0, 0))
 }
 
 var _ = Describe("BulkAppState", func() {
