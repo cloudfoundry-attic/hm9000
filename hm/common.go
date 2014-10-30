@@ -9,13 +9,13 @@ import (
 
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
+	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 
 	"os"
@@ -58,7 +58,7 @@ func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSConn 
 }
 
 func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
-	adapter, _ := connectToStoreAdapter(l, conf)
+	adapter := connectToStoreAdapter(l, conf, nil)
 	l.Info("Acquiring lock for " + lockName)
 
 	lock := storeadapter.StoreNode{
@@ -92,20 +92,30 @@ func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
 	l.Info("Acquired lock for " + lockName)
 }
 
-func connectToStoreAdapter(l logger.Logger, conf *config.Config) (storeadapter.StoreAdapter, metricsaccountant.UsageTracker) {
+func connectToStoreAdapter(l logger.Logger, conf *config.Config, usage *usageTracker) storeadapter.StoreAdapter {
 	var adapter storeadapter.StoreAdapter
-	workerPool := workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests)
-	adapter = etcdstoreadapter.NewETCDStoreAdapter(conf.StoreURLs, workerPool)
+	var around workpool.AroundWork = workpool.DefaultAround
+	if usage != nil {
+		around = usage
+	}
+	workPool := workpool.New(conf.StoreMaxConcurrentRequests, 0, around)
+	adapter = etcdstoreadapter.NewETCDStoreAdapter(conf.StoreURLs, workPool)
 	err := adapter.Connect()
 	if err != nil {
 		l.Error("Failed to connect to the store", err)
 		os.Exit(1)
 	}
 
-	return adapter, workerPool
+	return adapter
 }
 
-func connectToStore(l logger.Logger, conf *config.Config) (store.Store, metricsaccountant.UsageTracker) {
-	adapter, workerPool := connectToStoreAdapter(l, conf)
-	return store.NewStore(conf, adapter, l), workerPool
+func connectToStore(l logger.Logger, conf *config.Config) store.Store {
+	adapter := connectToStoreAdapter(l, conf, nil)
+	return store.NewStore(conf, adapter, l)
+}
+
+func connectToStoreAndTrack(l logger.Logger, conf *config.Config) (store.Store, metricsaccountant.UsageTracker) {
+	tracker := newUsageTracker(conf.StoreMaxConcurrentRequests)
+	adapter := connectToStoreAdapter(l, conf, tracker)
+	return store.NewStore(conf, adapter, l), tracker
 }

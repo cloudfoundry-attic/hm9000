@@ -1,9 +1,9 @@
 package store_test
 
 import (
+	"github.com/cloudfoundry/gunk/workpool"
 	. "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/storeadapter/storenodematchers"
-	"github.com/cloudfoundry/storeadapter/workerpool"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -28,7 +28,8 @@ var _ = Describe("Crash Count", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		Ω(err).ShouldNot(HaveOccurred())
-		storeAdapter = etcdstoreadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(), workerpool.NewWorkerPool(conf.StoreMaxConcurrentRequests))
+		storeAdapter = etcdstoreadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(),
+			workpool.NewWorkPool(conf.StoreMaxConcurrentRequests))
 		err = storeAdapter.Connect()
 		Ω(err).ShouldNot(HaveOccurred())
 

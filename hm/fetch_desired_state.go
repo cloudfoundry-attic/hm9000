@@ -1,23 +1,24 @@
 package hm
 
 import (
+	"os"
+	"strconv"
+
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/store"
-	"os"
-	"strconv"
 )
 
 func FetchDesiredState(l logger.Logger, conf *config.Config, poll bool) {
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 
 	if poll {
 		l.Info("Starting Desired State Daemon...")
 
-		adapter, _ := connectToStoreAdapter(l, conf)
+		adapter := connectToStoreAdapter(l, conf, nil)
 
 		err := Daemonize("Fetcher", func() error {
 			return fetchDesiredState(l, conf, store)

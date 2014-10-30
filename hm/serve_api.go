@@ -18,7 +18,7 @@ import (
 )
 
 func ServeAPI(l logger.Logger, conf *config.Config) {
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 
 	apiHandler, err := handlers.New(l, store, buildTimeProvider(l))
 	if err != nil {

@@ -34,11 +34,12 @@ func Daemonize(
 	lockAcquired := make(chan bool)
 
 	go func() {
+		l := lockAcquired
 		for {
 			if <-status {
-				if lockAcquired != nil {
-					close(lockAcquired)
-					lockAcquired = nil
+				if l != nil {
+					close(l)
+					l = nil
 				}
 			} else {
 				logger.Error("Lost the lock", errors.New("Lock the lock"))

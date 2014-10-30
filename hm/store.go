@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"sort"
+	"strings"
+	"time"
+
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
-	"os"
-	"sort"
-	"strings"
-	"time"
 )
 
 func Dump(l logger.Logger, conf *config.Config, raw bool) {
@@ -25,7 +26,7 @@ func Dump(l logger.Logger, conf *config.Config, raw bool) {
 
 func dumpStructured(l logger.Logger, conf *config.Config) {
 	timeProvider := buildTimeProvider(l)
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 	fmt.Printf("Dump - Current timestamp %d\n", timeProvider.Time().Unix())
 	err := store.VerifyFreshness(timeProvider.Time())
 	if err == nil {
@@ -142,7 +143,7 @@ func dumpApp(app *models.App, starts map[string]models.PendingStartMessage, stop
 }
 
 func dumpRaw(l logger.Logger, conf *config.Config) {
-	storeAdapter, _ := connectToStoreAdapter(l, conf)
+	storeAdapter := connectToStoreAdapter(l, conf, nil)
 	fmt.Printf("Raw Dump - Current timestamp %d\n", time.Now().Unix())
 
 	entries := sort.StringSlice{}

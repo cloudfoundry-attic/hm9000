@@ -2,14 +2,15 @@ package httpclient_test
 
 import (
 	"fmt"
-	. "github.com/cloudfoundry/hm9000/helpers/httpclient"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
 	"time"
+
+	. "github.com/cloudfoundry/hm9000/helpers/httpclient"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 //We tried to test skipSSLVerification and failed...
@@ -32,17 +33,16 @@ var _ = Describe("Httpclient", func() {
 	var client HttpClient
 
 	BeforeEach(func() {
-		client = NewHttpClient(true, 1*time.Millisecond)
+		client = NewHttpClient(true, 10*time.Millisecond)
 	})
 
 	Context("when the request times out (trying to connect)", func() {
-		It("should return an appropriate timeout error", func(done Done) {
+		It("should return an appropriate timeout error", func() {
 			request, _ := http.NewRequest("GET", "http://127.0.0.1:8887/", nil)
 			client.Do(request, func(response *http.Response, err error) {
 				Ω(err).Should(HaveOccurred())
-				close(done)
 			})
-		}, 0.1)
+		})
 	})
 
 	Context("when the request times out (after conecting)", func() {

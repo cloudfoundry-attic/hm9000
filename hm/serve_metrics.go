@@ -10,7 +10,7 @@ import (
 )
 
 func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf *config.Config) {
-	store, _ := connectToStore(l, conf)
+	store := connectToStore(l, conf)
 	messageBus := connectToMessageBus(l, conf)
 
 	acquireLock(l, conf, "metrics-server")
