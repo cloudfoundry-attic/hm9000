@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/gunk/workpool"
@@ -53,6 +54,16 @@ func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSConn 
 		l.Error("Failed to connect to the message bus", err)
 		os.Exit(1)
 	}
+
+	natsClient.AddReconnectedCB(func(conn *nats.Conn) {
+		l.Info(fmt.Sprintf("NATS Client Reconnected. Server URL: %s", conn.Opts.Url))
+	})
+
+	natsClient.AddClosedCB(func(conn *nats.Conn) {
+		err := errors.New(fmt.Sprintf("NATS Client Closed. nats.Conn: %+v", conn))
+		l.Error("NATS Closed", err)
+		os.Exit(1)
+	})
 
 	return natsClient
 }
