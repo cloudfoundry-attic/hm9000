@@ -134,7 +134,7 @@ will come up, register with the [collector](http://github.com/cloudfoundry/colle
 
     hm9000 serve_api --config=./local_config.json
 
-will come up and provide response to requests for `app.state` over NATS.
+will come up and provide response to requests for `/bulk_app_state` over HTTP.
 
 ### Evacuator
 
@@ -235,6 +235,17 @@ HM9000 is configured using a JSON file.  Here are the available entries:
 - `metrics_server_user`: The username that must be used to authenticate with /varz.  If set to "" a random username will be generated.
 
 - `metrics_server_password`: The password that must be used to authenticate with /varz.  If set to "" a random password will be generated.
+
+
+- `api_server_url`:  The URL in which to serve the HTTP API. Will register this through NATS with a router.
+
+- `api_server_address`: The IP address of machine runnine HM9000.
+
+- `api_server_port`: The port in which to serve the HTTP API.
+
+- `api_server_username`: User name to be used for basic auth on the API server.
+
+- `api_server_password`: Password to be used for basic auth on the API server.
 
 
 - `log_level`: Must be one of `"INFO"` or `"DEBUG"`
