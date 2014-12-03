@@ -8,7 +8,7 @@ import (
 	"github.com/apcera/nats"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
+	"github.com/pivotal-golang/localip"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
