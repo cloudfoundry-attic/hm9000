@@ -93,7 +93,7 @@ func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
 					lockAcquired = nil
 				}
 			} else {
-				l.Error("Lost the lock", errors.New("Lost the lock"))
+				l.Info("Lost the lock")
 				os.Exit(197)
 			}
 		}
