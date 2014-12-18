@@ -42,7 +42,7 @@ func Daemonize(
 					l = nil
 				}
 			} else {
-				logger.Error("Lost the lock", errors.New("Lock the lock"))
+				logger.Info("Lost the lock")
 				os.Exit(197)
 			}
 		}
