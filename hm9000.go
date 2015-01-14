@@ -11,6 +11,7 @@ import (
 	"github.com/codegangsta/cli"
 
 	"os"
+	"path"
 )
 
 func main() {
@@ -150,11 +151,19 @@ func loadLoggerAndConfig(c *cli.Context, component string) (logger.Logger, *gost
 		os.Exit(1)
 	}
 
+	sinks := make([]gosteno.Sink, 0, 3)
+	if conf.LogDirectory != "" {
+		logName := fmt.Sprintf("hm9000_%s.log", component)
+		logFile := path.Join(conf.LogDirectory, logName)
+
+		sinks = append(sinks, gosteno.NewFileSink(logFile))
+	} else {
+		sinks = append(sinks, gosteno.NewIOSink(os.Stdout))
+	}
+	sinks = append(sinks, gosteno.NewSyslogSink("vcap.hm9000."+component))
+
 	stenoConf := &gosteno.Config{
-		Sinks: []gosteno.Sink{
-			gosteno.NewIOSink(os.Stdout),
-			gosteno.NewSyslogSink("vcap.hm9000." + component),
-		},
+		Sinks: sinks,
 		Level: conf.LogLevel(),
 		Codec: gosteno.NewJsonCodec(),
 	}
