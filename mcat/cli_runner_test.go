@@ -106,7 +106,7 @@ func (runner *CLIRunner) start(command string, timestamp int, message string) *g
 
 	session, err := gexec.Start(cmd, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
 	Ω(err).ShouldNot(HaveOccurred())
-	Eventually(session, 5*time.Second).Should(gbytes.Say(message))
+	Eventually(session, 10*time.Second).Should(gbytes.Say(message))
 
 	return session
 }
