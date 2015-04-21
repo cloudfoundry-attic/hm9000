@@ -63,6 +63,8 @@ type Config struct {
 	LogLevelString string `json:"log_level"`
 	LogDirectory   string `json:"log_directory"`
 
+	Name string `json:"name,omitempty"`
+
 	NATS []struct {
 		Host     string `json:"host"`
 		Port     int    `json:"port"`

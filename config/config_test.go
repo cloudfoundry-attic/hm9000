@@ -61,7 +61,8 @@ var _ = Describe("Config", func() {
             "port": 4222,
             "user": "",
             "password": ""
-        }]
+        }],
+				"name": "hm_z1"
     }
     `
 
@@ -125,6 +126,8 @@ var _ = Describe("Config", func() {
 
 			Ω(config.LogLevelString).Should(Equal("INFO"))
 			Ω(config.LogDirectory).Should(Equal("/some/path"))
+
+			Ω(config.Name).Should(Equal("hm_z1"))
 		})
 	})
 
