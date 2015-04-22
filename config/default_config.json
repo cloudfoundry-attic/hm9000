@@ -23,5 +23,7 @@
         "port": 4222,
         "user": "",
         "password": ""
-    }]
+    }],
+
+    "name": "hm_z1"
 }

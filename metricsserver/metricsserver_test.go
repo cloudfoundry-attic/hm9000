@@ -2,6 +2,9 @@ package metricsserver_test
 
 import (
 	"errors"
+	"time"
+
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/metricsserver"
@@ -10,11 +13,11 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakemetricsaccountant"
+	"github.com/cloudfoundry/hm9000/testhelpers/fakeregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var _ = Describe("Metrics Server", func() {
@@ -24,6 +27,7 @@ var _ = Describe("Metrics Server", func() {
 		timeProvider      *faketimeprovider.FakeTimeProvider
 		metricsServer     *MetricsServer
 		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
+		fakeRegistrar     *fakeregistrar.FakeRegistrar
 	)
 
 	BeforeEach(func() {
@@ -34,7 +38,15 @@ var _ = Describe("Metrics Server", func() {
 
 		metricsAccountant = fakemetricsaccountant.New()
 
-		metricsServer = New(nil, nil, metricsAccountant, fakelogger.NewFakeLogger(), store, timeProvider, conf)
+		fakeRegistrar = fakeregistrar.New()
+		metricsServer = New(fakeRegistrar, createStenoLogger(), metricsAccountant, fakelogger.NewFakeLogger(), store, timeProvider, conf)
+	})
+
+	Describe("#Start", func() {
+		It("includes the jobname when registering with the collector", func() {
+			metricsServer.Start()
+			Ω(fakeRegistrar.RegisteredWithCollector.JobName).Should(Equal("hm_z1"))
+		})
 	})
 
 	Describe("message metrics", func() {
@@ -374,3 +386,16 @@ var _ = Describe("Metrics Server", func() {
 		Ω(metricsServer.Ok()).Should(BeTrue())
 	})
 })
+
+func createStenoLogger() *gosteno.Logger {
+	sinks := make([]gosteno.Sink, 0, 3)
+	level, _ := gosteno.GetLogLevel("debug")
+	stenoConf := &gosteno.Config{
+		Sinks: sinks,
+		Level: level,
+		Codec: gosteno.NewJsonCodec(),
+	}
+	gosteno.Init(stenoConf)
+	steno := gosteno.NewLogger("test")
+	return steno
+}

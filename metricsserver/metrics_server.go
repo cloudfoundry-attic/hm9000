@@ -1,6 +1,8 @@
 package metricsserver
 
 import (
+	"strconv"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/config"
@@ -10,7 +12,6 @@ import (
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"strconv"
 )
 
 type CollectorRegistrar interface {
@@ -187,9 +188,10 @@ func (s *MetricsServer) Start() error {
 		"HM9000",
 		0,
 		s,
-		uint32(s.config.MetricsServerPort),
+		uint16(s.config.MetricsServerPort),
 		[]string{s.config.MetricsServerUser, s.config.MetricsServerPassword},
 		[]instrumentation.Instrumentable{s},
+		s.config.Name,
 	)
 
 	if err != nil {
