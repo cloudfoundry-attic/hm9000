@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/cloudfoundry-incubator/cf-debug-server"
 	"github.com/cloudfoundry/gosteno"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -27,6 +28,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
 				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "fetcher")
@@ -39,6 +41,7 @@ func main() {
 			Usage:       "hm listen --config=/path/to/config",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "listener")
@@ -52,6 +55,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
 				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "analyzer")
@@ -65,6 +69,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
 				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "sender")
@@ -77,6 +82,7 @@ func main() {
 			Usage:       "hm evacuator --config=/path/to/config",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "evacuator")
@@ -89,6 +95,7 @@ func main() {
 			Usage:       "hm serve_metrics --config=/path/to/config",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, steno, conf := loadLoggerAndConfig(c, "metrics_server")
@@ -101,6 +108,7 @@ func main() {
 			Usage:       "hm serve_api --config=/path/to/config",
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "apiserver")
@@ -114,6 +122,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
 				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "shredder")
@@ -127,6 +136,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{"config", "", "Path to config file"},
 				cli.BoolFlag{"raw", "If set, dump the unstructured contents of the database"},
+				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "dumper")
@@ -170,6 +180,12 @@ func loadLoggerAndConfig(c *cli.Context, component string) (logger.Logger, *gost
 	gosteno.Init(stenoConf)
 	steno := gosteno.NewLogger("vcap.hm9000." + component)
 	hmLogger := logger.NewRealLogger(steno)
+
+	debugAddr := c.String("debugAddr")
+	if debugAddr != "" {
+		cf_debug_server.SetAddr(debugAddr)
+		cf_debug_server.Run()
+	}
 
 	return hmLogger, steno, conf
 }
