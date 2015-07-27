@@ -15,7 +15,7 @@ import (
 
 var (
 	etcdRunner  *etcdstorerunner.ETCDClusterRunner
-	etcdVersion = "2.1.0"
+	etcdVersion = "2.1.1"
 )
 
 func TestStore(t *testing.T) {
