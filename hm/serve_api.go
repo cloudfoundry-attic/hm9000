@@ -2,11 +2,8 @@ package hm
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"strings"
 
-	"github.com/cloudfoundry-incubator/natbeat"
 	"github.com/cloudfoundry/hm9000/apiserver/handlers"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
@@ -33,19 +30,6 @@ func ServeAPI(l logger.Logger, conf *config.Config) {
 		{"api", http_server.New(listenAddr, handler)},
 	}
 
-	natsAddresses := []string{}
-
-	for _, natsAddress := range conf.NATS {
-		natsAddresses = append(natsAddresses, fmt.Sprintf("%s:%d", natsAddress.Host, natsAddress.Port))
-	}
-
-	registration := initializeServerRegistration(l, conf)
-
-	members = append(members, grouper.Member{
-		Name:   "background_heartbeat",
-		Runner: natbeat.NewBackgroundHeartbeat(strings.Join(natsAddresses, ","), conf.NATS[0].User, conf.NATS[0].Password, &LagerAdapter{l}, registration),
-	})
-
 	group := grouper.NewOrdered(os.Interrupt, members)
 
 	monitor := ifrit.Invoke(sigmon.New(group))
@@ -61,18 +45,4 @@ func ServeAPI(l logger.Logger, conf *config.Config) {
 
 	l.Info("exited")
 	os.Exit(0)
-}
-
-func initializeServerRegistration(l logger.Logger, conf *config.Config) (registration natbeat.RegistryMessage) {
-	uri, err := url.Parse(conf.APIServerURL)
-	if err != nil {
-		l.Error("cannot parse url", err)
-		os.Exit(1)
-	}
-
-	return natbeat.RegistryMessage{
-		URIs: []string{uri.Host},
-		Host: conf.APIServerAddress,
-		Port: conf.APIServerPort,
-	}
 }
