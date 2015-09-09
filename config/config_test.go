@@ -49,7 +49,6 @@ var _ = Describe("Config", func() {
         "metrics_server_port": 7879,
         "metrics_server_user": "metrics_server_user",
         "metrics_server_password": "canHazMetrics?",
-				"api_server_url": "https://example.com/lol",
         "api_server_port": 5155,
         "api_server_username": "magnet",
         "api_server_password": "orangutan4sale",
@@ -112,7 +111,6 @@ var _ = Describe("Config", func() {
 			Ω(config.MetricsServerUser).Should(Equal("metrics_server_user"))
 			Ω(config.MetricsServerPassword).Should(Equal("canHazMetrics?"))
 
-			Ω(config.APIServerURL).Should(Equal("https://example.com/lol"))
 			Ω(config.APIServerAddress).Should(Equal("0.0.0.0"))
 			Ω(config.APIServerPort).Should(Equal(5155))
 			Ω(config.APIServerUsername).Should(Equal("magnet"))

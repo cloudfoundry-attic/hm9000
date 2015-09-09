@@ -235,8 +235,6 @@ HM9000 is configured using a JSON file.  Here are the available entries:
 - `metrics_server_password`: The password that must be used to authenticate with /varz.  If set to "" a random password will be generated.
 
 
-- `api_server_url`:  The URL in which to serve the HTTP API. Will register this through NATS with a router.
-
 - `api_server_address`: The IP address of machine runnine HM9000.
 
 - `api_server_port`: The port in which to serve the HTTP API.
