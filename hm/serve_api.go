@@ -17,7 +17,7 @@ import (
 func ServeAPI(l logger.Logger, conf *config.Config) {
 	store := connectToStore(l, conf)
 
-	apiHandler, err := handlers.New(l, store, buildTimeProvider(l))
+	apiHandler, err := handlers.New(l, store, buildClock(l))
 	if err != nil {
 		l.Error("initialize-handler.failed", err)
 		panic(err)

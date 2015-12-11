@@ -3,9 +3,11 @@ package desiredstateserver
 import (
 	"encoding/json"
 	"fmt"
-	. "github.com/cloudfoundry/hm9000/models"
 	"net/http"
 	"strconv"
+	"sync"
+
+	. "github.com/cloudfoundry/hm9000/models"
 )
 
 type DesiredStateServerInterface interface {
@@ -14,6 +16,7 @@ type DesiredStateServerInterface interface {
 }
 
 type DesiredStateServer struct {
+	mu                      sync.Mutex
 	Apps                    []DesiredAppState
 	NumberOfCompleteFetches int
 }
@@ -49,7 +52,9 @@ func (server *DesiredStateServer) SpinUp(port int) {
 }
 
 func (server *DesiredStateServer) SetDesiredState(newState []DesiredAppState) {
+	server.mu.Lock()
 	server.Apps = newState
+	server.mu.Unlock()
 }
 
 func (server *DesiredStateServer) Reset() {
@@ -70,17 +75,20 @@ func (server *DesiredStateServer) handleApps(w http.ResponseWriter, r *http.Requ
 
 	batchSize := server.extractBatchSize(r)
 	bulkToken := server.extractBulkToken(r)
+	server.mu.Lock()
+	apps := server.Apps
+	server.mu.Unlock()
 
 	endIndex := bulkToken + batchSize
-	endIndex = min(endIndex, len(server.Apps))
+	endIndex = min(endIndex, len(apps))
 
 	results := make(map[string]DesiredAppState, 0)
 
-	for _, app := range server.Apps[bulkToken:endIndex] {
+	for _, app := range apps[bulkToken:endIndex] {
 		results[app.AppGuid] = app
 	}
 
-	if bulkToken == len(server.Apps) {
+	if bulkToken == len(apps) {
 		server.NumberOfCompleteFetches += 1
 	}
 

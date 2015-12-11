@@ -3,8 +3,6 @@ package evacuator_test
 import (
 	"time"
 
-	"github.com/apcera/nats"
-	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	storepackage "github.com/cloudfoundry/hm9000/store"
@@ -13,6 +11,8 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"github.com/nats-io/nats"
+	"github.com/pivotal-golang/clock/fakeclock"
 
 	. "github.com/cloudfoundry/hm9000/evacuator"
 	. "github.com/onsi/ginkgo"
@@ -24,7 +24,7 @@ var _ = Describe("Evacuator", func() {
 		evacuator    *Evacuator
 		messageBus   *fakeyagnats.FakeNATSConn
 		storeAdapter *fakestoreadapter.FakeStoreAdapter
-		timeProvider *faketimeprovider.FakeTimeProvider
+		clock        *fakeclock.FakeClock
 
 		store storepackage.Store
 		app   appfixture.AppFixture
@@ -36,18 +36,16 @@ var _ = Describe("Evacuator", func() {
 		storeAdapter = fakestoreadapter.New()
 		messageBus = fakeyagnats.Connect()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		timeProvider = &faketimeprovider.FakeTimeProvider{
-			TimeToProvide: time.Unix(100, 0),
-		}
+		clock = fakeclock.NewFakeClock(time.Unix(100, 0))
 
 		app = appfixture.NewAppFixture()
 
-		evacuator = New(messageBus, store, timeProvider, conf, fakelogger.NewFakeLogger())
+		evacuator = New(messageBus, store, clock, conf, fakelogger.NewFakeLogger())
 		evacuator.Listen()
 	})
 
 	It("should be listening on the message bus for droplet.exited", func() {
-		Ω(messageBus.SubjectCallbacks("droplet.exited")).ShouldNot(BeNil())
+		Expect(messageBus.SubjectCallbacks("droplet.exited")).NotTo(BeNil())
 	})
 
 	Context("when droplet.exited is received", func() {
@@ -58,8 +56,8 @@ var _ = Describe("Evacuator", func() {
 				})
 
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(pendingStarts).Should(BeEmpty())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(pendingStarts).To(BeEmpty())
 			})
 		})
 
@@ -72,12 +70,12 @@ var _ = Describe("Evacuator", func() {
 
 			It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 
-				expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+				expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 				expectedStartMessage.SkipVerification = true
 
-				Ω(pendingStarts).Should(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
+				Expect(pendingStarts).To(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
 			})
 		})
 
@@ -90,12 +88,12 @@ var _ = Describe("Evacuator", func() {
 
 			It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 
-				expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+				expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 				expectedStartMessage.SkipVerification = true
 
-				Ω(pendingStarts).Should(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
+				Expect(pendingStarts).To(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
 			})
 		})
 
@@ -108,8 +106,8 @@ var _ = Describe("Evacuator", func() {
 
 			It("should do nothing", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(pendingStarts).Should(BeEmpty())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(pendingStarts).To(BeEmpty())
 			})
 		})
 
@@ -122,8 +120,8 @@ var _ = Describe("Evacuator", func() {
 
 			It("should do nothing", func() {
 				pendingStarts, err := store.GetPendingStartMessages()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(pendingStarts).Should(BeEmpty())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(pendingStarts).To(BeEmpty())
 			})
 		})
 	})

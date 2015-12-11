@@ -31,10 +31,15 @@ var _ = Describe("Apps", func() {
 	conf, _ = config.DefaultConfig()
 
 	BeforeEach(func() {
-		storeAdapter = etcdstoreadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(),
-			workpool.NewWorkPool(conf.StoreMaxConcurrentRequests))
-		err := storeAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccurred())
+		wpool, err := workpool.NewWorkPool(conf.StoreMaxConcurrentRequests)
+		Expect(err).NotTo(HaveOccurred())
+		storeAdapter, err = etcdstoreadapter.New(
+			&etcdstoreadapter.ETCDOptions{ClusterUrls: etcdRunner.NodeURLS()},
+			wpool,
+		)
+		Expect(err).NotTo(HaveOccurred())
+		err = storeAdapter.Connect()
+		Expect(err).NotTo(HaveOccurred())
 
 		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
@@ -89,55 +94,55 @@ var _ = Describe("Apps", func() {
 	})
 
 	Describe("AppKey", func() {
-		It("should concatenate the app guid and app version appropriately", func() {
+		It("To concatenate the app guid and app version appropriately", func() {
 			key := store.AppKey("abc", "123")
-			Ω(key).Should(Equal("abc,123"))
+			Expect(key).To(Equal("abc,123"))
 		})
 	})
 
 	Describe("GetApps", func() {
 		Context("when all is well", func() {
-			It("should build and return the set of apps", func() {
+			It("To build and return the set of apps", func() {
 				apps, err := store.GetApps()
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 
-				Ω(apps).Should(HaveLen(3))
-				Ω(apps).Should(HaveKey(app1.AppGuid + "," + app1.AppVersion))
-				Ω(apps).Should(HaveKey(app2.AppGuid + "," + app2.AppVersion))
-				Ω(apps).Should(HaveKey(app3.AppGuid + "," + app3.AppVersion))
+				Expect(apps).To(HaveLen(3))
+				Expect(apps).To(HaveKey(app1.AppGuid + "," + app1.AppVersion))
+				Expect(apps).To(HaveKey(app2.AppGuid + "," + app2.AppVersion))
+				Expect(apps).To(HaveKey(app3.AppGuid + "," + app3.AppVersion))
 
 				a1 := apps[app1.AppGuid+","+app1.AppVersion]
-				Ω(a1.Desired).Should(EqualDesiredState(app1.DesiredState(1)))
-				Ω(a1.InstanceHeartbeats).Should(HaveLen(3))
-				Ω(a1.InstanceHeartbeats).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
-				Ω(a1.InstanceHeartbeats).Should(ContainElement(app1.InstanceAtIndex(1).Heartbeat()))
-				Ω(a1.InstanceHeartbeats).Should(ContainElement(app1.InstanceAtIndex(2).Heartbeat()))
-				Ω(a1.CrashCounts[1]).Should(Equal(crashCount[0]))
-				Ω(a1.CrashCounts[2]).Should(Equal(crashCount[1]))
+				Expect(a1.Desired).To(EqualDesiredState(app1.DesiredState(1)))
+				Expect(a1.InstanceHeartbeats).To(HaveLen(3))
+				Expect(a1.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
+				Expect(a1.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(1).Heartbeat()))
+				Expect(a1.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(2).Heartbeat()))
+				Expect(a1.CrashCounts[1]).To(Equal(crashCount[0]))
+				Expect(a1.CrashCounts[2]).To(Equal(crashCount[1]))
 
 				a2 := apps[app2.AppGuid+","+app2.AppVersion]
-				Ω(a2.Desired).Should(BeZero())
-				Ω(a2.InstanceHeartbeats).Should(HaveLen(1))
-				Ω(a2.InstanceHeartbeats).Should(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
-				Ω(a2.CrashCounts[0]).Should(Equal(crashCount[2]))
+				Expect(a2.Desired).To(BeZero())
+				Expect(a2.InstanceHeartbeats).To(HaveLen(1))
+				Expect(a2.InstanceHeartbeats).To(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
+				Expect(a2.CrashCounts[0]).To(Equal(crashCount[2]))
 
 				a3 := apps[app3.AppGuid+","+app3.AppVersion]
-				Ω(a3.Desired).Should(EqualDesiredState(app3.DesiredState(1)))
-				Ω(a3.InstanceHeartbeats).Should(HaveLen(0))
-				Ω(a3.CrashCounts).Should(BeEmpty())
+				Expect(a3.Desired).To(EqualDesiredState(app3.DesiredState(1)))
+				Expect(a3.InstanceHeartbeats).To(HaveLen(0))
+				Expect(a3.CrashCounts).To(BeEmpty())
 			})
 		})
 
 		Context("when there is an empty app directory", func() {
-			It("should ignore that app directory", func() {
+			It("To ignore that app directory", func() {
 				storeAdapter.SetMulti([]storeadapter.StoreNode{{
 					Key:   "/hm/v1/apps/actual/foo-bar",
 					Value: []byte("foo"),
 				}})
 
 				apps, err := store.GetApps()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(apps).Should(HaveLen(3))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(apps).To(HaveLen(3))
 			})
 		})
 	})
@@ -145,58 +150,58 @@ var _ = Describe("Apps", func() {
 	Describe("GetApp", func() {
 		Context("when there are no store errors", func() {
 			Context("when the app has desired and actual state", func() {
-				It("should return the app", func() {
+				It("To return the app", func() {
 					app, err := store.GetApp(app1.AppGuid, app1.AppVersion)
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(app.Desired).Should(EqualDesiredState(app1.DesiredState(1)))
-					Ω(app.InstanceHeartbeats).Should(HaveLen(3))
-					Ω(app.InstanceHeartbeats).Should(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
-					Ω(app.InstanceHeartbeats).Should(ContainElement(app1.InstanceAtIndex(1).Heartbeat()))
-					Ω(app.InstanceHeartbeats).Should(ContainElement(app1.InstanceAtIndex(2).Heartbeat()))
-					Ω(app.CrashCounts[1]).Should(Equal(crashCount[0]))
-					Ω(app.CrashCounts[2]).Should(Equal(crashCount[1]))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(app.Desired).To(EqualDesiredState(app1.DesiredState(1)))
+					Expect(app.InstanceHeartbeats).To(HaveLen(3))
+					Expect(app.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
+					Expect(app.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(1).Heartbeat()))
+					Expect(app.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(2).Heartbeat()))
+					Expect(app.CrashCounts[1]).To(Equal(crashCount[0]))
+					Expect(app.CrashCounts[2]).To(Equal(crashCount[1]))
 				})
 			})
 
 			Context("when the app has desired state only", func() {
-				It("should return the app", func() {
+				It("To return the app", func() {
 					app, err := store.GetApp(app3.AppGuid, app3.AppVersion)
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(app.Desired).Should(EqualDesiredState(app3.DesiredState(1)))
-					Ω(app.InstanceHeartbeats).Should(BeEmpty())
-					Ω(app.CrashCounts).Should(BeEmpty())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(app.Desired).To(EqualDesiredState(app3.DesiredState(1)))
+					Expect(app.InstanceHeartbeats).To(BeEmpty())
+					Expect(app.CrashCounts).To(BeEmpty())
 				})
 			})
 
 			Context("when the app has actual state only", func() {
-				It("should return the app", func() {
+				It("To return the app", func() {
 					app, err := store.GetApp(app2.AppGuid, app2.AppVersion)
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(app.Desired).Should(BeZero())
-					Ω(app.InstanceHeartbeats).Should(HaveLen(1))
-					Ω(app.InstanceHeartbeats).Should(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
-					Ω(app.CrashCounts[0]).Should(Equal(crashCount[2]))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(app.Desired).To(BeZero())
+					Expect(app.InstanceHeartbeats).To(HaveLen(1))
+					Expect(app.InstanceHeartbeats).To(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
+					Expect(app.CrashCounts[0]).To(Equal(crashCount[2]))
 				})
 			})
 
 			Context("when the app has crash counts only", func() {
-				It("should return the app not found error", func() {
+				It("To return the app not found error", func() {
 					app, err := store.GetApp(app4.AppGuid, app4.AppVersion)
-					Ω(err).Should(Equal(AppNotFoundError))
-					Ω(app).Should(BeZero())
+					Expect(err).To(Equal(AppNotFoundError))
+					Expect(app).To(BeZero())
 				})
 			})
 
 			Context("when the app is not found", func() {
-				It("should return the app not found error", func() {
+				It("To return the app not found error", func() {
 					app, err := store.GetApp("Marzipan", "Armadillo")
-					Ω(err).Should(Equal(AppNotFoundError))
-					Ω(app).Should(BeZero())
+					Expect(err).To(Equal(AppNotFoundError))
+					Expect(app).To(BeZero())
 				})
 			})
 
 			Context("when the app directory is empty", func() {
-				It("should return the app not found error", func() {
+				It("To return the app not found error", func() {
 					storeAdapter.SetMulti([]storeadapter.StoreNode{{
 						Key:   "/hm/v1/apps/actual/foo-bar/baz",
 						Value: []byte("foo"),
@@ -205,8 +210,8 @@ var _ = Describe("Apps", func() {
 					storeAdapter.Delete("/hm/v1/apps/actual/foo-bar/baz")
 
 					app, err := store.GetApp("foo", "bar")
-					Ω(err).Should(Equal(AppNotFoundError))
-					Ω(app).Should(BeZero())
+					Expect(err).To(Equal(AppNotFoundError))
+					Expect(app).To(BeZero())
 				})
 			})
 

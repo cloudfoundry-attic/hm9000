@@ -2,18 +2,20 @@ package desiredstatefetcher
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/gunk/timeprovider"
+
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
-	"io/ioutil"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
+	"github.com/pivotal-golang/clock"
 )
 
 type DesiredStateFetcherResult struct {
@@ -30,7 +32,7 @@ type DesiredStateFetcher struct {
 	httpClient        httpclient.HttpClient
 	store             store.Store
 	metricsAccountant metricsaccountant.MetricsAccountant
-	timeProvider      timeprovider.TimeProvider
+	clock             clock.Clock
 	cache             map[string]models.DesiredAppState
 	logger            logger.Logger
 }
@@ -39,7 +41,7 @@ func New(config *config.Config,
 	store store.Store,
 	metricsAccountant metricsaccountant.MetricsAccountant,
 	httpClient httpclient.HttpClient,
-	timeProvider timeprovider.TimeProvider,
+	clock clock.Clock,
 	logger logger.Logger) *DesiredStateFetcher {
 
 	return &DesiredStateFetcher{
@@ -47,7 +49,7 @@ func New(config *config.Config,
 		httpClient:        httpClient,
 		store:             store,
 		metricsAccountant: metricsAccountant,
-		timeProvider:      timeProvider,
+		clock:             clock,
 		cache:             map[string]models.DesiredAppState{},
 		logger:            logger,
 	}
@@ -66,7 +68,6 @@ func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherRes
 
 func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult) {
 	req, err := http.NewRequest("GET", fetcher.bulkURL(fetcher.config.DesiredStateBatchSize, token), nil)
-
 	if err != nil {
 		resultChan <- DesiredStateFetcherResult{Message: "Failed to generate URL request", Error: err}
 		return
@@ -93,7 +94,6 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 		}
 
 		body, err := ioutil.ReadAll(resp.Body)
-
 		if err != nil {
 			resultChan <- DesiredStateFetcherResult{Message: "Failed to read HTTP response body", Error: err}
 			return
@@ -106,7 +106,7 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 		}
 
 		if len(response.Results) == 0 {
-			tSync := time.Now()
+			tSync := fetcher.clock.Now()
 			err = fetcher.syncStore()
 			fetcher.metricsAccountant.TrackDesiredStateSyncTime(time.Since(tSync))
 			if err != nil {
@@ -114,7 +114,7 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 				return
 			}
 
-			fetcher.store.BumpDesiredFreshness(fetcher.timeProvider.Time())
+			fetcher.store.BumpDesiredFreshness(fetcher.clock.Now())
 			resultChan <- DesiredStateFetcherResult{Success: true, NumResults: numResults}
 			return
 		}

@@ -3,10 +3,10 @@ package startstoplistener
 import (
 	"sync"
 
-	"github.com/apcera/nats"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/yagnats"
+	"github.com/nats-io/nats"
 )
 
 type StartStopListener struct {

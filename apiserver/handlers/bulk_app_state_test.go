@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/hm9000/apiserver/handlers"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
@@ -19,6 +18,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/clock/fakeclock"
 )
 
 func decodeBulkResponse(response string) (bulkAppResp map[string]AppResponse) {
@@ -38,7 +38,7 @@ type AppResponse struct {
 
 type HandlerConf struct {
 	StoreAdapter *fakestoreadapter.FakeStoreAdapter
-	TimeProvider *faketimeprovider.FakeTimeProvider
+	Clock        *fakeclock.FakeClock
 	Logger       logger.Logger
 	MaxInFlight  int
 }
@@ -46,10 +46,8 @@ type HandlerConf struct {
 func defaultConf() HandlerConf {
 	return HandlerConf{
 		StoreAdapter: fakestoreadapter.New(),
-		TimeProvider: &faketimeprovider.FakeTimeProvider{
-			TimeToProvide: time.Unix(100, 0),
-		},
-		Logger: fakelogger.NewFakeLogger(),
+		Clock:        fakeclock.NewFakeClock(time.Unix(100, 0)),
+		Logger:       fakelogger.NewFakeLogger(),
 	}
 }
 
@@ -58,13 +56,13 @@ func makeHandlerAndStore(conf HandlerConf) (http.Handler, store.Store, error) {
 
 	store := store.NewStore(config, conf.StoreAdapter, fakelogger.NewFakeLogger())
 
-	handler, err := handlers.New(conf.Logger, store, conf.TimeProvider)
+	handler, err := handlers.New(conf.Logger, store, conf.Clock)
 	return handler, store, err
 }
 
 func decodeResponse(response string) (appResp AppResponse) {
 	err := json.Unmarshal([]byte(response), &appResp)
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	return appResp
 }
 

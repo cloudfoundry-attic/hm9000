@@ -26,11 +26,16 @@ var _ = Describe("Actual State", func() {
 	BeforeEach(func() {
 		var err error
 		conf, err = config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccurred())
-		storeAdapter = etcdstoreadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(),
-			workpool.NewWorkPool(conf.StoreMaxConcurrentRequests))
+		Expect(err).NotTo(HaveOccurred())
+		wpool, err := workpool.NewWorkPool(conf.StoreMaxConcurrentRequests)
+		Expect(err).NotTo(HaveOccurred())
+		storeAdapter, err = etcdstoreadapter.New(
+			&etcdstoreadapter.ETCDOptions{ClusterUrls: etcdRunner.NodeURLS()},
+			wpool,
+		)
+		Expect(err).NotTo(HaveOccurred())
 		err = storeAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 		conf.StoreHeartbeatCacheRefreshIntervalInMilliseconds = 100
 		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
@@ -52,10 +57,10 @@ var _ = Describe("Actual State", func() {
 
 		It("should save the instance heartbeats for the passed-in heartbeat", func() {
 			results, err := store.GetInstanceHeartbeats()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(results).Should(HaveLen(2))
-			Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-			Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(2))
+			Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+			Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
 		})
 
 		Context("when there are already instance heartbeats stored for the DEA in question", func() {
@@ -71,10 +76,10 @@ var _ = Describe("Actual State", func() {
 
 			It("should sync the heartbeats (add new ones, adjust ones that have changed state, and delete old ones)", func() {
 				results, err := store.GetInstanceHeartbeats()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(results).Should(HaveLen(2))
-				Ω(results).Should(ContainElement(modifiedHeartbeat))
-				Ω(results).Should(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(2))
+				Expect(results).To(ContainElement(modifiedHeartbeat))
+				Expect(results).To(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
 			})
 		})
 
@@ -108,13 +113,13 @@ var _ = Describe("Actual State", func() {
 
 			It("should work", func() {
 				results, err := store.GetInstanceHeartbeats()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(results).Should(HaveLen(5))
-				Ω(results).Should(ContainElement(modifiedHeartbeat))
-				Ω(results).Should(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
-				Ω(results).Should(ContainElement(otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat()))
-				Ω(results).Should(ContainElement(otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat()))
-				Ω(results).Should(ContainElement(yetAnotherDea.GetApp(0).InstanceAtIndex(0).Heartbeat()))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(5))
+				Expect(results).To(ContainElement(modifiedHeartbeat))
+				Expect(results).To(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+				Expect(results).To(ContainElement(otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat()))
+				Expect(results).To(ContainElement(otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat()))
+				Expect(results).To(ContainElement(yetAnotherDea.GetApp(0).InstanceAtIndex(0).Heartbeat()))
 			})
 		})
 
@@ -141,8 +146,8 @@ var _ = Describe("Actual State", func() {
 
 				err1 := <-done
 				err2 := <-done
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
+				Expect(err1).NotTo(HaveOccurred())
+				Expect(err2).NotTo(HaveOccurred())
 			})
 		})
 
@@ -154,8 +159,8 @@ var _ = Describe("Actual State", func() {
 
 				//See that it's gone
 				results, err := store.GetInstanceHeartbeats()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(results).Should(HaveLen(1))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(1))
 
 				//Try to put it back
 				store.SyncHeartbeats(dea.HeartbeatWith(
@@ -165,8 +170,8 @@ var _ = Describe("Actual State", func() {
 
 				//See that we didn't... because it's still in the cache...
 				results, err = store.GetInstanceHeartbeats()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(results).Should(HaveLen(1))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(1))
 
 				//Eventually the cache should be reloaded...
 				Eventually(func() []models.InstanceHeartbeat {
@@ -176,7 +181,7 @@ var _ = Describe("Actual State", func() {
 					))
 
 					results, err = store.GetInstanceHeartbeats()
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 					return results
 				}, 1.0, 0.05).Should(HaveLen(2)) //...and the heartbeat should return
 			})
@@ -187,8 +192,8 @@ var _ = Describe("Actual State", func() {
 		Context("when there is none saved", func() {
 			It("should come back empty", func() {
 				results, err := store.GetInstanceHeartbeats()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(results).Should(BeEmpty())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(BeEmpty())
 			})
 		})
 
@@ -220,14 +225,14 @@ var _ = Describe("Actual State", func() {
 			Context("when the DEA heartbeats have not expired", func() {
 				It("should return the instance heartbeats", func() {
 					results, err := store.GetInstanceHeartbeats()
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(results).Should(HaveLen(6))
-					Ω(results).Should(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-					Ω(results).Should(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
-					Ω(results).Should(ContainElement(heartbeatOnDea))
-					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-					Ω(results).Should(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
-					Ω(results).Should(ContainElement(heartbeatOnOtherDea))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(6))
+					Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+					Expect(results).To(ContainElement(heartbeatOnDea))
+					Expect(results).To(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Expect(results).To(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
+					Expect(results).To(ContainElement(heartbeatOnOtherDea))
 				})
 			})
 
@@ -238,34 +243,34 @@ var _ = Describe("Actual State", func() {
 
 				It("should not return any expired instance heartbeats", func() {
 					results, err := store.GetInstanceHeartbeats()
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(results).Should(HaveLen(3))
-					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-					Ω(results).Should(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
-					Ω(results).Should(ContainElement(heartbeatOnOtherDea))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(3))
+					Expect(results).To(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Expect(results).To(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
+					Expect(results).To(ContainElement(heartbeatOnOtherDea))
 
 					//we fetch twice to ensure that nothing is incorrectly deleted
 					results, err = store.GetInstanceHeartbeats()
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(results).Should(HaveLen(3))
-					Ω(results).Should(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-					Ω(results).Should(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
-					Ω(results).Should(ContainElement(heartbeatOnOtherDea))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(3))
+					Expect(results).To(ContainElement(otherDea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Expect(results).To(ContainElement(otherDea.GetApp(1).InstanceAtIndex(0).Heartbeat()))
+					Expect(results).To(ContainElement(heartbeatOnOtherDea))
 				})
 
 				It("should remove expired instance heartbeats from the store", func() {
 					_, err := storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 
 					_, err = store.GetInstanceHeartbeats()
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 
 					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
-					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
-					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 				})
 
 				Context("if it fails to remove them", func() {
@@ -284,10 +289,10 @@ var _ = Describe("Actual State", func() {
 							errChan <- err
 						}()
 
-						Ω(<-resultChan).Should(HaveLen(3))
-						Ω(<-resultChan).Should(HaveLen(3))
-						Ω(<-errChan).ShouldNot(HaveOccurred())
-						Ω(<-errChan).ShouldNot(HaveOccurred())
+						Expect(<-resultChan).To(HaveLen(3))
+						Expect(<-resultChan).To(HaveLen(3))
+						Expect(<-errChan).NotTo(HaveOccurred())
+						Expect(<-errChan).NotTo(HaveOccurred())
 					})
 				})
 			})
@@ -303,8 +308,8 @@ var _ = Describe("Actual State", func() {
 		Context("when there is none saved", func() {
 			It("should come back empty", func() {
 				results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(results).Should(BeEmpty())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(BeEmpty())
 			})
 		})
 
@@ -336,10 +341,10 @@ var _ = Describe("Actual State", func() {
 			Context("when the corresponding DEA heartbeat has not expired", func() {
 				It("should return the instance heartbeats", func() {
 					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(results).Should(HaveLen(2))
-					Ω(results).Should(ContainElement(heartbeatA))
-					Ω(results).Should(ContainElement(heartbeatB))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(2))
+					Expect(results).To(ContainElement(heartbeatA))
+					Expect(results).To(ContainElement(heartbeatB))
 				})
 			})
 
@@ -350,20 +355,20 @@ var _ = Describe("Actual State", func() {
 
 				It("should not return any expired instance heartbeats", func() {
 					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(results).Should(HaveLen(1))
-					Ω(results).Should(ContainElement(heartbeatB))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(1))
+					Expect(results).To(ContainElement(heartbeatB))
 				})
 
 				It("should remove expired instance heartbeats from the store", func() {
 					_, err := storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 
 					_, err = store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 
 					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
-					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 				})
 
 				Context("if it fails to remove them", func() {
@@ -382,10 +387,10 @@ var _ = Describe("Actual State", func() {
 							errChan <- err
 						}()
 
-						Ω(<-resultChan).Should(HaveLen(1))
-						Ω(<-resultChan).Should(HaveLen(1))
-						Ω(<-errChan).ShouldNot(HaveOccurred())
-						Ω(<-errChan).ShouldNot(HaveOccurred())
+						Expect(<-resultChan).To(HaveLen(1))
+						Expect(<-resultChan).To(HaveLen(1))
+						Expect(<-errChan).NotTo(HaveOccurred())
+						Expect(<-errChan).NotTo(HaveOccurred())
 					})
 				})
 			})
@@ -397,9 +402,9 @@ var _ = Describe("Actual State", func() {
 
 				It("should not return any instance heartbeats", func() {
 					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(results).ShouldNot(BeNil())
-					Ω(results).Should(HaveLen(0))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).NotTo(BeNil())
+					Expect(results).To(HaveLen(0))
 				})
 			})
 		})

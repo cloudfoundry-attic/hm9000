@@ -27,11 +27,16 @@ var _ = Describe("Desired State", func() {
 	BeforeEach(func() {
 		var err error
 		conf, err = config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccurred())
-		storeAdapter = etcdstoreadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(),
-			workpool.NewWorkPool(conf.StoreMaxConcurrentRequests))
+		Expect(err).NotTo(HaveOccurred())
+		wpool, err := workpool.NewWorkPool(conf.StoreMaxConcurrentRequests)
+		Expect(err).NotTo(HaveOccurred())
+		storeAdapter, err = etcdstoreadapter.New(
+			&etcdstoreadapter.ETCDOptions{ClusterUrls: etcdRunner.NodeURLS()},
+			wpool,
+		)
+		Expect(err).NotTo(HaveOccurred())
 		err = storeAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		app1 = appfixture.NewAppFixture()
 		app2 = appfixture.NewAppFixture()
@@ -50,16 +55,16 @@ var _ = Describe("Desired State", func() {
 				app1.DesiredState(1),
 				app2.DesiredState(1),
 			)
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should store the passed in desired state", func() {
+		It("To store the passed in desired state", func() {
 			desiredState, err := store.GetDesiredState()
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
-			Ω(desiredState).Should(HaveLen(2))
-			Ω(desiredState[app1.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app1.DesiredState(1)))
-			Ω(desiredState[app2.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(1)))
+			Expect(desiredState).To(HaveLen(2))
+			Expect(desiredState[app1.DesiredState(1).StoreKey()]).To(EqualDesiredState(app1.DesiredState(1)))
+			Expect(desiredState[app2.DesiredState(1).StoreKey()]).To(EqualDesiredState(app2.DesiredState(1)))
 		})
 
 		Context("When the desired state already exists", func() {
@@ -69,16 +74,16 @@ var _ = Describe("Desired State", func() {
 						app2.DesiredState(2),
 						app3.DesiredState(1),
 					)
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It("should store the differences, adding any new state and removing any unrepresented state", func() {
+				It("To store the differences, adding any new state and removing any unrepresented state", func() {
 					desiredState, err := store.GetDesiredState()
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 
-					Ω(desiredState).Should(HaveLen(2))
-					Ω(desiredState[app2.DesiredState(2).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(2)))
-					Ω(desiredState[app3.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app3.DesiredState(1)))
+					Expect(desiredState).To(HaveLen(2))
+					Expect(desiredState[app2.DesiredState(2).StoreKey()]).To(EqualDesiredState(app2.DesiredState(2)))
+					Expect(desiredState[app3.DesiredState(1).StoreKey()]).To(EqualDesiredState(app3.DesiredState(1)))
 				})
 			})
 		})
@@ -91,22 +96,22 @@ var _ = Describe("Desired State", func() {
 					app1.DesiredState(1),
 					app2.DesiredState(1),
 				)
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("can fetch the desired state", func() {
 				desired, err := store.GetDesiredState()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(desired[app1.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app1.DesiredState(1)))
-				Ω(desired[app2.DesiredState(1).StoreKey()]).Should(EqualDesiredState(app2.DesiredState(1)))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(desired[app1.DesiredState(1).StoreKey()]).To(EqualDesiredState(app1.DesiredState(1)))
+				Expect(desired[app2.DesiredState(1).StoreKey()]).To(EqualDesiredState(app2.DesiredState(1)))
 			})
 		})
 
 		Context("when the desired state is empty", func() {
 			It("returns an empty hash", func() {
 				desired, err := store.GetDesiredState()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(desired).Should(BeEmpty())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(desired).To(BeEmpty())
 			})
 		})
 	})

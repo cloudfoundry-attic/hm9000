@@ -5,16 +5,17 @@ import (
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/clock/fakeclock"
 
 	"errors"
-	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
+	"time"
+
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
-	"time"
 )
 
 var _ = Describe("Analyzer", func() {
@@ -22,7 +23,7 @@ var _ = Describe("Analyzer", func() {
 		analyzer     *Analyzer
 		storeAdapter *fakestoreadapter.FakeStoreAdapter
 		store        storepackage.Store
-		timeProvider *faketimeprovider.FakeTimeProvider
+		clock        *fakeclock.FakeClock
 		dea          appfixture.DeaFixture
 		app          appfixture.AppFixture
 	)
@@ -33,8 +34,7 @@ var _ = Describe("Analyzer", func() {
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
-		timeProvider = &faketimeprovider.FakeTimeProvider{}
-		timeProvider.TimeToProvide = time.Unix(1000, 0)
+		clock = fakeclock.NewFakeClock(time.Unix(1000, 0))
 
 		dea = appfixture.NewDeaFixture()
 		app = dea.GetApp(0)
@@ -42,7 +42,7 @@ var _ = Describe("Analyzer", func() {
 		store.BumpActualFreshness(time.Unix(100, 0))
 		store.BumpDesiredFreshness(time.Unix(100, 0))
 
-		analyzer = New(store, timeProvider, fakelogger.NewFakeLogger(), conf)
+		analyzer = New(store, clock, fakelogger.NewFakeLogger(), conf)
 	})
 
 	startMessages := func() []models.PendingStartMessage {
@@ -107,10 +107,10 @@ var _ = Describe("Analyzer", func() {
 					Ω(stopMessages()).Should(BeEmpty())
 					Ω(startMessages()).Should(HaveLen(2))
 
-					expectedMessage := models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 0, 1, models.PendingStartMessageReasonMissing)
+					expectedMessage := models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 0, 1, models.PendingStartMessageReasonMissing)
 					Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessage)))
 
-					expectedMessage = models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 1, 1, models.PendingStartMessageReasonMissing)
+					expectedMessage = models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 1, 1, models.PendingStartMessageReasonMissing)
 					Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessage)))
 				})
 
@@ -150,7 +150,7 @@ var _ = Describe("Analyzer", func() {
 
 					Ω(startMessages()).Should(HaveLen(1))
 
-					expectedMessage := models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 1, 0.5, models.PendingStartMessageReasonMissing)
+					expectedMessage := models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 1, 0.5, models.PendingStartMessageReasonMissing)
 					Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessage)))
 				})
 
@@ -191,13 +191,13 @@ var _ = Describe("Analyzer", func() {
 				Ω(startMessages()).Should(BeEmpty())
 				Ω(stopMessages()).Should(HaveLen(3))
 
-				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessage := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonExtra)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(1).InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessage = models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(1).InstanceGuid, models.PendingStopMessageReasonExtra)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(2).InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessage = models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(2).InstanceGuid, models.PendingStopMessageReasonExtra)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 			})
 		})
@@ -233,10 +233,10 @@ var _ = Describe("Analyzer", func() {
 
 					Ω(stopMessages()).Should(HaveLen(2))
 
-					expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(1).InstanceGuid, models.PendingStopMessageReasonExtra)
+					expectedMessage := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(1).InstanceGuid, models.PendingStopMessageReasonExtra)
 					Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-					expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(2).InstanceGuid, models.PendingStopMessageReasonExtra)
+					expectedMessage = models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(2).InstanceGuid, models.PendingStopMessageReasonExtra)
 					Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 				})
 			})
@@ -252,7 +252,7 @@ var _ = Describe("Analyzer", func() {
 
 					Ω(startMessages()).Should(HaveLen(1))
 
-					expectedMessage := models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 0, 1.0, models.PendingStartMessageReasonMissing)
+					expectedMessage := models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 0, 1.0, models.PendingStartMessageReasonMissing)
 					Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessage)))
 
 					Ω(stopMessages()).Should(BeEmpty())
@@ -297,10 +297,10 @@ var _ = Describe("Analyzer", func() {
 
 				Ω(startMessages()).Should(HaveLen(2))
 
-				expectedMessage := models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 0, 2.0/3.0, models.PendingStartMessageReasonMissing)
+				expectedMessage := models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 0, 2.0/3.0, models.PendingStartMessageReasonMissing)
 				Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 1, 2.0/3.0, models.PendingStartMessageReasonMissing)
+				expectedMessage = models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 1, 2.0/3.0, models.PendingStartMessageReasonMissing)
 				Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessage)))
 			})
 		})
@@ -391,13 +391,13 @@ var _ = Describe("Analyzer", func() {
 
 				Ω(stopMessages()).Should(HaveLen(3))
 
-				expectedMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(3).InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessage := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(3).InstanceGuid, models.PendingStopMessageReasonExtra)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, duplicateExtraInstance1.InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessage = models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, duplicateExtraInstance1.InstanceGuid, models.PendingStopMessageReasonExtra)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 
-				expectedMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, duplicateExtraInstance2.InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessage = models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, duplicateExtraInstance2.InstanceGuid, models.PendingStopMessageReasonExtra)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessage)))
 			})
 		})
@@ -425,8 +425,8 @@ var _ = Describe("Analyzer", func() {
 
 				Ω(stopMessages()).Should(HaveLen(2))
 
-				expectedMessageForIndex0 := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonExtra)
-				expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessageForIndex0 := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonExtra)
 
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForIndex0)))
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
@@ -447,10 +447,10 @@ var _ = Describe("Analyzer", func() {
 				Ω(startMessages()).Should(HaveLen(1))
 				Ω(stopMessages()).Should(HaveLen(1))
 
-				expectedMessageForIndex1 := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+				expectedMessageForIndex1 := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 				Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessageForIndex1)))
 
-				expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
+				expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
 			})
 		})
@@ -468,7 +468,7 @@ var _ = Describe("Analyzer", func() {
 
 				Ω(stopMessages()).Should(HaveLen(1))
 
-				expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonExtra)
+				expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonExtra)
 				Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
 			})
 		})
@@ -487,7 +487,7 @@ var _ = Describe("Analyzer", func() {
 
 					Ω(startMessages()).Should(HaveLen(1))
 
-					expectedMessageForIndex1 := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+					expectedMessageForIndex1 := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 					Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessageForIndex1)))
 				})
 			})
@@ -508,7 +508,7 @@ var _ = Describe("Analyzer", func() {
 
 					Ω(stopMessages()).Should(HaveLen(1))
 
-					expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
+					expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
 					Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
 				})
 
@@ -531,9 +531,9 @@ var _ = Describe("Analyzer", func() {
 
 						Ω(stopMessages()).Should(HaveLen(2))
 
-						expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
+						expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
 						Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
-						expectedMessageForOtherEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, otherEvacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
+						expectedMessageForOtherEvacuatingInstance := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, otherEvacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
 						Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForOtherEvacuatingInstance)))
 					})
 				})
@@ -572,11 +572,11 @@ var _ = Describe("Analyzer", func() {
 					Ω(err).ShouldNot(HaveOccurred())
 
 					Ω(startMessages()).Should(HaveLen(1))
-					expectedMessageForIndex1 := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+					expectedMessageForIndex1 := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 					Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedMessageForIndex1)))
 
 					Ω(stopMessages()).Should(HaveLen(1))
-					expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
+					expectedMessageForEvacuatingInstance := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, evacuatingHeartbeat.InstanceGuid, models.PendingStopMessageReasonEvacuationComplete)
 					Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedMessageForEvacuatingInstance)))
 				})
 			})
@@ -609,7 +609,7 @@ var _ = Describe("Analyzer", func() {
 
 				It("should try to start the instance immediately", func() {
 					Ω(startMessages()).Should(HaveLen(1))
-					expectMessage := models.NewPendingStartMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 0, 1.0, models.PendingStartMessageReasonCrashed)
+					expectMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 0, 1.0, models.PendingStartMessageReasonCrashed)
 					Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectMessage)))
 				})
 
@@ -670,7 +670,7 @@ var _ = Describe("Analyzer", func() {
 				for _, expectedDelay := range expectedDelays {
 					err := analyzer.Analyze()
 					Ω(err).ShouldNot(HaveOccurred())
-					Ω(startMessages()[0].SendOn).Should(Equal(timeProvider.Time().Unix() + expectedDelay))
+					Ω(startMessages()[0].SendOn).Should(Equal(clock.Now().Unix() + expectedDelay))
 					Ω(startMessages()[0].StartReason).Should(Equal(models.PendingStartMessageReasonCrashed))
 					store.DeletePendingStartMessages(startMessages()...)
 				}
@@ -752,21 +752,21 @@ var _ = Describe("Analyzer", func() {
 
 			Ω(startMessages()).Should(HaveLen(3))
 
-			expectedStartMessage := models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, otherApp.AppGuid, otherApp.AppVersion, 1, 1.0/3.0, models.PendingStartMessageReasonMissing)
+			expectedStartMessage := models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, otherApp.AppGuid, otherApp.AppVersion, 1, 1.0/3.0, models.PendingStartMessageReasonMissing)
 			Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
 
-			expectedStartMessage = models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, yetAnotherApp.AppGuid, yetAnotherApp.AppVersion, 0, 1.0, models.PendingStartMessageReasonMissing)
+			expectedStartMessage = models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, yetAnotherApp.AppGuid, yetAnotherApp.AppVersion, 0, 1.0, models.PendingStartMessageReasonMissing)
 			Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
 
-			expectedStartMessage = models.NewPendingStartMessage(timeProvider.Time(), conf.GracePeriod(), 0, yetAnotherApp.AppGuid, yetAnotherApp.AppVersion, 1, 1.0, models.PendingStartMessageReasonMissing)
+			expectedStartMessage = models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, yetAnotherApp.AppGuid, yetAnotherApp.AppVersion, 1, 1.0, models.PendingStartMessageReasonMissing)
 			Ω(startMessages()).Should(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
 
 			Ω(stopMessages()).Should(HaveLen(2))
 
-			expectedStopMessage := models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(1).InstanceGuid, models.PendingStopMessageReasonExtra)
+			expectedStopMessage := models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, app.InstanceAtIndex(1).InstanceGuid, models.PendingStopMessageReasonExtra)
 			Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedStopMessage)))
 
-			expectedStopMessage = models.NewPendingStopMessage(timeProvider.Time(), 0, conf.GracePeriod(), undesiredApp.AppGuid, undesiredApp.AppVersion, undesiredApp.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonExtra)
+			expectedStopMessage = models.NewPendingStopMessage(clock.Now(), 0, conf.GracePeriod(), undesiredApp.AppGuid, undesiredApp.AppVersion, undesiredApp.InstanceAtIndex(0).InstanceGuid, models.PendingStopMessageReasonExtra)
 			Ω(stopMessages()).Should(ContainElement(EqualPendingStopMessage(expectedStopMessage)))
 		})
 	})

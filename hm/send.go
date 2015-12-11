@@ -18,7 +18,7 @@ func Send(l logger.Logger, conf *config.Config, poll bool) {
 	if poll {
 		l.Info("Starting Sender Daemon...")
 
-		adapter := connectToStoreAdapter(l, conf, nil)
+		adapter := connectToStoreAdapter(l, conf)
 
 		err := Daemonize("Sender", func() error {
 			return send(l, conf, messageBus, store)
@@ -42,7 +42,7 @@ func send(l logger.Logger, conf *config.Config, messageBus yagnats.NATSConn, sto
 	l.Info("Sending...")
 
 	sender := sender.New(store, metricsaccountant.New(store), conf, messageBus, l)
-	err := sender.Send(buildTimeProvider(l))
+	err := sender.Send(buildClock(l))
 
 	if err != nil {
 		l.Error("Sender failed with error", err)

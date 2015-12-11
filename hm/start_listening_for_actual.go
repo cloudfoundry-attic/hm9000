@@ -18,7 +18,7 @@ func StartListeningForActual(l logger.Logger, conf *config.Config) {
 		store,
 		usageTracker,
 		metricsaccountant.New(store),
-		buildTimeProvider(l),
+		buildClock(l),
 		l,
 	)
 

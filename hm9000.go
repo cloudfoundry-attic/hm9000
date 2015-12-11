@@ -26,9 +26,9 @@ func main() {
 			Description: "Fetches desired state",
 			Usage:       "hm fetch_desired --config=/path/to/config --poll",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.BoolFlag{Name: "poll", Usage: "If true, poll repeatedly with an interval defined in config"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "fetcher")
@@ -40,8 +40,8 @@ func main() {
 			Description: "Listens over the NATS for the actual state",
 			Usage:       "hm listen --config=/path/to/config",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "listener")
@@ -53,9 +53,9 @@ func main() {
 			Description: "Analyze the desired and actual state and enqueue start/stop messages",
 			Usage:       "hm analyze --config=/path/to/config --poll",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.BoolFlag{Name: "poll", Usage: "If true, poll repeatedly with an interval defined in config"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "analyzer")
@@ -67,9 +67,9 @@ func main() {
 			Description: "Send the enqueued start/stop messages",
 			Usage:       "hm send --config=/path/to/config --poll",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.BoolFlag{Name: "poll", Usage: "If true, poll repeatedly with an interval defined in config"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "sender")
@@ -81,8 +81,8 @@ func main() {
 			Description: "Send NATS start message for evacuated apps",
 			Usage:       "hm evacuator --config=/path/to/config",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "evacuator")
@@ -94,8 +94,8 @@ func main() {
 			Description: "Listens for Varz calls to serve metrics",
 			Usage:       "hm serve_metrics --config=/path/to/config",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, steno, conf := loadLoggerAndConfig(c, "metrics_server")
@@ -107,8 +107,8 @@ func main() {
 			Description: "Serve app API over http",
 			Usage:       "hm serve_api --config=/path/to/config",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "apiserver")
@@ -120,9 +120,9 @@ func main() {
 			Description: "Deletes empty directories from the store",
 			Usage:       "hm shred --config=/path/to/config --poll",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.BoolFlag{"poll", "If true, poll repeatedly with an interval defined in config"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.BoolFlag{Name: "poll", Usage: "If true, poll repeatedly with an interval defined in config"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "shredder")
@@ -134,9 +134,9 @@ func main() {
 			Description: "Dumps contents of the data store",
 			Usage:       "hm dump --config=/path/to/config",
 			Flags: []cli.Flag{
-				cli.StringFlag{"config", "", "Path to config file"},
-				cli.BoolFlag{"raw", "If set, dump the unstructured contents of the database"},
-				cli.StringFlag{"debugAddr", "", "address to serve debug info"},
+				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
+				cli.BoolFlag{Name: "raw", Usage: "If set, dump the unstructured contents of the database"},
+				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "dumper")
@@ -183,8 +183,11 @@ func loadLoggerAndConfig(c *cli.Context, component string) (logger.Logger, *gost
 
 	debugAddr := c.String("debugAddr")
 	if debugAddr != "" {
-		cf_debug_server.SetAddr(debugAddr)
-		cf_debug_server.Run()
+		_, err = cf_debug_server.Run(debugAddr, nil)
+		if err != nil {
+			hmLogger.Error("Failed to start debug server", err)
+			os.Exit(1)
+		}
 	}
 
 	return hmLogger, steno, conf

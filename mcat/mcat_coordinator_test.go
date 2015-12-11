@@ -10,9 +10,7 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/hm9000/testhelpers/natsrunner"
 	"github.com/cloudfoundry/hm9000/testhelpers/startstoplistener"
-	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/cloudfoundry/storeadapter/storerunner"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/gomega"
@@ -21,8 +19,8 @@ import (
 type MCATCoordinator struct {
 	MessageBus   yagnats.NATSConn
 	StateServer  *desiredstateserver.DesiredStateServer
-	StoreRunner  storerunner.StoreRunner
-	StoreAdapter storeadapter.StoreAdapter
+	StoreRunner  *etcdstorerunner.ETCDClusterRunner
+	StoreAdapter *etcdstoreadapter.ETCDStoreAdapter
 
 	hm9000Binary      string
 	natsRunner        *natsrunner.NATSRunner
@@ -98,13 +96,16 @@ func (coordinator *MCATCoordinator) StartStartStopListener() {
 
 func (coordinator *MCATCoordinator) StartETCD() {
 	etcdPort := 5000 + (coordinator.ParallelNode-1)*10
-	coordinator.StoreRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
+	coordinator.StoreRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	coordinator.StoreRunner.Start()
 
-	coordinator.StoreAdapter = etcdstoreadapter.NewETCDStoreAdapter(coordinator.StoreRunner.NodeURLS(),
-		workpool.NewWorkPool(coordinator.Conf.StoreMaxConcurrentRequests))
-	err := coordinator.StoreAdapter.Connect()
-	Ω(err).ShouldNot(HaveOccurred())
+	pool, err := workpool.NewWorkPool(coordinator.Conf.StoreMaxConcurrentRequests)
+	Expect(err).NotTo(HaveOccurred())
+
+	coordinator.StoreAdapter, err = etcdstoreadapter.New(&etcdstoreadapter.ETCDOptions{ClusterUrls: coordinator.StoreRunner.NodeURLS()}, pool)
+	Expect(err).NotTo(HaveOccurred())
+	err = coordinator.StoreAdapter.Connect()
+	Expect(err).NotTo(HaveOccurred())
 }
 
 func (coordinator *MCATCoordinator) StopETCD() {

@@ -18,6 +18,10 @@ func (l *LagerAdapter) Session(task string, data ...lager.Data) lager.Logger {
 	return l
 }
 
+func (l *LagerAdapter) SessionName() string {
+	return ""
+}
+
 func (l *LagerAdapter) Debug(action string, data ...lager.Data) {
 	l.oldLogger.Debug(action, dataToStrings(data)...)
 }

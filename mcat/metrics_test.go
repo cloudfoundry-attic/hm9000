@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/apcera/nats"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
-	"github.com/pivotal-golang/localip"
+	"github.com/nats-io/nats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/localip"
 )
 
 var _ = Describe("Serving Metrics", func() {

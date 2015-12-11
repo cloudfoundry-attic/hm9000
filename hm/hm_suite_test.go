@@ -17,7 +17,7 @@ func TestHM9000(t *testing.T) {
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(5001, 1)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(5001, 1, nil)
 	etcdRunner.Start()
 	return nil
 }, func([]byte) {

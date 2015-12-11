@@ -2,11 +2,11 @@ package hm
 
 import (
 	"github.com/cloudfoundry/gosteno"
+	collectorregistrar "github.com/cloudfoundry/hm9000/cfcomponent/registrars/legacycollectorregistrar"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/metricsserver"
-	collectorregistrar "github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/legacycollectorregistrar"
 )
 
 func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf *config.Config) {
@@ -23,7 +23,7 @@ func ServeMetrics(steno *gosteno.Logger, l logger.Logger, conf *config.Config) {
 		metricsaccountant.New(store),
 		l,
 		store,
-		buildTimeProvider(l),
+		buildClock(l),
 		conf,
 	)
 

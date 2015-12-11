@@ -23,11 +23,16 @@ var _ = Describe("Compact", func() {
 		var err error
 		conf, err = config.DefaultConfig()
 		conf.StoreSchemaVersion = 17
-		Ω(err).ShouldNot(HaveOccurred())
-		storeAdapter = etcdstoreadapter.NewETCDStoreAdapter(etcdRunner.NodeURLS(),
-			workpool.NewWorkPool(conf.StoreMaxConcurrentRequests))
+		Expect(err).NotTo(HaveOccurred())
+		wpool, err := workpool.NewWorkPool(conf.StoreMaxConcurrentRequests)
+		Expect(err).NotTo(HaveOccurred())
+		storeAdapter, err = etcdstoreadapter.New(
+			&etcdstoreadapter.ETCDOptions{ClusterUrls: etcdRunner.NodeURLS()},
+			wpool,
+		)
+		Expect(err).NotTo(HaveOccurred())
 		err = storeAdapter.Connect()
-		Ω(err).ShouldNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 		store = NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 	})
 
@@ -49,55 +54,55 @@ var _ = Describe("Compact", func() {
 			})
 
 			err := store.Compact()
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should delete everything under older versions", func() {
+		It("To delete everything under older versions", func() {
 			_, err := storeAdapter.Get("/hm/v3/delete/me")
-			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 
 			_, err = storeAdapter.Get("/hm/v16/delete/me")
-			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 		})
 
-		It("should leave the current version alone", func() {
+		It("To leave the current version alone", func() {
 			_, err := storeAdapter.Get("/hm/v17/leave/me/alone")
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			_, err = storeAdapter.Get("/hm/v17/leave/me/v1/alone")
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should leave newer versions alone", func() {
+		It("To leave newer versions alone", func() {
 			_, err := storeAdapter.Get("/hm/v18/leave/me/alone")
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should leave locks alone", func() {
+		It("To leave locks alone", func() {
 			_, err := storeAdapter.Get("/hm/locks/keep")
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should delete anything that's unversioned", func() {
+		It("To delete anything that's unversioned", func() {
 			_, err := storeAdapter.Get("/hm/delete/me")
-			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 
 			_, err = storeAdapter.Get("/hm/v1ola/delete/me")
-			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 
 			_, err = storeAdapter.Get("/hm/delete/me/too")
-			Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 		})
 
-		It("should not touch anything that isn't under the hm namespace", func() {
+		It("To not touch anything that isn't under the hm namespace", func() {
 			_, err := storeAdapter.Get("/other/keep")
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			_, err = storeAdapter.Get("/foo")
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			_, err = storeAdapter.Get("/v3/keep")
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
@@ -118,20 +123,20 @@ var _ = Describe("Compact", func() {
 
 				It("shreds it mercilessly", func() {
 					err := store.Compact()
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 
 					_, err = storeAdapter.Get("/hm/v17/pokemon")
-					Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 				})
 			})
 
 			Context("and it is non-empty", func() {
 				It("spares it", func() {
 					err := store.Compact()
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 
 					_, err = storeAdapter.Get("/hm/v17/pokemon/geodude")
-					Ω(err).ShouldNot(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				Context("but all of its children are empty", func() {
@@ -141,13 +146,13 @@ var _ = Describe("Compact", func() {
 
 					It("shreds it mercilessly", func() {
 						err := store.Compact()
-						Ω(err).ShouldNot(HaveOccurred())
+						Expect(err).NotTo(HaveOccurred())
 
 						_, err = storeAdapter.Get("/hm/v17/deep-pokemon/abra/kadabra")
-						Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+						Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 
 						_, err = storeAdapter.Get("/hm/v17/deep-pokemon/abra")
-						Ω(err).Should(Equal(storeadapter.ErrorKeyNotFound))
+						Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
 					})
 				})
 			})
@@ -156,10 +161,10 @@ var _ = Describe("Compact", func() {
 		Context("when the node is NOT a directory", func() {
 			It("spares it", func() {
 				err := store.Compact()
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 
 				_, err = storeAdapter.Get("/hm/v17/pokemonCount")
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 

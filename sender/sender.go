@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
+	"github.com/pivotal-golang/clock"
 )
 
 type Sender struct {
@@ -52,8 +52,8 @@ func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountan
 	}
 }
 
-func (sender *Sender) Send(timeProvider timeprovider.TimeProvider) error {
-	sender.currentTime = timeProvider.Time()
+func (sender *Sender) Send(clock clock.Clock) error {
+	sender.currentTime = clock.Now()
 	err := sender.store.VerifyFreshness(sender.currentTime)
 	if err != nil {
 		sender.logger.Error("Store is not fresh", err)

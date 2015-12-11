@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apcera/nats"
-	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/nats-io/nats"
+	"github.com/pivotal-golang/clock"
 
 	"github.com/cloudfoundry/yagnats"
 )
@@ -23,7 +23,7 @@ type ActualStateListener struct {
 	config                  *config.Config
 	messageBus              yagnats.NATSConn
 	store                   store.Store
-	timeProvider            timeprovider.TimeProvider
+	clock                   clock.Clock
 	storeUsageTracker       metricsaccountant.UsageTracker
 	metricsAccountant       metricsaccountant.MetricsAccountant
 	heartbeatsToSave        []models.Heartbeat
@@ -40,7 +40,7 @@ func New(config *config.Config,
 	store store.Store,
 	storeUsageTracker metricsaccountant.UsageTracker,
 	metricsAccountant metricsaccountant.MetricsAccountant,
-	timeProvider timeprovider.TimeProvider,
+	clock clock.Clock,
 	logger logger.Logger) *ActualStateListener {
 
 	return &ActualStateListener{
@@ -50,7 +50,7 @@ func New(config *config.Config,
 		store:             store,
 		storeUsageTracker: storeUsageTracker,
 		metricsAccountant: metricsAccountant,
-		timeProvider:      timeProvider,
+		clock:             clock,
 		heartbeatsToSave:  []models.Heartbeat{},
 		heartbeatMutex:    &sync.Mutex{},
 	}
@@ -63,8 +63,7 @@ func (listener *ActualStateListener) Start() {
 		listener.heartbeatMutex.Lock()
 		lastReceived := listener.lastReceivedHeartbeat
 		listener.heartbeatMutex.Unlock()
-
-		if listener.timeProvider.Time().Sub(lastReceived) >= heartbeatThreshold {
+		if listener.clock.Now().Sub(lastReceived) >= heartbeatThreshold {
 			listener.bumpFreshness()
 		}
 
@@ -86,7 +85,7 @@ func (listener *ActualStateListener) Start() {
 
 		listener.heartbeatMutex.Lock()
 
-		listener.lastReceivedHeartbeat = listener.timeProvider.Time()
+		listener.lastReceivedHeartbeat = listener.clock.Now()
 
 		listener.totalReceivedHeartbeats++
 		listener.heartbeatsToSave = append(listener.heartbeatsToSave, heartbeat)
@@ -101,15 +100,12 @@ func (listener *ActualStateListener) Start() {
 
 	go listener.syncHeartbeats()
 
-	if listener.storeUsageTracker != nil {
-		listener.storeUsageTracker.StartTrackingUsage()
-		listener.measureStoreUsage()
-	}
+	listener.storeUsageTracker.StartTrackingUsage()
+	listener.measureStoreUsage()
 }
 
 func (listener *ActualStateListener) syncHeartbeats() {
-	syncInterval := listener.timeProvider.NewTickerChannel(HeartbeatSyncTimer, listener.config.ListenerHeartbeatSyncInterval())
-
+	syncInterval := listener.clock.NewTicker(listener.config.ListenerHeartbeatSyncInterval())
 	previousReceivedHeartbeats := -1
 
 	for {
@@ -124,14 +120,14 @@ func (listener *ActualStateListener) syncHeartbeats() {
 				"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
 			})
 
-			t := time.Now()
+			t := listener.clock.Now()
 			err := listener.store.SyncHeartbeats(heartbeatsToSave...)
 
 			if err != nil {
 				listener.logger.Error("Could not put instance heartbeats in store:", err)
 				listener.store.RevokeActualFreshness()
 			} else {
-				dt := time.Since(t)
+				dt := listener.clock.Since(t)
 				if dt < listener.config.ListenerHeartbeatSyncInterval() {
 					listener.bumpFreshness()
 				} else {
@@ -155,7 +151,7 @@ func (listener *ActualStateListener) syncHeartbeats() {
 			listener.logger.Debug("Tracking Heartbeat Metrics", map[string]string{
 				"Total Received Heartbeats": strconv.Itoa(totalReceivedHeartbeats),
 			})
-			t := time.Now()
+			t := listener.clock.Now()
 
 			listener.metricsAccountant.TrackReceivedHeartbeats(totalReceivedHeartbeats)
 
@@ -167,7 +163,7 @@ func (listener *ActualStateListener) syncHeartbeats() {
 			previousReceivedHeartbeats = totalReceivedHeartbeats
 		}
 
-		<-syncInterval
+		<-syncInterval.C()
 	}
 }
 
@@ -181,7 +177,7 @@ func (listener *ActualStateListener) measureStoreUsage() {
 }
 
 func (listener *ActualStateListener) bumpFreshness() {
-	err := listener.store.BumpActualFreshness(listener.timeProvider.Time())
+	err := listener.store.BumpActualFreshness(listener.clock.Now())
 	if err != nil {
 		listener.logger.Error("Could not update actual freshness", err)
 	} else {

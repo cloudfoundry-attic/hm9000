@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 )
 
+//go:generate counterfeiter -o fakemetricsaccountant/fake_usagetracker.go . UsageTracker
 type UsageTracker interface {
 	StartTrackingUsage()
 	MeasureUsage() (usage float64, measurementDuration time.Duration)
@@ -25,6 +26,7 @@ var stopMetrics = map[models.PendingStopMessageReason]string{
 	models.PendingStopMessageReasonEvacuationComplete: "StopEvacuationComplete",
 }
 
+//go:generate counterfeiter -o fakemetricsaccountant/fake_metricsaccountant.go . MetricsAccountant
 type MetricsAccountant interface {
 	TrackReceivedHeartbeats(metric int) error
 	TrackSavedHeartbeats(metric int) error

@@ -15,7 +15,7 @@ func Shred(l logger.Logger, conf *config.Config, poll bool) {
 	if poll {
 		l.Info("Starting Shredder Daemon...")
 
-		adapter := connectToStoreAdapter(l, conf, nil)
+		adapter := connectToStoreAdapter(l, conf)
 
 		err := Daemonize("Shredder", func() error {
 			return shred(l, store)

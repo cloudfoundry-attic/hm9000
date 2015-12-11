@@ -5,14 +5,14 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
-	"github.com/cloudfoundry/storeadapter/storerunner"
+	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/gomega"
 )
 
 type Simulator struct {
 	conf                   *config.Config
-	storeRunner            storerunner.StoreRunner
+	storeRunner            *etcdstorerunner.ETCDClusterRunner
 	store                  store.Store
 	desiredStateServer     *desiredstateserver.DesiredStateServer
 	currentHeartbeats      []models.Heartbeat
@@ -24,7 +24,7 @@ type Simulator struct {
 	messageBus             yagnats.NATSConn
 }
 
-func NewSimulator(conf *config.Config, storeRunner storerunner.StoreRunner, store store.Store, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.NATSConn) *Simulator {
+func NewSimulator(conf *config.Config, storeRunner *etcdstorerunner.ETCDClusterRunner, store store.Store, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.NATSConn) *Simulator {
 	desiredStateServer.Reset()
 
 	return &Simulator{

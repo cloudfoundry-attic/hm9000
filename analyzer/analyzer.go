@@ -1,32 +1,32 @@
 package analyzer
 
 import (
-	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/pivotal-golang/clock"
 )
 
 type Analyzer struct {
 	store store.Store
 
-	logger       logger.Logger
-	timeProvider timeprovider.TimeProvider
-	conf         *config.Config
+	logger logger.Logger
+	clock  clock.Clock
+	conf   *config.Config
 }
 
-func New(store store.Store, timeProvider timeprovider.TimeProvider, logger logger.Logger, conf *config.Config) *Analyzer {
+func New(store store.Store, clock clock.Clock, logger logger.Logger, conf *config.Config) *Analyzer {
 	return &Analyzer{
-		store:        store,
-		timeProvider: timeProvider,
-		logger:       logger,
-		conf:         conf,
+		store:  store,
+		clock:  clock,
+		logger: logger,
+		conf:   conf,
 	}
 }
 
 func (analyzer *Analyzer) Analyze() error {
-	err := analyzer.store.VerifyFreshness(analyzer.timeProvider.Time())
+	err := analyzer.store.VerifyFreshness(analyzer.clock.Now())
 	if err != nil {
 		analyzer.logger.Error("Store is not fresh", err)
 		return err
@@ -55,7 +55,7 @@ func (analyzer *Analyzer) Analyze() error {
 	allCrashCounts := []models.CrashCount{}
 
 	for _, app := range apps {
-		startMessages, stopMessages, crashCounts := newAppAnalyzer(app, analyzer.timeProvider.Time(), existingPendingStartMessages, existingPendingStopMessages, analyzer.logger, analyzer.conf).analyzeApp()
+		startMessages, stopMessages, crashCounts := newAppAnalyzer(app, analyzer.clock.Now(), existingPendingStartMessages, existingPendingStopMessages, analyzer.logger, analyzer.conf).analyzeApp()
 		for _, startMessage := range startMessages {
 			allStartMessages = append(allStartMessages, startMessage)
 		}

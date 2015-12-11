@@ -3,23 +3,26 @@ package desiredstatefetcher_test
 import (
 	"errors"
 	"fmt"
+
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/desiredstatefetcher"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant/fakemetricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakemetricsaccountant"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
+	"github.com/pivotal-golang/clock/fakeclock"
 
-	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakehttpclient"
 	"time"
+
+	"github.com/cloudfoundry/hm9000/testhelpers/fakehttpclient"
+
+	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
 )
 
 type brokenReader struct{}
@@ -37,7 +40,7 @@ var _ = Describe("DesiredStateFetcher", func() {
 		conf              *config.Config
 		fetcher           *DesiredStateFetcher
 		httpClient        *fakehttpclient.FakeHttpClient
-		timeProvider      *faketimeprovider.FakeTimeProvider
+		timeProvider      *fakeclock.FakeClock
 		store             storepackage.Store
 		storeAdapter      *fakestoreadapter.FakeStoreAdapter
 		resultChan        chan DesiredStateFetcherResult
@@ -47,14 +50,12 @@ var _ = Describe("DesiredStateFetcher", func() {
 	BeforeEach(func() {
 		var err error
 		conf, err = config.DefaultConfig()
-		Ω(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
-		metricsAccountant = fakemetricsaccountant.New()
+		metricsAccountant = &fakemetricsaccountant.FakeMetricsAccountant{}
 
 		resultChan = make(chan DesiredStateFetcherResult, 1)
-		timeProvider = &faketimeprovider.FakeTimeProvider{
-			TimeToProvide: time.Unix(100, 0),
-		}
+		timeProvider = fakeclock.NewFakeClock(time.Unix(100, 0))
 
 		httpClient = fakehttpclient.NewFakeHttpClient()
 		storeAdapter = fakestoreadapter.New()
@@ -71,56 +72,56 @@ var _ = Describe("DesiredStateFetcher", func() {
 			fetcher.Fetch(resultChan)
 		})
 
-		It("should send an error down the result channel", func(done Done) {
-			result := <-resultChan
-			Ω(result.Success).Should(BeFalse())
-			Ω(result.Message).Should(Equal("Failed to generate URL request"))
-			Ω(result.Error).Should(HaveOccurred())
-			close(done)
-		}, 0.1)
+		It("should send an error down the result channel", func() {
+			var result DesiredStateFetcherResult
+			Eventually(resultChan).Should(Receive(&result))
+			Expect(result.Success).To(BeFalse())
+			Expect(result.Message).To(Equal("Failed to generate URL request"))
+			Expect(result.Error).To(HaveOccurred())
+		})
 	})
 
 	Describe("Fetching batches", func() {
 		var response DesiredStateServerResponse
 
 		It("should make the correct request", func() {
-			Ω(httpClient.Requests).Should(HaveLen(1))
+			Expect(httpClient.Requests).To(HaveLen(1))
 			request := httpClient.Requests[0]
 
-			Ω(request.URL.String()).Should(ContainSubstring(conf.CCBaseURL))
-			Ω(request.URL.Path).Should(ContainSubstring("/bulk/apps"))
+			Expect(request.URL.String()).To(ContainSubstring(conf.CCBaseURL))
+			Expect(request.URL.Path).To(ContainSubstring("/bulk/apps"))
 
 			expectedAuth := models.BasicAuthInfo{
 				User:     "mcat",
 				Password: "testing",
 			}.Encode()
 
-			Ω(request.Header.Get("Authorization")).Should(Equal(expectedAuth))
+			Expect(request.Header.Get("Authorization")).To(Equal(expectedAuth))
 		})
 
 		It("should request a batch size with an empty bulk token", func() {
 			query := httpClient.LastRequest().URL.Query()
-			Ω(query.Get("batch_size")).Should(Equal(fmt.Sprintf("%d", conf.DesiredStateBatchSize)))
-			Ω(query.Get("bulk_token")).Should(Equal("{}"))
+			Expect(query.Get("batch_size")).To(Equal(fmt.Sprintf("%d", conf.DesiredStateBatchSize)))
+			Expect(query.Get("bulk_token")).To(Equal("{}"))
 		})
 
 		assertFailure := func(expectedMessage string, numRequests int) {
 			It("should stop requesting batches", func() {
-				Ω(httpClient.Requests).Should(HaveLen(numRequests))
+				Expect(httpClient.Requests).To(HaveLen(numRequests))
 			})
 
 			It("should not bump the freshness", func() {
 				fresh, _ := store.IsDesiredStateFresh()
-				Ω(fresh).Should(BeFalse())
+				Expect(fresh).To(BeFalse())
 			})
 
-			It("should send an error down the result channel", func(done Done) {
-				result := <-resultChan
-				Ω(result.Success).Should(BeFalse())
-				Ω(result.Message).Should(Equal(expectedMessage))
-				Ω(result.Error).Should(HaveOccurred())
-				close(done)
-			}, 1.0)
+			It("should send an error down the result channel", func() {
+				var result DesiredStateFetcherResult
+				Eventually(resultChan).Should(Receive(&result))
+				Expect(result.Success).To(BeFalse())
+				Expect(result.Message).To(Equal(expectedMessage))
+				Expect(result.Error).To(HaveOccurred())
+			})
 		}
 
 		Context("when a response with desired state is received", func() {
@@ -172,22 +173,22 @@ var _ = Describe("DesiredStateFetcher", func() {
 
 			It("should not store the desired state (yet)", func() {
 				desired, _ := store.GetDesiredState()
-				Ω(desired).Should(HaveLen(1))
-				Ω(desired[deletedApp.DesiredState(1).StoreKey()]).Should(EqualDesiredState(deletedApp.DesiredState(1)))
+				Expect(desired).To(HaveLen(1))
+				Expect(desired[deletedApp.DesiredState(1).StoreKey()]).To(EqualDesiredState(deletedApp.DesiredState(1)))
 			})
 
 			It("should request the next batch", func() {
-				Ω(httpClient.Requests).Should(HaveLen(2))
-				Ω(httpClient.LastRequest().URL.Query().Get("bulk_token")).Should(Equal(response.BulkTokenRepresentation()))
+				Expect(httpClient.Requests).To(HaveLen(2))
+				Expect(httpClient.LastRequest().URL.Query().Get("bulk_token")).To(Equal(response.BulkTokenRepresentation()))
 			})
 
 			It("should not bump the freshness yet", func() {
 				fresh, _ := store.IsDesiredStateFresh()
-				Ω(fresh).Should(BeFalse())
+				Expect(fresh).To(BeFalse())
 			})
 
 			It("should not send a result down the resultChan yet", func() {
-				Ω(resultChan).Should(HaveLen(0))
+				Expect(resultChan).To(HaveLen(0))
 			})
 
 			Context("when an empty response is received", func() {
@@ -203,33 +204,33 @@ var _ = Describe("DesiredStateFetcher", func() {
 				})
 
 				It("should stop requesting batches", func() {
-					Ω(httpClient.Requests).Should(HaveLen(2))
+					Expect(httpClient.Requests).To(HaveLen(2))
 				})
 
 				It("should bump the freshness", func() {
 					fresh, _ := store.IsDesiredStateFresh()
-					Ω(fresh).Should(BeTrue())
+					Expect(fresh).To(BeTrue())
 				})
 
 				It("should store any desired state that is in the STARTED appstate and STAGED package state, and delete any stale data", func() {
 					desired, _ := store.GetDesiredState()
-					Ω(desired).Should(HaveLen(3))
-					Ω(desired).Should(ContainElement(EqualDesiredState(a1.DesiredState(1))))
-					Ω(desired).Should(ContainElement(EqualDesiredState(a2.DesiredState(1))))
-					Ω(desired).Should(ContainElement(EqualDesiredState(pendingStagingDesiredState)))
+					Expect(desired).To(HaveLen(3))
+					Expect(desired).To(ContainElement(EqualDesiredState(a1.DesiredState(1))))
+					Expect(desired).To(ContainElement(EqualDesiredState(a2.DesiredState(1))))
+					Expect(desired).To(ContainElement(EqualDesiredState(pendingStagingDesiredState)))
 				})
 
 				It("should track the time taken to sync desired state", func() {
-					Ω(metricsAccountant.TrackedDesiredStateSyncTime).ShouldNot(BeZero())
+					Expect(metricsAccountant.TrackDesiredStateSyncTimeCallCount()).NotTo(BeZero())
 				})
 
-				It("should send a succesful result down the result channel", func(done Done) {
-					result := <-resultChan
-					Ω(result.Success).Should(BeTrue())
-					Ω(result.Message).Should(BeZero())
-					Ω(result.Error).ShouldNot(HaveOccurred())
-					close(done)
-				}, 0.1)
+				It("should send a succesful result down the result channel", func() {
+					var result DesiredStateFetcherResult
+					Eventually(resultChan).Should(Receive(&result))
+					Expect(result.Success).To(BeTrue())
+					Expect(result.Message).To(BeZero())
+					Expect(result.Error).ToNot(HaveOccurred())
+				})
 
 				Context("and it fails to write to the store", func() {
 					BeforeEach(func() {

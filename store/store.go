@@ -3,14 +3,15 @@ package store
 import (
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/storeadapter"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/storeadapter"
 )
 
 var ActualIsNotFreshError = errors.New("Actual state is not fresh")
@@ -23,6 +24,7 @@ type Storeable interface {
 	ToJSON() []byte
 }
 
+//go:generate counterfeiter -o fakestore/fake_store.go . Store
 type Store interface {
 	BumpDesiredFreshness(timestamp time.Time) error
 	BumpActualFreshness(timestamp time.Time) error

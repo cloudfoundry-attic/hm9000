@@ -7,15 +7,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/pivotal-golang/clock"
 )
 
 type bulkHandler struct {
-	logger       logger.Logger
-	store        store.Store
-	timeProvider timeprovider.TimeProvider
+	logger logger.Logger
+	store  store.Store
+	clock  clock.Clock
 }
 
 type AppStateRequest struct {
@@ -23,11 +23,11 @@ type AppStateRequest struct {
 	AppVersion string `json:"version"`
 }
 
-func NewBulkAppStateHandler(logger logger.Logger, store store.Store, timeProvider timeprovider.TimeProvider) http.Handler {
+func NewBulkAppStateHandler(logger logger.Logger, store store.Store, clock clock.Clock) http.Handler {
 	return &bulkHandler{
-		logger:       logger,
-		store:        store,
-		timeProvider: timeProvider,
+		logger: logger,
+		store:  store,
+		clock:  clock,
 	}
 }
 
@@ -51,7 +51,7 @@ func (handler *bulkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.store.VerifyFreshness(handler.timeProvider.Time())
+	err = handler.store.VerifyFreshness(handler.clock.Now())
 	if err != nil {
 		handler.logger.Error("Failed to handle bulk_app_state request", err, map[string]string{
 			"payload":      string(bodyBytes),

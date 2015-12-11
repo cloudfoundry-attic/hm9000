@@ -18,7 +18,7 @@ func FetchDesiredState(l logger.Logger, conf *config.Config, poll bool) {
 	if poll {
 		l.Info("Starting Desired State Daemon...")
 
-		adapter := connectToStoreAdapter(l, conf, nil)
+		adapter := connectToStoreAdapter(l, conf)
 
 		err := Daemonize("Fetcher", func() error {
 			return fetchDesiredState(l, conf, store)
@@ -44,7 +44,7 @@ func fetchDesiredState(l logger.Logger, conf *config.Config, store store.Store) 
 		store,
 		metricsaccountant.New(store),
 		httpclient.NewHttpClient(conf.SkipSSLVerification, conf.FetcherNetworkTimeout()),
-		buildTimeProvider(l),
+		buildClock(l),
 		l,
 	)
 

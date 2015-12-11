@@ -8,38 +8,38 @@ import (
 
 type FakeLogger struct {
 	mutex          sync.Mutex
-	LoggedSubjects []string
-	LoggedErrors   []error
-	LoggedMessages []string
+	loggedSubjects []string
+	loggedErrors   []error
+	loggedMessages []string
 }
 
 func NewFakeLogger() *FakeLogger {
 	return &FakeLogger{
-		LoggedSubjects: []string{},
-		LoggedErrors:   []error{},
-		LoggedMessages: []string{},
+		loggedSubjects: []string{},
+		loggedErrors:   []error{},
+		loggedMessages: []string{},
 	}
 }
 
 func (logger *FakeLogger) Info(subject string, messages ...map[string]string) {
 	logger.mutex.Lock()
-	logger.LoggedSubjects = append(logger.LoggedSubjects, subject)
-	logger.LoggedMessages = append(logger.LoggedMessages, logger.squashedMessage(messages...))
+	logger.loggedSubjects = append(logger.loggedSubjects, subject)
+	logger.loggedMessages = append(logger.loggedMessages, logger.squashedMessage(messages...))
 	logger.mutex.Unlock()
 }
 
 func (logger *FakeLogger) Debug(subject string, messages ...map[string]string) {
 	logger.mutex.Lock()
-	logger.LoggedSubjects = append(logger.LoggedSubjects, subject)
-	logger.LoggedMessages = append(logger.LoggedMessages, logger.squashedMessage(messages...))
+	logger.loggedSubjects = append(logger.loggedSubjects, subject)
+	logger.loggedMessages = append(logger.loggedMessages, logger.squashedMessage(messages...))
 	logger.mutex.Unlock()
 }
 
 func (logger *FakeLogger) Error(subject string, err error, messages ...map[string]string) {
 	logger.mutex.Lock()
-	logger.LoggedSubjects = append(logger.LoggedSubjects, subject)
-	logger.LoggedErrors = append(logger.LoggedErrors, err)
-	logger.LoggedMessages = append(logger.LoggedMessages, logger.squashedMessage(messages...))
+	logger.loggedSubjects = append(logger.loggedSubjects, subject)
+	logger.loggedErrors = append(logger.loggedErrors, err)
+	logger.loggedMessages = append(logger.loggedMessages, logger.squashedMessage(messages...))
 	logger.mutex.Unlock()
 }
 
@@ -52,4 +52,10 @@ func (logger *FakeLogger) squashedMessage(messages ...map[string]string) (squash
 		squashed += " - " + string(encoded)
 	}
 	return
+}
+
+func (logger *FakeLogger) LoggedSubjects() []string {
+	defer logger.mutex.Unlock()
+	logger.mutex.Lock()
+	return logger.loggedSubjects[:]
 }

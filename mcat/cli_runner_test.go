@@ -57,6 +57,7 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.StoreMaxConcurrentRequests = 10
 	conf.ListenerHeartbeatSyncIntervalInMilliseconds = 100
 	conf.APIServerPort = int(5155 + ginkgo.GinkgoParallelNode())
+	conf.LogLevelString = "DEBUG"
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Ω(err).ShouldNot(HaveOccurred())

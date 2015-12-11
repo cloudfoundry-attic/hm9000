@@ -1,16 +1,17 @@
 package metricsserver
 
 import (
+	"strconv"
+
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/gunk/timeprovider"
+	"github.com/cloudfoundry/hm9000/cfcomponent"
+	"github.com/cloudfoundry/hm9000/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"strconv"
+	"github.com/pivotal-golang/clock"
 )
 
 type CollectorRegistrar interface {
@@ -22,16 +23,16 @@ type MetricsServer struct {
 	steno             *gosteno.Logger
 	store             store.Store
 	logger            logger.Logger
-	timeProvider      timeprovider.TimeProvider
+	clock             clock.Clock
 	config            *config.Config
 	metricsAccountant metricsaccountant.MetricsAccountant
 }
 
-func New(registrar CollectorRegistrar, steno *gosteno.Logger, metricsAccountant metricsaccountant.MetricsAccountant, logger logger.Logger, store store.Store, timeProvider timeprovider.TimeProvider, conf *config.Config) *MetricsServer {
+func New(registrar CollectorRegistrar, steno *gosteno.Logger, metricsAccountant metricsaccountant.MetricsAccountant, logger logger.Logger, store store.Store, clock clock.Clock, conf *config.Config) *MetricsServer {
 	return &MetricsServer{
 		registrar:         registrar,
 		store:             store,
-		timeProvider:      timeProvider,
+		clock:             clock,
 		steno:             steno,
 		logger:            logger,
 		config:            conf,
@@ -115,7 +116,7 @@ func (s *MetricsServer) Emit() (context instrumentation.Context) {
 		}
 	}
 
-	err = s.store.VerifyFreshness(s.timeProvider.Time())
+	err = s.store.VerifyFreshness(s.clock.Now())
 	if err != nil {
 		s.logger.Error("Failed to server metrics: store is not fresh", err)
 		NumberOfAppsWithAllInstancesReporting = -1
@@ -187,7 +188,7 @@ func (s *MetricsServer) Start() error {
 		"HM9000",
 		0,
 		s,
-		uint32(s.config.MetricsServerPort),
+		uint16(s.config.MetricsServerPort),
 		[]string{s.config.MetricsServerUser, s.config.MetricsServerPassword},
 		[]instrumentation.Instrumentable{s},
 	)

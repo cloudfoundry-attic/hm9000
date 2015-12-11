@@ -15,14 +15,14 @@ import (
 
 var (
 	etcdRunner  *etcdstorerunner.ETCDClusterRunner
-	etcdVersion = "2.1.1"
+	etcdVersion = "2.2.0"
 )
 
 func TestStore(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(5001+config.GinkgoConfig.ParallelNode, 1)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(5001+config.GinkgoConfig.ParallelNode, 1, nil)
 
 	etcdRunner.Start()
 	RunSpecs(t, "Store Suite")

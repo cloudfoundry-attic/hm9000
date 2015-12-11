@@ -2,26 +2,28 @@ package metricsserver_test
 
 import (
 	"errors"
-	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
+	"time"
+
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant/fakemetricsaccountant"
 	. "github.com/cloudfoundry/hm9000/metricsserver"
 	"github.com/cloudfoundry/hm9000/models"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
-	"github.com/cloudfoundry/hm9000/testhelpers/fakemetricsaccountant"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+
+	"github.com/cloudfoundry/hm9000/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
+	"github.com/pivotal-golang/clock/fakeclock"
 )
 
 var _ = Describe("Metrics Server", func() {
 	var (
 		store             storepackage.Store
 		storeAdapter      *fakestoreadapter.FakeStoreAdapter
-		timeProvider      *faketimeprovider.FakeTimeProvider
+		timeProvider      *fakeclock.FakeClock
 		metricsServer     *MetricsServer
 		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
 	)
@@ -30,19 +32,19 @@ var _ = Describe("Metrics Server", func() {
 		conf, _ := config.DefaultConfig()
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		timeProvider = &faketimeprovider.FakeTimeProvider{TimeToProvide: time.Unix(100, 0)}
+		timeProvider = fakeclock.NewFakeClock(time.Unix(100, 0))
 
-		metricsAccountant = fakemetricsaccountant.New()
+		metricsAccountant = &fakemetricsaccountant.FakeMetricsAccountant{}
 
 		metricsServer = New(nil, nil, metricsAccountant, fakelogger.NewFakeLogger(), store, timeProvider, conf)
 	})
 
 	Describe("message metrics", func() {
 		BeforeEach(func() {
-			metricsAccountant.GetMetricsMetrics = map[string]float64{
+			metricsAccountant.GetMetricsReturns(map[string]float64{
 				"foo": 1,
 				"bar": 2,
-			}
+			}, nil)
 		})
 
 		Context("when the metrics fetch succesfully", func() {
@@ -55,7 +57,7 @@ var _ = Describe("Metrics Server", func() {
 
 		Context("when the metrics fail to fetch", func() {
 			BeforeEach(func() {
-				metricsAccountant.GetMetricsError = errors.New("oops")
+				metricsAccountant.GetMetricsReturns(nil, errors.New("oops"))
 			})
 
 			It("should not return them", func() {
