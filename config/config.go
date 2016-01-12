@@ -68,6 +68,8 @@ type Config struct {
 		User     string `json:"user"`
 		Password string `json:"password"`
 	} `json:"nats"`
+
+	DropsondePort int `json:"dropsonde_port"`
 }
 
 func defaults() Config {
