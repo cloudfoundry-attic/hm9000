@@ -2,6 +2,8 @@ package metricsaccountant_test
 
 import (
 	"errors"
+	"time"
+
 	"github.com/cloudfoundry/hm9000/config"
 	. "github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
@@ -10,7 +12,6 @@ import (
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var _ = Describe("Metrics Accountant", func() {
@@ -30,8 +31,8 @@ var _ = Describe("Metrics Accountant", func() {
 		Context("when the store is empty", func() {
 			It("should return a map of 0s", func() {
 				metrics, err := accountant.GetMetrics()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(metrics).Should(Equal(map[string]float64{
+				Expect(err).ToNot(HaveOccurred())
+				Expect(metrics).To(Equal(map[string]float64{
 					"StartCrashed":                            0,
 					"StartMissing":                            0,
 					"StartEvacuating":                         0,
@@ -53,8 +54,8 @@ var _ = Describe("Metrics Accountant", func() {
 
 			It("should return an error and an empty map", func() {
 				metrics, err := accountant.GetMetrics()
-				Ω(err).Should(Equal(errors.New("oops")))
-				Ω(metrics).Should(BeEmpty())
+				Expect(err).To(Equal(errors.New("oops")))
+				Expect(metrics).To(BeEmpty())
 			})
 		})
 	})
@@ -62,60 +63,60 @@ var _ = Describe("Metrics Accountant", func() {
 	Describe("TrackReceivedHeartbeats", func() {
 		It("should record the number of received heartbeats appropriately", func() {
 			err := accountant.TrackReceivedHeartbeats(127)
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 			metrics, err := accountant.GetMetrics()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(metrics["ReceivedHeartbeats"]).Should(BeNumerically("==", 127))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(metrics["ReceivedHeartbeats"]).To(BeNumerically("==", 127))
 		})
 	})
 
 	Describe("TrackSavedHeartbeats", func() {
 		It("should record the number of received heartbeats appropriately", func() {
 			err := accountant.TrackSavedHeartbeats(91)
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 			metrics, err := accountant.GetMetrics()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(metrics["SavedHeartbeats"]).Should(BeNumerically("==", 91))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(metrics["SavedHeartbeats"]).To(BeNumerically("==", 91))
 		})
 	})
 
 	Describe("TrackDesiredStateSyncTime", func() {
 		It("should record the passed in time duration appropriately", func() {
 			err := accountant.TrackDesiredStateSyncTime(1138 * time.Millisecond)
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 			metrics, err := accountant.GetMetrics()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(metrics["DesiredStateSyncTimeInMilliseconds"]).Should(BeNumerically("==", 1138))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(metrics["DesiredStateSyncTimeInMilliseconds"]).To(BeNumerically("==", 1138))
 		})
 	})
 
 	Describe("TrackActualStateListenerStoreUsageFraction", func() {
 		It("should record the passed in time duration appropriately", func() {
 			err := accountant.TrackActualStateListenerStoreUsageFraction(0.723)
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 			metrics, err := accountant.GetMetrics()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(metrics["ActualStateListenerStoreUsagePercentage"]).Should(BeNumerically("==", 72.3))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(metrics["ActualStateListenerStoreUsagePercentage"]).To(BeNumerically("==", 72.3))
 		})
 	})
 
 	Describe("TrackDesiredStateSyncTime", func() {
 		It("should record the passed in time duration appropriately", func() {
 			err := accountant.TrackDesiredStateSyncTime(1138 * time.Millisecond)
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 			metrics, err := accountant.GetMetrics()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(metrics["DesiredStateSyncTimeInMilliseconds"]).Should(BeNumerically("==", 1138))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(metrics["DesiredStateSyncTimeInMilliseconds"]).To(BeNumerically("==", 1138))
 		})
 	})
 
 	Describe("TrackActualStateListenerStoreUsageFraction", func() {
 		It("should record the passed in time duration appropriately", func() {
 			err := accountant.TrackActualStateListenerStoreUsageFraction(0.723)
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 			metrics, err := accountant.GetMetrics()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(metrics["ActualStateListenerStoreUsagePercentage"]).Should(BeNumerically("==", 72.3))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(metrics["ActualStateListenerStoreUsagePercentage"]).To(BeNumerically("==", 72.3))
 		})
 	})
 
@@ -145,38 +146,38 @@ var _ = Describe("Metrics Accountant", func() {
 		Context("when the store is empty", func() {
 			BeforeEach(func() {
 				err := accountant.IncrementSentMessageMetrics(starts, stops)
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should increment the metrics and return them when GettingMetrics", func() {
 				metrics, err := accountant.GetMetrics()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(metrics["StartCrashed"]).Should(BeNumerically("==", 1))
-				Ω(metrics["StartMissing"]).Should(BeNumerically("==", 2))
-				Ω(metrics["StartEvacuating"]).Should(BeNumerically("==", 3))
-				Ω(metrics["StopExtra"]).Should(BeNumerically("==", 1))
-				Ω(metrics["StopDuplicate"]).Should(BeNumerically("==", 2))
-				Ω(metrics["StopEvacuationComplete"]).Should(BeNumerically("==", 3))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(metrics["StartCrashed"]).To(BeNumerically("==", 1))
+				Expect(metrics["StartMissing"]).To(BeNumerically("==", 2))
+				Expect(metrics["StartEvacuating"]).To(BeNumerically("==", 3))
+				Expect(metrics["StopExtra"]).To(BeNumerically("==", 1))
+				Expect(metrics["StopDuplicate"]).To(BeNumerically("==", 2))
+				Expect(metrics["StopEvacuationComplete"]).To(BeNumerically("==", 3))
 			})
 		})
 
 		Context("when the metric already exists", func() {
 			BeforeEach(func() {
 				err := accountant.IncrementSentMessageMetrics(starts, stops)
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 				err = accountant.IncrementSentMessageMetrics(starts, stops)
-				Ω(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should increment the metrics and return them when GettingMetrics", func() {
 				metrics, err := accountant.GetMetrics()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(metrics["StartCrashed"]).Should(BeNumerically("==", 2))
-				Ω(metrics["StartMissing"]).Should(BeNumerically("==", 4))
-				Ω(metrics["StartEvacuating"]).Should(BeNumerically("==", 6))
-				Ω(metrics["StopExtra"]).Should(BeNumerically("==", 2))
-				Ω(metrics["StopDuplicate"]).Should(BeNumerically("==", 4))
-				Ω(metrics["StopEvacuationComplete"]).Should(BeNumerically("==", 6))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(metrics["StartCrashed"]).To(BeNumerically("==", 2))
+				Expect(metrics["StartMissing"]).To(BeNumerically("==", 4))
+				Expect(metrics["StartEvacuating"]).To(BeNumerically("==", 6))
+				Expect(metrics["StopExtra"]).To(BeNumerically("==", 2))
+				Expect(metrics["StopDuplicate"]).To(BeNumerically("==", 4))
+				Expect(metrics["StopEvacuationComplete"]).To(BeNumerically("==", 6))
 			})
 		})
 
@@ -187,7 +188,7 @@ var _ = Describe("Metrics Accountant", func() {
 
 			It("should return an error", func() {
 				err := accountant.IncrementSentMessageMetrics(starts, stops)
-				Ω(err).Should(Equal(errors.New("oops")))
+				Expect(err).To(Equal(errors.New("oops")))
 			})
 		})
 
@@ -198,7 +199,7 @@ var _ = Describe("Metrics Accountant", func() {
 
 			It("should return an error", func() {
 				err := accountant.IncrementSentMessageMetrics(starts, stops)
-				Ω(err).Should(Equal(errors.New("oops")))
+				Expect(err).To(Equal(errors.New("oops")))
 			})
 		})
 	})
