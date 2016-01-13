@@ -1,8 +1,6 @@
 package store_test
 
 import (
-	"io/ioutil"
-	"net/http"
 	"os"
 	"os/signal"
 	"testing"
@@ -15,36 +13,27 @@ import (
 
 var (
 	etcdRunner  *etcdstorerunner.ETCDClusterRunner
-	etcdVersion = "2.2.0"
 )
 
 func TestStore(t *testing.T) {
 	registerSignalHandler()
 	RegisterFailHandler(Fail)
 
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(5001+config.GinkgoConfig.ParallelNode, 1, nil)
-
-	etcdRunner.Start()
 	RunSpecs(t, "Store Suite")
-	etcdRunner.Stop()
 }
 
 var _ = BeforeSuite(func() {
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(5001+config.GinkgoConfig.ParallelNode, 1, nil)
+	etcdRunner.Start()
 	Expect(len(etcdRunner.NodeURLS())).Should(BeNumerically(">=", 1))
-
-	etcdVersionUrl := etcdRunner.NodeURLS()[0] + "/version"
-	resp, err := http.Get(etcdVersionUrl)
-	Expect(err).ToNot(HaveOccurred())
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	Expect(err).ToNot(HaveOccurred())
-
-	Expect(string(body)).To(ContainSubstring(etcdVersion))
 })
 
 var _ = BeforeEach(func() {
 	etcdRunner.Reset()
+})
+
+var _ = AfterSuite(func() {
+	etcdRunner.Stop()
 })
 
 func registerSignalHandler() {

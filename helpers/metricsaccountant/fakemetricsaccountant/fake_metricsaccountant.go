@@ -51,13 +51,6 @@ type FakeMetricsAccountant struct {
 	trackActualStateListenerStoreUsageFractionReturns struct {
 		result1 error
 	}
-	GetMetricsStub        func() (map[string]float64, error)
-	getMetricsMutex       sync.RWMutex
-	getMetricsArgsForCall []struct{}
-	getMetricsReturns struct {
-		result1 map[string]float64
-		result2 error
-	}
 }
 
 func (fake *FakeMetricsAccountant) TrackReceivedHeartbeats(metric int) error {
@@ -219,31 +212,6 @@ func (fake *FakeMetricsAccountant) TrackActualStateListenerStoreUsageFractionRet
 	fake.trackActualStateListenerStoreUsageFractionReturns = struct {
 		result1 error
 	}{result1}
-}
-
-func (fake *FakeMetricsAccountant) GetMetrics() (map[string]float64, error) {
-	fake.getMetricsMutex.Lock()
-	fake.getMetricsArgsForCall = append(fake.getMetricsArgsForCall, struct{}{})
-	fake.getMetricsMutex.Unlock()
-	if fake.GetMetricsStub != nil {
-		return fake.GetMetricsStub()
-	} else {
-		return fake.getMetricsReturns.result1, fake.getMetricsReturns.result2
-	}
-}
-
-func (fake *FakeMetricsAccountant) GetMetricsCallCount() int {
-	fake.getMetricsMutex.RLock()
-	defer fake.getMetricsMutex.RUnlock()
-	return len(fake.getMetricsArgsForCall)
-}
-
-func (fake *FakeMetricsAccountant) GetMetricsReturns(result1 map[string]float64, result2 error) {
-	fake.GetMetricsStub = nil
-	fake.getMetricsReturns = struct {
-		result1 map[string]float64
-		result2 error
-	}{result1, result2}
 }
 
 var _ metricsaccountant.MetricsAccountant = new(FakeMetricsAccountant)

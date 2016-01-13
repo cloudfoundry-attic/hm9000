@@ -12,10 +12,10 @@ type FakeUsageTracker struct {
 	StartTrackingUsageStub        func()
 	startTrackingUsageMutex       sync.RWMutex
 	startTrackingUsageArgsForCall []struct{}
-	MeasureUsageStub        func() (usage float64, measurementDuration time.Duration)
-	measureUsageMutex       sync.RWMutex
-	measureUsageArgsForCall []struct{}
-	measureUsageReturns struct {
+	MeasureUsageStub              func() (usage float64, measurementDuration time.Duration)
+	measureUsageMutex             sync.RWMutex
+	measureUsageArgsForCall       []struct{}
+	measureUsageReturns           struct {
 		result1 float64
 		result2 time.Duration
 	}

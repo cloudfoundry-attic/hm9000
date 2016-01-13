@@ -58,8 +58,10 @@ func (server *DesiredStateServer) SetDesiredState(newState []DesiredAppState) {
 }
 
 func (server *DesiredStateServer) Reset() {
+	server.mu.Lock()
 	server.Apps = make([]DesiredAppState, 0)
 	server.NumberOfCompleteFetches = 0
+	server.mu.Unlock()
 }
 
 func (server *DesiredStateServer) GetNumberOfCompleteFetches() int {

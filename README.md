@@ -39,7 +39,7 @@ To resolve this, you'll need to pick one of the HM9000 nodes (`hm9000_z1/0` or `
 
 ## Installing HM9000 locally
 
-Assuming you have `go` v1.1.* installed:
+Assuming you have `go` v1.4+ installed:
 
 1. Clone the HM-workspace:
 
@@ -50,16 +50,11 @@ Assuming you have `go` v1.1.* installed:
         $ cd hm-workspace
         $ git submodule update --init
 
-2. Install `etcd`
-
-        $ pushd ./src/github.com/coreos/etcd
-        $ ./build
-        $ mv bin/etcd $GOPATH/bin/
-        $ popd
+2. Install `etcd` to $GOPATH/bin
+    Download and install the version of etcd as specific from cf-release
 
 3. Start `etcd`.  Open a new terminal session and:
 
-        $ export PATH=$HOME/hm-workspace/bin:$PATH
         $ cd $HOME
         $ mkdir etcdstorage
         $ cd etcdstorage
@@ -74,10 +69,10 @@ Assuming you have `go` v1.1.* installed:
     and get usage information
 
 5. Running the tests
-    
+
         $ go get github.com/onsi/ginkgo/ginkgo
         $ cd src/github.com/cloudfoundry/hm9000/
-        $ ginkgo -r -skipMeasurements -race -failOnPending
+        $ ginkgo -r -skipMeasurements -race -failOnPending -randomizeAllSpecs
 
     These tests will spin up their own instances of `etcd` as needed.  It shouldn't interfere with your long-running `etcd` server.
 
@@ -121,12 +116,6 @@ will come up, compare the desired/actual state, and submit start and stop messag
     hm9000 send --config=./local_config.json
 
 will come up, evaluate the pending starts and stops and publish them over NATS. You can optionally pass `-poll` to send messages periodically.
-
-### Serving metrics (varz)
-
-    hm9000 serve_metrics --config=./local_config.json
-
-will come up, register with the [collector](http://github.com/cloudfoundry/collector) and provide a `/varz` end-point with data.
 
 ### Serving API
 
@@ -228,11 +217,7 @@ HM9000 is configured using a JSON file.  Here are the available entries:
 - `desired_freshness_key`: The key for the actual freshness in the store.  Set to `"/desired-fresh"`.
 
 
-- `metrics_server_port`: The port on which to serve /varz metrics.  If set to 0 a random available port will be chosen.
-
-- `metrics_server_user`: The username that must be used to authenticate with /varz.  If set to "" a random username will be generated.
-
-- `metrics_server_password`: The password that must be used to authenticate with /varz.  If set to "" a random password will be generated.
+- `dropsonde_port`: The port which metron is listening on to receive metrics.
 
 
 - `api_server_address`: The IP address of machine runnine HM9000.
@@ -281,14 +266,7 @@ Desired state is stored under `/desired/APP_GUID-APP_VERSION
 
 The `analyzer` comes up, analyzes the actual and desired state, and puts pending `start` and `stop` messages in the store.  If a `start` or `stop` message is *already* in the store, the analyzer will *not* override it.
 
-### `sender`
-
-The `sender` runs periodically and pulls pending messages out of the store and sends them over `NATS`.  The `sender` verifies that the messages should be sent before sending them (i.e. missing instances are still missing, extra instances are still extra, etc...) The `sender` is also responsible for throttling the rate at which messages are sent over NATS.
-
-### `metricsserver`
-
-The `metricsserver` registers with the CF collector and aggregates and provides metrics via a /varz end-point.  These are the available metrics:
-
+These are the metrics emitted:
 - NumberOfAppsWithAllInstancesReporting: The number of desired applications for which all instances are reporting (the state of the instance is irrelevant: STARTING/RUNNING/CRASHED all count).
 - NumberOfAppsWithMissingInstances: The number of desired applications for which an instance is missing (i.e. the instance is simply not heartbeating at all).
 - NumberOfUndesiredRunningApps: The number of *undesired* applications with at least one instance reporting as STARTING or RUNNING.
@@ -299,6 +277,10 @@ The `metricsserver` registers with the CF collector and aggregates and provides 
 
 If either the actual state or desired state are not *fresh* all of these metrics will have the value `-1`.
 
+### `sender`
+
+The `sender` runs periodically and pulls pending messages out of the store and sends them over `NATS`.  The `sender` verifies that the messages should be sent before sending them (i.e. missing instances are still missing, extra instances are still extra, etc...) The `sender` is also responsible for throttling the rate at which messages are sent over NATS.
+ÂÂ
 ### `apiserver`
 
 The `apiserver` responds to NATS `app.state` messages and allow other CloudFoundry components to obtain information about arbitrary applications.
@@ -377,7 +359,7 @@ Some brief documentation -- look at the code and tests for more:
 app := NewApp()
 
 //Get the desired state for the app.  This can be passed into
-//the desired state server to simulate the APP's presence in 
+//the desired state server to simulate the APP's presence in
 //the CC's DB.  By default the app is staged and started, to change
 //this, modify the return value.
 desiredState := app.DesiredState(NUMBER_OF_DESIRED_INSTANCES)

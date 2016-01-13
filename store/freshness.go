@@ -2,9 +2,10 @@ package store
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
-	"time"
 )
 
 func (store *RealStore) BumpDesiredFreshness(timestamp time.Time) error {

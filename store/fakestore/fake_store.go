@@ -29,13 +29,13 @@ type FakeStore struct {
 	RevokeActualFreshnessStub        func() error
 	revokeActualFreshnessMutex       sync.RWMutex
 	revokeActualFreshnessArgsForCall []struct{}
-	revokeActualFreshnessReturns struct {
+	revokeActualFreshnessReturns     struct {
 		result1 error
 	}
 	IsDesiredStateFreshStub        func() (bool, error)
 	isDesiredStateFreshMutex       sync.RWMutex
 	isDesiredStateFreshArgsForCall []struct{}
-	isDesiredStateFreshReturns struct {
+	isDesiredStateFreshReturns     struct {
 		result1 bool
 		result2 error
 	}
@@ -68,7 +68,7 @@ type FakeStore struct {
 	GetAppsStub        func() (map[string]*models.App, error)
 	getAppsMutex       sync.RWMutex
 	getAppsArgsForCall []struct{}
-	getAppsReturns struct {
+	getAppsReturns     struct {
 		result1 map[string]*models.App
 		result2 error
 	}
@@ -93,7 +93,7 @@ type FakeStore struct {
 	GetDesiredStateStub        func() (map[string]models.DesiredAppState, error)
 	getDesiredStateMutex       sync.RWMutex
 	getDesiredStateArgsForCall []struct{}
-	getDesiredStateReturns struct {
+	getDesiredStateReturns     struct {
 		result1 map[string]models.DesiredAppState
 		result2 error
 	}
@@ -108,7 +108,7 @@ type FakeStore struct {
 	GetInstanceHeartbeatsStub        func() (results []models.InstanceHeartbeat, err error)
 	getInstanceHeartbeatsMutex       sync.RWMutex
 	getInstanceHeartbeatsArgsForCall []struct{}
-	getInstanceHeartbeatsReturns struct {
+	getInstanceHeartbeatsReturns     struct {
 		result1 []models.InstanceHeartbeat
 		result2 error
 	}
@@ -141,7 +141,7 @@ type FakeStore struct {
 	GetPendingStartMessagesStub        func() (map[string]models.PendingStartMessage, error)
 	getPendingStartMessagesMutex       sync.RWMutex
 	getPendingStartMessagesArgsForCall []struct{}
-	getPendingStartMessagesReturns struct {
+	getPendingStartMessagesReturns     struct {
 		result1 map[string]models.PendingStartMessage
 		result2 error
 	}
@@ -164,7 +164,7 @@ type FakeStore struct {
 	GetPendingStopMessagesStub        func() (map[string]models.PendingStopMessage, error)
 	getPendingStopMessagesMutex       sync.RWMutex
 	getPendingStopMessagesArgsForCall []struct{}
-	getPendingStopMessagesReturns struct {
+	getPendingStopMessagesReturns     struct {
 		result1 map[string]models.PendingStopMessage
 		result2 error
 	}
@@ -197,7 +197,7 @@ type FakeStore struct {
 	CompactStub        func() error
 	compactMutex       sync.RWMutex
 	compactArgsForCall []struct{}
-	compactReturns struct {
+	compactReturns     struct {
 		result1 error
 	}
 }

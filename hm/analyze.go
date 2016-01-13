@@ -38,8 +38,9 @@ func Analyze(l logger.Logger, conf *config.Config, poll bool) {
 func analyze(l logger.Logger, conf *config.Config, store store.Store) error {
 	l.Info("Analyzing...")
 
-	analyzer := analyzer.New(store, buildClock(l), l, conf)
-	err := analyzer.Analyze()
+	a := analyzer.New(store, buildClock(l), l, conf)
+	apps, err := a.Analyze()
+	analyzer.SendMetrics(apps, err)
 
 	if err != nil {
 		l.Error("Analyzer failed with error", err)

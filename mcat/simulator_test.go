@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/gomega"
@@ -55,16 +56,16 @@ func (s *Simulator) Tick(numTicks int) {
 }
 
 func (s *Simulator) sendHeartbeats() {
-	s.store.SaveMetric("SavedHeartbeats", 0)
 	s.cliRunner.StartListener(s.currentTimestamp)
+	metronAgent.Reset()
 	for _, heartbeat := range s.currentHeartbeats {
 		s.messageBus.Publish("dea.heartbeat", heartbeat.ToJSON())
 	}
 
-	Eventually(func() float64 {
-		nHeartbeats, _ := s.store.GetMetric("SavedHeartbeats")
-		return nHeartbeats
-	}, 5.0, 0.05).Should(BeNumerically("==", len(s.currentHeartbeats)))
+	nHeartbeats := len(s.currentHeartbeats)
+	Eventually(func() bool {
+		return metronAgent.MatchEvent("listener", events.Envelope_ValueMetric, "SavedHeartbeats", float64(nHeartbeats))
+	}, 5.0, 0.05).Should(BeTrue())
 
 	s.cliRunner.StopListener()
 }

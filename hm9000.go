@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cloudfoundry-incubator/cf-debug-server"
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -13,6 +14,10 @@ import (
 
 	"os"
 	"path"
+)
+
+const (
+	dropsondeOrigin = "HM9000"
 )
 
 func main() {
@@ -87,19 +92,6 @@ func main() {
 			Action: func(c *cli.Context) {
 				logger, _, conf := loadLoggerAndConfig(c, "evacuator")
 				hm.StartEvacuator(logger, conf)
-			},
-		},
-		{
-			Name:        "serve_metrics",
-			Description: "Listens for Varz calls to serve metrics",
-			Usage:       "hm serve_metrics --config=/path/to/config",
-			Flags: []cli.Flag{
-				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
-				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
-			},
-			Action: func(c *cli.Context) {
-				logger, steno, conf := loadLoggerAndConfig(c, "metrics_server")
-				hm.ServeMetrics(steno, logger, conf)
 			},
 		},
 		{
@@ -188,6 +180,13 @@ func loadLoggerAndConfig(c *cli.Context, component string) (logger.Logger, *gost
 			hmLogger.Error("Failed to start debug server", err)
 			os.Exit(1)
 		}
+	}
+
+	dropsondeDestination := fmt.Sprintf("127.0.0.1:%d", conf.DropsondePort)
+	err = dropsonde.Initialize(dropsondeDestination, component)
+	if err != nil {
+		hmLogger.Error("Failed to initialize dropsonde", err)
+		os.Exit(1)
 	}
 
 	return hmLogger, steno, conf

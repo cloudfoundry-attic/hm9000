@@ -23,5 +23,7 @@
         "port": 4222,
         "user": "",
         "password": ""
-    }]
+    }],
+
+    "dropsonde_port": 12345
 }

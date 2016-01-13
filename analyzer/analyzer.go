@@ -25,29 +25,29 @@ func New(store store.Store, clock clock.Clock, logger logger.Logger, conf *confi
 	}
 }
 
-func (analyzer *Analyzer) Analyze() error {
+func (analyzer *Analyzer) Analyze() (map[string]*models.App, error) {
 	err := analyzer.store.VerifyFreshness(analyzer.clock.Now())
 	if err != nil {
 		analyzer.logger.Error("Store is not fresh", err)
-		return err
+		return nil, err
 	}
 
 	apps, err := analyzer.store.GetApps()
 	if err != nil {
 		analyzer.logger.Error("Failed to fetch apps", err)
-		return err
+		return nil, err
 	}
 
 	existingPendingStartMessages, err := analyzer.store.GetPendingStartMessages()
 	if err != nil {
 		analyzer.logger.Error("Failed to fetch pending start messages", err)
-		return err
+		return nil, err
 	}
 
 	existingPendingStopMessages, err := analyzer.store.GetPendingStopMessages()
 	if err != nil {
 		analyzer.logger.Error("Failed to fetch pending stop messages", err)
-		return err
+		return nil, err
 	}
 
 	allStartMessages := []models.PendingStartMessage{}
@@ -66,24 +66,22 @@ func (analyzer *Analyzer) Analyze() error {
 	}
 
 	err = analyzer.store.SaveCrashCounts(allCrashCounts...)
-
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to save crash counts", err)
-		return err
+		return nil, err
 	}
 
 	err = analyzer.store.SavePendingStartMessages(allStartMessages...)
-
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to enqueue start messages", err)
-		return err
+		return nil, err
 	}
 
 	err = analyzer.store.SavePendingStopMessages(allStopMessages...)
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to enqueue stop messages", err)
-		return err
+		return nil, err
 	}
 
-	return nil
+	return apps, nil
 }

@@ -28,16 +28,16 @@ type CLIRunner struct {
 	verbose bool
 }
 
-func NewCLIRunner(hm9000Binary string, storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int, verbose bool) *CLIRunner {
+func NewCLIRunner(hm9000Binary string, storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int, verbose bool) *CLIRunner {
 	runner := &CLIRunner{
 		hm9000Binary: hm9000Binary,
 		verbose:      verbose,
 	}
-	runner.config = runner.generateConfig(storeURLs, ccBaseURL, natsPort, metricsServerPort)
+	runner.config = runner.generateConfig(storeURLs, ccBaseURL, natsPort, dropsondePort)
 	return runner
 }
 
-func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, metricsServerPort int) *config.Config {
+func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int) *config.Config {
 	tmpFile, err := ioutil.TempFile("/tmp", "hm9000_clirunner")
 	defer tmpFile.Close()
 	Ω(err).ShouldNot(HaveOccurred())
@@ -51,9 +51,7 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.NATS[0].Port = natsPort
 	conf.SenderMessageLimit = 8
 	conf.MaximumBackoffDelayInHeartbeats = 6
-	conf.MetricsServerPort = metricsServerPort
-	conf.MetricsServerUser = "bob"
-	conf.MetricsServerPassword = "password"
+	conf.DropsondePort = dropsondePort
 	conf.StoreMaxConcurrentRequests = 10
 	conf.ListenerHeartbeatSyncIntervalInMilliseconds = 100
 	conf.APIServerPort = int(5155 + ginkgo.GinkgoParallelNode())
@@ -66,19 +64,14 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 }
 
 func (runner *CLIRunner) StartListener(timestamp int) {
+	if runner.listenerSession != nil {
+		runner.StopListener()
+	}
 	runner.listenerSession = runner.start("listen", timestamp, "Listening for Actual State")
 }
 
 func (runner *CLIRunner) StopListener() {
 	runner.listenerSession.Interrupt().Wait(time.Second)
-}
-
-func (runner *CLIRunner) StartMetricsServer(timestamp int) {
-	runner.metricsSession = runner.start("serve_metrics", timestamp, "Serving Metrics")
-}
-
-func (runner *CLIRunner) StopMetricsServer() {
-	runner.metricsSession.Interrupt().Wait(time.Second)
 }
 
 func (runner *CLIRunner) StartAPIServer(timestamp int) {
