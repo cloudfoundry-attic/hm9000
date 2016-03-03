@@ -40,12 +40,12 @@ func NewCLIRunner(hm9000Binary string, storeURLs []string, ccBaseURL string, nat
 func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int) *config.Config {
 	tmpFile, err := ioutil.TempFile("/tmp", "hm9000_clirunner")
 	defer tmpFile.Close()
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	runner.configPath = tmpFile.Name()
 
 	conf, err := config.DefaultConfig()
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	conf.StoreURLs = storeURLs
 	conf.CCBaseURL = ccBaseURL
 	conf.NATS[0].Port = natsPort
@@ -58,7 +58,7 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.LogLevelString = "DEBUG"
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	return conf
 }
@@ -99,7 +99,7 @@ func (runner *CLIRunner) start(command string, timestamp int, message string) *g
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
 
 	session, err := gexec.Start(cmd, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	Eventually(session, 10*time.Second).Should(gbytes.Say(message))
 
 	return session
@@ -110,7 +110,7 @@ func (runner *CLIRunner) Run(command string, timestamp int) {
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
 
 	session, err := gexec.Start(cmd, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	session.Wait(10 * time.Second)
 	time.Sleep(50 * time.Millisecond)
@@ -124,7 +124,7 @@ func (runner *CLIRunner) StartSession(command string, timestamp int, extraArgs .
 	cmd.Env = append(os.Environ(), fmt.Sprintf("HM9000_FAKE_TIME=%d", timestamp))
 
 	session, err := gexec.Start(cmd, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	return session
 }

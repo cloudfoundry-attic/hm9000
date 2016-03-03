@@ -73,7 +73,7 @@ func NewMCATCoordinator(hm9000Binary string, parallelNode int, verbose bool) *MC
 
 func (coordinator *MCATCoordinator) loadConfig() {
 	conf, err := config.DefaultConfig()
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).ToNot(HaveOccurred())
 	coordinator.Conf = conf
 }
 

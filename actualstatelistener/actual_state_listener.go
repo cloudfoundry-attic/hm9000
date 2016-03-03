@@ -30,8 +30,6 @@ type ActualStateListener struct {
 	totalReceivedHeartbeats int
 	totalSavedHeartbeats    int
 
-	lastReceivedHeartbeat time.Time
-
 	heartbeatMutex *sync.Mutex
 }
 
@@ -57,19 +55,6 @@ func New(config *config.Config,
 }
 
 func (listener *ActualStateListener) Start() {
-	heartbeatThreshold := time.Duration(listener.config.ActualFreshnessTTL()) * time.Second
-
-	listener.messageBus.Subscribe("dea.advertise", func(message *nats.Msg) {
-		listener.heartbeatMutex.Lock()
-		lastReceived := listener.lastReceivedHeartbeat
-		listener.heartbeatMutex.Unlock()
-		if listener.clock.Now().Sub(lastReceived) >= heartbeatThreshold {
-			listener.bumpFreshness()
-		}
-
-		listener.logger.Debug("Received dea.advertise")
-	})
-
 	listener.messageBus.Subscribe("dea.heartbeat", func(message *nats.Msg) {
 		listener.logger.Debug("Got a heartbeat")
 		heartbeat, err := models.NewHeartbeatFromJSON(message.Data)
@@ -85,9 +70,8 @@ func (listener *ActualStateListener) Start() {
 
 		listener.heartbeatMutex.Lock()
 
-		listener.lastReceivedHeartbeat = listener.clock.Now()
-
 		listener.totalReceivedHeartbeats++
+
 		listener.heartbeatsToSave = append(listener.heartbeatsToSave, heartbeat)
 		numToSave := len(listener.heartbeatsToSave)
 

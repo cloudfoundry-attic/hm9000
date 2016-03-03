@@ -34,16 +34,16 @@ var _ = Describe("Crashes", func() {
 		})
 
 		It("should only try to start instance at index 0", func() {
-			Ω(startStopListener.StartCount()).Should(Equal(1))
+			Expect(startStopListener.StartCount()).To(Equal(1))
 			startMsg := startStopListener.Start(0)
-			Ω(startMsg.AppVersion).Should(Equal(a.AppVersion))
-			Ω(startMsg.InstanceIndex).Should(Equal(0))
+			Expect(startMsg.AppVersion).To(Equal(a.AppVersion))
+			Expect(startMsg.InstanceIndex).To(Equal(0))
 		})
 
 		It("should never try to stop crashes", func() {
-			Ω(startStopListener.StopCount()).Should(BeZero())
+			Expect(startStopListener.StopCount()).To(BeZero())
 			simulator.Tick(1)
-			Ω(startStopListener.StopCount()).Should(BeZero())
+			Expect(startStopListener.StopCount()).To(BeZero())
 		})
 	})
 
@@ -62,16 +62,16 @@ var _ = Describe("Crashes", func() {
 		})
 
 		It("should start all the crashed instances", func() {
-			Ω(startStopListener.StopCount()).Should(BeZero())
-			Ω(startStopListener.StartCount()).Should(Equal(2))
+			Expect(startStopListener.StopCount()).To(BeZero())
+			Expect(startStopListener.StartCount()).To(Equal(2))
 
 			indicesToStart := []int{
 				startStopListener.Start(0).InstanceIndex,
 				startStopListener.Start(1).InstanceIndex,
 			}
 
-			Ω(indicesToStart).Should(ContainElement(0))
-			Ω(indicesToStart).Should(ContainElement(2))
+			Expect(indicesToStart).To(ContainElement(0))
+			Expect(indicesToStart).To(ContainElement(2))
 		})
 	})
 
@@ -94,23 +94,23 @@ var _ = Describe("Crashes", func() {
 				simulator.Tick(simulator.GracePeriod)
 				startStopListener.Reset()
 				simulator.Tick(1)
-				Ω(startStopListener.StartCount()).Should(Equal(1))
+				Expect(startStopListener.StartCount()).To(Equal(1))
 
 				//crash #3
 				simulator.Tick(simulator.GracePeriod)
 				startStopListener.Reset()
 				simulator.Tick(1)
-				Ω(startStopListener.StartCount()).Should(Equal(1))
+				Expect(startStopListener.StartCount()).To(Equal(1))
 
 				//crash #4, backoff begins
 				simulator.Tick(simulator.GracePeriod)
 				startStopListener.Reset()
 				simulator.Tick(1)
-				Ω(startStopListener.StartCount()).Should(BeZero())
+				Expect(startStopListener.StartCount()).To(BeZero())
 
 				//take more ticks longer to send a new start messages
 				simulator.Tick(simulator.GracePeriod)
-				Ω(startStopListener.StartCount()).Should(Equal(1))
+				Expect(startStopListener.StartCount()).To(Equal(1))
 			})
 		})
 
@@ -134,16 +134,16 @@ var _ = Describe("Crashes", func() {
 				startStopListener.Reset()
 				simulator.SetCurrentHeartbeats(runningHeartbeat)
 				simulator.Tick(1) //app is running, no starts should be scheduled
-				Ω(startStopListener.StartCount()).Should(BeZero())
+				Expect(startStopListener.StartCount()).To(BeZero())
 			})
 
 			Context("when it starts crashing again *before* the crash count expires", func() {
 				It("should continue the backoff policy where it left off", func() {
 					simulator.SetCurrentHeartbeats(crashingHeartbeat)
 					simulator.Tick(1) //running heartbeat is gone; schedule a start from where the policy left off
-					Ω(startStopListener.StartCount()).Should(BeZero())
+					Expect(startStopListener.StartCount()).To(BeZero())
 					simulator.Tick(simulator.GracePeriod)
-					Ω(startStopListener.StartCount()).Should(Equal(1))
+					Expect(startStopListener.StartCount()).To(Equal(1))
 				})
 			})
 
@@ -152,7 +152,7 @@ var _ = Describe("Crashes", func() {
 					simulator.Tick(6 * 2) //6 is the maximum backoff (cli_runner_test sets this in the config) and the crash count TTL is max backoff * 2
 					simulator.SetCurrentHeartbeats(crashingHeartbeat)
 					simulator.Tick(1) //schedule and send a start immediately
-					Ω(startStopListener.StartCount()).Should(Equal(1))
+					Expect(startStopListener.StartCount()).To(Equal(1))
 				})
 			})
 		})

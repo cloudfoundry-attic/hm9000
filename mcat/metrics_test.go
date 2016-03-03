@@ -23,7 +23,7 @@ var _ = Describe("Serving Metrics", func() {
 
 		var err error
 		ip, err = localip.LocalIP()
-		Ω(err).ShouldNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Context("when there is a desired app that failed to stage", func() {

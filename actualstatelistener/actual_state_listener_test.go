@@ -80,11 +80,6 @@ var _ = Describe("Actual state listener", func() {
 		Expect(messageBus.Subscriptions("dea.heartbeat")).To(HaveLen(1))
 	})
 
-	It("To subscribe to the dea.advertise subject", func() {
-		Expect(messageBus.Subscriptions("dea.advertise")).NotTo(BeNil())
-		Expect(messageBus.Subscriptions("dea.advertise")).To(HaveLen(1))
-	})
-
 	It("To start tracking store usage", func() {
 		Expect(usageTracker.StartTrackingUsageCallCount()).To(Equal(1))
 		Expect(usageTracker.MeasureUsageCallCount()).To(Equal(1))
@@ -104,42 +99,6 @@ var _ = Describe("Actual state listener", func() {
 		Eventually(store.SyncHeartbeatsCallCount).Should(Equal(2))
 	})
 
-	Context("When it receives a dea advertisement over the message bus", func() {
-		advertise := func() {
-			messageBus.SubjectCallbacks("dea.advertise")[0](&nats.Msg{
-				Data: []byte("doesn't matter"),
-			})
-		}
-
-		Context("and no heartbeat has been received recently", func() {
-			JustBeforeEach(func() {
-				beat()
-				clock.Increment(conf.ListenerHeartbeatSyncInterval())
-				Eventually(store.BumpActualFreshnessCallCount).Should(Equal(1))
-				clock.Increment(time.Duration(conf.ActualFreshnessTTL())*time.Second - time.Minute)
-				advertise()
-			})
-
-			It("does not bump the freshness", func() {
-				Consistently(store.BumpActualFreshnessCallCount).Should(Equal(1))
-			})
-		})
-
-		Context("and a heartbeat was received recently", func() {
-			JustBeforeEach(func() {
-				beat()
-				clock.Increment(conf.ListenerHeartbeatSyncInterval())
-				Eventually(store.BumpActualFreshnessCallCount).Should(Equal(1))
-				clock.Increment(time.Duration(conf.ActualFreshnessTTL()) * time.Second)
-				advertise()
-			})
-
-			It("does bump the freshness", func() {
-				Eventually(store.BumpActualFreshnessCallCount).Should(Equal(2))
-			})
-		})
-	})
-
 	Context("When there are heartbeats", func() {
 		receivedHeartbeats := func() {
 			Eventually(func() bool {
@@ -152,6 +111,7 @@ var _ = Describe("Actual state listener", func() {
 		}
 
 		JustBeforeEach(func() {
+			Expect(store.BumpActualFreshnessCallCount()).To(Equal(0))
 			beat()
 			clock.Increment(conf.ListenerHeartbeatSyncInterval())
 		})

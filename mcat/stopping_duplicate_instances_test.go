@@ -32,7 +32,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 		})
 
 		It("should not immediately stop anything", func() {
-			Ω(startStopListener.StopCount()).Should(Equal(0))
+			Expect(startStopListener.StopCount()).To(Equal(0))
 		})
 
 		Context("after four grace periods", func() {
@@ -42,13 +42,13 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 				})
 
 				It("should stop one of them", func() {
-					Ω(startStopListener.StopCount()).Should(Equal(1))
+					Expect(startStopListener.StopCount()).To(Equal(1))
 					stop := startStopListener.Stop(0)
-					Ω(stop.AppGuid).Should(Equal(a.AppGuid))
-					Ω(stop.AppVersion).Should(Equal(a.AppVersion))
-					Ω(stop.InstanceIndex).Should(Equal(1))
-					Ω(stop.IsDuplicate).Should(BeTrue())
-					Ω([]string{instance1.InstanceGuid, duplicateInstance1.InstanceGuid}).Should(ContainElement(stop.InstanceGuid))
+					Expect(stop.AppGuid).To(Equal(a.AppGuid))
+					Expect(stop.AppVersion).To(Equal(a.AppVersion))
+					Expect(stop.InstanceIndex).To(Equal(1))
+					Expect(stop.IsDuplicate).To(BeTrue())
+					Expect([]string{instance1.InstanceGuid, duplicateInstance1.InstanceGuid}).To(ContainElement(stop.InstanceGuid))
 				})
 
 				Context("after another grace period (assuming the stopped instance stops)", func() {
@@ -69,7 +69,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 					})
 
 					It("should not stop the other instance", func() {
-						Ω(startStopListener.StopCount()).Should(Equal(0))
+						Expect(startStopListener.StopCount()).To(Equal(0))
 					})
 				})
 			})
@@ -83,7 +83,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 				})
 
 				It("should not stop any instances", func() {
-					Ω(startStopListener.StopCount()).Should(Equal(0))
+					Expect(startStopListener.StopCount()).To(Equal(0))
 				})
 			})
 		})

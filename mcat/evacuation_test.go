@@ -32,11 +32,11 @@ var _ = Describe("Evacuation and Shutdown", func() {
 
 			It("should immediately start the app", func() {
 				simulator.Tick(1)
-				Ω(startStopListener.StartCount()).Should(Equal(1))
+				Expect(startStopListener.StartCount()).To(Equal(1))
 				startMsg := startStopListener.Start(0)
-				Ω(startMsg.AppGuid).Should(Equal(app.AppGuid))
-				Ω(startMsg.AppVersion).Should(Equal(app.AppVersion))
-				Ω(startMsg.InstanceIndex).Should(Equal(0))
+				Expect(startMsg.AppGuid).To(Equal(app.AppGuid))
+				Expect(startMsg.AppVersion).To(Equal(app.AppVersion))
+				Expect(startMsg.InstanceIndex).To(Equal(0))
 			})
 		})
 	})
@@ -46,8 +46,8 @@ var _ = Describe("Evacuation and Shutdown", func() {
 			var evacuatingHeartbeat models.InstanceHeartbeat
 
 			BeforeEach(func() {
-				Ω(startStopListener.StartCount()).Should(BeZero())
-				Ω(startStopListener.StopCount()).Should(BeZero())
+				Expect(startStopListener.StartCount()).To(BeZero())
+				Expect(startStopListener.StopCount()).To(BeZero())
 				evacuatingHeartbeat = app.InstanceAtIndex(0).Heartbeat()
 				evacuatingHeartbeat.State = models.InstanceStateEvacuating
 
@@ -56,12 +56,12 @@ var _ = Describe("Evacuation and Shutdown", func() {
 			})
 
 			It("should immediately start the app", func() {
-				Ω(startStopListener.StartCount()).Should(Equal(1))
+				Expect(startStopListener.StartCount()).To(Equal(1))
 				startMsg := startStopListener.Start(0)
-				Ω(startMsg.AppGuid).Should(Equal(app.AppGuid))
-				Ω(startMsg.AppVersion).Should(Equal(app.AppVersion))
-				Ω(startMsg.InstanceIndex).Should(Equal(0))
-				Ω(startStopListener.StopCount()).Should(BeZero())
+				Expect(startMsg.AppGuid).To(Equal(app.AppGuid))
+				Expect(startMsg.AppVersion).To(Equal(app.AppVersion))
+				Expect(startMsg.InstanceIndex).To(Equal(0))
+				Expect(startStopListener.StopCount()).To(BeZero())
 			})
 
 			Context("when the app starts", func() {
@@ -78,12 +78,12 @@ var _ = Describe("Evacuation and Shutdown", func() {
 				})
 
 				It("should stop the evacuated instance", func() {
-					Ω(startStopListener.StartCount()).Should(BeZero())
-					Ω(startStopListener.StopCount()).Should(Equal(1))
+					Expect(startStopListener.StartCount()).To(BeZero())
+					Expect(startStopListener.StopCount()).To(Equal(1))
 					stopMsg := startStopListener.Stop(0)
-					Ω(stopMsg.AppGuid).Should(Equal(app.AppGuid))
-					Ω(stopMsg.AppVersion).Should(Equal(app.AppVersion))
-					Ω(stopMsg.InstanceGuid).Should(Equal(evacuatingHeartbeat.InstanceGuid))
+					Expect(stopMsg.AppGuid).To(Equal(app.AppGuid))
+					Expect(stopMsg.AppVersion).To(Equal(app.AppVersion))
+					Expect(stopMsg.InstanceGuid).To(Equal(evacuatingHeartbeat.InstanceGuid))
 				})
 			})
 		})
