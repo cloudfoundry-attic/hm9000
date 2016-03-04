@@ -35,14 +35,17 @@ var _ = BeforeSuite(func() {
 	coordinator.StartStartStopListener()
 	coordinator.StartMetron()
 	coordinator.StartETCD()
+	coordinator.StartConsulRunner()
 })
 
 var _ = BeforeEach(func() {
 	cliRunner, simulator, startStopListener, metronAgent = coordinator.PrepForNextTest()
+	coordinator.ResetConsulRunner()
 })
 
 var _ = AfterSuite(func() {
 	coordinator.StopETCD()
 	coordinator.StopAllExternalProcesses()
 	gexec.CleanupBuildArtifacts()
+	coordinator.StopConsulRunner()
 })

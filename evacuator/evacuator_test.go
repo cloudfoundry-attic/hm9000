@@ -13,6 +13,8 @@ import (
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"github.com/nats-io/nats"
 	"github.com/pivotal-golang/clock/fakeclock"
+	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/ginkgomon"
 
 	. "github.com/cloudfoundry/hm9000/evacuator"
 	. "github.com/onsi/ginkgo"
@@ -26,8 +28,9 @@ var _ = Describe("Evacuator", func() {
 		storeAdapter *fakestoreadapter.FakeStoreAdapter
 		clock        *fakeclock.FakeClock
 
-		store storepackage.Store
-		app   appfixture.AppFixture
+		store            storepackage.Store
+		app              appfixture.AppFixture
+		evacuatorProcess ifrit.Process
 	)
 
 	conf, _ := config.DefaultConfig()
@@ -39,9 +42,16 @@ var _ = Describe("Evacuator", func() {
 		clock = fakeclock.NewFakeClock(time.Unix(100, 0))
 
 		app = appfixture.NewAppFixture()
+	})
 
+	JustBeforeEach(func() {
 		evacuator = New(messageBus, store, clock, conf, fakelogger.NewFakeLogger())
-		evacuator.Listen()
+		evacuatorProcess = ifrit.Background(evacuator)
+		Eventually(evacuatorProcess.Ready()).Should(BeClosed())
+	})
+
+	AfterEach(func() {
+		ginkgomon.Kill(evacuatorProcess)
 	})
 
 	It("should be listening on the message bus for droplet.exited", func() {
@@ -62,7 +72,7 @@ var _ = Describe("Evacuator", func() {
 		})
 
 		Context("when the reason is DEA_EVACUATION", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
 					Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonDEAEvacuation).ToJSON(),
 				})
@@ -80,7 +90,7 @@ var _ = Describe("Evacuator", func() {
 		})
 
 		Context("when the reason is DEA_SHUTDOWN", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
 					Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonDEAShutdown).ToJSON(),
 				})
@@ -98,7 +108,7 @@ var _ = Describe("Evacuator", func() {
 		})
 
 		Context("when the reason is STOPPED", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
 					Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonStopped).ToJSON(),
 				})
@@ -112,7 +122,7 @@ var _ = Describe("Evacuator", func() {
 		})
 
 		Context("when the reason is CRASHED", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
 					Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonCrashed).ToJSON(),
 				})

@@ -61,7 +61,12 @@ var _ = Describe("Config", func() {
             "user": "",
             "password": ""
         }],
-				"dropsonde_port": 12344
+        "http_heartbeat": [{
+        	"server_address": "0.0.0.0",
+        	"port": 5335
+        }],
+		"dropsonde_port": 12344,
+		"consul_cluster": "http://127.0.0.1:8500"
     }
     `
 
@@ -126,6 +131,11 @@ var _ = Describe("Config", func() {
 			Expect(config.LogDirectory).To(Equal("/some/path"))
 
 			Expect(config.DropsondePort).To(Equal(12344))
+
+			Expect(config.HttpHeartbeatServerAddress).To(Equal("0.0.0.0"))
+			Expect(config.HttpHeartbeatPort).To(Equal(5335))
+
+			Expect(config.ConsulCluster).To(Equal("http://127.0.0.1:8500"))
 		})
 	})
 

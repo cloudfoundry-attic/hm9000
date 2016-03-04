@@ -5,15 +5,14 @@ import (
 
 	"github.com/cloudfoundry-incubator/cf-debug-server"
 	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/gosteno"
 
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/hm"
 	"github.com/codegangsta/cli"
 
+	"github.com/pivotal-golang/lager"
+
 	"os"
-	"path"
 )
 
 const (
@@ -36,20 +35,20 @@ func main() {
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "fetcher")
+				logger, conf := loadLoggerAndConfig(c, "fetcher")
 				hm.FetchDesiredState(logger, conf, c.Bool("poll"))
 			},
 		},
 		{
 			Name:        "listen",
-			Description: "Listens over the NATS for the actual state",
+			Description: "Listens for the actual state over NATS and via HTTP",
 			Usage:       "hm listen --config=/path/to/config",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "listener")
+				logger, conf := loadLoggerAndConfig(c, "listener")
 				hm.StartListeningForActual(logger, conf)
 			},
 		},
@@ -63,7 +62,7 @@ func main() {
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "analyzer")
+				logger, conf := loadLoggerAndConfig(c, "analyzer")
 				hm.Analyze(logger, conf, c.Bool("poll"))
 			},
 		},
@@ -77,7 +76,7 @@ func main() {
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "sender")
+				logger, conf := loadLoggerAndConfig(c, "sender")
 				hm.Send(logger, conf, c.Bool("poll"))
 			},
 		},
@@ -90,7 +89,7 @@ func main() {
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "evacuator")
+				logger, conf := loadLoggerAndConfig(c, "evacuator")
 				hm.StartEvacuator(logger, conf)
 			},
 		},
@@ -103,7 +102,7 @@ func main() {
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "apiserver")
+				logger, conf := loadLoggerAndConfig(c, "apiserver")
 				hm.ServeAPI(logger, conf)
 			},
 		},
@@ -117,7 +116,7 @@ func main() {
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "shredder")
+				logger, conf := loadLoggerAndConfig(c, "shredder")
 				hm.Shred(logger, conf, c.Bool("poll"))
 			},
 		},
@@ -131,7 +130,7 @@ func main() {
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, _, conf := loadLoggerAndConfig(c, "dumper")
+				logger, conf := loadLoggerAndConfig(c, "dumper")
 				hm.Dump(logger, conf, c.Bool("raw"))
 			},
 		},
@@ -140,44 +139,34 @@ func main() {
 	app.Run(os.Args)
 }
 
-func loadLoggerAndConfig(c *cli.Context, component string) (logger.Logger, *gosteno.Logger, *config.Config) {
+func loadLoggerAndConfig(c *cli.Context, component string) (lager.Logger, *config.Config) {
+	var logger lager.Logger
 	configPath := c.String("config")
 	if configPath == "" {
-		fmt.Printf("Config path required")
+		fmt.Fprintf(os.Stderr, "Config path required\n")
 		os.Exit(1)
 	}
 
 	conf, err := config.FromFile(configPath)
 	if err != nil {
-		fmt.Printf("Failed to load config: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Failed to load config: %s\n", configPath)
 		os.Exit(1)
 	}
 
-	sinks := make([]gosteno.Sink, 0, 3)
-	if conf.LogDirectory != "" {
-		logName := fmt.Sprintf("hm9000_%s.log", component)
-		logFile := path.Join(conf.LogDirectory, logName)
-
-		sinks = append(sinks, gosteno.NewFileSink(logFile))
-	} else {
-		sinks = append(sinks, gosteno.NewIOSink(os.Stdout))
+	if component == "" {
+		fmt.Fprintf(os.Stderr, "Empty component name\n")
+		os.Exit(1)
 	}
-	sinks = append(sinks, gosteno.NewSyslogSink("vcap.hm9000."+component))
 
-	stenoConf := &gosteno.Config{
-		Sinks: sinks,
-		Level: conf.LogLevel(),
-		Codec: gosteno.NewJsonCodec(),
-	}
-	gosteno.Init(stenoConf)
-	steno := gosteno.NewLogger("vcap.hm9000." + component)
-	hmLogger := logger.NewRealLogger(steno)
+	logger = lager.NewLogger(component)
+
+	logger.RegisterSink(lager.NewReconfigurableSink(lager.NewWriterSink(os.Stdout, lager.DEBUG), lager.DEBUG))
 
 	debugAddr := c.String("debugAddr")
 	if debugAddr != "" {
 		_, err = cf_debug_server.Run(debugAddr, nil)
 		if err != nil {
-			hmLogger.Error("Failed to start debug server", err)
+			logger.Error("Failed to start debug server", err)
 			os.Exit(1)
 		}
 	}
@@ -185,9 +174,9 @@ func loadLoggerAndConfig(c *cli.Context, component string) (logger.Logger, *gost
 	dropsondeDestination := fmt.Sprintf("127.0.0.1:%d", conf.DropsondePort)
 	err = dropsonde.Initialize(dropsondeDestination, component)
 	if err != nil {
-		hmLogger.Error("Failed to initialize dropsonde", err)
+		logger.Error("Failed to initialize dropsonde", err)
 		os.Exit(1)
 	}
 
-	return hmLogger, steno, conf
+	return logger, conf
 }

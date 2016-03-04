@@ -2,10 +2,12 @@ package store
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/storeadapter"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/pivotal-golang/lager"
 )
 
 func (store *RealStore) Compact() error {
@@ -67,7 +69,7 @@ func (store *RealStore) deleteEmptyDirectoriesUnder(node storeadapter.StoreNode)
 	if node.Dir {
 		if len(node.ChildNodes) == 0 {
 			// ignoring errors -- best effort!
-			store.logger.Info("Deleting Key", map[string]string{"Key": node.Key})
+			store.logger.Info("Deleting Key", lager.Data{"Key": node.Key})
 			store.adapter.Delete(node.Key)
 			return true
 		} else {
@@ -79,7 +81,7 @@ func (store *RealStore) deleteEmptyDirectoriesUnder(node storeadapter.StoreNode)
 
 			if deletedAll {
 				// ignoring errors -- best effort!
-				store.logger.Info("Deleting Key", map[string]string{"Key": node.Key})
+				store.logger.Info("Deleting Key", lager.Data{"Key": node.Key})
 				store.adapter.Delete(node.Key)
 				return true
 			}

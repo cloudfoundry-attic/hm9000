@@ -77,7 +77,13 @@ Assuming you have `go` v1.5+ installed:
 
     and get usage information.  Run `hm9000 --help` to see supported commands.
 
-5. Running the tests
+5. Install consul (if you plan to run the integration test suite):
+
+    The `mcat` integration test suite requires that the `consul` binary be in your `PATH`.  Refer to the [installation
+    instructions](https://www.consul.io/intro/getting-started/install.html) for your specific platform to download an install
+    consul.
+
+6. Running the tests
 
         $ go get github.com/onsi/ginkgo/ginkgo
         $ cd src/github.com/cloudfoundry/hm9000/
@@ -85,7 +91,7 @@ Assuming you have `go` v1.5+ installed:
 
     These tests will spin up their own instances of `etcd` as needed.  It shouldn't interfere with your long-running `etcd` server.
 
-6. Updating hm9000.  You'll need to fetch the latest code *and* recompile the hm9000 binary:
+7. Updating hm9000.  You'll need to fetch the latest code *and* recompile the hm9000 binary:
 
         $ cd $GOPATH/src/github.com/cloudfoundry/hm9000
         $ git checkout master
@@ -112,7 +118,7 @@ will connect to CC, fetch the desired state, put it in the store, then exit.  Yo
 
     hm9000 listen --config=./local_config.json
 
-will come up, listen to NATS for heartbeats, and put them in the store.
+will come up, listen for heartbeat messages via NATS and HTTP, and put them in the store.
 
 ### Analyzing the desired and actual state
 

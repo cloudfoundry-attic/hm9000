@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/lager"
 )
 
-func Dump(l logger.Logger, conf *config.Config, raw bool) {
+func Dump(l lager.Logger, conf *config.Config, raw bool) {
 	if raw {
 		dumpRaw(l, conf)
 	} else {
@@ -24,7 +24,7 @@ func Dump(l logger.Logger, conf *config.Config, raw bool) {
 	}
 }
 
-func dumpStructured(l logger.Logger, conf *config.Config) {
+func dumpStructured(l lager.Logger, conf *config.Config) {
 	clock := buildClock(l)
 	store := connectToStore(l, conf)
 	fmt.Printf("Dump - Current timestamp %d\n", clock.Now().Unix())
@@ -142,7 +142,7 @@ func dumpApp(app *models.App, starts map[string]models.PendingStartMessage, stop
 	}
 }
 
-func dumpRaw(l logger.Logger, conf *config.Config) {
+func dumpRaw(l lager.Logger, conf *config.Config) {
 	storeAdapter := connectToStoreAdapter(l, conf)
 	fmt.Printf("Raw Dump - Current timestamp %d\n", time.Now().Unix())
 

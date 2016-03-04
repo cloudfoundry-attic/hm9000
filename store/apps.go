@@ -2,8 +2,10 @@ package store
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/hm9000/models"
 	"time"
+
+	"github.com/cloudfoundry/hm9000/models"
+	"github.com/pivotal-golang/lager"
 )
 
 func (store *RealStore) AppKey(appGuid string, appVersion string) string {
@@ -50,7 +52,7 @@ func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, 
 		return nil, AppNotFoundError
 	}
 
-	store.logger.Debug(fmt.Sprintf("Get Duration App"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Get Duration App"), lager.Data{
 		"Duration":                   fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 		"Time to Fetch Desired":      fmt.Sprintf("%.4f seconds", dtDesired),
 		"Time to Fetch Actual":       fmt.Sprintf("%.4f seconds", dtActual),
@@ -113,7 +115,7 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 		}
 	}
 
-	store.logger.Debug(fmt.Sprintf("Get Duration Apps"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Get Duration Apps"), lager.Data{
 		"Number of Items":            fmt.Sprintf("%d", len(results)),
 		"Duration":                   fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 		"Time to Fetch Desired":      fmt.Sprintf("%.4f seconds", dtDesired),

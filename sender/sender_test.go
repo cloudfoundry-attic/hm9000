@@ -43,7 +43,7 @@ var _ = Describe("Sender", func() {
 
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger())
+		sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger(), timeProvider)
 		store.BumpActualFreshness(time.Unix(10, 0))
 		store.BumpDesiredFreshness(time.Unix(10, 0))
 	})
@@ -747,13 +747,13 @@ var _ = Describe("Sender", func() {
 			conf, _ = config.DefaultConfig()
 			conf.SenderMessageLimit = 20
 
-			sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger())
+			sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger(), timeProvider)
 
 			desiredStates := []models.DesiredAppState{}
 			for i := 0; i < 40; i += 1 {
 				a := appfixture.NewAppFixture()
 				desiredStates = append(desiredStates, a.DesiredState(1))
-				store.SyncHeartbeats(models.Heartbeat{
+				store.SyncHeartbeats(&models.Heartbeat{
 					DeaGuid:            a.DeaGuid,
 					InstanceHeartbeats: []models.InstanceHeartbeat{a.InstanceAtIndex(1).Heartbeat()},
 				})

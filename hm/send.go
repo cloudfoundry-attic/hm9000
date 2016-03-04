@@ -2,34 +2,32 @@ package hm
 
 import (
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
+	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/lager"
 
 	"os"
 )
 
-func Send(l logger.Logger, conf *config.Config, poll bool) {
+func Send(l lager.Logger, conf *config.Config, poll bool) {
 	messageBus := connectToMessageBus(l, conf)
 	store := connectToStore(l, conf)
+	clock := buildClock(l)
 
 	if poll {
-		l.Info("Starting Sender Daemon...")
-
-		adapter := connectToStoreAdapter(l, conf)
-
-		err := Daemonize("Sender", func() error {
-			return send(l, conf, messageBus, store)
-		}, conf.SenderPollingInterval(), conf.SenderTimeout(), l, adapter)
+		sender := sender.New(store, metricsaccountant.New(), conf, messageBus, l, clock)
+		err := ifritize("Sender", conf, sender, l)
 		if err != nil {
 			l.Error("Sender Daemon Errored", err)
+			os.Exit(197)
 		}
 		l.Info("Sender Daemon is Down")
-		os.Exit(1)
+		os.Exit(0)
 	} else {
-		err := send(l, conf, messageBus, store)
+		err := send(l, conf, messageBus, store, clock)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -38,11 +36,11 @@ func Send(l logger.Logger, conf *config.Config, poll bool) {
 	}
 }
 
-func send(l logger.Logger, conf *config.Config, messageBus yagnats.NATSConn, store store.Store) error {
+func send(l lager.Logger, conf *config.Config, messageBus yagnats.NATSConn, store store.Store, clock clock.Clock) error {
 	l.Info("Sending...")
 
-	sender := sender.New(store, metricsaccountant.New(), conf, messageBus, l)
-	err := sender.Send(buildClock(l))
+	sender := sender.New(store, metricsaccountant.New(), conf, messageBus, l, clock)
+	err := sender.Send(clock)
 
 	if err != nil {
 		l.Error("Sender failed with error", err)

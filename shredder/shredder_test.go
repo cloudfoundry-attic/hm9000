@@ -22,7 +22,7 @@ var _ = Describe("Shredder", func() {
 		conf, _ := config.DefaultConfig()
 		conf.StoreSchemaVersion = 2
 		store := storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		shredder = New(store)
+		shredder = New(store, conf, fakelogger.NewFakeLogger())
 
 		storeAdapter.SetMulti([]storeadapter.StoreNode{
 			{Key: "/hm/v2/pokemon/geodude", Value: []byte{}},

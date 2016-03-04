@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/pivotal-golang/lager"
 )
 
 //Desired app state
@@ -72,8 +74,8 @@ func (state DesiredAppState) ToCSV() []byte {
 	return []byte(fmt.Sprintf("%d,%s,%s", state.NumberOfInstances, state.State, state.PackageState))
 }
 
-func (state DesiredAppState) LogDescription() map[string]string {
-	return map[string]string{
+func (state DesiredAppState) LogDescription() lager.Data {
+	return lager.Data{
 		"AppGuid":           state.AppGuid,
 		"AppVersion":        state.AppVersion,
 		"NumberOfInstances": strconv.Itoa(state.NumberOfInstances),

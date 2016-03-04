@@ -16,7 +16,7 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 
 		BeforeEach(func() {
 			var desiredStates = []models.DesiredAppState{}
-			var heartbeats = []models.Heartbeat{}
+			var heartbeats = []*models.Heartbeat{}
 
 			lowPriorityAppGuids = make([]string, 0)
 			for i := 0; i < 8; i += 1 {

@@ -320,7 +320,7 @@ var _ = Describe("Actual State", func() {
 				heartbeatA = app.InstanceAtIndex(0).Heartbeat()
 				heartbeatA.DeaGuid = "A"
 
-				store.SyncHeartbeats(models.Heartbeat{
+				store.SyncHeartbeats(&models.Heartbeat{
 					DeaGuid: "A",
 					InstanceHeartbeats: []models.InstanceHeartbeat{
 						heartbeatA,
@@ -330,7 +330,7 @@ var _ = Describe("Actual State", func() {
 				heartbeatB = app.InstanceAtIndex(1).Heartbeat()
 				heartbeatB.DeaGuid = "B"
 
-				store.SyncHeartbeats(models.Heartbeat{
+				store.SyncHeartbeats(&models.Heartbeat{
 					DeaGuid: "B",
 					InstanceHeartbeats: []models.InstanceHeartbeat{
 						heartbeatB,

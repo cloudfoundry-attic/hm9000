@@ -2,10 +2,12 @@ package store
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/storeadapter"
 	"strconv"
 	"time"
+
+	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/pivotal-golang/lager"
 )
 
 func (store *RealStore) crashCountStoreKey(crashCount models.CrashCount) string {
@@ -26,7 +28,7 @@ func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error 
 
 	err := store.adapter.SetMulti(nodes)
 
-	store.logger.Debug(fmt.Sprintf("Save Duration Crash Counts"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Save Duration Crash Counts"), lager.Data{
 		"Number of Items": fmt.Sprintf("%d", len(crashCounts)),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})

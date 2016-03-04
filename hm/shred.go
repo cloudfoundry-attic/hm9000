@@ -4,29 +4,26 @@ import (
 	"os"
 
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/shredder"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/pivotal-golang/lager"
 )
 
-func Shred(l logger.Logger, conf *config.Config, poll bool) {
+func Shred(l lager.Logger, conf *config.Config, poll bool) {
 	store := connectToStore(l, conf)
 
 	if poll {
-		l.Info("Starting Shredder Daemon...")
+		shredder := shredder.New(store, conf, l)
+		err := ifritize("shredder", conf, shredder, l)
 
-		adapter := connectToStoreAdapter(l, conf)
-
-		err := Daemonize("Shredder", func() error {
-			return shred(l, store)
-		}, conf.ShredderPollingInterval(), conf.ShredderTimeout(), l, adapter)
 		if err != nil {
-			l.Error("Shredder Errored", err)
+			l.Error("Shredder Exiting on error", err)
+			os.Exit(197)
 		}
-		l.Info("Shredder Daemon is Down")
+		l.Info("Shredder Ifrit exited normally")
 		os.Exit(1)
 	} else {
-		err := shred(l, store)
+		err := shred(l, store, conf)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -35,8 +32,8 @@ func Shred(l logger.Logger, conf *config.Config, poll bool) {
 	}
 }
 
-func shred(l logger.Logger, store store.Store) error {
+func shred(l lager.Logger, store store.Store, conf *config.Config) error {
 	l.Info("Shredding Store")
-	theShredder := shredder.New(store)
+	theShredder := shredder.New(store, conf, l)
 	return theShredder.Shred()
 }

@@ -7,27 +7,33 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/pivotal-golang/lager"
 )
 
-func FetchDesiredState(l logger.Logger, conf *config.Config, poll bool) {
+func FetchDesiredState(l lager.Logger, conf *config.Config, poll bool) {
 	store := connectToStore(l, conf)
 
 	if poll {
-		l.Info("Starting Desired State Daemon...")
+		l.Info("Starting Desired State Ifrit...")
 
-		adapter := connectToStoreAdapter(l, conf)
+		f := desiredstatefetcher.New(conf,
+			store,
+			metricsaccountant.New(),
+			httpclient.NewHttpClient(conf.SkipSSLVerification, conf.FetcherNetworkTimeout()),
+			buildClock(l),
+			l,
+		)
 
-		err := Daemonize("Fetcher", func() error {
-			return fetchDesiredState(l, conf, store)
-		}, conf.FetcherPollingInterval(), conf.FetcherTimeout(), l, adapter)
+		err := ifritize("fetcher", conf, f, l)
 		if err != nil {
-			l.Error("Desired State Daemon Errored", err)
+			l.Error("Fetcher exited", err)
+			os.Exit(197)
 		}
-		l.Info("Desired State Daemon is Down")
-		os.Exit(1)
+
+		l.Info("exited")
+		os.Exit(0)
 	} else {
 		err := fetchDesiredState(l, conf, store)
 		if err != nil {
@@ -38,7 +44,7 @@ func FetchDesiredState(l logger.Logger, conf *config.Config, poll bool) {
 	}
 }
 
-func fetchDesiredState(l logger.Logger, conf *config.Config, store store.Store) error {
+func fetchDesiredState(l lager.Logger, conf *config.Config, store store.Store) error {
 	l.Info("Fetching Desired State")
 	fetcher := desiredstatefetcher.New(conf,
 		store,
@@ -54,7 +60,7 @@ func fetchDesiredState(l logger.Logger, conf *config.Config, store store.Store) 
 	result := <-resultChan
 
 	if result.Success {
-		l.Info("Success", map[string]string{"Number of Desired Apps Fetched": strconv.Itoa(result.NumResults)})
+		l.Info("Success", lager.Data{"Number of Desired Apps Fetched": strconv.Itoa(result.NumResults)})
 		return nil
 	} else {
 		l.Error(result.Message, result.Error)

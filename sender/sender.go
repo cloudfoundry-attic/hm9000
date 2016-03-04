@@ -3,21 +3,22 @@ package sender
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/lager"
 )
 
 type Sender struct {
 	store  store.Store
 	conf   *config.Config
-	logger logger.Logger
+	logger lager.Logger
 
 	apps        map[string]*models.App
 	messageBus  yagnats.NATSConn
@@ -31,11 +32,11 @@ type Sender struct {
 	stopMessagesToSave        []models.PendingStopMessage
 	stopMessagesToDelete      []models.PendingStopMessage
 	metricsAccountant         metricsaccountant.MetricsAccountant
-
-	didSucceed bool
+	clock                     clock.Clock
+	didSucceed                bool
 }
 
-func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.NATSConn, logger logger.Logger) *Sender {
+func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.NATSConn, logger lager.Logger, clock clock.Clock) *Sender {
 	return &Sender{
 		store:                 store,
 		conf:                  conf,
@@ -49,6 +50,40 @@ func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountan
 		stopMessagesToDelete:  []models.PendingStopMessage{},
 		metricsAccountant:     metricsAccountant,
 		didSucceed:            true,
+		clock:                 clock,
+	}
+}
+
+func (sender *Sender) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	close(ready)
+	for {
+		afterChan := time.After(sender.conf.SenderPollingInterval())
+		timeoutChan := time.After(sender.conf.SenderTimeout())
+		errorChan := make(chan error, 1)
+
+		t := time.Now()
+
+		go func() {
+			err := sender.Send(sender.clock)
+			errorChan <- err
+		}()
+
+		select {
+		case err := <-errorChan:
+			sender.logger.Info("ifrit time", lager.Data{
+				"Component": "sender",
+				"Duration":  fmt.Sprintf("%.4f", time.Since(t).Seconds()),
+			})
+			if err != nil {
+				sender.logger.Error("Sender returned an error. Continuing...", err)
+			}
+		case <-timeoutChan:
+			return errors.New("Sender timed out. Aborting!")
+		case <-signals:
+			return nil
+		}
+
+		<-afterChan
 	}
 }
 

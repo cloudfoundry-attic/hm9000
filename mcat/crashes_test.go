@@ -11,7 +11,7 @@ var _ = Describe("Crashes", func() {
 	var (
 		dea               appfixture.DeaFixture
 		a                 appfixture.AppFixture
-		crashingHeartbeat models.Heartbeat
+		crashingHeartbeat *models.Heartbeat
 	)
 
 	BeforeEach(func() {

@@ -1,13 +1,15 @@
 package evacuator
 
 import (
+	"os"
+
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/nats-io/nats"
 	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/lager"
 )
 
 type Evacuator struct {
@@ -15,10 +17,11 @@ type Evacuator struct {
 	store      store.Store
 	clock      clock.Clock
 	config     *config.Config
-	logger     logger.Logger
+	logger     lager.Logger
+	sub        *nats.Subscription
 }
 
-func New(messageBus yagnats.NATSConn, store store.Store, clock clock.Clock, config *config.Config, logger logger.Logger) *Evacuator {
+func New(messageBus yagnats.NATSConn, store store.Store, clock clock.Clock, config *config.Config, logger lager.Logger) *Evacuator {
 	return &Evacuator{
 		messageBus: messageBus,
 		store:      store,
@@ -29,7 +32,7 @@ func New(messageBus yagnats.NATSConn, store store.Store, clock clock.Clock, conf
 }
 
 func (e *Evacuator) Listen() {
-	e.messageBus.Subscribe("droplet.exited", func(message *nats.Msg) {
+	e.sub, _ = e.messageBus.Subscribe("droplet.exited", func(message *nats.Msg) {
 		dropletExited, err := models.NewDropletExitedFromJSON([]byte(message.Data))
 		if err != nil {
 			e.logger.Error("Failed to parse droplet exited message", err)
@@ -38,6 +41,19 @@ func (e *Evacuator) Listen() {
 
 		e.handleExited(dropletExited)
 	})
+}
+
+func (e *Evacuator) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	e.Listen()
+	e.logger.Info("Listening for DEA Evacuations")
+	close(ready)
+	select {
+	case <-signals:
+		if e.sub != nil {
+			e.messageBus.Unsubscribe(e.sub)
+		}
+		return nil
+	}
 }
 
 func (e *Evacuator) handleExited(exited models.DropletExited) {

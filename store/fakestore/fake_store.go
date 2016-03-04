@@ -97,10 +97,10 @@ type FakeStore struct {
 		result1 map[string]models.DesiredAppState
 		result2 error
 	}
-	SyncHeartbeatsStub        func(heartbeat ...models.Heartbeat) error
+	SyncHeartbeatsStub        func(heartbeat ...*models.Heartbeat) error
 	syncHeartbeatsMutex       sync.RWMutex
 	syncHeartbeatsArgsForCall []struct {
-		heartbeat []models.Heartbeat
+		heartbeat []*models.Heartbeat
 	}
 	syncHeartbeatsReturns struct {
 		result1 error
@@ -529,10 +529,10 @@ func (fake *FakeStore) GetDesiredStateReturns(result1 map[string]models.DesiredA
 	}{result1, result2}
 }
 
-func (fake *FakeStore) SyncHeartbeats(heartbeat ...models.Heartbeat) error {
+func (fake *FakeStore) SyncHeartbeats(heartbeat ...*models.Heartbeat) error {
 	fake.syncHeartbeatsMutex.Lock()
 	fake.syncHeartbeatsArgsForCall = append(fake.syncHeartbeatsArgsForCall, struct {
-		heartbeat []models.Heartbeat
+		heartbeat []*models.Heartbeat
 	}{heartbeat})
 	fake.syncHeartbeatsMutex.Unlock()
 	if fake.SyncHeartbeatsStub != nil {
@@ -548,7 +548,7 @@ func (fake *FakeStore) SyncHeartbeatsCallCount() int {
 	return len(fake.syncHeartbeatsArgsForCall)
 }
 
-func (fake *FakeStore) SyncHeartbeatsArgsForCall(i int) []models.Heartbeat {
+func (fake *FakeStore) SyncHeartbeatsArgsForCall(i int) []*models.Heartbeat {
 	fake.syncHeartbeatsMutex.RLock()
 	defer fake.syncHeartbeatsMutex.RUnlock()
 	return fake.syncHeartbeatsArgsForCall[i].heartbeat

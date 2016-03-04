@@ -29,7 +29,7 @@ var _ = Describe("Dea Fixture", func() {
 	})
 
 	Describe("heartbeat", func() {
-		var heartbeat models.Heartbeat
+		var heartbeat *models.Heartbeat
 
 		BeforeEach(func() {
 			heartbeat = dea.Heartbeat(70)

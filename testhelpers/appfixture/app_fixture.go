@@ -94,13 +94,13 @@ func (instance Instance) DropletExited(reason DropletExitedReason) DropletExited
 	return droplet_exited
 }
 
-func (app AppFixture) Heartbeat(instances int) Heartbeat {
+func (app AppFixture) Heartbeat(instances int) *Heartbeat {
 	instanceHeartbeats := make([]InstanceHeartbeat, instances)
 	for i := 0; i < instances; i++ {
 		instanceHeartbeats[i] = app.InstanceAtIndex(i).Heartbeat()
 	}
 
-	return Heartbeat{
+	return &Heartbeat{
 		DeaGuid:            app.DeaGuid,
 		InstanceHeartbeats: instanceHeartbeats,
 	}

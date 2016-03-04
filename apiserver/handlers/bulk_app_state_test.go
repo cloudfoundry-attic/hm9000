@@ -10,7 +10,6 @@ import (
 
 	"github.com/cloudfoundry/hm9000/apiserver/handlers"
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
@@ -19,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/clock/fakeclock"
+	"github.com/pivotal-golang/lager"
 )
 
 func decodeBulkResponse(response string) (bulkAppResp map[string]AppResponse) {
@@ -39,7 +39,7 @@ type AppResponse struct {
 type HandlerConf struct {
 	StoreAdapter *fakestoreadapter.FakeStoreAdapter
 	Clock        *fakeclock.FakeClock
-	Logger       logger.Logger
+	Logger       lager.Logger
 	MaxInFlight  int
 }
 

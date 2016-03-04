@@ -4,6 +4,7 @@ import (
 	. "github.com/cloudfoundry/hm9000/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("InstanceHeartbeat", func() {
@@ -107,7 +108,7 @@ var _ = Describe("InstanceHeartbeat", func() {
 		It("should return correct message", func() {
 			logDescription := instance.LogDescription()
 
-			Ω(logDescription).Should(Equal(map[string]string{
+			Ω(logDescription).Should(Equal(lager.Data{
 				"AppGuid":        "abc",
 				"AppVersion":     "xyz-123",
 				"InstanceGuid":   "def",

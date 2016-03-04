@@ -4,6 +4,7 @@ import (
 	. "github.com/cloudfoundry/hm9000/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
 
 	"time"
 )
@@ -82,7 +83,7 @@ var _ = Describe("Pending Messages", func() {
 
 		Describe("LogDescription", func() {
 			It("should generate an appropriate map", func() {
-				Ω(message.LogDescription()).Should(Equal(map[string]string{
+				Ω(message.LogDescription()).Should(Equal(lager.Data{
 					"SendOn":           time.Unix(130, 0).String(),
 					"SentOn":           time.Unix(0, 0).String(),
 					"KeepAlive":        "10",
@@ -221,7 +222,7 @@ var _ = Describe("Pending Messages", func() {
 
 		Describe("LogDescription", func() {
 			It("should generate an appropriate map", func() {
-				Ω(message.LogDescription()).Should(Equal(map[string]string{
+				Ω(message.LogDescription()).Should(Equal(lager.Data{
 					"SendOn":       time.Unix(130, 0).String(),
 					"SentOn":       time.Unix(0, 0).String(),
 					"KeepAlive":    "10",

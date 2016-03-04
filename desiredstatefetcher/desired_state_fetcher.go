@@ -1,7 +1,9 @@
 package desiredstatefetcher
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"io/ioutil"
 	"net/http"
@@ -11,11 +13,11 @@ import (
 
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/lager"
 )
 
 type DesiredStateFetcherResult struct {
@@ -34,7 +36,7 @@ type DesiredStateFetcher struct {
 	metricsAccountant metricsaccountant.MetricsAccountant
 	clock             clock.Clock
 	cache             map[string]models.DesiredAppState
-	logger            logger.Logger
+	logger            lager.Logger
 }
 
 func New(config *config.Config,
@@ -42,7 +44,7 @@ func New(config *config.Config,
 	metricsAccountant metricsaccountant.MetricsAccountant,
 	httpClient httpclient.HttpClient,
 	clock clock.Clock,
-	logger logger.Logger) *DesiredStateFetcher {
+	logger lager.Logger) *DesiredStateFetcher {
 
 	return &DesiredStateFetcher{
 		config:            config,
@@ -52,6 +54,46 @@ func New(config *config.Config,
 		clock:             clock,
 		cache:             map[string]models.DesiredAppState{},
 		logger:            logger,
+	}
+}
+
+func (fetcher *DesiredStateFetcher) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	close(ready)
+	for {
+		afterChan := time.After(fetcher.config.FetcherPollingInterval())
+		timeoutChan := time.After(fetcher.config.FetcherTimeout())
+		errorChan := make(chan error, 1)
+
+		t := time.Now()
+
+		go func() {
+			resultChan := make(chan DesiredStateFetcherResult, 1)
+			fetcher.Fetch(resultChan)
+			result := <-resultChan
+			if result.Success {
+				errorChan <- nil
+			} else {
+				fetcher.logger.Error(result.Message, result.Error)
+				errorChan <- result.Error
+			}
+		}()
+
+		select {
+		case err := <-errorChan:
+			fetcher.logger.Info("ifrit time", lager.Data{
+				"Component": "fetcher",
+				"Duration":  fmt.Sprintf("%.4f", time.Since(t).Seconds()),
+			})
+			if err != nil {
+				fetcher.logger.Error("Fetcher returned an error. Continuing...", err)
+			}
+		case <-timeoutChan:
+			return errors.New("Fetcher timed out. Aborting!")
+		case <-signals:
+			return nil
+		}
+
+		<-afterChan
 	}
 }
 
@@ -147,7 +189,7 @@ func (fetcher *DesiredStateFetcher) syncStore() error {
 	}
 	err := fetcher.store.SyncDesiredState(desiredStates...)
 	if err != nil {
-		fetcher.logger.Error("Failed to Sync Desired State", err, map[string]string{
+		fetcher.logger.Error("Failed to Sync Desired State", err, lager.Data{
 			"Number of Entries": strconv.Itoa(len(desiredStates)),
 			"Desireds":          fetcher.guids(desiredStates),
 		})

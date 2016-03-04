@@ -5,3 +5,4 @@ mcat/phd/plot/*.pdf
 mcat/phdaws/*.csv
 *.coverprofile
 *.test
+bin

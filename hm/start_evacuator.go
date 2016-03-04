@@ -1,20 +1,27 @@
 package hm
 
 import (
+	"os"
+
 	"github.com/cloudfoundry/hm9000/config"
 	evacuatorpackage "github.com/cloudfoundry/hm9000/evacuator"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
+	"github.com/pivotal-golang/lager"
 )
 
-func StartEvacuator(l logger.Logger, conf *config.Config) {
-	messageBus := connectToMessageBus(l, conf)
-	store := connectToStore(l, conf)
+func StartEvacuator(logger lager.Logger, conf *config.Config) {
+	messageBus := connectToMessageBus(logger, conf)
+	store := connectToStore(logger, conf)
 
-	acquireLock(l, conf, "evacuator")
+	clock := buildClock(logger)
 
-	evacuator := evacuatorpackage.New(messageBus, store, buildClock(l), conf, l)
+	evacuator := evacuatorpackage.New(messageBus, store, clock, conf, logger)
 
-	evacuator.Listen()
-	l.Info("Listening for DEA Evacuations")
-	select {}
+	err := ifritize("evacuator", conf, evacuator, logger)
+	if err != nil {
+		logger.Error("exited", err)
+		os.Exit(197)
+	}
+
+	logger.Info("exited")
+	os.Exit(0)
 }

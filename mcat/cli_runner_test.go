@@ -28,16 +28,16 @@ type CLIRunner struct {
 	verbose bool
 }
 
-func NewCLIRunner(hm9000Binary string, storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int, verbose bool) *CLIRunner {
+func NewCLIRunner(hm9000Binary string, storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int, consulCluster string, verbose bool) *CLIRunner {
 	runner := &CLIRunner{
 		hm9000Binary: hm9000Binary,
 		verbose:      verbose,
 	}
-	runner.config = runner.generateConfig(storeURLs, ccBaseURL, natsPort, dropsondePort)
+	runner.config = runner.generateConfig(storeURLs, ccBaseURL, natsPort, dropsondePort, consulCluster)
 	return runner
 }
 
-func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int) *config.Config {
+func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int, consulCluster string) *config.Config {
 	tmpFile, err := ioutil.TempFile("/tmp", "hm9000_clirunner")
 	defer tmpFile.Close()
 	Expect(err).NotTo(HaveOccurred())
@@ -56,6 +56,8 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.ListenerHeartbeatSyncIntervalInMilliseconds = 100
 	conf.APIServerPort = int(5155 + ginkgo.GinkgoParallelNode())
 	conf.LogLevelString = "DEBUG"
+	conf.ConsulCluster = consulCluster
+	conf.HttpHeartbeatPort = int(5335 + ginkgo.GinkgoParallelNode())
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Expect(err).NotTo(HaveOccurred())

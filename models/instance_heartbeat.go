@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type InstanceState string
@@ -103,8 +105,8 @@ func (instance InstanceHeartbeat) IsEvacuating() bool {
 	return instance.State == InstanceStateEvacuating
 }
 
-func (instance InstanceHeartbeat) LogDescription() map[string]string {
-	return map[string]string{
+func (instance InstanceHeartbeat) LogDescription() lager.Data {
+	return lager.Data{
 		"AppGuid":        instance.AppGuid,
 		"AppVersion":     instance.AppVersion,
 		"InstanceGuid":   instance.InstanceGuid,

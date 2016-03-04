@@ -8,10 +8,10 @@ import (
 )
 
 var _ = Describe("Heartbeat", func() {
-	var heartbeat Heartbeat
+	var heartbeat *Heartbeat
 
 	BeforeEach(func() {
-		heartbeat = Heartbeat{
+		heartbeat = &Heartbeat{
 			DeaGuid: "dea_abc",
 			InstanceHeartbeats: []InstanceHeartbeat{
 				{

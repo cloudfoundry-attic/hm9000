@@ -1,14 +1,15 @@
-package actualstatelistener_test
+package actualstatelisteners_test
 
 import (
 	"errors"
 
-	. "github.com/cloudfoundry/hm9000/actualstatelistener"
+	. "github.com/cloudfoundry/hm9000/actualstatelisteners"
 	"github.com/cloudfoundry/hm9000/store/fakestore"
-	"github.com/nats-io/nats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/clock/fakeclock"
+	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/ginkgomon"
 
 	"time"
 
@@ -20,7 +21,6 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
-	"github.com/cloudfoundry/yagnats/fakeyagnats"
 )
 
 var _ = Describe("Actual state listener", func() {
@@ -30,14 +30,14 @@ var _ = Describe("Actual state listener", func() {
 		dea               DeaFixture
 		store             *fakestore.FakeStore
 		storeAdapter      *fakestoreadapter.FakeStoreAdapter
-		listener          *ActualStateListener
+		syncer            Syncer
 		clock             *fakeclock.FakeClock
-		messageBus        *fakeyagnats.FakeNATSConn
 		logger            *fakelogger.FakeLogger
 		conf              *config.Config
 		freshByTime       time.Time
 		usageTracker      *fakemetricsaccountant.FakeUsageTracker
 		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
+		syncerProcess     ifrit.Process
 	)
 
 	BeforeEach(func() {
@@ -57,7 +57,6 @@ var _ = Describe("Actual state listener", func() {
 
 		storeAdapter = fakestoreadapter.New()
 		store = &fakestore.FakeStore{}
-		messageBus = fakeyagnats.Connect()
 		logger = fakelogger.NewFakeLogger()
 
 		usageTracker = &fakemetricsaccountant.FakeUsageTracker{}
@@ -66,25 +65,24 @@ var _ = Describe("Actual state listener", func() {
 	})
 
 	JustBeforeEach(func() {
-		listener = New(conf, messageBus, store, usageTracker, metricsAccountant, clock, logger)
-		listener.Start()
+		syncer = NewSyncer(logger, conf, store, usageTracker, metricsAccountant, clock)
+		syncerProcess = ifrit.Background(syncer)
+		Eventually(syncerProcess.Ready()).Should(BeClosed())
+	})
+
+	AfterEach(func() {
+		ginkgomon.Kill(syncerProcess)
 	})
 
 	beat := func() {
-		messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
-			Data: app.Heartbeat(1).ToJSON(),
-		})
+		syncer.Heartbeat(app.Heartbeat(1))
 	}
-
-	It("To subscribe to the dea.heartbeat subject", func() {
-		Expect(messageBus.Subscriptions("dea.heartbeat")).To(HaveLen(1))
-	})
 
 	It("To start tracking store usage", func() {
 		Expect(usageTracker.StartTrackingUsageCallCount()).To(Equal(1))
 		Expect(usageTracker.MeasureUsageCallCount()).To(Equal(1))
-		Expect(metricsAccountant.TrackActualStateListenerStoreUsageFractionCallCount()).To(Equal(1))
-		Expect(metricsAccountant.TrackActualStateListenerStoreUsageFractionArgsForCall(0)).To(Equal(0.7))
+		Expect(metricsAccountant.TrackActualStateStoreUsageFractionCallCount()).To(Equal(1))
+		Expect(metricsAccountant.TrackActualStateStoreUsageFractionArgsForCall(0)).To(Equal(0.7))
 	})
 
 	It("To save heartbeats on a timer", func() {
@@ -120,7 +118,7 @@ var _ = Describe("Actual state listener", func() {
 			BeforeEach(func() {
 				clock := clock
 				interval := conf.ListenerHeartbeatSyncInterval()
-				store.SyncHeartbeatsStub = func(_ ...Heartbeat) error {
+				store.SyncHeartbeatsStub = func(_ ...*Heartbeat) error {
 					clock.Increment(interval - 1)
 					return nil
 				}
@@ -144,7 +142,7 @@ var _ = Describe("Actual state listener", func() {
 			BeforeEach(func() {
 				interval := conf.ListenerHeartbeatSyncInterval()
 				clock := clock
-				store.SyncHeartbeatsStub = func(_ ...Heartbeat) error {
+				store.SyncHeartbeatsStub = func(_ ...*Heartbeat) error {
 					clock.Increment(interval)
 					return nil
 				}
@@ -184,24 +182,6 @@ var _ = Describe("Actual state listener", func() {
 			It("logs about the failed save", func() {
 				Eventually(logger.LoggedSubjects).Should(ContainElement(ContainSubstring("Could not put instance heartbeats in store")))
 			})
-		})
-	})
-
-	Context("When it fails to parse the heartbeat message", func() {
-		JustBeforeEach(func() {
-			messageBus.SubjectCallbacks("dea.heartbeat")[0](&nats.Msg{
-				Data: []byte("ß"),
-			})
-
-			clock.Increment(conf.ListenerHeartbeatSyncInterval())
-		})
-
-		It("does not sync heartbeats", func() {
-			Consistently(store.SyncHeartbeatsCallCount).Should(Equal(0))
-		})
-
-		It("logs about the failed parse", func() {
-			Eventually(logger.LoggedSubjects).Should(ContainElement("Could not unmarshal heartbeat"))
 		})
 	})
 })

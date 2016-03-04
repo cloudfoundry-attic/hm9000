@@ -2,11 +2,12 @@ package analyzer
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
-	"github.com/cloudfoundry/hm9000/models"
 	"strconv"
 	"time"
+
+	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/models"
+	"github.com/pivotal-golang/lager"
 )
 
 type appAnalyzer struct {
@@ -15,14 +16,20 @@ type appAnalyzer struct {
 	existingPendingStartMessages map[string]models.PendingStartMessage
 	existingPendingStopMessages  map[string]models.PendingStopMessage
 	currentTime                  time.Time
-	logger                       logger.Logger
+	logger                       lager.Logger
 
 	startMessages map[string]models.PendingStartMessage
 	stopMessages  map[string]models.PendingStopMessage
 	crashCounts   []models.CrashCount
 }
 
-func newAppAnalyzer(app *models.App, currentTime time.Time, existingPendingStartMessages map[string]models.PendingStartMessage, existingPendingStopMessages map[string]models.PendingStopMessage, logger logger.Logger, conf *config.Config) *appAnalyzer {
+func newAppAnalyzer(app *models.App,
+	currentTime time.Time,
+	existingPendingStartMessages map[string]models.PendingStartMessage,
+	existingPendingStopMessages map[string]models.PendingStopMessage,
+	logger lager.Logger,
+	conf *config.Config,
+) *appAnalyzer {
 	return &appAnalyzer{
 		app:  app,
 		conf: conf,
@@ -59,7 +66,7 @@ func (a *appAnalyzer) generatePendingStartsForMissingInstances(priority float64)
 		if !a.app.HasStartingOrRunningInstanceAtIndex(index) && !a.app.HasCrashedInstanceAtIndex(index) {
 			message := models.NewPendingStartMessage(a.currentTime, a.conf.GracePeriod(), 0, a.app.AppGuid, a.app.AppVersion, index, priority, models.PendingStartMessageReasonMissing)
 
-			a.appendStartMessageIfNotDuplicate(message, "Identified missing instance", map[string]string{
+			a.appendStartMessageIfNotDuplicate(message, "Identified missing instance", lager.Data{
 				"Desired # of Instances": strconv.Itoa(a.app.NumberOfDesiredInstances()),
 			})
 		}
@@ -83,7 +90,7 @@ func (a *appAnalyzer) generatePendingStartsForCrashedInstances(priority float64)
 			delay := a.computeDelayForCrashCount(crashCount)
 			message := models.NewPendingStartMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, index, priority, models.PendingStartMessageReasonCrashed)
 
-			didAppend := a.appendStartMessageIfNotDuplicate(message, "Identified crashed instance", map[string]string{
+			didAppend := a.appendStartMessageIfNotDuplicate(message, "Identified crashed instance", lager.Data{
 				"Desired # of Instances": strconv.Itoa(a.app.NumberOfDesiredInstances()),
 				"Crash Count":            strconv.Itoa(crashCount.CrashCount),
 			})
@@ -102,7 +109,7 @@ func (a *appAnalyzer) generatePendingStopsForExtraInstances() {
 	for _, extraInstance := range a.app.ExtraStartingOrRunningInstances() {
 		message := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, extraInstance.InstanceGuid, models.PendingStopMessageReasonExtra)
 
-		a.appendStopMessageIfNotDuplicate(message, "Identified extra running instance", map[string]string{
+		a.appendStopMessageIfNotDuplicate(message, "Identified extra running instance", lager.Data{
 			"InstanceIndex":          strconv.Itoa(extraInstance.InstanceIndex),
 			"Desired # of Instances": strconv.Itoa(a.app.NumberOfDesiredInstances()),
 		})
@@ -125,7 +132,7 @@ func (a *appAnalyzer) generatePendingStopsForDuplicateInstances() {
 				delay := i*a.conf.GracePeriod() + minimumDuplicateInstanceStopDelay
 				message := models.NewPendingStopMessage(a.currentTime, delay, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, instance.InstanceGuid, models.PendingStopMessageReasonDuplicate)
 
-				a.appendStopMessageIfNotDuplicate(message, "Identified duplicate running instance", map[string]string{
+				a.appendStopMessageIfNotDuplicate(message, "Identified duplicate running instance", lager.Data{
 					"InstanceIndex": strconv.Itoa(instance.InstanceIndex),
 				})
 			}
@@ -146,7 +153,7 @@ func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
 			addStopMessages := func(displayReason string, stopReason models.PendingStopMessageReason) {
 				for _, evacuatingInstance := range evacuatingInstances {
 					stopMessage := models.NewPendingStopMessage(a.currentTime, 0, a.conf.GracePeriod(), a.app.AppGuid, a.app.AppVersion, evacuatingInstance.InstanceGuid, stopReason)
-					a.appendStopMessageIfNotDuplicate(stopMessage, displayReason, map[string]string{})
+					a.appendStopMessageIfNotDuplicate(stopMessage, displayReason, nil)
 				}
 			}
 
@@ -172,12 +179,12 @@ func (a *appAnalyzer) generatePendingStartsAndStopsForEvacuatingInstances() {
 				addStopMessages("Stopping an unstable evacuating instance.", models.PendingStopMessageReasonEvacuationComplete)
 			}
 
-			a.appendStartMessageIfNotDuplicate(startMessage, "An instance is evacuating.  Starting it elsewhere.", map[string]string{})
+			a.appendStartMessageIfNotDuplicate(startMessage, "An instance is evacuating.  Starting it elsewhere.", nil)
 		}
 	}
 }
 
-func (a *appAnalyzer) appendStartMessageIfNotDuplicate(message models.PendingStartMessage, loggingMessage string, additionalDetails map[string]string) (didAppend bool) {
+func (a *appAnalyzer) appendStartMessageIfNotDuplicate(message models.PendingStartMessage, loggingMessage string, additionalDetails lager.Data) (didAppend bool) {
 	existingMessage, alreadyQueued := a.existingPendingStartMessages[message.StoreKey()]
 	if !alreadyQueued {
 		a.logger.Info(fmt.Sprintf("Enqueuing Start Message: %s", loggingMessage), message.LogDescription(), additionalDetails)
@@ -189,7 +196,7 @@ func (a *appAnalyzer) appendStartMessageIfNotDuplicate(message models.PendingSta
 	}
 }
 
-func (a *appAnalyzer) appendStopMessageIfNotDuplicate(message models.PendingStopMessage, loggingMessage string, additionalDetails map[string]string) {
+func (a *appAnalyzer) appendStopMessageIfNotDuplicate(message models.PendingStopMessage, loggingMessage string, additionalDetails lager.Data) {
 	existingMessage, alreadyQueued := a.existingPendingStopMessages[message.StoreKey()]
 	if !alreadyQueued {
 		a.logger.Info(fmt.Sprintf("Enqueuing Stop Message: %s", loggingMessage), message.LogDescription(), additionalDetails)

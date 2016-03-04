@@ -69,7 +69,12 @@ type Config struct {
 		Password string `json:"password"`
 	} `json:"nats"`
 
+	HttpHeartbeatServerAddress string `json: "http_heartbeat_server_address"`
+	HttpHeartbeatPort          int    `json:"http_heartbeat_port"`
+
 	DropsondePort int `json:"dropsonde_port"`
+
+	ConsulCluster string `json:"config_cluster"`
 }
 
 func defaults() Config {
@@ -114,6 +119,11 @@ func defaults() Config {
 
 		ActualFreshnessKey:  "/actual-fresh",
 		DesiredFreshnessKey: "/desired-fresh",
+
+		HttpHeartbeatServerAddress: "0.0.0.0",
+		HttpHeartbeatPort:          5335,
+
+		ConsulCluster: "http://127.0.0.1:8500",
 	}
 }
 

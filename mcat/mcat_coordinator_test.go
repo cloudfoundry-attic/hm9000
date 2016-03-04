@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/cloudfoundry-incubator/consuladapter/consulrunner"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/hm9000/config"
 	storepackage "github.com/cloudfoundry/hm9000/store"
@@ -57,6 +58,8 @@ type MCATCoordinator struct {
 	Verbose      bool
 
 	currentCLIRunner *CLIRunner
+
+	ConsulRunner *consulrunner.ClusterRunner
 }
 
 func NewMCATCoordinator(hm9000Binary string, parallelNode int, verbose bool) *MCATCoordinator {
@@ -93,7 +96,7 @@ func (coordinator *MCATCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *
 	if coordinator.currentCLIRunner != nil {
 		coordinator.currentCLIRunner.Cleanup()
 	}
-	coordinator.currentCLIRunner = NewCLIRunner(coordinator.hm9000Binary, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.DropsondePort, coordinator.Verbose)
+	coordinator.currentCLIRunner = NewCLIRunner(coordinator.hm9000Binary, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.DropsondePort, coordinator.ConsulRunner.ConsulCluster(), coordinator.Verbose)
 	store := storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
 	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus)
 
@@ -134,6 +137,22 @@ func (coordinator *MCATCoordinator) StopETCD() {
 	if coordinator.StoreAdapter != nil {
 		coordinator.StoreAdapter.Disconnect()
 	}
+}
+
+func (coordinator *MCATCoordinator) StartConsulRunner() {
+	consulPort := 10000 + (coordinator.ParallelNode-1)*10
+	coordinator.ConsulRunner = consulrunner.NewClusterRunner(consulPort, 1, "http")
+	coordinator.ConsulRunner.Start()
+	coordinator.ConsulRunner.WaitUntilReady()
+}
+
+func (coordinator *MCATCoordinator) StopConsulRunner() {
+	coordinator.ConsulRunner.Stop()
+}
+
+func (coordinator *MCATCoordinator) ResetConsulRunner() {
+	coordinator.ConsulRunner.Reset()
+	coordinator.ConsulRunner.WaitUntilReady()
 }
 
 func (coordinator *MCATCoordinator) StopAllExternalProcesses() {

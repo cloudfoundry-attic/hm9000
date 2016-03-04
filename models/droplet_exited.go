@@ -3,6 +3,8 @@ package models
 import (
 	"encoding/json"
 	"strconv"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type DropletExitedReason string
@@ -41,8 +43,8 @@ func (dropletExited DropletExited) ToJSON() []byte {
 	return result
 }
 
-func (dropletExited DropletExited) LogDescription() map[string]string {
-	return map[string]string{
+func (dropletExited DropletExited) LogDescription() lager.Data {
+	return lager.Data{
 		"AppGuid":         dropletExited.AppGuid,
 		"AppVersion":      dropletExited.AppVersion,
 		"InstanceGuid":    dropletExited.InstanceGuid,

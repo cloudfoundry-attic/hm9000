@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
+	"github.com/pivotal-golang/lager"
 )
 
 func (store *RealStore) ensureCacheIsReady() error {
@@ -25,7 +26,7 @@ func (store *RealStore) ensureCacheIsReady() error {
 			store.instanceHeartbeatCache[heartbeat.InstanceGuid] = heartbeat
 		}
 		store.instanceHeartbeatCacheTimestamp = time.Now()
-		store.logger.Debug("Busting store cache", map[string]string{
+		store.logger.Debug("Busting store cache", lager.Data{
 			"Duration":                   time.Since(t).String(),
 			"Instance Heartbeats Loaded": fmt.Sprintf("%d", len(store.instanceHeartbeatCache)),
 		})
@@ -35,7 +36,7 @@ func (store *RealStore) ensureCacheIsReady() error {
 	return nil
 }
 
-func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...models.Heartbeat) error {
+func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) error {
 	t := time.Now()
 
 	err := store.ensureCacheIsReady()
@@ -100,7 +101,7 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...models.Heartbeat) e
 		return err
 	}
 
-	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), lager.Data{
 		"Number of Heartbeats":          fmt.Sprintf("%d", len(incomingHeartbeats)),
 		"Number of Instance Heartbeats": fmt.Sprintf("%d", numberOfInstanceHeartbeats),
 		"Number of Items Saved":         fmt.Sprintf("%d", len(nodesToSave)),

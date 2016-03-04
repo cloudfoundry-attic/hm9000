@@ -43,12 +43,12 @@ type FakeMetricsAccountant struct {
 	trackDesiredStateSyncTimeReturns struct {
 		result1 error
 	}
-	TrackActualStateListenerStoreUsageFractionStub        func(usage float64) error
-	trackActualStateListenerStoreUsageFractionMutex       sync.RWMutex
-	trackActualStateListenerStoreUsageFractionArgsForCall []struct {
+	TrackActualStateStoreUsageFractionStub        func(usage float64) error
+	trackActualStateStoreUsageFractionMutex       sync.RWMutex
+	trackActualStateStoreUsageFractionArgsForCall []struct {
 		usage float64
 	}
-	trackActualStateListenerStoreUsageFractionReturns struct {
+	trackActualStateStoreUsageFractionReturns struct {
 		result1 error
 	}
 }
@@ -182,34 +182,34 @@ func (fake *FakeMetricsAccountant) TrackDesiredStateSyncTimeReturns(result1 erro
 	}{result1}
 }
 
-func (fake *FakeMetricsAccountant) TrackActualStateListenerStoreUsageFraction(usage float64) error {
-	fake.trackActualStateListenerStoreUsageFractionMutex.Lock()
-	fake.trackActualStateListenerStoreUsageFractionArgsForCall = append(fake.trackActualStateListenerStoreUsageFractionArgsForCall, struct {
+func (fake *FakeMetricsAccountant) TrackActualStateStoreUsageFraction(usage float64) error {
+	fake.trackActualStateStoreUsageFractionMutex.Lock()
+	fake.trackActualStateStoreUsageFractionArgsForCall = append(fake.trackActualStateStoreUsageFractionArgsForCall, struct {
 		usage float64
 	}{usage})
-	fake.trackActualStateListenerStoreUsageFractionMutex.Unlock()
-	if fake.TrackActualStateListenerStoreUsageFractionStub != nil {
-		return fake.TrackActualStateListenerStoreUsageFractionStub(usage)
+	fake.trackActualStateStoreUsageFractionMutex.Unlock()
+	if fake.TrackActualStateStoreUsageFractionStub != nil {
+		return fake.TrackActualStateStoreUsageFractionStub(usage)
 	} else {
-		return fake.trackActualStateListenerStoreUsageFractionReturns.result1
+		return fake.trackActualStateStoreUsageFractionReturns.result1
 	}
 }
 
-func (fake *FakeMetricsAccountant) TrackActualStateListenerStoreUsageFractionCallCount() int {
-	fake.trackActualStateListenerStoreUsageFractionMutex.RLock()
-	defer fake.trackActualStateListenerStoreUsageFractionMutex.RUnlock()
-	return len(fake.trackActualStateListenerStoreUsageFractionArgsForCall)
+func (fake *FakeMetricsAccountant) TrackActualStateStoreUsageFractionCallCount() int {
+	fake.trackActualStateStoreUsageFractionMutex.RLock()
+	defer fake.trackActualStateStoreUsageFractionMutex.RUnlock()
+	return len(fake.trackActualStateStoreUsageFractionArgsForCall)
 }
 
-func (fake *FakeMetricsAccountant) TrackActualStateListenerStoreUsageFractionArgsForCall(i int) float64 {
-	fake.trackActualStateListenerStoreUsageFractionMutex.RLock()
-	defer fake.trackActualStateListenerStoreUsageFractionMutex.RUnlock()
-	return fake.trackActualStateListenerStoreUsageFractionArgsForCall[i].usage
+func (fake *FakeMetricsAccountant) TrackActualStateStoreUsageFractionArgsForCall(i int) float64 {
+	fake.trackActualStateStoreUsageFractionMutex.RLock()
+	defer fake.trackActualStateStoreUsageFractionMutex.RUnlock()
+	return fake.trackActualStateStoreUsageFractionArgsForCall[i].usage
 }
 
-func (fake *FakeMetricsAccountant) TrackActualStateListenerStoreUsageFractionReturns(result1 error) {
-	fake.TrackActualStateListenerStoreUsageFractionStub = nil
-	fake.trackActualStateListenerStoreUsageFractionReturns = struct {
+func (fake *FakeMetricsAccountant) TrackActualStateStoreUsageFractionReturns(result1 error) {
+	fake.TrackActualStateStoreUsageFractionStub = nil
+	fake.trackActualStateStoreUsageFractionReturns = struct {
 		result1 error
 	}{result1}
 }

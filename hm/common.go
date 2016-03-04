@@ -9,7 +9,6 @@ import (
 
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/storeadapter"
@@ -17,11 +16,12 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/nats-io/nats"
 	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/lager"
 
 	"os"
 )
 
-func buildClock(l logger.Logger) clock.Clock {
+func buildClock(l lager.Logger) clock.Clock {
 	if os.Getenv("HM9000_FAKE_TIME") == "" {
 		return clock.NewClock()
 	} else {
@@ -34,7 +34,7 @@ func buildClock(l logger.Logger) clock.Clock {
 	}
 }
 
-func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSConn {
+func connectToMessageBus(l lager.Logger, conf *config.Config) yagnats.NATSConn {
 	members := make([]string, len(conf.NATS))
 
 	for _, natsConf := range conf.NATS {
@@ -65,7 +65,7 @@ func connectToMessageBus(l logger.Logger, conf *config.Config) yagnats.NATSConn 
 	return natsClient
 }
 
-func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
+func acquireLock(l lager.Logger, conf *config.Config, lockName string) chan chan bool {
 	adapter := connectToStoreAdapter(l, conf)
 	l.Info("Acquiring lock for " + lockName)
 
@@ -74,7 +74,7 @@ func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
 		TTL: 10,
 	}
 
-	status, _, err := adapter.MaintainNode(lock)
+	status, lockChannel, err := adapter.MaintainNode(lock)
 	if err != nil {
 		l.Error("Failed to talk to lock store", err)
 		os.Exit(1)
@@ -98,9 +98,10 @@ func acquireLock(l logger.Logger, conf *config.Config, lockName string) {
 
 	<-lockAcquired
 	l.Info("Acquired lock for " + lockName)
+	return lockChannel
 }
 
-func connectToStoreAdapter(l logger.Logger, conf *config.Config) storeadapter.StoreAdapter {
+func connectToStoreAdapter(l lager.Logger, conf *config.Config) storeadapter.StoreAdapter {
 	var adapter storeadapter.StoreAdapter
 	workPool, err := workpool.NewWorkPool(conf.StoreMaxConcurrentRequests)
 	if err != nil {
@@ -126,12 +127,12 @@ func connectToStoreAdapter(l logger.Logger, conf *config.Config) storeadapter.St
 	return adapter
 }
 
-func connectToStore(l logger.Logger, conf *config.Config) store.Store {
+func connectToStore(l lager.Logger, conf *config.Config) store.Store {
 	adapter := connectToStoreAdapter(l, conf)
 	return store.NewStore(conf, adapter, l)
 }
 
-func connectToStoreAndTrack(l logger.Logger, conf *config.Config) (store.Store, metricsaccountant.UsageTracker) {
+func connectToStoreAndTrack(l lager.Logger, conf *config.Config) (store.Store, metricsaccountant.UsageTracker) {
 	tracker := newUsageTracker(conf.StoreMaxConcurrentRequests)
 	adapter := connectToStoreAdapter(l, conf)
 	return store.NewStore(conf, adapter, l), tracker

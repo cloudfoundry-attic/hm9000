@@ -70,7 +70,7 @@ var _ = Describe("Evacuation and Shutdown", func() {
 					runningHeartbeat := app.InstanceAtIndex(0).Heartbeat()
 					runningHeartbeat.InstanceGuid = models.Guid()
 					simulator.SetCurrentHeartbeats(dea.HeartbeatWith(evacuatingHeartbeat))
-					simulator.SetCurrentHeartbeats(models.Heartbeat{
+					simulator.SetCurrentHeartbeats(&models.Heartbeat{
 						DeaGuid:            "new-dea",
 						InstanceHeartbeats: []models.InstanceHeartbeat{runningHeartbeat},
 					})

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
+	"github.com/pivotal-golang/lager"
 )
 
 var ActualIsNotFreshError = errors.New("Actual state is not fresh")
@@ -42,7 +42,7 @@ type Store interface {
 	SyncDesiredState(desiredStates ...models.DesiredAppState) error
 	GetDesiredState() (map[string]models.DesiredAppState, error)
 
-	SyncHeartbeats(heartbeat ...models.Heartbeat) error
+	SyncHeartbeats(heartbeat ...*models.Heartbeat) error
 	GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
 	GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
 
@@ -65,14 +65,14 @@ type Store interface {
 type RealStore struct {
 	config  *config.Config
 	adapter storeadapter.StoreAdapter
-	logger  logger.Logger
+	logger  lager.Logger
 
 	instanceHeartbeatCache          map[string]models.InstanceHeartbeat
 	instanceHeartbeatCacheMutex     *sync.Mutex
 	instanceHeartbeatCacheTimestamp time.Time
 }
 
-func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger logger.Logger) *RealStore {
+func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger lager.Logger) *RealStore {
 	return &RealStore{
 		config:                          config,
 		adapter:                         adapter,
@@ -116,7 +116,7 @@ func (store *RealStore) save(stuff interface{}, root string, ttl uint64) error {
 
 	err := store.adapter.SetMulti(nodes)
 
-	store.logger.Debug(fmt.Sprintf("Save Duration %s", root), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Save Duration %s", root), lager.Data{
 		"Number of Items": fmt.Sprintf("%d", arrValue.Len()),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
@@ -141,7 +141,7 @@ func (store *RealStore) get(root string, mapType reflect.Type, constructor refle
 		mapToReturn.SetMapIndex(reflect.ValueOf(item.StoreKey()), out[0])
 	}
 
-	store.logger.Debug(fmt.Sprintf("Get Duration %s", root), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Get Duration %s", root), lager.Data{
 		"Number of Items": fmt.Sprintf("%d", mapToReturn.Len()),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})
@@ -160,7 +160,7 @@ func (store *RealStore) delete(stuff interface{}, root string) error {
 
 	err := store.adapter.Delete(keysToDelete...)
 
-	store.logger.Debug(fmt.Sprintf("Delete Duration %s", root), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Delete Duration %s", root), lager.Data{
 		"Number of Items": fmt.Sprintf("%d", arrValue.Len()),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})

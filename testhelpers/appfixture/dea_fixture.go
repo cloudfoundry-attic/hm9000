@@ -25,20 +25,20 @@ func (dea DeaFixture) GetApp(index int) AppFixture {
 	return dea.apps[index]
 }
 
-func (dea DeaFixture) Heartbeat(numApps int) models.Heartbeat {
+func (dea DeaFixture) Heartbeat(numApps int) *models.Heartbeat {
 	instanceHeartbeats := make([]models.InstanceHeartbeat, 0)
 	for i := 0; i < numApps; i++ {
 		instanceHeartbeats = append(instanceHeartbeats, dea.GetApp(i).InstanceAtIndex(0).Heartbeat())
 	}
 
-	return models.Heartbeat{
+	return &models.Heartbeat{
 		DeaGuid:            dea.DeaGuid,
 		InstanceHeartbeats: instanceHeartbeats,
 	}
 }
 
-func (dea DeaFixture) HeartbeatWith(instanceHeartbeats ...models.InstanceHeartbeat) models.Heartbeat {
-	return models.Heartbeat{
+func (dea DeaFixture) HeartbeatWith(instanceHeartbeats ...models.InstanceHeartbeat) *models.Heartbeat {
+	return &models.Heartbeat{
 		DeaGuid:            dea.DeaGuid,
 		InstanceHeartbeats: instanceHeartbeats,
 	}

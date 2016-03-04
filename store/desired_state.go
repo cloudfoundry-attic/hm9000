@@ -2,10 +2,12 @@ package store
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/storeadapter"
 	"strings"
 	"time"
+
+	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/pivotal-golang/lager"
 )
 
 func (store *RealStore) desiredStateStoreKey(desiredState models.DesiredAppState) string {
@@ -61,7 +63,7 @@ func (store *RealStore) SyncDesiredState(newDesiredStates ...models.DesiredAppSt
 		return err
 	}
 
-	store.logger.Debug(fmt.Sprintf("Save Duration Desired"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Save Duration Desired"), lager.Data{
 		"Number of Items Synced":  fmt.Sprintf("%d", len(newDesiredStates)),
 		"Number of Items Saved":   fmt.Sprintf("%d", len(nodesToSave)),
 		"Number of Items Deleted": fmt.Sprintf("%d", len(keysToDelete)),
@@ -98,7 +100,7 @@ func (store *RealStore) GetDesiredState() (results map[string]models.DesiredAppS
 		results[desiredState.StoreKey()] = desiredState
 	}
 
-	store.logger.Debug(fmt.Sprintf("Get Duration Desired"), map[string]string{
+	store.logger.Debug(fmt.Sprintf("Get Duration Desired"), lager.Data{
 		"Number of Items": fmt.Sprintf("%d", len(results)),
 		"Duration":        fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
 	})

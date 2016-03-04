@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type PendingStartMessageReason string
@@ -59,8 +61,8 @@ func newPendingMessage(now time.Time, delayInSeconds int, keepAliveInSeconds int
 	}
 }
 
-func (message PendingMessage) pendingLogDescription() map[string]string {
-	return map[string]string{
+func (message PendingMessage) pendingLogDescription() lager.Data {
+	return lager.Data{
 		"SendOn":     time.Unix(message.SendOn, 0).String(),
 		"SentOn":     time.Unix(message.SentOn, 0).String(),
 		"KeepAlive":  strconv.Itoa(int(message.KeepAlive)),
@@ -140,7 +142,7 @@ func (message PendingStartMessage) ToJSON() []byte {
 	return encoded
 }
 
-func (message PendingStartMessage) LogDescription() map[string]string {
+func (message PendingStartMessage) LogDescription() lager.Data {
 	base := message.pendingLogDescription()
 	base["IndexToStart"] = strconv.Itoa(message.IndexToStart)
 	base["SkipVerification"] = strconv.FormatBool(message.SkipVerification)
@@ -182,7 +184,7 @@ func (message PendingStopMessage) StoreKey() string {
 	return message.InstanceGuid
 }
 
-func (message PendingStopMessage) LogDescription() map[string]string {
+func (message PendingStopMessage) LogDescription() lager.Data {
 	base := message.pendingLogDescription()
 	base["InstanceGuid"] = message.InstanceGuid
 	base["StopReason"] = string(message.StopReason)

@@ -13,7 +13,7 @@ var _ = Describe("Stopping Duplicate Instances", func() {
 
 	Context("when there are multiple instances on the same index", func() {
 		var instance0, instance1, duplicateInstance1 appfixture.Instance
-		var heartbeat models.Heartbeat
+		var heartbeat *models.Heartbeat
 		BeforeEach(func() {
 			dea = appfixture.NewDeaFixture()
 			a = dea.GetApp(0)

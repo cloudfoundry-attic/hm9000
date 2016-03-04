@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/lager"
 )
 
 type bulkHandler struct {
-	logger logger.Logger
+	logger lager.Logger
 	store  store.Store
 	clock  clock.Clock
 }
@@ -23,7 +23,7 @@ type AppStateRequest struct {
 	AppVersion string `json:"version"`
 }
 
-func NewBulkAppStateHandler(logger logger.Logger, store store.Store, clock clock.Clock) http.Handler {
+func NewBulkAppStateHandler(logger lager.Logger, store store.Store, clock clock.Clock) http.Handler {
 	return &bulkHandler{
 		logger: logger,
 		store:  store,
@@ -43,7 +43,7 @@ func (handler *bulkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal(bodyBytes, &requests)
 	if err != nil {
-		handler.logger.Error("Failed to handle bulk_app_state request", err, map[string]string{
+		handler.logger.Error("Failed to handle bulk_app_state request", err, lager.Data{
 			"payload":      string(bodyBytes),
 			"elapsed time": fmt.Sprintf("%s", time.Since(startTime)),
 		})
@@ -53,7 +53,7 @@ func (handler *bulkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err = handler.store.VerifyFreshness(handler.clock.Now())
 	if err != nil {
-		handler.logger.Error("Failed to handle bulk_app_state request", err, map[string]string{
+		handler.logger.Error("Failed to handle bulk_app_state request", err, lager.Data{
 			"payload":      string(bodyBytes),
 			"elapsed time": fmt.Sprintf("%s", time.Since(startTime)),
 		})
@@ -71,7 +71,7 @@ func (handler *bulkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	appsJson, err := json.Marshal(apps)
 	if err != nil {
-		handler.logger.Error("Failed to handle bulk_app_state request", err, map[string]string{
+		handler.logger.Error("Failed to handle bulk_app_state request", err, lager.Data{
 			"payload":      string(bodyBytes),
 			"elapsed time": fmt.Sprintf("%s", time.Since(startTime)),
 		})

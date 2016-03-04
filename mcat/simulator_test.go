@@ -16,7 +16,7 @@ type Simulator struct {
 	storeRunner            *etcdstorerunner.ETCDClusterRunner
 	store                  store.Store
 	desiredStateServer     *desiredstateserver.DesiredStateServer
-	currentHeartbeats      []models.Heartbeat
+	currentHeartbeats      []*models.Heartbeat
 	currentTimestamp       int
 	cliRunner              *CLIRunner
 	TicksToAttainFreshness int
@@ -74,6 +74,6 @@ func (s *Simulator) SetDesiredState(desiredStates ...models.DesiredAppState) {
 	s.desiredStateServer.SetDesiredState(desiredStates)
 }
 
-func (s *Simulator) SetCurrentHeartbeats(heartbeats ...models.Heartbeat) {
+func (s *Simulator) SetCurrentHeartbeats(heartbeats ...*models.Heartbeat) {
 	s.currentHeartbeats = heartbeats
 }

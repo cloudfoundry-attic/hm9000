@@ -44,7 +44,7 @@ type MetricsAccountant interface {
 	TrackSavedHeartbeats(metric int) error
 	IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error
 	TrackDesiredStateSyncTime(dt time.Duration) error
-	TrackActualStateListenerStoreUsageFraction(usage float64) error
+	TrackActualStateStoreUsageFraction(usage float64) error
 }
 
 type RealMetricsAccountant struct {
@@ -66,7 +66,7 @@ func (m *RealMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) erro
 	return metrics.SendValue(DesiredStateSyncTime, float64(dt/time.Millisecond), "ms")
 }
 
-func (m *RealMetricsAccountant) TrackActualStateListenerStoreUsageFraction(usage float64) error {
+func (m *RealMetricsAccountant) TrackActualStateStoreUsageFraction(usage float64) error {
 	return metrics.SendValue(ActualStateListenerStoreUsage, usage*100.0, "Metric")
 }
 

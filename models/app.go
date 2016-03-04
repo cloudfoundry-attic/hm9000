@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type App struct {
@@ -60,7 +62,7 @@ func (a *App) ToJSON() []byte {
 	return result
 }
 
-func (a *App) LogDescription() map[string]string {
+func (a *App) LogDescription() lager.Data {
 	var desired string
 	if a.IsDesired() {
 		desired = fmt.Sprintf(`{"NumberOfInstances":%d,"State":"%s","PackageState":"%s"}`, a.Desired.NumberOfInstances, a.Desired.State, a.Desired.PackageState)
@@ -78,7 +80,7 @@ func (a *App) LogDescription() map[string]string {
 		crashCounts = append(crashCounts, fmt.Sprintf(`{"InstanceIndex":%d, "CrashCount":%d}`, crashCount.InstanceIndex, crashCount.CrashCount))
 	}
 
-	return map[string]string{
+	return lager.Data{
 		"AppGuid":            a.AppGuid,
 		"AppVersion":         a.AppVersion,
 		"Desired":            desired,

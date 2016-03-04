@@ -404,7 +404,7 @@ var _ = Describe("Analyzer", func() {
 	})
 
 	Describe("Handling evacuating instances", func() {
-		var heartbeat models.Heartbeat
+		var heartbeat *models.Heartbeat
 		var evacuatingHeartbeat models.InstanceHeartbeat
 		BeforeEach(func() {
 			evacuatingHeartbeat = app.InstanceAtIndex(1).Heartbeat()
@@ -584,7 +584,7 @@ var _ = Describe("Analyzer", func() {
 	})
 
 	Describe("Handling crashed instances", func() {
-		var heartbeat models.Heartbeat
+		var heartbeat *models.Heartbeat
 		Context("When there are multiple crashed instances on the same index", func() {
 			JustBeforeEach(func() {
 				_, err := analyzer.Analyze()

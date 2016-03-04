@@ -1,27 +1,66 @@
 package analyzer
 
 import (
+	"errors"
+	"fmt"
+	"os"
+	"time"
+
 	"github.com/cloudfoundry/hm9000/config"
-	"github.com/cloudfoundry/hm9000/helpers/logger"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/lager"
 )
 
 type Analyzer struct {
 	store store.Store
 
-	logger logger.Logger
+	logger lager.Logger
 	clock  clock.Clock
 	conf   *config.Config
 }
 
-func New(store store.Store, clock clock.Clock, logger logger.Logger, conf *config.Config) *Analyzer {
+func New(store store.Store, clock clock.Clock, logger lager.Logger, conf *config.Config) *Analyzer {
 	return &Analyzer{
 		store:  store,
 		clock:  clock,
 		logger: logger,
 		conf:   conf,
+	}
+}
+
+func (analyzer *Analyzer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	close(ready)
+	for {
+		afterChan := time.After(analyzer.conf.AnalyzerPollingInterval())
+		timeoutChan := time.After(analyzer.conf.AnalyzerTimeout())
+		errorChan := make(chan error, 1)
+
+		t := time.Now()
+
+		go func() {
+			apps, err := analyzer.Analyze()
+			SendMetrics(apps, err)
+			errorChan <- err
+		}()
+
+		select {
+		case err := <-errorChan:
+			analyzer.logger.Info("ifrit time", lager.Data{
+				"Component": "analyzer",
+				"Duration":  fmt.Sprintf("%.4f", time.Since(t).Seconds()),
+			})
+			if err != nil {
+				analyzer.logger.Error("Analyzer returned an error. Continuing...", err)
+			}
+		case <-timeoutChan:
+			return errors.New("Analyzer timed out. Aborting!")
+		case <-signals:
+			return nil
+		}
+
+		<-afterChan
 	}
 }
 
