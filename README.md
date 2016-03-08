@@ -2,7 +2,7 @@
 
 HM 9000 is a rewrite of CloudFoundry's Health Manager.  HM 9000 is written in Golang and has a more modular architecture compared to the original ruby implementation.  HM 9000's dependencies are locked down in a separate repo, the [hm-workspace](https://github.com/cloudfoundry/hm-workspace).
 
-There are several Go Packages in this repository, each with a comprehensive set of unit tests.  In addition there is an integration test that excercises the interactions between the various components.  What follows is a detailed breakdown.
+There are several Go Packages in this repository, each with a comprehensive set of unit tests.  In addition there is an integration test that exercises the interactions between the various components.  What follows is a detailed breakdown.
 
 ## HM9000's Architecture and High-Availability
 
@@ -20,8 +20,8 @@ If HM9000 enters a bad state, the simplest solution - typically - is to delete t
 
 1. `bosh ssh` into each etcd node (`bosh vms` is your friend here.  We typically have `etcd_leader_z1/0`, `etcd_z1/0`, and `etcd_z2/0`)
 2. `monit stop etcd` on all the boxes (better to stop them all simultaenously!)
-3. Blow away (or move) the etcd storage directory.  It's located under `/var/vcap/store`
-4. `monit start etcd` on all the boxes
+3. Delete (or move) the etcd storage directory located under `/var/vcap/store`
+4. Run `monit start etcd` on each etcd node
 5. HM9000 should recover on its own.
 
 ### If Clustered etcd can't handle the load
@@ -39,34 +39,43 @@ To resolve this, you'll need to pick one of the HM9000 nodes (`hm9000_z1/0` or `
 
 ## Installing HM9000 locally
 
-Assuming you have `go` v1.4+ installed:
+Assuming you have `go` v1.5+ installed:
 
-1. Clone the HM-workspace:
+1. Clone `dea-hm-workspace` and its submodules:
 
-        $ cd $HOME
-        $ git clone https://github.com/cloudfoundry/hm-workspace
-        $ export GOPATH=$HOME/hm-workspace
-        $ export PATH=$HOME/hm-workspace/bin:$PATH
-        $ cd hm-workspace
-        $ git submodule update --init
+        $ cd $HOME (or other appropriate base directory)
+        $ git clone https://github.com/cloudfoundry/dea-hm-workspace
+        $ cd dea-hm-workspace
+        $ git submodule update --init --recursive
+        $ mkdir bin
+        $ export GOPATH=$PWD
+        $ export PATH=$PATH:$GOPATH/bin
 
-2. Install `etcd` to $GOPATH/bin
-    Download and install the version of etcd as specific from cf-release
+2. Download and install `gnatsd` (the version downloaded here is for linux-x64 - if you have a different platform, be sure to download the correct tarball):
 
-3. Start `etcd`.  Open a new terminal session and:
+        $ wget https://github.com/nats-io/gnatsd/releases/download/v0.7.2/gnatsd-v0.7.2-linux-amd64.tar.gz
+        $ tar xzf gnatsd-v0.7.2-linux-amd64.tar.gz
+        $ mv ./gnatsd $GOPATH/bin
 
-        $ cd $HOME
-        $ mkdir etcdstorage
-        $ cd etcdstorage
-        $ etcd
+3. Install `etcd` to $GOPATH/bin (the downloaded version here is for linux-x64 - if you have a different platform, be sure to download the correct tarball)
 
-    `etcd` generates a number of files in CWD when run locally, hence `etcdstorage`
+        $ wget https://github.com/coreos/etcd/releases/download/v2.2.4/etcd-v2.2.4-linux-amd64.tar.gz
+        $ tar xzf etcd-v2.2.4-linux-amd64.tar.gz
+        $ mv etcd-v2.2.4-linux-amd64/etcd $GOPATH/bin
 
-4. Running `hm9000`.  Back in the terminal you used to clone the hm-workspace you should be able to
+3. Start `etcd`:
 
-        $ hm9000
+        $ mkdir $HOME/etcdstorage
+        $ (cd $HOME/etcdstorage && etcd &)
 
-    and get usage information
+    `etcd` generates a number of files in the current working directory when run locally, hence `etcdstorage`
+
+4. Run `hm9000`:
+
+        $ go install github.com/cloudfoundry/hm9000
+        $ hm9000 <args>
+
+    and get usage information.  Run `hm9000 --help` to see supported commands.
 
 5. Running the tests
 
