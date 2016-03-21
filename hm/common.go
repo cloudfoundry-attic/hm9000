@@ -1,7 +1,6 @@
 package hm
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -57,7 +56,7 @@ func connectToMessageBus(l lager.Logger, conf *config.Config) yagnats.NATSConn {
 	})
 
 	natsClient.AddClosedCB(func(conn *nats.Conn) {
-		err := errors.New(fmt.Sprintf("NATS Client Closed. nats.Conn: %+v", conn))
+		err := fmt.Errorf("NATS Client Closed. nats.Conn: %+v", conn)
 		l.Error("NATS Closed", err)
 		os.Exit(1)
 	})

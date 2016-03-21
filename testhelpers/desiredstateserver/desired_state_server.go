@@ -11,14 +11,17 @@ import (
 )
 
 type DesiredStateServerInterface interface {
-	SpinUp(port int)
+	SpinUp()
 	SetDesiredState([]DesiredAppState)
+	URL() string
 }
 
 type DesiredStateServer struct {
 	mu                      sync.Mutex
 	Apps                    []DesiredAppState
 	NumberOfCompleteFetches int
+	port                    int
+	url                     string
 }
 
 type DesiredStateServerResponse struct {
@@ -35,11 +38,18 @@ func min(a, b int) int {
 	return a
 }
 
-func NewDesiredStateServer() *DesiredStateServer {
-	return &DesiredStateServer{}
+func NewDesiredStateServer(port int) *DesiredStateServer {
+	return &DesiredStateServer{
+		port: port,
+		url:  fmt.Sprintf("http://127.0.0.1:%d", port),
+	}
 }
 
-func (server *DesiredStateServer) SpinUp(port int) {
+func (server *DesiredStateServer) URL() string {
+	return server.url
+}
+
+func (server *DesiredStateServer) SpinUp() {
 	http.HandleFunc("/bulk/apps", func(w http.ResponseWriter, r *http.Request) {
 		server.handleApps(w, r)
 	})
@@ -48,7 +58,7 @@ func (server *DesiredStateServer) SpinUp(port int) {
 		fmt.Fprintf(w, `{"counts":{"user":17}}`)
 	})
 
-	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	http.ListenAndServe(fmt.Sprintf(":%d", server.port), nil)
 }
 
 func (server *DesiredStateServer) SetDesiredState(newState []DesiredAppState) {

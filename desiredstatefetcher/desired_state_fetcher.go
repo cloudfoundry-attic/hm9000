@@ -1,9 +1,7 @@
 package desiredstatefetcher
 
 import (
-	"errors"
 	"fmt"
-	"os"
 
 	"io/ioutil"
 	"net/http"
@@ -54,46 +52,6 @@ func New(config *config.Config,
 		clock:             clock,
 		cache:             map[string]models.DesiredAppState{},
 		logger:            logger,
-	}
-}
-
-func (fetcher *DesiredStateFetcher) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	close(ready)
-	for {
-		afterChan := time.After(fetcher.config.FetcherPollingInterval())
-		timeoutChan := time.After(fetcher.config.FetcherTimeout())
-		errorChan := make(chan error, 1)
-
-		t := time.Now()
-
-		go func() {
-			resultChan := make(chan DesiredStateFetcherResult, 1)
-			fetcher.Fetch(resultChan)
-			result := <-resultChan
-			if result.Success {
-				errorChan <- nil
-			} else {
-				fetcher.logger.Error(result.Message, result.Error)
-				errorChan <- result.Error
-			}
-		}()
-
-		select {
-		case err := <-errorChan:
-			fetcher.logger.Info("ifrit time", lager.Data{
-				"Component": "fetcher",
-				"Duration":  fmt.Sprintf("%.4f", time.Since(t).Seconds()),
-			})
-			if err != nil {
-				fetcher.logger.Error("Fetcher returned an error. Continuing...", err)
-			}
-		case <-timeoutChan:
-			return errors.New("Fetcher timed out. Aborting!")
-		case <-signals:
-			return nil
-		}
-
-		<-afterChan
 	}
 }
 

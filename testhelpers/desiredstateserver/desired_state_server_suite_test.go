@@ -1,14 +1,16 @@
 package desiredstateserver_test
 
 import (
+	"io/ioutil"
+
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	. "github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
 
 	"encoding/json"
 	"fmt"
+
 	. "github.com/cloudfoundry/hm9000/models"
 
 	"net/http"
@@ -26,23 +28,25 @@ var server *DesiredStateServer
 func TestDesiredStateServer(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	server = NewDesiredStateServer()
-	go server.SpinUp(6000)
-
 	RunSpecs(t, "Desired State Server Suite")
 }
+
+var _ = SynchronizedBeforeSuite(func() []byte {
+	return nil
+}, func([]byte) {
+	server = NewDesiredStateServer(6000 + 10*GinkgoParallelNode())
+	go server.SpinUp()
+})
 
 var _ = BeforeEach(func() {
 	server.Reset()
 })
 
 var _ = Describe("making requests", func() {
-	var serverURL = "http://localhost:6000"
-
 	Describe("/bulk/counts", func() {
 		var response UserCountResponse
 		BeforeEach(func(done Done) {
-			url := fmt.Sprintf("%s/bulk/counts?model=user", serverURL)
+			url := fmt.Sprintf("%s/bulk/counts?model=user", server.URL())
 			resp, err := http.Get(url)
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(resp.StatusCode).Should(Equal(http.StatusOK))
@@ -76,7 +80,7 @@ var _ = Describe("making requests", func() {
 		})
 
 		JustBeforeEach(func(done Done) {
-			url := fmt.Sprintf("%s/bulk/apps?batch_size=%d&bulk_token=%s", serverURL, batchSize, bulkTokenAsJson)
+			url := fmt.Sprintf("%s/bulk/apps?batch_size=%d&bulk_token=%s", server.URL(), batchSize, bulkTokenAsJson)
 			req, err := http.NewRequest("GET", url, nil)
 			Ω(err).ShouldNot(HaveOccurred())
 			if authorization != "" {

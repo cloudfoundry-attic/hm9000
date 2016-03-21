@@ -8,17 +8,11 @@ import (
 )
 
 func NewHttpClient(skipSSLVerification bool, timeout time.Duration) HttpClient {
-	dialFunc := func(network, addr string) (net.Conn, error) {
-		conn, err := net.DialTimeout(network, addr, timeout)
-		if err != nil {
-			return nil, err
-		}
-		conn.SetDeadline(time.Now().Add(timeout))
-		return conn, err
-	}
-
 	transport := &http.Transport{
-		Dial: dialFunc,
+		Dial: (&net.Dialer{
+			Timeout: timeout,
+		}).Dial,
+
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: skipSSLVerification,
 		},
@@ -27,6 +21,7 @@ func NewHttpClient(skipSSLVerification bool, timeout time.Duration) HttpClient {
 	return &RealHttpClient{
 		client: &http.Client{
 			Transport: transport,
+			Timeout:   timeout,
 		},
 	}
 }

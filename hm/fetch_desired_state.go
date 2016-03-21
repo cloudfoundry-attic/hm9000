@@ -9,24 +9,31 @@ import (
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 )
 
 func FetchDesiredState(l lager.Logger, conf *config.Config, poll bool) {
 	store := connectToStore(l, conf)
+	clock := buildClock(l)
+	client := httpclient.NewHttpClient(conf.SkipSSLVerification, conf.FetcherNetworkTimeout())
 
 	if poll {
-		l.Info("Starting Desired State Ifrit...")
+		l.Info("Starting Desired State Fetcher...")
 
-		f := desiredstatefetcher.New(conf,
-			store,
-			metricsaccountant.New(),
-			httpclient.NewHttpClient(conf.SkipSSLVerification, conf.FetcherNetworkTimeout()),
-			buildClock(l),
-			l,
-		)
+		f := &Component{
+			component:       "fetcher",
+			conf:            conf,
+			pollingInterval: conf.FetcherPollingInterval(),
+			timeout:         conf.FetcherTimeout(),
+			logger:          l,
+			action: func() error {
+				return fetchDesiredState(l, clock, client, conf, store)
+			},
+		}
 
-		err := ifritize("fetcher", conf, f, l)
+		err := ifritizeComponent(f)
+
 		if err != nil {
 			l.Error("Fetcher exited", err)
 			os.Exit(197)
@@ -35,7 +42,7 @@ func FetchDesiredState(l lager.Logger, conf *config.Config, poll bool) {
 		l.Info("exited")
 		os.Exit(0)
 	} else {
-		err := fetchDesiredState(l, conf, store)
+		err := fetchDesiredState(l, clock, client, conf, store)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -44,13 +51,14 @@ func FetchDesiredState(l lager.Logger, conf *config.Config, poll bool) {
 	}
 }
 
-func fetchDesiredState(l lager.Logger, conf *config.Config, store store.Store) error {
+func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, store store.Store) error {
 	l.Info("Fetching Desired State")
-	fetcher := desiredstatefetcher.New(conf,
+	fetcher := desiredstatefetcher.New(
+		conf,
 		store,
 		metricsaccountant.New(),
-		httpclient.NewHttpClient(conf.SkipSSLVerification, conf.FetcherNetworkTimeout()),
-		buildClock(l),
+		client,
+		clock,
 		l,
 	)
 
@@ -62,9 +70,8 @@ func fetchDesiredState(l lager.Logger, conf *config.Config, store store.Store) e
 	if result.Success {
 		l.Info("Success", lager.Data{"Number of Desired Apps Fetched": strconv.Itoa(result.NumResults)})
 		return nil
-	} else {
-		l.Error(result.Message, result.Error)
-		return result.Error
 	}
-	return nil
+
+	l.Error(result.Message, result.Error)
+	return result.Error
 }

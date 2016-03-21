@@ -1,6 +1,7 @@
 package evacuator_test
 
 import (
+	"errors"
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -47,91 +48,107 @@ var _ = Describe("Evacuator", func() {
 	JustBeforeEach(func() {
 		evacuator = New(messageBus, store, clock, conf, fakelogger.NewFakeLogger())
 		evacuatorProcess = ifrit.Background(evacuator)
-		Eventually(evacuatorProcess.Ready()).Should(BeClosed())
 	})
 
 	AfterEach(func() {
 		ginkgomon.Kill(evacuatorProcess)
 	})
 
-	It("should be listening on the message bus for droplet.exited", func() {
-		Expect(messageBus.SubjectCallbacks("droplet.exited")).NotTo(BeNil())
+	Context("when the subscription fails", func() {
+		BeforeEach(func() {
+			messageBus.WhenSubscribing("droplet.exited",
+				func(nats.MsgHandler) error { return errors.New("an error") })
+		})
+
+		It("fails", func() {
+			Eventually(evacuatorProcess.Wait()).Should(Receive(HaveOccurred()))
+		})
 	})
 
-	Context("when droplet.exited is received", func() {
-		Context("when the message is malformed", func() {
-			It("does nothing", func() {
-				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
-					Data: []byte("ß"),
-				})
-
-				pendingStarts, err := store.GetPendingStartMessages()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pendingStarts).To(BeEmpty())
-			})
+	Context("when the subscription succeeds", func() {
+		JustBeforeEach(func() {
+			Eventually(evacuatorProcess.Ready()).Should(BeClosed())
 		})
 
-		Context("when the reason is DEA_EVACUATION", func() {
-			JustBeforeEach(func() {
-				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
-					Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonDEAEvacuation).ToJSON(),
-				})
-			})
-
-			It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
-				pendingStarts, err := store.GetPendingStartMessages()
-				Expect(err).NotTo(HaveOccurred())
-
-				expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
-				expectedStartMessage.SkipVerification = true
-
-				Expect(pendingStarts).To(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
-			})
+		It("should be listening on the message bus for droplet.exited", func() {
+			Expect(messageBus.SubjectCallbacks("droplet.exited")).NotTo(BeNil())
 		})
 
-		Context("when the reason is DEA_SHUTDOWN", func() {
-			JustBeforeEach(func() {
-				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
-					Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonDEAShutdown).ToJSON(),
+		Context("when droplet.exited is received", func() {
+			Context("when the message is malformed", func() {
+				It("does nothing", func() {
+					messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
+						Data: []byte("ß"),
+					})
+
+					pendingStarts, err := store.GetPendingStartMessages()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pendingStarts).To(BeEmpty())
 				})
 			})
 
-			It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
-				pendingStarts, err := store.GetPendingStartMessages()
-				Expect(err).NotTo(HaveOccurred())
+			Context("when the reason is DEA_EVACUATION", func() {
+				JustBeforeEach(func() {
+					messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
+						Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonDEAEvacuation).ToJSON(),
+					})
+				})
 
-				expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
-				expectedStartMessage.SkipVerification = true
+				It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
+					pendingStarts, err := store.GetPendingStartMessages()
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(pendingStarts).To(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
-			})
-		})
+					expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+					expectedStartMessage.SkipVerification = true
 
-		Context("when the reason is STOPPED", func() {
-			JustBeforeEach(func() {
-				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
-					Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonStopped).ToJSON(),
+					Expect(pendingStarts).To(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
 				})
 			})
 
-			It("should do nothing", func() {
-				pendingStarts, err := store.GetPendingStartMessages()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pendingStarts).To(BeEmpty())
-			})
-		})
+			Context("when the reason is DEA_SHUTDOWN", func() {
+				JustBeforeEach(func() {
+					messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
+						Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonDEAShutdown).ToJSON(),
+					})
+				})
 
-		Context("when the reason is CRASHED", func() {
-			JustBeforeEach(func() {
-				messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
-					Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonCrashed).ToJSON(),
+				It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
+					pendingStarts, err := store.GetPendingStartMessages()
+					Expect(err).NotTo(HaveOccurred())
+
+					expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
+					expectedStartMessage.SkipVerification = true
+
+					Expect(pendingStarts).To(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
 				})
 			})
 
-			It("should do nothing", func() {
-				pendingStarts, err := store.GetPendingStartMessages()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pendingStarts).To(BeEmpty())
+			Context("when the reason is STOPPED", func() {
+				JustBeforeEach(func() {
+					messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
+						Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonStopped).ToJSON(),
+					})
+				})
+
+				It("should do nothing", func() {
+					pendingStarts, err := store.GetPendingStartMessages()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pendingStarts).To(BeEmpty())
+				})
+			})
+
+			Context("when the reason is CRASHED", func() {
+				JustBeforeEach(func() {
+					messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
+						Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonCrashed).ToJSON(),
+					})
+				})
+
+				It("should do nothing", func() {
+					pendingStarts, err := store.GetPendingStartMessages()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pendingStarts).To(BeEmpty())
+				})
 			})
 		})
 	})

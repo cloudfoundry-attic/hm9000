@@ -18,12 +18,25 @@ func Send(l lager.Logger, conf *config.Config, poll bool) {
 	clock := buildClock(l)
 
 	if poll {
-		sender := sender.New(store, metricsaccountant.New(), conf, messageBus, l, clock)
-		err := ifritize("Sender", conf, sender, l)
+		l.Info("Starting Sender Daemon...")
+		s := &Component{
+			component:       "sender",
+			conf:            conf,
+			pollingInterval: conf.SenderPollingInterval(),
+			timeout:         conf.SenderTimeout(),
+			logger:          l,
+			action: func() error {
+				return send(l, conf, messageBus, store, clock)
+			},
+		}
+
+		err := ifritizeComponent(s)
+
 		if err != nil {
 			l.Error("Sender Daemon Errored", err)
 			os.Exit(197)
 		}
+
 		l.Info("Sender Daemon is Down")
 		os.Exit(0)
 	} else {
@@ -45,8 +58,8 @@ func send(l lager.Logger, conf *config.Config, messageBus yagnats.NATSConn, stor
 	if err != nil {
 		l.Error("Sender failed with error", err)
 		return err
-	} else {
-		l.Info("Sender completed succesfully")
-		return nil
 	}
+
+	l.Info("Sender completed succesfully")
+	return nil
 }

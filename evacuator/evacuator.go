@@ -31,8 +31,9 @@ func New(messageBus yagnats.NATSConn, store store.Store, clock clock.Clock, conf
 	}
 }
 
-func (e *Evacuator) Listen() {
-	e.sub, _ = e.messageBus.Subscribe("droplet.exited", func(message *nats.Msg) {
+func (e *Evacuator) listen() error {
+	var err error
+	e.sub, err = e.messageBus.Subscribe("droplet.exited", func(message *nats.Msg) {
 		dropletExited, err := models.NewDropletExitedFromJSON([]byte(message.Data))
 		if err != nil {
 			e.logger.Error("Failed to parse droplet exited message", err)
@@ -41,11 +42,17 @@ func (e *Evacuator) Listen() {
 
 		e.handleExited(dropletExited)
 	})
+
+	return err
 }
 
 func (e *Evacuator) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	e.Listen()
 	e.logger.Info("Listening for DEA Evacuations")
+	err := e.listen()
+	if err != nil {
+		return err
+	}
+
 	close(ready)
 	select {
 	case <-signals:

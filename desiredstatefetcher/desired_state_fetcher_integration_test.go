@@ -41,6 +41,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		})
 
 		conf, _ = config.DefaultConfig()
+		conf.CCBaseURL = stateServer.URL()
 
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 
@@ -51,14 +52,14 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 	It("requests for the first set of data from the CC and stores the response", func() {
 		var desired map[string]models.DesiredAppState
 		var err error
-		Eventually(func() interface{} {
+		Eventually(func() map[string]models.DesiredAppState {
 			desired, err = store.GetDesiredState()
 			return desired
 		}, 1, 0.1).ShouldNot(BeEmpty())
 
-		Ω(desired).Should(HaveKey(a1.AppGuid + "," + a1.AppVersion))
-		Ω(desired).Should(HaveKey(a2.AppGuid + "," + a2.AppVersion))
-		Ω(desired).Should(HaveKey(a3.AppGuid + "," + a3.AppVersion))
+		Expect(desired).To(HaveKey(a1.AppGuid + "," + a1.AppVersion))
+		Expect(desired).To(HaveKey(a2.AppGuid + "," + a2.AppVersion))
+		Expect(desired).To(HaveKey(a3.AppGuid + "," + a3.AppVersion))
 	})
 
 	It("bumps the freshness", func() {
@@ -69,16 +70,17 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 	})
 
 	It("reports success to the channel", func() {
-		result := <-resultChan
-		Ω(result.Success).Should(BeTrue())
-		Ω(result.NumResults).Should(Equal(3))
-		Ω(result.Message).Should(BeZero())
-		Ω(result.Error).ShouldNot(HaveOccurred())
+		var result desiredstatefetcher.DesiredStateFetcherResult
+		Eventually(resultChan).Should(Receive(&result))
+		Expect(result.Success).To(BeTrue())
+		Expect(result.NumResults).To(Equal(3))
+		Expect(result.Message).To(BeZero())
+		Expect(result.Error).NotTo(HaveOccurred())
 	})
 
 	Context("when fetching again, and apps have been stopped and/or deleted", func() {
 		BeforeEach(func() {
-			<-resultChan
+			Eventually(resultChan).Should(Receive())
 
 			desired1 := a1.DesiredState(1)
 			desired1.State = models.AppStateStopped
@@ -92,12 +94,12 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		})
 
 		It("should remove those apps from the store", func() {
-			<-resultChan
+			Eventually(resultChan).Should(Receive())
 
 			desired, err := store.GetDesiredState()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(desired).Should(HaveLen(1))
-			Ω(desired).Should(HaveKey(a3.AppGuid + "," + a3.AppVersion))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(desired).To(HaveLen(1))
+			Expect(desired).To(HaveKey(a3.AppGuid + "," + a3.AppVersion))
 		})
 	})
 })

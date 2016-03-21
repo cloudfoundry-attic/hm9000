@@ -13,8 +13,18 @@ func Shred(l lager.Logger, conf *config.Config, poll bool) {
 	store := connectToStore(l, conf)
 
 	if poll {
-		shredder := shredder.New(store, conf, l)
-		err := ifritize("shredder", conf, shredder, l)
+		s := &Component{
+			component:       "shredder",
+			conf:            conf,
+			pollingInterval: conf.ShredderPollingInterval(),
+			timeout:         conf.ShredderTimeout(),
+			logger:          l,
+			action: func() error {
+				return shred(l, store)
+			},
+		}
+
+		err := ifritizeComponent(s)
 
 		if err != nil {
 			l.Error("Shredder Exiting on error", err)
@@ -23,7 +33,7 @@ func Shred(l lager.Logger, conf *config.Config, poll bool) {
 		l.Info("Shredder Ifrit exited normally")
 		os.Exit(1)
 	} else {
-		err := shred(l, store, conf)
+		err := shred(l, store)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -32,8 +42,8 @@ func Shred(l lager.Logger, conf *config.Config, poll bool) {
 	}
 }
 
-func shred(l lager.Logger, store store.Store, conf *config.Config) error {
+func shred(l lager.Logger, store store.Store) error {
 	l.Info("Shredding Store")
-	theShredder := shredder.New(store, conf, l)
+	theShredder := shredder.New(store, l)
 	return theShredder.Shred()
 }

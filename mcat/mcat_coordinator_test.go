@@ -110,8 +110,8 @@ func (coordinator *MCATCoordinator) StartNats() {
 }
 
 func (coordinator *MCATCoordinator) StartDesiredStateServer() {
-	coordinator.StateServer = desiredstateserver.NewDesiredStateServer()
-	go coordinator.StateServer.SpinUp(coordinator.DesiredStateServerPort)
+	coordinator.StateServer = desiredstateserver.NewDesiredStateServer(coordinator.DesiredStateServerPort)
+	go coordinator.StateServer.SpinUp()
 }
 
 func (coordinator *MCATCoordinator) StartStartStopListener() {

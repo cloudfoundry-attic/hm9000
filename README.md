@@ -87,7 +87,7 @@ Assuming you have `go` v1.5+ installed:
 
         $ go get github.com/onsi/ginkgo/ginkgo
         $ cd src/github.com/cloudfoundry/hm9000/
-        $ ginkgo -r -skipMeasurements -race -failOnPending -randomizeAllSpecs
+        $ ginkgo -r -p -skipMeasurements -race -failOnPending -randomizeAllSpecs
 
     These tests will spin up their own instances of `etcd` as needed.  It shouldn't interfere with your long-running `etcd` server.
 
