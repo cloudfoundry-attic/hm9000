@@ -43,6 +43,7 @@ func (listener *heartbeatListener) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	listener.logger.Debug("Got an HTTP heartbeat")
 
 	bodyBytes, err := ioutil.ReadAll(r.Body)
+	r.Body.Close()
 	if err != nil || len(bodyBytes) == 0 {
 		listener.logger.Error("Failed to read dea heartbeat body", err)
 		w.WriteHeader(http.StatusBadRequest)

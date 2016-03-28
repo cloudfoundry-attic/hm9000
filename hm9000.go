@@ -160,7 +160,7 @@ func loadLoggerAndConfig(c *cli.Context, component string) (lager.Logger, *confi
 
 	logger = lager.NewLogger(component)
 
-	logger.RegisterSink(lager.NewReconfigurableSink(lager.NewWriterSink(os.Stdout, lager.DEBUG), lager.DEBUG))
+	logger.RegisterSink(lager.NewReconfigurableSink(lager.NewWriterSink(os.Stdout, conf.LogLevel()), conf.LogLevel()))
 
 	debugAddr := c.String("debugAddr")
 	if debugAddr != "" {

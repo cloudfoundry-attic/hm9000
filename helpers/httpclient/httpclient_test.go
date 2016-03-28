@@ -1,7 +1,6 @@
 package httpclient_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -40,7 +39,6 @@ var _ = Describe("Httpclient", func() {
 		It("should return the correct response", func() {
 			request, _ := http.NewRequest("GET", url+"/sleep?time=0", nil)
 			client.Do(request, func(response *http.Response, err error) {
-				fmt.Println(err)
 				Expect(err).NotTo(HaveOccurred())
 				defer response.Body.Close()
 				body, err := ioutil.ReadAll(response.Body)

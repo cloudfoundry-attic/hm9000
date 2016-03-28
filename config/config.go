@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
+	"github.com/pivotal-golang/lager"
 )
 
 type Config struct {
@@ -195,14 +195,14 @@ func (conf *Config) StoreHeartbeatCacheRefreshInterval() time.Duration {
 	return time.Millisecond * time.Duration(conf.StoreHeartbeatCacheRefreshIntervalInMilliseconds)
 }
 
-func (conf *Config) LogLevel() gosteno.LogLevel {
+func (conf *Config) LogLevel() lager.LogLevel {
 	switch conf.LogLevelString {
 	case "INFO":
-		return gosteno.LOG_INFO
+		return lager.INFO
 	case "DEBUG":
-		return gosteno.LOG_DEBUG
+		return lager.DEBUG
 	default:
-		return gosteno.LOG_INFO
+		return lager.INFO
 	}
 }
 

@@ -4,10 +4,10 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	. "github.com/cloudfoundry/hm9000/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Config", func() {
@@ -143,11 +143,11 @@ var _ = Describe("Config", func() {
 		It("should support INFO and DEBUG", func() {
 			config, _ := FromJSON([]byte(configJSON))
 			config.LogLevelString = "INFO"
-			Expect(config.LogLevel()).To(Equal(gosteno.LOG_INFO))
+			Expect(config.LogLevel()).To(Equal(lager.INFO))
 			config.LogLevelString = "DEBUG"
-			Expect(config.LogLevel()).To(Equal(gosteno.LOG_DEBUG))
+			Expect(config.LogLevel()).To(Equal(lager.DEBUG))
 			config.LogLevelString = "Eggplant"
-			Expect(config.LogLevel()).To(Equal(gosteno.LOG_INFO))
+			Expect(config.LogLevel()).To(Equal(lager.INFO))
 		})
 	})
 
