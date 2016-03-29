@@ -56,7 +56,7 @@ func StartListeningForActual(logger lager.Logger, conf *config.Config) {
 		Name: "listener-hm9000",
 		Port: conf.HttpHeartbeatPort,
 		Check: &api.AgentServiceCheck{
-			TTL: fmt.Sprintf("%s", locket.LockTTL),
+			TTL: locket.LockTTL.String(),
 		},
 	}
 

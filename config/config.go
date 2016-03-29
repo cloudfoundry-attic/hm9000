@@ -60,7 +60,6 @@ type Config struct {
 	APIServerPassword string `json:"api_server_password"`
 
 	LogLevelString string `json:"log_level"`
-	LogDirectory   string `json:"log_directory"`
 
 	NATS []struct {
 		Host     string `json:"host"`

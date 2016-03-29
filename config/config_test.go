@@ -54,7 +54,6 @@ var _ = Describe("Config", func() {
         "api_server_password": "orangutan4sale",
         "api_server_address": "0.0.0.0",
         "log_level": "INFO",
-        "log_directory": "/some/path",
         "nats": [{
             "host": "127.0.0.1",
             "port": 4222,
@@ -128,7 +127,6 @@ var _ = Describe("Config", func() {
 			Expect(config.NATS[0].Password).To(Equal(""))
 
 			Expect(config.LogLevelString).To(Equal("INFO"))
-			Expect(config.LogDirectory).To(Equal("/some/path"))
 
 			Expect(config.DropsondePort).To(Equal(12344))
 
