@@ -138,14 +138,35 @@ var _ = Describe("Config", func() {
 	})
 
 	Describe("LogLevel", func() {
+		var config *Config
+
+		BeforeEach(func() {
+			config, _ = FromJSON([]byte(configJSON))
+		})
+
 		It("should support INFO and DEBUG", func() {
-			config, _ := FromJSON([]byte(configJSON))
 			config.LogLevelString = "INFO"
-			Expect(config.LogLevel()).To(Equal(lager.INFO))
+			logLevel, err := config.LogLevel()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(logLevel).To(Equal(lager.INFO))
+
 			config.LogLevelString = "DEBUG"
-			Expect(config.LogLevel()).To(Equal(lager.DEBUG))
+			logLevel, err = config.LogLevel()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(logLevel).To(Equal(lager.DEBUG))
+		})
+
+		It("defaults to INFO if no level is set", func() {
+			config.LogLevelString = ""
+			logLevel, err := config.LogLevel()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(logLevel).To(Equal(lager.INFO))
+		})
+
+		It("returns an error if there is an unrecognized log level", func() {
 			config.LogLevelString = "Eggplant"
-			Expect(config.LogLevel()).To(Equal(lager.INFO))
+			_, err := config.LogLevel()
+			Expect(err).To(HaveOccurred())
 		})
 	})
 

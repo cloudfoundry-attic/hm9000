@@ -2,6 +2,8 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -194,14 +196,16 @@ func (conf *Config) StoreHeartbeatCacheRefreshInterval() time.Duration {
 	return time.Millisecond * time.Duration(conf.StoreHeartbeatCacheRefreshIntervalInMilliseconds)
 }
 
-func (conf *Config) LogLevel() lager.LogLevel {
+func (conf *Config) LogLevel() (lager.LogLevel, error) {
 	switch conf.LogLevelString {
 	case "INFO":
-		return lager.INFO
+		return lager.INFO, nil
 	case "DEBUG":
-		return lager.DEBUG
+		return lager.DEBUG, nil
+	case "":
+		return lager.INFO, nil
 	default:
-		return lager.INFO
+		return 0, errors.New(fmt.Sprintf("Unknown log level %s", conf.LogLevelString))
 	}
 }
 
