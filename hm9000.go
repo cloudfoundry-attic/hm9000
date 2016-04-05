@@ -162,7 +162,7 @@ func loadLoggerAndConfig(c *cli.Context, component string) (lager.Logger, *confi
 
 	logLevel, err := conf.LogLevel()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+		fmt.Fprintf(os.Stderr, "Invalid log level in config: %s\n", err.Error())
 		os.Exit(1)
 	}
 
