@@ -12,6 +12,12 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+type SSL struct {
+	KeyFile        string `json:"key_file"`
+	ServerCertFile string `json:"cert_file"`
+	CACertFile     string `json:"ca_file"`
+}
+
 type Config struct {
 	HeartbeatPeriod                 uint64 `json:"heartbeat_period_in_seconds"`
 	HeartbeatTTLInHeartbeats        uint64 `json:"heartbeat_ttl_in_heartbeats"`
@@ -73,6 +79,8 @@ type Config struct {
 	HttpHeartbeatServerAddress string `json: "http_heartbeat_server_address"`
 	HttpHeartbeatPort          int    `json:"http_heartbeat_port"`
 
+	SSLCerts SSL `json:"ssl"`
+
 	DropsondePort int `json:"dropsonde_port"`
 
 	ConsulCluster string `json:"config_cluster"`
@@ -123,6 +131,8 @@ func defaults() Config {
 
 		HttpHeartbeatServerAddress: "0.0.0.0",
 		HttpHeartbeatPort:          5335,
+
+		SSLCerts: SSL{},
 
 		ConsulCluster: "http://127.0.0.1:8500",
 	}

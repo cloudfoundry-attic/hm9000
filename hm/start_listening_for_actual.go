@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cloudfoundry-incubator/cf_http"
 	"github.com/cloudfoundry-incubator/consuladapter"
 	"github.com/cloudfoundry-incubator/locket"
 	"github.com/cloudfoundry/hm9000/actualstatelisteners"
@@ -62,12 +63,17 @@ func StartListeningForActual(logger lager.Logger, conf *config.Config) {
 
 	registrationRunner := locket.NewRegistrationRunner(logger, registration, consulClient, locket.RetryInterval, clock)
 
+	tlsConfig, err := cf_http.NewTLSConfig(conf.SSLCerts.ServerCertFile, conf.SSLCerts.KeyFile, conf.SSLCerts.CACertFile)
+	if err != nil {
+		logger.Error("tls-configuration-failed", err)
+		os.Exit(1)
+	}
 	members := grouper.Members{
 		{"lockRunner", lockRunner},
 		{"syncer", syncer},
 		{"router_registration", registrationRunner},
 		{"nats_heartbeat_listener", natsListener},
-		{"http_heartbeat_listener", http_server.New(listenAddr, httpListener)},
+		{"http_heartbeat_listener", http_server.NewTLSServer(listenAddr, httpListener, tlsConfig)},
 	}
 
 	group := grouper.NewOrdered(os.Interrupt, members)

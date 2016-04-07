@@ -60,10 +60,11 @@ var _ = Describe("Config", func() {
             "user": "",
             "password": ""
         }],
-        "http_heartbeat": [{
-        	"server_address": "0.0.0.0",
-        	"port": 5335
-        }],
+		"ssl": {
+			"key_file": "/var/vcap/jobs/hm9000/config/certs/server.key",
+			"cert_file": "/var/vcap/jobs/hm9000/config/certs/server.crt",
+			"ca_file": "/var/vcap/jobs/hm9000/config/certs/ca.crt"
+		},
 		"dropsonde_port": 12344,
 		"consul_cluster": "http://127.0.0.1:8500"
     }
@@ -132,6 +133,9 @@ var _ = Describe("Config", func() {
 
 			Expect(config.HttpHeartbeatServerAddress).To(Equal("0.0.0.0"))
 			Expect(config.HttpHeartbeatPort).To(Equal(5335))
+			Expect(config.SSLCerts.KeyFile).To(Equal("/var/vcap/jobs/hm9000/config/certs/server.key"))
+			Expect(config.SSLCerts.ServerCertFile).To(Equal("/var/vcap/jobs/hm9000/config/certs/server.crt"))
+			Expect(config.SSLCerts.CACertFile).To(Equal("/var/vcap/jobs/hm9000/config/certs/ca.crt"))
 
 			Expect(config.ConsulCluster).To(Equal("http://127.0.0.1:8500"))
 		})

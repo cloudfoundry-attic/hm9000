@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/onsi/ginkgo"
@@ -58,6 +59,15 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.LogLevelString = "DEBUG"
 	conf.ConsulCluster = consulCluster
 	conf.HttpHeartbeatPort = int(5335 + ginkgo.GinkgoParallelNode())
+
+	keyFilepath, _ := filepath.Abs("../testhelpers/fake_certs/hm9000_server.key")
+	serverCertFilepath, _ := filepath.Abs("../testhelpers/fake_certs/hm9000_server.crt")
+	caCertFilepath, _ := filepath.Abs("../testhelpers/fake_certs/hm9000_ca.crt")
+	conf.SSLCerts = config.SSL{
+		KeyFile:        keyFilepath,
+		ServerCertFile: serverCertFilepath,
+		CACertFile:     caCertFilepath,
+	}
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Expect(err).NotTo(HaveOccurred())

@@ -18,6 +18,11 @@
 
     "log_level": "INFO",
 
+    "ssl":{
+        "key_file": "/var/vcap/jobs/hm9000/config/certs/server.key",
+        "cert_file": "/var/vcap/jobs/"
+    },
+
     "nats": [{
         "host": "127.0.0.1",
         "port": 4222,
