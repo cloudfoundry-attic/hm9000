@@ -69,8 +69,8 @@ var _ = Describe("HM9000Component", func() {
 		Eventually(actionChan).Should(Receive(&t3))
 		ginkgomon.Kill(proc)
 
-		Expect(t2.Sub(t1)).To(BeNumerically("~", pollingInterval, 10*time.Millisecond))
-		Expect(t3.Sub(t2)).To(BeNumerically("~", pollingInterval, 10*time.Millisecond))
+		Expect(t2.Sub(t1)).To(BeNumerically("~", pollingInterval, pollingInterval/2))
+		Expect(t3.Sub(t2)).To(BeNumerically("~", pollingInterval, pollingInterval/2))
 	})
 
 	Context("When the action returns an error", func() {
