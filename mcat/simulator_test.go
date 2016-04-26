@@ -49,9 +49,7 @@ func (s *Simulator) Tick(numTicks int) {
 		s.currentTimestamp += timeBetweenTicks
 		s.storeRunner.FastForwardTime(timeBetweenTicks)
 		s.sendHeartbeats()
-		s.cliRunner.Run("fetch_desired", s.currentTimestamp)
-		s.cliRunner.Run("analyze", s.currentTimestamp)
-		s.cliRunner.Run("send", s.currentTimestamp)
+		s.cliRunner.Run("manage_desired", s.currentTimestamp)
 	}
 }
 

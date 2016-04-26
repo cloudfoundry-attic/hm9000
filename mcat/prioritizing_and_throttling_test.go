@@ -57,28 +57,5 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 				Expect(highPriorityAppGuids).To(ContainElement(startMessage.AppGuid))
 			}
 		})
-
-		Context("when told to send again", func() {
-			BeforeEach(func() {
-				startStopListener.Reset()
-				cliRunner.Run("send", simulator.currentTimestamp)
-			})
-
-			It("should send the next batch of starts", func() {
-				Expect(startStopListener.StartCount()).To(Equal(8))
-				for i := 0; i < 8; i++ {
-					startMessage := startStopListener.Start(i)
-					if i == 0 {
-						Expect(highPriorityAppGuids).To(ContainElement(startMessage.AppGuid))
-					} else {
-						Expect(lowPriorityAppGuids).To(ContainElement(startMessage.AppGuid))
-					}
-				}
-			})
-
-			It("should not send anymore stops (as they were all sent)", func() {
-				Expect(startStopListener.StopCount()).To(Equal(0))
-			})
-		})
 	})
 })

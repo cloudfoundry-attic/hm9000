@@ -108,29 +108,17 @@ Assuming you have `go` v1.5+ installed:
 
 You *must* specify a config file for all the `hm9000` commands.  You do this with (e.g.) `--config=./local_config.json`
 
-### Fetching desired state
+### Managing desired state
 
-    hm9000 fetch_desired --config=./local_config.json
+    hm9000 manage_desired --config=./local_config.json
 
-will connect to CC, fetch the desired state, put it in the store, then exit.  You can optionally pass `-poll` to fetch desired state periodically.
+will connect to CC, fetch the desired state, put it in the store, compute the delta between desired and actual state, and then evaluate the pending starts and stops and publishes them over NATS.  You can optionally pass `-poll` to manage desired state periodically.
 
 ### Listening for actual state
 
     hm9000 listen --config=./local_config.json
 
 will come up, listen for heartbeat messages via NATS and HTTP, and put them in the store.
-
-### Analyzing the desired and actual state
-
-    hm9000 analyze --config=./local_config.json
-
-will come up, compare the desired/actual state, and submit start and stop messages to the store.  You can optionally pass `-poll` to analyze periodically.
-
-### Sending start and stop messages
-
-    hm9000 send --config=./local_config.json
-
-will come up, evaluate the pending starts and stops and publish them over NATS. You can optionally pass `-poll` to send messages periodically.
 
 ### Serving API
 
@@ -142,7 +130,7 @@ will come up and provide response to requests for `/bulk_app_state` over HTTP.
 
     hm9000 evacuator --config=./local_config.json
 
-will come up and listen for `droplet.exited` messages and send `start` messages for any evacuating droplets.  The `evacuator` is *not* necessary for deterministic evacuation but is provided for backward compatibility with old DEAs.  There is no harm in running the `evacuator` *during* deterministic evacuation.
+will come up and listen for `droplet.exited` messages and queue `start` messages for any evacuating droplets. Start messages will be sent when the desired_state_manager sends start and stop messages.  The `evacuator` is *not* necessary for deterministic evacuation but is provided for backward compatibility with old DEAs.  There is no harm in running the `evacuator` *during* deterministic evacuation.
 
 ### Shredder
 

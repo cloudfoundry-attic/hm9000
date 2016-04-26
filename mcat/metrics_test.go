@@ -38,11 +38,11 @@ var _ = Describe("Serving Metrics", func() {
 
 		It("should not count as an app with missing instances", func() {
 			Eventually(func() bool {
-				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", 0.0)
+				return metronAgent.MatchEvent("desired_state_manager", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", 0.0)
 			}).Should(BeTrue())
 
 			Consistently(func() bool {
-				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", 0.0)
+				return metronAgent.MatchEvent("desired_state_manager", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", 0.0)
 			}).Should(BeTrue())
 		})
 	})
@@ -55,13 +55,13 @@ var _ = Describe("Serving Metrics", func() {
 
 		It("should return the metrics", func() {
 			Eventually(func() bool {
-				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", 1.0)
+				return metronAgent.MatchEvent("desired_state_manager", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", 1.0)
 			}).Should(BeTrue())
 			Eventually(func() bool {
-				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfUndesiredRunningApps", 0.0)
+				return metronAgent.MatchEvent("desired_state_manager", events.Envelope_ValueMetric, "NumberOfUndesiredRunningApps", 0.0)
 			}).Should(BeTrue())
 			Eventually(func() bool {
-				return metronAgent.MatchEvent("sender", events.Envelope_CounterEvent, "StartMissing", 1.0)
+				return metronAgent.MatchEvent("desired_state_manager", events.Envelope_CounterEvent, "StartMissing", 1.0)
 			}).Should(BeTrue())
 		})
 	})
@@ -73,10 +73,10 @@ var _ = Describe("Serving Metrics", func() {
 
 		It("should return -1 for all metrics", func() {
 			Eventually(func() bool {
-				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", -1.0)
+				return metronAgent.MatchEvent("desired_state_manager", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", -1.0)
 			}).Should(BeTrue())
 			Eventually(func() bool {
-				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfUndesiredRunningApps", -1.0)
+				return metronAgent.MatchEvent("desired_state_manager", events.Envelope_ValueMetric, "NumberOfUndesiredRunningApps", -1.0)
 			}).Should(BeTrue())
 		})
 	})

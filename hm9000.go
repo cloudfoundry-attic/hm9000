@@ -26,17 +26,17 @@ func main() {
 	app.Version = "0.0.9000"
 	app.Commands = []cli.Command{
 		{
-			Name:        "fetch_desired",
-			Description: "Fetches desired state",
-			Usage:       "hm fetch_desired --config=/path/to/config --poll",
+			Name:        "manage_desired",
+			Description: "Manages desired state",
+			Usage:       "hm manage_desired --config=/path/to/config --poll",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
 				cli.BoolFlag{Name: "poll", Usage: "If true, poll repeatedly with an interval defined in config"},
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, conf := loadLoggerAndConfig(c, "fetcher")
-				hm.FetchDesiredState(logger, conf, c.Bool("poll"))
+				logger, conf := loadLoggerAndConfig(c, "desired_state_manager")
+				hm.ManageDesiredState(logger, conf, c.Bool("poll"))
 			},
 		},
 		{
@@ -50,34 +50,6 @@ func main() {
 			Action: func(c *cli.Context) {
 				logger, conf := loadLoggerAndConfig(c, "listener")
 				hm.StartListeningForActual(logger, conf)
-			},
-		},
-		{
-			Name:        "analyze",
-			Description: "Analyze the desired and actual state and enqueue start/stop messages",
-			Usage:       "hm analyze --config=/path/to/config --poll",
-			Flags: []cli.Flag{
-				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
-				cli.BoolFlag{Name: "poll", Usage: "If true, poll repeatedly with an interval defined in config"},
-				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
-			},
-			Action: func(c *cli.Context) {
-				logger, conf := loadLoggerAndConfig(c, "analyzer")
-				hm.Analyze(logger, conf, c.Bool("poll"))
-			},
-		},
-		{
-			Name:        "send",
-			Description: "Send the enqueued start/stop messages",
-			Usage:       "hm send --config=/path/to/config --poll",
-			Flags: []cli.Flag{
-				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
-				cli.BoolFlag{Name: "poll", Usage: "If true, poll repeatedly with an interval defined in config"},
-				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
-			},
-			Action: func(c *cli.Context) {
-				logger, conf := loadLoggerAndConfig(c, "sender")
-				hm.Send(logger, conf, c.Bool("poll"))
 			},
 		},
 		{
