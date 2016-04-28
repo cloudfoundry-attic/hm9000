@@ -26,7 +26,7 @@ func ServeAPI(l lager.Logger, conf *config.Config) {
 
 	hs := http_server.New(listenAddr, handler)
 
-	err = ifritize(l, "api", hs, conf)
+	err = ifritize(l, "api", hs, conf, false)
 	if err != nil {
 		l.Error("exited", err)
 		os.Exit(1)

@@ -16,7 +16,7 @@ func StartEvacuator(logger lager.Logger, conf *config.Config) {
 
 	evac := evacuator.New(messageBus, store, clock, conf, logger)
 
-	err := ifritize(logger, "evacuator", evac, conf)
+	err := ifritize(logger, "evacuator", evac, conf, true)
 	if err != nil {
 		logger.Error("exited", err)
 		os.Exit(197)

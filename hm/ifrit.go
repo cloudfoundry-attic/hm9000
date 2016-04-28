@@ -36,11 +36,11 @@ func NewComponent(name string, conf *config.Config, pollingInterval time.Duratio
 }
 
 func ifritizeComponent(hm *Component) error {
-	return ifritize(hm.logger, hm.component, hm, hm.conf)
+	return ifritize(hm.logger, hm.component, hm, hm.conf, true)
 }
 
-func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *config.Config) error {
-	releaseLockChannel := acquireLock(logger, conf, name)
+func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *config.Config, lock bool) error {
+	releaseLockChannel := acquireLock(logger, conf, name, lock)
 
 	group := grouper.NewOrdered(os.Interrupt, grouper.Members{
 		{name, runner},
@@ -53,10 +53,11 @@ func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *confi
 	if err != nil {
 		logger.Error(fmt.Sprintf("%s exiting on error", name), err)
 	}
-
-	released := make(chan bool)
-	releaseLockChannel <- released
-	<-released
+	if lock {
+		released := make(chan bool)
+		releaseLockChannel <- released
+		<-released
+	}
 	return err
 }
 

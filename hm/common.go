@@ -64,7 +64,10 @@ func connectToMessageBus(l lager.Logger, conf *config.Config) yagnats.NATSConn {
 	return natsClient
 }
 
-func acquireLock(l lager.Logger, conf *config.Config, lockName string) chan chan bool {
+func acquireLock(l lager.Logger, conf *config.Config, lockName string, foobar bool) chan chan bool {
+	if !foobar {
+		return nil
+	}
 	adapter := connectToStoreAdapter(l, conf)
 	l.Info("Acquiring lock for " + lockName)
 
