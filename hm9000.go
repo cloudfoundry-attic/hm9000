@@ -26,17 +26,17 @@ func main() {
 	app.Version = "0.0.9000"
 	app.Commands = []cli.Command{
 		{
-			Name:        "manage_desired",
-			Description: "Manages desired state",
-			Usage:       "hm manage_desired --config=/path/to/config --poll",
+			Name:        "analyze",
+			Description: "Analyzes desired state",
+			Usage:       "hm analyze --config=/path/to/config --poll",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "config", Value: "", Usage: "Path to config file"},
 				cli.BoolFlag{Name: "poll", Usage: "If true, poll repeatedly with an interval defined in config"},
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, conf := loadLoggerAndConfig(c, "desired_state_manager")
-				hm.ManageDesiredState(logger, conf, c.Bool("poll"))
+				logger, conf := loadLoggerAndConfig(c, "analyzer")
+				hm.Analyze(logger, conf, c.Bool("poll"))
 			},
 		},
 		{

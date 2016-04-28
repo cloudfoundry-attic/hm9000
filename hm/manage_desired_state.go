@@ -1,54 +1,54 @@
 package hm
 
 import (
+	"fmt"
 	"os"
 	"strconv"
-	"fmt"
 	"time"
 
+	"github.com/cloudfoundry/hm9000/analyzer"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
+	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/yagnats"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
-	"github.com/cloudfoundry/hm9000/analyzer"
-	"github.com/cloudfoundry/hm9000/sender"
-	"github.com/cloudfoundry/yagnats"
 )
 
-func ManageDesiredState(l lager.Logger, conf *config.Config, poll bool) {
+func Analyze(l lager.Logger, conf *config.Config, poll bool) {
 	store := connectToStore(l, conf)
 	messageBus := connectToMessageBus(l, conf)
 	clock := buildClock(l)
 	client := httpclient.NewHttpClient(conf.SkipSSLVerification, conf.FetcherNetworkTimeout())
 
 	if poll {
-		l.Info("Starting Desired State Manager...")
+		l.Info("Starting Analyzer...")
 
 		f := &Component{
-			component:       "desired_state_manager",
+			component:       "analyzer",
 			conf:            conf,
 			pollingInterval: conf.FetcherPollingInterval(),
 			timeout:         conf.FetcherTimeout(),
 			logger:          l,
 			action: func() error {
-				return manageDesiredState(l, clock, client, conf, store, messageBus)
+				return analyze(l, clock, client, conf, store, messageBus)
 			},
 		}
 
 		err := ifritizeComponent(f)
 
 		if err != nil {
-			l.Error("Desired State Manager exited", err)
+			l.Error("Analyzer exited", err)
 			os.Exit(197)
 		}
 
 		l.Info("exited")
 		os.Exit(0)
 	} else {
-		err := manageDesiredState(l, clock, client, conf, store, messageBus)
+		err := analyze(l, clock, client, conf, store, messageBus)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -57,14 +57,14 @@ func ManageDesiredState(l lager.Logger, conf *config.Config, poll bool) {
 	}
 }
 
-func manageDesiredState(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, store store.Store, messageBus yagnats.NATSConn ) error {
+func analyze(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, store store.Store, messageBus yagnats.NATSConn) error {
 	e := fetchDesiredState(l, clock, client, conf, store)
 
 	if e != nil {
 		return e
 	}
 
-	e = analyze(l, clock, conf, store)
+	e = analyzeState(l, clock, conf, store)
 	if e != nil {
 		return e
 	}
@@ -97,7 +97,7 @@ func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.Http
 	return result.Error
 }
 
-func analyze(l lager.Logger, clk clock.Clock, conf *config.Config, store store.Store) error {
+func analyzeState(l lager.Logger, clk clock.Clock, conf *config.Config, store store.Store) error {
 	l.Info("Analyzing...")
 
 	t := time.Now()

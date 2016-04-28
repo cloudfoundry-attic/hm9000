@@ -108,9 +108,9 @@ Assuming you have `go` v1.5+ installed:
 
 You *must* specify a config file for all the `hm9000` commands.  You do this with (e.g.) `--config=./local_config.json`
 
-### Managing desired state
+### Analyzing desired state
 
-    hm9000 manage_desired --config=./local_config.json
+    hm9000 analyze --config=./local_config.json
 
 will connect to CC, fetch the desired state, put it in the store, compute the delta between desired and actual state, and then evaluate the pending starts and stops and publishes them over NATS.  You can optionally pass `-poll` to manage desired state periodically.
 
@@ -130,7 +130,7 @@ will come up and provide response to requests for `/bulk_app_state` over HTTP.
 
     hm9000 evacuator --config=./local_config.json
 
-will come up and listen for `droplet.exited` messages and queue `start` messages for any evacuating droplets. Start messages will be sent when the desired_state_manager sends start and stop messages.  The `evacuator` is *not* necessary for deterministic evacuation but is provided for backward compatibility with old DEAs.  There is no harm in running the `evacuator` *during* deterministic evacuation.
+will come up and listen for `droplet.exited` messages and queue `start` messages for any evacuating droplets. Start messages will be sent when the analyzer sends start and stop messages.  The `evacuator` is *not* necessary for deterministic evacuation but is provided for backward compatibility with old DEAs.  There is no harm in running the `evacuator` *during* deterministic evacuation.
 
 ### Shredder
 

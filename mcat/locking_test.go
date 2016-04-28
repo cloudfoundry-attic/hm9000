@@ -43,14 +43,14 @@ var _ = Describe("Locking", func() {
 
 		Context("when two polling processes try to run", func() {
 			It("one waits for the other to exit and then grabs the lock", func() {
-				analyzerA := cliRunner.StartSession("manage_desired", 1, "--poll")
+				analyzerA := cliRunner.StartSession("analyze", 1, "--poll")
 				defer func() {
 					analyzerA.Interrupt().Wait(11 * time.Second)
 				}()
 
 				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("Acquired lock"))
 
-				analyzerB := cliRunner.StartSession("manage_desired", 1, "--poll")
+				analyzerB := cliRunner.StartSession("analyze", 1, "--poll")
 				defer func() {
 					analyzerB.Interrupt().Wait(11 * time.Second)
 				}()
@@ -84,7 +84,7 @@ var _ = Describe("Locking", func() {
 
 		Context("polling processes", func() {
 			It("should exit 197", func() {
-				analyzerA := cliRunner.StartSession("manage_desired", 1, "--poll")
+				analyzerA := cliRunner.StartSession("analyze", 1, "--poll")
 				defer func() {
 					analyzerA.Interrupt().Wait(5 * time.Second)
 				}()
