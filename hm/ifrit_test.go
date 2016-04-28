@@ -33,9 +33,7 @@ var _ = Describe("HM9000Component", func() {
 			actionChan <- time.Now()
 			return nil
 		}
-	})
 
-	JustBeforeEach(func() {
 		hmc = NewComponent(
 			"component",
 			nil,
@@ -79,6 +77,15 @@ var _ = Describe("HM9000Component", func() {
 				actionChan <- time.Now()
 				return errors.New("Action failed")
 			}
+
+			hmc = NewComponent(
+				"component",
+				nil,
+				pollingInterval,
+				timeout,
+				logger,
+				action,
+			)
 		})
 
 		It("Continues to execute", func() {
@@ -91,16 +98,26 @@ var _ = Describe("HM9000Component", func() {
 
 	Context("when the timeout expires", func() {
 		BeforeEach(func() {
-			timeout = 10 * time.Millisecond
-			action = func() error {
-				time.Sleep(2 * timeout)
+			to := 1 * time.Second
+
+			runAction := func() error {
+				time.Sleep(5 * to)
 				return nil
 			}
+
+			hmc = NewComponent(
+				"component",
+				nil,
+				pollingInterval,
+				to,
+				logger,
+				runAction,
+			)
 		})
 
 		It("Returns an error", func() {
 			proc := ifrit.Background(hmc)
-			Eventually(proc.Wait()).Should(Receive(MatchError(Equal("component timed out. Aborting!"))))
+			Eventually(proc.Wait(), "5s").Should(Receive(MatchError(Equal("component timed out. Aborting!"))))
 		})
 	})
 

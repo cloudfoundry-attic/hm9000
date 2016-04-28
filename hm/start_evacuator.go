@@ -3,6 +3,8 @@ package hm
 import (
 	"os"
 
+	"github.com/cloudfoundry-incubator/consuladapter"
+	"github.com/cloudfoundry-incubator/locket"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/evacuator"
 	"github.com/pivotal-golang/lager"
@@ -16,7 +18,10 @@ func StartEvacuator(logger lager.Logger, conf *config.Config) {
 
 	evac := evacuator.New(messageBus, store, clock, conf, logger)
 
-	err := ifritize(logger, "evacuator", evac, conf)
+	consulClient, _ := consuladapter.NewClientFromUrl(conf.ConsulCluster)
+	lockRunner := locket.NewLock(logger, consulClient, "hm9000.evacuator", make([]byte, 0), clock, locket.RetryInterval, locket.LockTTL)
+
+	err := ifritize(logger, "evacuator", evac, conf, lockRunner)
 	if err != nil {
 		logger.Error("exited", err)
 		os.Exit(197)

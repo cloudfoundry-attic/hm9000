@@ -64,42 +64,6 @@ func connectToMessageBus(l lager.Logger, conf *config.Config) yagnats.NATSConn {
 	return natsClient
 }
 
-func acquireLock(l lager.Logger, conf *config.Config, lockName string) chan chan bool {
-	adapter := connectToStoreAdapter(l, conf)
-	l.Info("Acquiring lock for " + lockName)
-
-	lock := storeadapter.StoreNode{
-		Key: "/hm/locks/" + lockName,
-		TTL: 10,
-	}
-
-	status, lockChannel, err := adapter.MaintainNode(lock)
-	if err != nil {
-		l.Error("Failed to talk to lock store", err)
-		os.Exit(1)
-	}
-
-	lockAcquired := make(chan bool)
-
-	go func() {
-		for {
-			if <-status {
-				if lockAcquired != nil {
-					close(lockAcquired)
-					lockAcquired = nil
-				}
-			} else {
-				l.Info("Lost the lock")
-				os.Exit(197)
-			}
-		}
-	}()
-
-	<-lockAcquired
-	l.Info("Acquired lock for " + lockName)
-	return lockChannel
-}
-
 func connectToStoreAdapter(l lager.Logger, conf *config.Config) storeadapter.StoreAdapter {
 	var adapter storeadapter.StoreAdapter
 	workPool, err := workpool.NewWorkPool(conf.StoreMaxConcurrentRequests)

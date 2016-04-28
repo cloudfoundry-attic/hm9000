@@ -48,19 +48,19 @@ var _ = Describe("Locking", func() {
 					analyzerA.Interrupt().Wait(11 * time.Second)
 				}()
 
-				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("Acquired lock"))
+				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("acquire-lock-succeeded"))
 
 				analyzerB := cliRunner.StartSession("analyze", 1, "--poll")
 				defer func() {
 					analyzerB.Interrupt().Wait(11 * time.Second)
 				}()
 
-				Eventually(analyzerB, 10*time.Second).Should(gbytes.Say("Acquiring"))
-				Consistently(analyzerB).ShouldNot(gbytes.Say("Acquired"))
+				Eventually(analyzerB, 10*time.Second).Should(gbytes.Say("acquiring-lock"))
+				Consistently(analyzerB).ShouldNot(gbytes.Say("acquire-lock-succeeded"))
 
 				analyzerA.Interrupt().Wait(11 * time.Second)
 
-				Eventually(analyzerB, 20*time.Second).Should(gbytes.Say("Acquired"))
+				Eventually(analyzerB, 20*time.Second).Should(gbytes.Say("acquire-lock-succeeded"))
 			})
 		})
 	})
@@ -89,11 +89,12 @@ var _ = Describe("Locking", func() {
 					analyzerA.Interrupt().Wait(5 * time.Second)
 				}()
 
-				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("Acquired lock"))
+				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("acquire-lock-succeeded"))
 
-				coordinator.StoreAdapter.Delete("/hm/locks")
+				// coordinator.StoreAdapter.Delete("/hm/locks")
+				coordinator.ResetConsulRunner()
 
-				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("Lost the lock"))
+				Eventually(analyzerA, 10*time.Second).Should(gbytes.Say("lost-lock"))
 				Eventually(analyzerA, 20*time.Second).Should(gexec.Exit(197))
 			})
 		})

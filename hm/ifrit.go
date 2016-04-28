@@ -35,16 +35,26 @@ func NewComponent(name string, conf *config.Config, pollingInterval time.Duratio
 	}
 }
 
-func ifritizeComponent(hm *Component) error {
-	return ifritize(hm.logger, hm.component, hm, hm.conf)
+func ifritizeComponent(hm *Component, lockRunner ...ifrit.Runner) error {
+	return ifritize(hm.logger, hm.component, hm, hm.conf, lockRunner[0])
 }
 
-func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *config.Config) error {
-	releaseLockChannel := acquireLock(logger, conf, name)
+func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *config.Config, lockRunner ...ifrit.Runner) error {
+	//releaseLockChannel := acquireLock(logger, conf, name)
+	var group ifrit.Runner
 
-	group := grouper.NewOrdered(os.Interrupt, grouper.Members{
-		{name, runner},
-	})
+	if len(lockRunner) > 0 {
+		lockName := fmt.Sprintf("%s.lock", name)
+		group = grouper.NewOrdered(os.Interrupt, grouper.Members{
+			{lockName, lockRunner[0]},
+			{name, runner},
+		})
+	} else {
+		group = grouper.NewOrdered(os.Interrupt, grouper.Members{
+			{name, runner},
+		})
+	}
+
 	monitor := ifrit.Invoke(sigmon.New(group))
 
 	logger.Info(fmt.Sprintf("%s started", name))
@@ -54,9 +64,6 @@ func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *confi
 		logger.Error(fmt.Sprintf("%s exiting on error", name), err)
 	}
 
-	released := make(chan bool)
-	releaseLockChannel <- released
-	<-released
 	return err
 }
 

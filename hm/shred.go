@@ -3,6 +3,8 @@ package hm
 import (
 	"os"
 
+	"github.com/cloudfoundry-incubator/consuladapter"
+	"github.com/cloudfoundry-incubator/locket"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/shredder"
 	"github.com/cloudfoundry/hm9000/store"
@@ -24,7 +26,10 @@ func Shred(l lager.Logger, conf *config.Config, poll bool) {
 			},
 		}
 
-		err := ifritizeComponent(s)
+		consulClient, _ := consuladapter.NewClientFromUrl(conf.ConsulCluster)
+		lockRunner := locket.NewLock(l, consulClient, "hm9000.shredder", make([]byte, 0), buildClock(l), locket.RetryInterval, locket.LockTTL)
+
+		err := ifritizeComponent(s, lockRunner)
 
 		if err != nil {
 			l.Error("Shredder Exiting on error", err)

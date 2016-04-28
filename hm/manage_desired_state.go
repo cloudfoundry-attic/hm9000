@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cloudfoundry-incubator/consuladapter"
+	"github.com/cloudfoundry-incubator/locket"
 	"github.com/cloudfoundry/hm9000/analyzer"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
@@ -38,7 +40,10 @@ func Analyze(l lager.Logger, conf *config.Config, poll bool) {
 			},
 		}
 
-		err := ifritizeComponent(f)
+		consulClient, _ := consuladapter.NewClientFromUrl(conf.ConsulCluster)
+		lockRunner := locket.NewLock(l, consulClient, "hm9000.analyzer", make([]byte, 0), clock, locket.RetryInterval, locket.LockTTL)
+
+		err := ifritizeComponent(f, lockRunner)
 
 		if err != nil {
 			l.Error("Analyzer exited", err)
