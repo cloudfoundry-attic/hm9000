@@ -63,18 +63,18 @@ func Analyze(l lager.Logger, conf *config.Config, poll bool) {
 }
 
 func analyze(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, store store.Store, messageBus yagnats.NATSConn) error {
-	e := fetchDesiredState(l, clock, client, conf, store)
+	e := fetchDesiredState(l.Session("fetch_desired_state"), clock, client, conf, store)
 
 	if e != nil {
 		return e
 	}
 
-	e = analyzeState(l, clock, conf, store)
+	e = analyzeState(l.Session("analyze"), clock, conf, store)
 	if e != nil {
 		return e
 	}
 
-	return send(l, conf, messageBus, store, clock)
+	return send(l.Session("send"), conf, messageBus, store, clock)
 }
 
 func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, store store.Store) error {
