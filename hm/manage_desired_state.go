@@ -20,7 +20,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-func Analyze(l lager.Logger, conf *config.Config, poll bool) {
+func Analyze(l lager.Logger, sink lager.Sink, conf *config.Config, poll bool) {
 	store := connectToStore(l, conf)
 	messageBus := connectToMessageBus(l, conf)
 	clock := buildClock(l)
@@ -36,7 +36,7 @@ func Analyze(l lager.Logger, conf *config.Config, poll bool) {
 			timeout:         conf.FetcherTimeout(),
 			logger:          l,
 			action: func() error {
-				return analyze(l, clock, client, conf, store, messageBus)
+				return analyze(l, sink, clock, client, conf, store, messageBus)
 			},
 		}
 
@@ -53,7 +53,7 @@ func Analyze(l lager.Logger, conf *config.Config, poll bool) {
 		l.Info("exited")
 		os.Exit(0)
 	} else {
-		err := analyze(l, clock, client, conf, store, messageBus)
+		err := analyze(l, sink, clock, client, conf, store, messageBus)
 		if err != nil {
 			os.Exit(1)
 		} else {
@@ -62,19 +62,23 @@ func Analyze(l lager.Logger, conf *config.Config, poll bool) {
 	}
 }
 
-func analyze(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, store store.Store, messageBus yagnats.NATSConn) error {
-	e := fetchDesiredState(l.Session("fetch_desired_state"), clock, client, conf, store)
+func analyze(l lager.Logger, sink lager.Sink, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, store store.Store, messageBus yagnats.NATSConn) error {
+	logger := lager.NewLogger("fetcher")
+	logger.RegisterSink(sink)
+	e := fetchDesiredState(logger, clock, client, conf, store)
 
 	if e != nil {
 		return e
 	}
 
-	e = analyzeState(l.Session("analyze"), clock, conf, store)
+	e = analyzeState(l, clock, conf, store)
 	if e != nil {
 		return e
 	}
 
-	return send(l.Session("send"), conf, messageBus, store, clock)
+	logger = lager.NewLogger("sender")
+	logger.RegisterSink(sink)
+	return send(logger, conf, messageBus, store, clock)
 }
 
 func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, store store.Store) error {

@@ -35,8 +35,20 @@ func main() {
 				cli.StringFlag{Name: "debugAddr", Value: "", Usage: "address to serve debug info"},
 			},
 			Action: func(c *cli.Context) {
-				logger, conf := loadLoggerAndConfig(c, "analyzer")
-				hm.Analyze(logger, conf, c.Bool("poll"))
+				conf := loadConfig(c, "analyzer")
+				logLevel, err := conf.LogLevel()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Invalid log level in config: %s\n", err.Error())
+					os.Exit(1)
+				}
+
+				logger := lager.NewLogger("analyzer")
+				sink := lager.NewReconfigurableSink(lager.NewWriterSink(os.Stdout, logLevel), logLevel)
+				logger.RegisterSink(sink)
+
+				startDropsond(c, "analyzer", conf, logger)
+				startDebugServer(c, logger)
+				hm.Analyze(logger, sink, conf, c.Bool("poll"))
 			},
 		},
 		{
@@ -111,8 +123,12 @@ func main() {
 	app.Run(os.Args)
 }
 
-func loadLoggerAndConfig(c *cli.Context, component string) (lager.Logger, *config.Config) {
-	var logger lager.Logger
+func loadConfig(c *cli.Context, component string) *config.Config {
+	if component == "" {
+		fmt.Fprintf(os.Stderr, "Empty component name\n")
+		os.Exit(1)
+	}
+
 	configPath := c.String("config")
 	if configPath == "" {
 		fmt.Fprintf(os.Stderr, "Config path required\n")
@@ -125,11 +141,38 @@ func loadLoggerAndConfig(c *cli.Context, component string) (lager.Logger, *confi
 		os.Exit(1)
 	}
 
+	return conf
+}
+
+func startDebugServer(c *cli.Context, logger lager.Logger) {
+	debugAddr := c.String("debugAddr")
+	if debugAddr != "" {
+		_, err := cf_debug_server.Run(debugAddr, nil)
+		if err != nil {
+			logger.Error("Failed to start debug server", err)
+			os.Exit(1)
+		}
+	}
+}
+
+func startDropsond(c *cli.Context, component string, conf *config.Config, logger lager.Logger) {
+	dropsondeDestination := fmt.Sprintf("127.0.0.1:%d", conf.DropsondePort)
+	err := dropsonde.Initialize(dropsondeDestination, component)
+	if err != nil {
+		logger.Error("Failed to initialize dropsonde", err)
+		os.Exit(1)
+	}
+}
+
+func loadLoggerAndConfig(c *cli.Context, component string) (lager.Logger, *config.Config) {
+	var logger lager.Logger
+
 	if component == "" {
 		fmt.Fprintf(os.Stderr, "Empty component name\n")
 		os.Exit(1)
 	}
 
+	conf := loadConfig(c, component)
 	logger = lager.NewLogger(component)
 
 	logLevel, err := conf.LogLevel()
@@ -140,21 +183,8 @@ func loadLoggerAndConfig(c *cli.Context, component string) (lager.Logger, *confi
 
 	logger.RegisterSink(lager.NewReconfigurableSink(lager.NewWriterSink(os.Stdout, logLevel), logLevel))
 
-	debugAddr := c.String("debugAddr")
-	if debugAddr != "" {
-		_, err = cf_debug_server.Run(debugAddr, nil)
-		if err != nil {
-			logger.Error("Failed to start debug server", err)
-			os.Exit(1)
-		}
-	}
-
-	dropsondeDestination := fmt.Sprintf("127.0.0.1:%d", conf.DropsondePort)
-	err = dropsonde.Initialize(dropsondeDestination, component)
-	if err != nil {
-		logger.Error("Failed to initialize dropsonde", err)
-		os.Exit(1)
-	}
+	startDropsond(c, component, conf, logger)
+	startDebugServer(c, logger)
 
 	return logger, conf
 }
