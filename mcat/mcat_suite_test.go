@@ -18,6 +18,10 @@ var (
 	metronAgent       *Metron
 )
 
+const (
+	IterationTimeout = 10.0
+)
+
 func TestMCAT(t *testing.T) {
 	RegisterFailHandler(Fail)
 

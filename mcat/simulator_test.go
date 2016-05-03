@@ -63,7 +63,7 @@ func (s *Simulator) sendHeartbeats() {
 	nHeartbeats := len(s.currentHeartbeats)
 	Eventually(func() bool {
 		return metronAgent.MatchEvent("listener", events.Envelope_ValueMetric, "SavedHeartbeats", float64(nHeartbeats))
-	}, 5.0, 0.05).Should(BeTrue())
+	}, IterationTimeout, 0.05).Should(BeTrue())
 
 	s.cliRunner.StopListener()
 }

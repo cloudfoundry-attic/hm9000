@@ -17,6 +17,10 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+const (
+	processTimeout = 10 * time.Second
+)
+
 type CLIRunner struct {
 	configPath       string
 	listenerSession  *gexec.Session
@@ -83,7 +87,7 @@ func (runner *CLIRunner) StartListener(timestamp int) {
 }
 
 func (runner *CLIRunner) StopListener() {
-	runner.listenerSession.Interrupt().Wait(time.Second)
+	runner.listenerSession.Interrupt().Wait(processTimeout)
 }
 
 func (runner *CLIRunner) StartAPIServer(timestamp int) {
@@ -91,7 +95,7 @@ func (runner *CLIRunner) StartAPIServer(timestamp int) {
 }
 
 func (runner *CLIRunner) StopAPIServer() {
-	runner.apiServerSession.Interrupt().Wait(time.Second)
+	runner.apiServerSession.Interrupt().Wait(processTimeout)
 }
 
 func (runner *CLIRunner) StartEvacuator(timestamp int) {
@@ -99,7 +103,7 @@ func (runner *CLIRunner) StartEvacuator(timestamp int) {
 }
 
 func (runner *CLIRunner) StopEvacuator() {
-	runner.evacuatorSession.Interrupt().Wait(time.Second)
+	runner.evacuatorSession.Interrupt().Wait(processTimeout)
 }
 
 func (runner *CLIRunner) Cleanup() {

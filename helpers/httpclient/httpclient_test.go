@@ -14,7 +14,7 @@ var _ = Describe("Httpclient", func() {
 	var client HttpClient
 
 	BeforeEach(func() {
-		client = NewHttpClient(true, 10*time.Millisecond)
+		client = NewHttpClient(true, 100*time.Millisecond)
 	})
 
 	Context("when the request times out (trying to connect)", func() {
