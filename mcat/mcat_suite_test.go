@@ -19,7 +19,7 @@ var (
 )
 
 const (
-	IterationTimeout = 10.0
+	IterationTimeout = 20.0
 )
 
 func TestMCAT(t *testing.T) {
