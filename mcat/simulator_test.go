@@ -49,7 +49,6 @@ func (s *Simulator) Tick(numTicks int) {
 		s.currentTimestamp += timeBetweenTicks
 		s.storeRunner.FastForwardTime(timeBetweenTicks)
 		s.sendHeartbeats()
-		//		s.sendHeartbeatsHttp()
 		s.cliRunner.Run("analyze", s.currentTimestamp)
 	}
 }
@@ -69,23 +68,6 @@ func (s *Simulator) sendHeartbeats() {
 	s.cliRunner.StopListener()
 }
 
-//func (s *Simulator) sendHeartbeatsHttp() {
-//	s.cliRunner.StartListener(s.currentTimestamp)
-//	metronAgent.Reset()
-//	for _, heartbeat := range s.currentHeartbeats {
-//		_, err := http.Post("http://localhost:5335/dea/hearbeat", "application/json", bytes.NewBuffer(heartbeat.ToJSON()))
-//		Expect(err).NotTo(HaveOccurred())
-//		// Do HTTP-y stuff
-//	}
-//
-//	nHeartbeats := len(s.currentHeartbeats)
-//	Eventually(func() bool {
-//		return metronAgent.MatchEvent("listener", events.Envelope_ValueMetric, "SavedHeartbeats", float64(nHeartbeats))
-//	}, IterationTimeout, 0.05).Should(BeTrue())
-//
-//	s.cliRunner.StopListener()
-//}
-//
 func (s *Simulator) SetDesiredState(desiredStates ...models.DesiredAppState) {
 	s.desiredStateServer.SetDesiredState(desiredStates)
 }
