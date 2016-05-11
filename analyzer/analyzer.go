@@ -16,7 +16,8 @@ type Analyzer struct {
 	conf   *config.Config
 }
 
-func New(store store.Store, clock clock.Clock, logger lager.Logger, conf *config.Config) *Analyzer {
+func New(store store.Store, clock clock.Clock, logger lager.Logger, conf *config.Config,
+) *Analyzer {
 	return &Analyzer{
 		store:  store,
 		clock:  clock,
@@ -25,14 +26,20 @@ func New(store store.Store, clock clock.Clock, logger lager.Logger, conf *config
 	}
 }
 
-func (analyzer *Analyzer) Analyze() (map[string]*models.App, error) {
+func (analyzer *Analyzer) Analyze(desiredAppQueue chan map[string]models.DesiredAppState) (map[string]*models.App, error) {
 	err := analyzer.store.VerifyFreshness(analyzer.clock.Now())
 	if err != nil {
 		analyzer.logger.Error("Store is not fresh", err)
 		return nil, err
 	}
 
-	apps, err := analyzer.store.GetApps()
+	runningApps, err := analyzer.store.GetApps()
+
+	appsNotDesired := make(map[string]*models.App)
+	for k, v := range runningApps {
+		appsNotDesired[k] = v
+	}
+
 	if err != nil {
 		analyzer.logger.Error("Failed to fetch apps", err)
 		return nil, err
@@ -54,11 +61,49 @@ func (analyzer *Analyzer) Analyze() (map[string]*models.App, error) {
 	allStopMessages := []models.PendingStopMessage{}
 	allCrashCounts := []models.CrashCount{}
 
-	for _, app := range apps {
-		startMessages, stopMessages, crashCounts := newAppAnalyzer(app, analyzer.clock.Now(), existingPendingStartMessages, existingPendingStopMessages, analyzer.logger, analyzer.conf).analyzeApp()
-		for _, startMessage := range startMessages {
-			allStartMessages = append(allStartMessages, startMessage)
+	startMessagesToDelete := existingPendingStartMessages
+	stopMessagesToDelete := existingPendingStopMessages
+
+	for desiredAppBatch := range desiredAppQueue {
+		for _, desiredApp := range desiredAppBatch {
+			app := runningApps[desiredApp.StoreKey()]
+
+			if app == nil {
+				app = models.NewApp(desiredApp.AppGuid, desiredApp.AppVersion, desiredApp, nil, nil)
+				runningApps[desiredApp.StoreKey()] = app
+			} else {
+				app.Desired = desiredApp
+				delete(appsNotDesired, desiredApp.StoreKey())
+			}
+
+			startMessages, stopMessages, crashCounts, _, _ := newAppAnalyzer(app,
+				analyzer.clock.Now(),
+				existingPendingStartMessages,
+				existingPendingStopMessages,
+				startMessagesToDelete,
+				stopMessagesToDelete,
+				analyzer.logger,
+				analyzer.conf).analyzeApp()
+			for _, startMessage := range startMessages {
+				allStartMessages = append(allStartMessages, startMessage)
+			}
+			for _, stopMessage := range stopMessages {
+				allStopMessages = append(allStopMessages, stopMessage)
+			}
+			allCrashCounts = append(allCrashCounts, crashCounts...)
 		}
+	}
+
+	for _, app := range appsNotDesired {
+		_, stopMessages, crashCounts, _, _ := newAppAnalyzer(app,
+			analyzer.clock.Now(),
+			existingPendingStartMessages,
+			existingPendingStopMessages,
+			startMessagesToDelete,
+			stopMessagesToDelete,
+			analyzer.logger,
+			analyzer.conf).analyzeApp()
+		//TODO: start messages should not be created
 		for _, stopMessage := range stopMessages {
 			allStopMessages = append(allStopMessages, stopMessage)
 		}
@@ -83,5 +128,5 @@ func (analyzer *Analyzer) Analyze() (map[string]*models.App, error) {
 		return nil, err
 	}
 
-	return apps, nil
+	return runningApps, nil
 }

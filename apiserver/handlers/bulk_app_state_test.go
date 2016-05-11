@@ -67,7 +67,6 @@ func decodeResponse(response string) (appResp AppResponse) {
 }
 
 func freshenTheStore(store store.Store) {
-	store.BumpDesiredFreshness(time.Unix(0, 0))
 	store.BumpActualFreshness(time.Unix(0, 0))
 }
 
@@ -103,7 +102,6 @@ var _ = Describe("BulkAppState", func() {
 				InstanceIndex: 1,
 				CrashCount:    2,
 			}
-			store.SyncDesiredState(app.DesiredState(3))
 			store.SyncHeartbeats(app.Heartbeat(3))
 			store.SaveCrashCounts(crashCount)
 
@@ -130,7 +128,6 @@ var _ = Describe("BulkAppState", func() {
 				InstanceIndex: 1,
 				CrashCount:    2,
 			}
-			store.SyncDesiredState(app.DesiredState(3))
 			store.SyncHeartbeats(app.Heartbeat(3))
 			store.SaveCrashCounts(crashCount)
 			freshenTheStore(store)
@@ -171,7 +168,7 @@ var _ = Describe("BulkAppState", func() {
 					InstanceIndex: 1,
 					CrashCount:    2,
 				}
-				store.SyncDesiredState(app.DesiredState(3))
+
 				store.SyncHeartbeats(app.Heartbeat(3))
 				store.SaveCrashCounts(crashCount)
 				freshenTheStore(store)
@@ -189,7 +186,6 @@ var _ = Describe("BulkAppState", func() {
 				expectedApp := AppResponse{
 					AppGuid:            app.AppGuid,
 					AppVersion:         app.AppVersion,
-					Desired:            app.DesiredState(3),
 					InstanceHeartbeats: expectedInstanceHeartbeats,
 					CrashCounts:        []models.CrashCount{crashCount},
 				}
@@ -221,7 +217,7 @@ var _ = Describe("BulkAppState", func() {
 					InstanceIndex: 1,
 					CrashCount:    2,
 				}
-				store.SyncDesiredState(app.DesiredState(3))
+
 				store.SyncHeartbeats(app.Heartbeat(3))
 				store.SaveCrashCounts(crashCount)
 
@@ -238,7 +234,6 @@ var _ = Describe("BulkAppState", func() {
 				expectedApp := AppResponse{
 					AppGuid:            app.AppGuid,
 					AppVersion:         app.AppVersion,
-					Desired:            app.DesiredState(3),
 					InstanceHeartbeats: expectedInstanceHeartbeats,
 					CrashCounts:        []models.CrashCount{crashCount},
 				}

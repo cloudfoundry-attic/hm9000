@@ -21,12 +21,17 @@ type appAnalyzer struct {
 	startMessages map[string]models.PendingStartMessage
 	stopMessages  map[string]models.PendingStopMessage
 	crashCounts   []models.CrashCount
+
+	startMessagesToDelete map[string]models.PendingStartMessage
+	stopMessagesToDelete  map[string]models.PendingStopMessage
 }
 
 func newAppAnalyzer(app *models.App,
 	currentTime time.Time,
 	existingPendingStartMessages map[string]models.PendingStartMessage,
 	existingPendingStopMessages map[string]models.PendingStopMessage,
+	startMessagesToDelete map[string]models.PendingStartMessage,
+	stopMessagesToDelete map[string]models.PendingStopMessage,
 	logger lager.Logger,
 	conf *config.Config,
 ) *appAnalyzer {
@@ -40,10 +45,12 @@ func newAppAnalyzer(app *models.App,
 		startMessages:                make(map[string]models.PendingStartMessage, 0),
 		stopMessages:                 make(map[string]models.PendingStopMessage, 0),
 		crashCounts:                  make([]models.CrashCount, 0),
+		startMessagesToDelete:        startMessagesToDelete,
+		stopMessagesToDelete:         stopMessagesToDelete,
 	}
 }
 
-func (a *appAnalyzer) analyzeApp() (map[string]models.PendingStartMessage, map[string]models.PendingStopMessage, []models.CrashCount) {
+func (a *appAnalyzer) analyzeApp() (map[string]models.PendingStartMessage, map[string]models.PendingStopMessage, []models.CrashCount, map[string]models.PendingStartMessage, map[string]models.PendingStopMessage) {
 	priority := a.computePendingStartMessagePriority()
 	a.generatePendingStartsForMissingInstances(priority)
 	a.generatePendingStartsForCrashedInstances(priority)
@@ -54,7 +61,7 @@ func (a *appAnalyzer) analyzeApp() (map[string]models.PendingStartMessage, map[s
 		a.generatePendingStopsForDuplicateInstances()
 	}
 
-	return a.startMessages, a.stopMessages, a.crashCounts
+	return a.startMessages, a.stopMessages, a.crashCounts, a.startMessagesToDelete, a.stopMessagesToDelete
 }
 
 func (a *appAnalyzer) generatePendingStartsForMissingInstances(priority float64) {
@@ -191,6 +198,8 @@ func (a *appAnalyzer) appendStartMessageIfNotDuplicate(message models.PendingSta
 		a.startMessages[message.StoreKey()] = message
 		return true
 	} else {
+		// Delete the key from the messages to be deleted because message is still desired
+		delete(a.startMessagesToDelete, message.StoreKey())
 		a.logger.Info(fmt.Sprintf("Skipping Already Enqueued Start Message: %s", loggingMessage), existingMessage.LogDescription(), additionalDetails)
 		return false
 	}
@@ -202,6 +211,8 @@ func (a *appAnalyzer) appendStopMessageIfNotDuplicate(message models.PendingStop
 		a.logger.Info(fmt.Sprintf("Enqueuing Stop Message: %s", loggingMessage), message.LogDescription(), additionalDetails)
 		a.stopMessages[message.StoreKey()] = message
 	} else {
+		// Delete the key from the message to be deleted because message is still desired
+		delete(a.startMessagesToDelete, message.StoreKey())
 		a.logger.Info(fmt.Sprintf("Skipping Already Enqueued Stop Message: %s", loggingMessage), existingMessage.LogDescription(), additionalDetails)
 	}
 }

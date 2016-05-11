@@ -47,13 +47,11 @@ func (a *App) ToJSON() []byte {
 		AppGuid    string `json:"droplet"`
 		AppVersion string `json:"version"`
 
-		Desired            DesiredAppState     `json:"desired"`
 		InstanceHeartbeats []InstanceHeartbeat `json:"instance_heartbeats"`
 		CrashCounts        []CrashCount        `json:"crash_counts"`
 	}{
 		a.AppGuid,
 		a.AppVersion,
-		a.Desired,
 		a.InstanceHeartbeats,
 		crashCounts,
 	}

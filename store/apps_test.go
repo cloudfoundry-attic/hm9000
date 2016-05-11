@@ -6,7 +6,6 @@ import (
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
-	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
@@ -56,11 +55,6 @@ var _ = Describe("Apps", func() {
 			app2.InstanceAtIndex(0).Heartbeat(),
 		}
 
-		desiredState := []models.DesiredAppState{
-			app1.DesiredState(1),
-			app3.DesiredState(1),
-		}
-
 		crashCount = []models.CrashCount{
 			{
 				AppGuid:       app1.AppGuid,
@@ -89,7 +83,6 @@ var _ = Describe("Apps", func() {
 		}
 
 		store.SyncHeartbeats(dea.HeartbeatWith(actualState...))
-		store.SyncDesiredState(desiredState...)
 		store.SaveCrashCounts(crashCount...)
 	})
 
@@ -106,13 +99,11 @@ var _ = Describe("Apps", func() {
 				apps, err := store.GetApps()
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(apps).To(HaveLen(3))
+				Expect(apps).To(HaveLen(2))
 				Expect(apps).To(HaveKey(app1.AppGuid + "," + app1.AppVersion))
 				Expect(apps).To(HaveKey(app2.AppGuid + "," + app2.AppVersion))
-				Expect(apps).To(HaveKey(app3.AppGuid + "," + app3.AppVersion))
 
 				a1 := apps[app1.AppGuid+","+app1.AppVersion]
-				Expect(a1.Desired).To(EqualDesiredState(app1.DesiredState(1)))
 				Expect(a1.InstanceHeartbeats).To(HaveLen(3))
 				Expect(a1.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
 				Expect(a1.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(1).Heartbeat()))
@@ -125,11 +116,6 @@ var _ = Describe("Apps", func() {
 				Expect(a2.InstanceHeartbeats).To(HaveLen(1))
 				Expect(a2.InstanceHeartbeats).To(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
 				Expect(a2.CrashCounts[0]).To(Equal(crashCount[2]))
-
-				a3 := apps[app3.AppGuid+","+app3.AppVersion]
-				Expect(a3.Desired).To(EqualDesiredState(app3.DesiredState(1)))
-				Expect(a3.InstanceHeartbeats).To(HaveLen(0))
-				Expect(a3.CrashCounts).To(BeEmpty())
 			})
 		})
 
@@ -142,46 +128,20 @@ var _ = Describe("Apps", func() {
 
 				apps, err := store.GetApps()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(apps).To(HaveLen(3))
+				Expect(apps).To(HaveLen(2))
 			})
 		})
 	})
 
 	Describe("GetApp", func() {
 		Context("when there are no store errors", func() {
-			Context("when the app has desired and actual state", func() {
-				It("To return the app", func() {
-					app, err := store.GetApp(app1.AppGuid, app1.AppVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(app.Desired).To(EqualDesiredState(app1.DesiredState(1)))
-					Expect(app.InstanceHeartbeats).To(HaveLen(3))
-					Expect(app.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(0).Heartbeat()))
-					Expect(app.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(1).Heartbeat()))
-					Expect(app.InstanceHeartbeats).To(ContainElement(app1.InstanceAtIndex(2).Heartbeat()))
-					Expect(app.CrashCounts[1]).To(Equal(crashCount[0]))
-					Expect(app.CrashCounts[2]).To(Equal(crashCount[1]))
-				})
-			})
-
-			Context("when the app has desired state only", func() {
-				It("To return the app", func() {
-					app, err := store.GetApp(app3.AppGuid, app3.AppVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(app.Desired).To(EqualDesiredState(app3.DesiredState(1)))
-					Expect(app.InstanceHeartbeats).To(BeEmpty())
-					Expect(app.CrashCounts).To(BeEmpty())
-				})
-			})
-
-			Context("when the app has actual state only", func() {
-				It("To return the app", func() {
-					app, err := store.GetApp(app2.AppGuid, app2.AppVersion)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(app.Desired).To(BeZero())
-					Expect(app.InstanceHeartbeats).To(HaveLen(1))
-					Expect(app.InstanceHeartbeats).To(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
-					Expect(app.CrashCounts[0]).To(Equal(crashCount[2]))
-				})
+			It("To return the app, with an empty desired state", func() {
+				app, err := store.GetApp(app2.AppGuid, app2.AppVersion)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(app.Desired).To(BeZero())
+				Expect(app.InstanceHeartbeats).To(HaveLen(1))
+				Expect(app.InstanceHeartbeats).To(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
+				Expect(app.CrashCounts[0]).To(Equal(crashCount[2]))
 			})
 
 			Context("when the app has crash counts only", func() {

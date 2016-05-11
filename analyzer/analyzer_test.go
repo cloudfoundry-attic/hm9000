@@ -26,6 +26,7 @@ var _ = Describe("Analyzer", func() {
 		clock        *fakeclock.FakeClock
 		dea          appfixture.DeaFixture
 		app          appfixture.AppFixture
+		appQueue     chan map[string]models.DesiredAppState
 	)
 
 	conf, _ := config.DefaultConfig()
@@ -40,7 +41,8 @@ var _ = Describe("Analyzer", func() {
 		app = dea.GetApp(0)
 
 		store.BumpActualFreshness(time.Unix(100, 0))
-		store.BumpDesiredFreshness(time.Unix(100, 0))
+
+		appQueue = make(chan map[string]models.DesiredAppState, 2)
 
 		analyzer = New(store, clock, fakelogger.NewFakeLogger(), conf)
 	})
@@ -63,10 +65,16 @@ var _ = Describe("Analyzer", func() {
 		return messagesArr
 	}
 
+	runAnalyze := func(appQueue chan map[string]models.DesiredAppState) (map[string]*models.App, error) {
+		close(appQueue)
+		return analyzer.Analyze(appQueue)
+	}
+
 	Describe("The steady state", func() {
 		Context("When there are no desired or running apps", func() {
 			It("should not send any start or stop messages", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
+
 				Expect(err).ToNot(HaveOccurred())
 				Expect(startMessages()).To(BeEmpty())
 				Expect(stopMessages()).To(BeEmpty())
@@ -77,14 +85,15 @@ var _ = Describe("Analyzer", func() {
 			BeforeEach(func() {
 				desired := app.DesiredState(3)
 				desired.State = models.AppStateStarted
-				store.SyncDesiredState(
-					desired,
-				)
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desired.StoreKey()] = desired
+
+				appQueue <- desiredStateData
 				store.SyncHeartbeats(app.Heartbeat(3))
 			})
 
 			It("should not send any start or stop messages", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(startMessages()).To(BeEmpty())
 				Expect(stopMessages()).To(BeEmpty())
@@ -93,16 +102,18 @@ var _ = Describe("Analyzer", func() {
 	})
 
 	Describe("Starting missing instances", func() {
-		Context("where an app has desired instances", func() {
+		Context("where an staged app has desired instances", func() {
 			BeforeEach(func() {
-				store.SyncDesiredState(
-					app.DesiredState(2),
-				)
+				desired := app.DesiredState(2)
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desired.StoreKey()] = desired
+				appQueue <- desiredStateData
+
 			})
 
 			Context("and none of the instances are running", func() {
 				It("should send a start message for each of the missing instances", func() {
-					_, err := analyzer.Analyze()
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stopMessages()).To(BeEmpty())
 					Expect(startMessages()).To(HaveLen(2))
@@ -115,7 +126,7 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should set the priority to 1", func() {
-					analyzer.Analyze()
+					runAnalyze(appQueue)
 					for _, message := range startMessages() {
 						Expect(message.Priority).To(Equal(1.0))
 					}
@@ -125,11 +136,12 @@ var _ = Describe("Analyzer", func() {
 			Context("when there is an existing start message", func() {
 				var existingMessage models.PendingStartMessage
 				BeforeEach(func() {
-					existingMessage = models.NewPendingStartMessage(time.Unix(1, 0), 0, 0, app.AppGuid, app.AppVersion, 0, 0.5, models.PendingStartMessageReasonMissing)
+					existingMessage = models.NewPendingStartMessage(time.Unix(1, 0), 0, 0, app.AppGuid, app.AppVersion, 0, 1, models.PendingStartMessageReasonMissing)
 					store.SavePendingStartMessages(
 						existingMessage,
 					)
-					analyzer.Analyze()
+					Expect(startMessages()).To(ContainElement(EqualPendingStartMessage(existingMessage)))
+					runAnalyze(appQueue)
 				})
 
 				It("should not overwrite", func() {
@@ -144,7 +156,7 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should return a start message containing only the missing indices", func() {
-					_, err := analyzer.Analyze()
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stopMessages()).To(BeEmpty())
 
@@ -155,26 +167,28 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should set the priority to 0.5", func() {
-					analyzer.Analyze()
+					runAnalyze(appQueue)
 					for _, message := range startMessages() {
 						Expect(message.Priority).To(Equal(0.5))
 					}
 				})
 			})
 
-			Context("When the app has not finished staging", func() {
-				BeforeEach(func() {
-					desiredState := app.DesiredState(2)
-					desiredState.PackageState = models.AppPackageStatePending
-					store.SyncDesiredState(desiredState)
-				})
+		})
+		Context("When the app has not finished staging and has desired instances", func() {
+			BeforeEach(func() {
+				desiredState := app.DesiredState(2)
+				desiredState.PackageState = models.AppPackageStatePending
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desiredState.StoreKey()] = desiredState
+				appQueue <- desiredStateData
+			})
 
-				It("should not start any missing instances", func() {
-					_, err := analyzer.Analyze()
-					Expect(err).ToNot(HaveOccurred())
-					Expect(stopMessages()).To(BeEmpty())
-					Expect(startMessages()).To(BeEmpty())
-				})
+			It("should not start any missing instances", func() {
+				_, err := runAnalyze(appQueue)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(stopMessages()).To(BeEmpty())
+				Expect(startMessages()).To(BeEmpty())
 			})
 		})
 	})
@@ -186,7 +200,7 @@ var _ = Describe("Analyzer", func() {
 
 		Context("when there are no desired instances", func() {
 			It("should return an array of stop messages for the extra instances", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(startMessages()).To(BeEmpty())
 				Expect(stopMessages()).To(HaveLen(3))
@@ -209,7 +223,7 @@ var _ = Describe("Analyzer", func() {
 				store.SavePendingStopMessages(
 					existingMessage,
 				)
-				analyzer.Analyze()
+				runAnalyze(appQueue)
 			})
 
 			It("should not overwrite", func() {
@@ -220,14 +234,15 @@ var _ = Describe("Analyzer", func() {
 
 		Context("when the desired state requires fewer versions", func() {
 			BeforeEach(func() {
-				store.SyncDesiredState(
-					app.DesiredState(1),
-				)
+				desiredState := app.DesiredState(1)
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desiredState.StoreKey()] = desiredState
+				appQueue <- desiredStateData
 			})
 
 			Context("and all desired instances are present", func() {
 				It("should return an array of stop messages for the (correct) extra instances", func() {
-					_, err := analyzer.Analyze()
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(startMessages()).To(BeEmpty())
 
@@ -247,7 +262,7 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should return a start message containing the missing indices and no stop messages", func() {
-					_, err := analyzer.Analyze()
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(startMessages()).To(HaveLen(1))
@@ -269,9 +284,10 @@ var _ = Describe("Analyzer", func() {
 		)
 
 		BeforeEach(func() {
-			store.SyncDesiredState(
-				app.DesiredState(3),
-			)
+			desiredState := app.DesiredState(3)
+			desiredStateData := make(map[string]models.DesiredAppState)
+			desiredStateData[desiredState.StoreKey()] = desiredState
+			appQueue <- desiredStateData
 
 			duplicateInstance1 = app.InstanceAtIndex(2)
 			duplicateInstance1.InstanceGuid = models.Guid()
@@ -291,7 +307,7 @@ var _ = Describe("Analyzer", func() {
 					duplicateInstance3.Heartbeat(),
 				))
 
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stopMessages()).To(BeEmpty())
 
@@ -321,7 +337,7 @@ var _ = Describe("Analyzer", func() {
 			})
 
 			It("should schedule a stop for every running instance at the duplicated index with increasing delays", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(startMessages()).To(BeEmpty())
 
@@ -351,7 +367,7 @@ var _ = Describe("Analyzer", func() {
 					store.SavePendingStopMessages(
 						existingMessage,
 					)
-					analyzer.Analyze()
+					runAnalyze(appQueue)
 				})
 
 				It("should not overwrite", func() {
@@ -385,7 +401,7 @@ var _ = Describe("Analyzer", func() {
 					duplicateExtraInstance2.Heartbeat(),
 				))
 
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(startMessages()).To(BeEmpty())
 
@@ -418,7 +434,7 @@ var _ = Describe("Analyzer", func() {
 
 		Context("when the app is no longer desired", func() {
 			It("should send an immediate stop", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(startMessages()).To(BeEmpty())
@@ -437,11 +453,13 @@ var _ = Describe("Analyzer", func() {
 			BeforeEach(func() {
 				desired := app.DesiredState(2)
 				desired.PackageState = models.AppPackageStatePending
-				store.SyncDesiredState(desired)
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desired.StoreKey()] = desired
+				appQueue <- desiredStateData
 			})
 
 			It("should send an immediate start & stop (as the EVACUATING instance cannot be started on another DEA, but we're going to try...)", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(startMessages()).To(HaveLen(1))
@@ -457,11 +475,14 @@ var _ = Describe("Analyzer", func() {
 
 		Context("when the EVACUTING instance is no longer in the desired range", func() {
 			BeforeEach(func() {
-				store.SyncDesiredState(app.DesiredState(1))
+				desiredState := app.DesiredState(1)
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desiredState.StoreKey()] = desiredState
+				appQueue <- desiredStateData
 			})
 
 			It("should send an immediate stop", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(startMessages()).To(BeEmpty())
@@ -475,12 +496,15 @@ var _ = Describe("Analyzer", func() {
 
 		Context("and the index is still desired", func() {
 			BeforeEach(func() {
-				store.SyncDesiredState(app.DesiredState(2))
+				desiredState := app.DesiredState(2)
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desiredState.StoreKey()] = desiredState
+				appQueue <- desiredStateData
 			})
 
 			Context("and no other instances", func() {
 				It("should schedule an immediate start message and no stop message", func() {
-					_, err := analyzer.Analyze()
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(stopMessages()).To(BeEmpty())
@@ -501,7 +525,7 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should schedule an immediate stop for the EVACUATING instance", func() {
-					_, err := analyzer.Analyze()
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(startMessages()).To(BeEmpty())
@@ -524,7 +548,7 @@ var _ = Describe("Analyzer", func() {
 					})
 
 					It("should schedule an immediate stop for both EVACUATING instances", func() {
-						_, err := analyzer.Analyze()
+						_, err := runAnalyze(appQueue)
 						Expect(err).ToNot(HaveOccurred())
 
 						Expect(startMessages()).To(BeEmpty())
@@ -549,7 +573,7 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should not schedule anything", func() {
-					_, err := analyzer.Analyze()
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(startMessages()).To(BeEmpty())
@@ -568,7 +592,7 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should schedule an immediate start message *and* a stop message for the EVACUATING instance", func() {
-					_, err := analyzer.Analyze()
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(startMessages()).To(HaveLen(1))
@@ -587,7 +611,7 @@ var _ = Describe("Analyzer", func() {
 		var heartbeat *models.Heartbeat
 		Context("When there are multiple crashed instances on the same index", func() {
 			JustBeforeEach(func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -598,9 +622,10 @@ var _ = Describe("Analyzer", func() {
 
 			Context("when the app is desired", func() {
 				BeforeEach(func() {
-					store.SyncDesiredState(
-						app.DesiredState(1),
-					)
+					desiredState := app.DesiredState(1)
+					desiredStateData := make(map[string]models.DesiredAppState)
+					desiredStateData[desiredState.StoreKey()] = desiredState
+					appQueue <- desiredStateData
 				})
 
 				It("should not try to stop crashed instances", func() {
@@ -643,9 +668,10 @@ var _ = Describe("Analyzer", func() {
 				BeforeEach(func() {
 					desiredState := app.DesiredState(1)
 					desiredState.PackageState = models.AppPackageStatePending
-					store.SyncDesiredState(
-						desiredState,
-					)
+					desiredStateData := make(map[string]models.DesiredAppState)
+					desiredStateData[desiredState.StoreKey()] = desiredState
+					appQueue <- desiredStateData
+
 				})
 
 				It("should not try to start/stop the instance", func() {
@@ -659,20 +685,24 @@ var _ = Describe("Analyzer", func() {
 			BeforeEach(func() {
 				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0))
 				store.SyncHeartbeats(heartbeat)
-				store.SyncDesiredState(
-					app.DesiredState(1),
-				)
 			})
 
 			It("should back off the scheduling", func() {
 				expectedDelays := []int64{0, 0, 0, 30, 60, 120, 240, 480, 960, 960, 960}
 
 				for _, expectedDelay := range expectedDelays {
-					_, err := analyzer.Analyze()
+					appQueue := make(chan map[string]models.DesiredAppState, 2)
+					desiredState := app.DesiredState(1)
+					desiredStateData := make(map[string]models.DesiredAppState)
+					desiredStateData[desiredState.StoreKey()] = desiredState
+					appQueue <- desiredStateData
+
+					_, err := runAnalyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(startMessages()[0].SendOn).To(Equal(clock.Now().Unix() + expectedDelay))
 					Expect(startMessages()[0].StartReason).To(Equal(models.PendingStartMessageReasonCrashed))
 					store.DeletePendingStartMessages(startMessages()...)
+
 				}
 			})
 		})
@@ -682,13 +712,14 @@ var _ = Describe("Analyzer", func() {
 				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(1))
 				store.SyncHeartbeats(heartbeat)
 
-				store.SyncDesiredState(
-					app.DesiredState(2),
-				)
+				desiredState := app.DesiredState(2)
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desiredState.StoreKey()] = desiredState
+				appQueue <- desiredStateData
 			})
 
 			It("should only try to start the index 0", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(startMessages()).To(HaveLen(1))
 				Expect(startMessages()[0].IndexToStart).To(Equal(0))
@@ -700,13 +731,14 @@ var _ = Describe("Analyzer", func() {
 				heartbeat = dea.HeartbeatWith(app.CrashedInstanceHeartbeatAtIndex(0), app.CrashedInstanceHeartbeatAtIndex(1), app.InstanceAtIndex(2).Heartbeat())
 				store.SyncHeartbeats(heartbeat)
 
-				store.SyncDesiredState(
-					app.DesiredState(3),
-				)
+				desiredState := app.DesiredState(3)
+				desiredStateData := make(map[string]models.DesiredAppState)
+				desiredStateData[desiredState.StoreKey()] = desiredState
+				appQueue <- desiredStateData
 			})
 
 			It("should only try to start the index 0", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(startMessages()).To(HaveLen(2))
 				indexesToStart := []int{}
@@ -732,11 +764,16 @@ var _ = Describe("Analyzer", func() {
 			yetAnotherApp = dea.GetApp(3)
 			undesiredApp.AppGuid = app.AppGuid
 
-			store.SyncDesiredState(
-				app.DesiredState(1),
-				otherApp.DesiredState(3),
-				yetAnotherApp.DesiredState(2),
-			)
+			desiredStateData := make(map[string]models.DesiredAppState)
+			desiredState := app.DesiredState(1)
+			desiredStateData[desiredState.StoreKey()] = desiredState
+			desiredState = otherApp.DesiredState(3)
+			desiredStateData[desiredState.StoreKey()] = desiredState
+			desiredState = yetAnotherApp.DesiredState(2)
+			desiredStateData[desiredState.StoreKey()] = desiredState
+
+			appQueue <- desiredStateData
+
 			store.SyncHeartbeats(dea.HeartbeatWith(
 				app.InstanceAtIndex(0).Heartbeat(),
 				app.InstanceAtIndex(1).Heartbeat(),
@@ -747,7 +784,7 @@ var _ = Describe("Analyzer", func() {
 		})
 
 		It("should analyze each app-version combination separately", func() {
-			_, err := analyzer.Analyze()
+			_, err := runAnalyze(appQueue)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(startMessages()).To(HaveLen(3))
@@ -775,36 +812,20 @@ var _ = Describe("Analyzer", func() {
 		BeforeEach(func() {
 			storeAdapter.Reset()
 
-			desired := app.DesiredState(1)
+			desiredState := app.DesiredState(1)
 			//this setup would, ordinarily, trigger a start and a stop
-			store.SyncDesiredState(
-				desired,
-			)
+			desiredStateData := make(map[string]models.DesiredAppState)
+			desiredStateData[desiredState.StoreKey()] = desiredState
+			appQueue <- desiredStateData
+
 			store.SyncHeartbeats(
 				appfixture.NewAppFixture().Heartbeat(0),
 			)
 		})
 
-		Context("when the desired state is not fresh", func() {
-			BeforeEach(func() {
-				store.BumpActualFreshness(time.Unix(10, 0))
-			})
-
-			It("should not send any start or stop messages", func() {
-				_, err := analyzer.Analyze()
-				Expect(err).To(Equal(storepackage.DesiredIsNotFreshError))
-				Expect(startMessages()).To(BeEmpty())
-				Expect(stopMessages()).To(BeEmpty())
-			})
-		})
-
 		Context("when the actual state is not fresh", func() {
-			BeforeEach(func() {
-				store.BumpDesiredFreshness(time.Unix(10, 0))
-			})
-
 			It("should not send any start or stop messages", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).To(Equal(storepackage.ActualIsNotFreshError))
 				Expect(startMessages()).To(BeEmpty())
 				Expect(stopMessages()).To(BeEmpty())
@@ -814,12 +835,11 @@ var _ = Describe("Analyzer", func() {
 		Context("when the apps fail to fetch", func() {
 			BeforeEach(func() {
 				store.BumpActualFreshness(time.Unix(10, 0))
-				store.BumpDesiredFreshness(time.Unix(10, 0))
 				storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("apps", errors.New("oops!"))
 			})
 
 			It("should return the store's error and not send any start/stop messages", func() {
-				_, err := analyzer.Analyze()
+				_, err := runAnalyze(appQueue)
 				Expect(err).To(Equal(errors.New("oops!")))
 				Expect(startMessages()).To(BeEmpty())
 				Expect(stopMessages()).To(BeEmpty())

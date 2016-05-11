@@ -22,13 +22,6 @@ func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, 
 
 	var err error
 
-	tDesired := time.Now()
-	representation.desiredState, err = store.getDesiredStateForApp(appGuid, appVersion)
-	if err != nil {
-		return nil, err
-	}
-	dtDesired := time.Since(tDesired).Seconds()
-
 	tActual := time.Now()
 	representation.actualState, err = store.GetInstanceHeartbeatsForApp(appGuid, appVersion)
 	if err != nil {
@@ -54,7 +47,6 @@ func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, 
 
 	store.logger.Debug(fmt.Sprintf("Get Duration App"), lager.Data{
 		"Duration":                   fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
-		"Time to Fetch Desired":      fmt.Sprintf("%.4f seconds", dtDesired),
 		"Time to Fetch Actual":       fmt.Sprintf("%.4f seconds", dtActual),
 		"Time to Fetch Crash Counts": fmt.Sprintf("%.4f seconds", dtCrash),
 	})
@@ -67,18 +59,6 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 
 	results = make(map[string]*models.App)
 	representations := make(appRepresentations)
-
-	tDesired := time.Now()
-	desiredStates, err := store.GetDesiredState()
-	dtDesired := time.Since(tDesired).Seconds()
-
-	if err != nil {
-		return results, err
-	}
-	for _, desiredState := range desiredStates {
-		representation := representations.representationForAppGuidVersion(desiredState.AppGuid, desiredState.AppVersion)
-		representation.desiredState = desiredState
-	}
 
 	tActual := time.Now()
 	actualStates, err := store.GetInstanceHeartbeats()
@@ -118,7 +98,6 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 	store.logger.Debug(fmt.Sprintf("Get Duration Apps"), lager.Data{
 		"Number of Items":            fmt.Sprintf("%d", len(results)),
 		"Duration":                   fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
-		"Time to Fetch Desired":      fmt.Sprintf("%.4f seconds", dtDesired),
 		"Time to Fetch Actual":       fmt.Sprintf("%.4f seconds", dtActual),
 		"Time to Fetch Crash Counts": fmt.Sprintf("%.4f seconds", dtCrash),
 	})
@@ -146,12 +125,8 @@ type appRepresentation struct {
 	crashCounts  []models.CrashCount
 }
 
-func (representation *appRepresentation) hasDesired() bool {
-	return representation.desiredState.AppGuid != ""
-}
-
 func (representation *appRepresentation) representsAnApp() bool {
-	return representation.hasDesired() || len(representation.actualState) > 0
+	return len(representation.actualState) > 0
 }
 
 func (representation *appRepresentation) buildApp() (*models.App, error) {
@@ -159,11 +134,6 @@ func (representation *appRepresentation) buildApp() (*models.App, error) {
 	appVersion := ""
 
 	desiredState := models.DesiredAppState{}
-	if representation.hasDesired() {
-		desiredState = representation.desiredState
-		appGuid = desiredState.AppGuid
-		appVersion = desiredState.AppVersion
-	}
 
 	actualState := representation.actualState
 	if len(actualState) > 0 {

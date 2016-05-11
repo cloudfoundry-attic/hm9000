@@ -15,8 +15,6 @@ import (
 )
 
 var ActualIsNotFreshError = errors.New("Actual state is not fresh")
-var DesiredIsNotFreshError = errors.New("Desired state is not fresh")
-var ActualAndDesiredAreNotFreshError = errors.New("Actual and desired state are not fresh")
 var AppNotFoundError = errors.New("App not found")
 
 type Storeable interface {
@@ -26,11 +24,9 @@ type Storeable interface {
 
 //go:generate counterfeiter -o fakestore/fake_store.go . Store
 type Store interface {
-	BumpDesiredFreshness(timestamp time.Time) error
 	BumpActualFreshness(timestamp time.Time) error
 	RevokeActualFreshness() error
 
-	IsDesiredStateFresh() (bool, error)
 	IsActualStateFresh(time.Time) (bool, error)
 
 	VerifyFreshness(time.Time) error
@@ -38,9 +34,6 @@ type Store interface {
 	AppKey(appGuid string, appVersion string) string
 	GetApps() (map[string]*models.App, error)
 	GetApp(appGuid string, appVersion string) (*models.App, error)
-
-	SyncDesiredState(desiredStates ...models.DesiredAppState) error
-	GetDesiredState() (map[string]models.DesiredAppState, error)
 
 	SyncHeartbeats(heartbeat ...*models.Heartbeat) error
 	GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
@@ -97,8 +90,6 @@ func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode
 	}
 	return node.ChildNodes, nil
 }
-
-// buckle up, here be dragons...
 
 func (store *RealStore) save(stuff interface{}, root string, ttl uint64) error {
 	t := time.Now()

@@ -5,15 +5,13 @@ import (
 
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/cloudfoundry/hm9000/store"
+	// "github.com/cloudfoundry/hm9000/store"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 )
@@ -30,43 +28,39 @@ const initialBulkToken = "{}"
 type DesiredStateFetcher struct {
 	config            *config.Config
 	httpClient        httpclient.HttpClient
-	store             store.Store
 	metricsAccountant metricsaccountant.MetricsAccountant
 	clock             clock.Clock
-	cache             map[string]models.DesiredAppState
 	logger            lager.Logger
 }
 
 func New(config *config.Config,
-	store store.Store,
 	metricsAccountant metricsaccountant.MetricsAccountant,
 	httpClient httpclient.HttpClient,
 	clock clock.Clock,
-	logger lager.Logger) *DesiredStateFetcher {
+	logger lager.Logger,
+) *DesiredStateFetcher {
 
 	return &DesiredStateFetcher{
 		config:            config,
 		httpClient:        httpClient,
-		store:             store,
 		metricsAccountant: metricsAccountant,
 		clock:             clock,
-		cache:             map[string]models.DesiredAppState{},
 		logger:            logger,
 	}
 }
 
-func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult) {
-	fetcher.cache = map[string]models.DesiredAppState{}
+func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult, appQueue chan map[string]models.DesiredAppState) {
+	fetcher.logger.Info("repakulus: inside the fetcher")
 
 	authInfo := models.BasicAuthInfo{
 		User:     fetcher.config.CCAuthUser,
 		Password: fetcher.config.CCAuthPassword,
 	}
 
-	fetcher.fetchBatch(authInfo.Encode(), initialBulkToken, 0, resultChan)
+	fetcher.fetchBatch(authInfo.Encode(), initialBulkToken, 0, resultChan, appQueue)
 }
 
-func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult) {
+func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult, appQueue chan map[string]models.DesiredAppState) {
 	req, err := http.NewRequest("GET", fetcher.bulkURL(fetcher.config.DesiredStateBatchSize, token), nil)
 	if err != nil {
 		resultChan <- DesiredStateFetcherResult{Message: "Failed to generate URL request", Error: err}
@@ -106,21 +100,13 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 		}
 
 		if len(response.Results) == 0 {
-			tSync := fetcher.clock.Now()
-			err = fetcher.syncStore()
-			fetcher.metricsAccountant.TrackDesiredStateSyncTime(time.Since(tSync))
-			if err != nil {
-				resultChan <- DesiredStateFetcherResult{Message: "Failed to sync desired state to the store", Error: err}
-				return
-			}
-
-			fetcher.store.BumpDesiredFreshness(fetcher.clock.Now())
+			close(appQueue)
 			resultChan <- DesiredStateFetcherResult{Success: true, NumResults: numResults}
 			return
 		}
 
-		fetcher.cacheResponse(response)
-		fetcher.fetchBatch(authorization, response.BulkTokenRepresentation(), numResults+len(response.Results), resultChan)
+		fetcher.sendBatch(response, appQueue)
+		fetcher.fetchBatch(authorization, response.BulkTokenRepresentation(), numResults+len(response.Results), resultChan, appQueue)
 	})
 }
 
@@ -138,29 +124,12 @@ func (fetcher *DesiredStateFetcher) guids(desiredStates []models.DesiredAppState
 	return strings.Join(result, ",")
 }
 
-func (fetcher *DesiredStateFetcher) syncStore() error {
-	desiredStates := make([]models.DesiredAppState, len(fetcher.cache))
-	i := 0
-	for _, desiredState := range fetcher.cache {
-		desiredStates[i] = desiredState
-		i++
-	}
-	err := fetcher.store.SyncDesiredState(desiredStates...)
-	if err != nil {
-		fetcher.logger.Error("Failed to Sync Desired State", err, lager.Data{
-			"Number of Entries": strconv.Itoa(len(desiredStates)),
-			"Desireds":          fetcher.guids(desiredStates),
-		})
-		return err
-	}
-
-	return nil
-}
-
-func (fetcher *DesiredStateFetcher) cacheResponse(response DesiredStateServerResponse) {
+func (fetcher *DesiredStateFetcher) sendBatch(response DesiredStateServerResponse, appQueue chan map[string]models.DesiredAppState) {
+	cache := map[string]models.DesiredAppState{}
 	for _, desiredState := range response.Results {
 		if desiredState.State == models.AppStateStarted && (desiredState.PackageState == models.AppPackageStateStaged || desiredState.PackageState == models.AppPackageStatePending) {
-			fetcher.cache[desiredState.StoreKey()] = desiredState
+			cache[desiredState.StoreKey()] = desiredState
 		}
 	}
+	appQueue <- cache
 }

@@ -76,8 +76,6 @@ var _ = Describe("Serving API", func() {
 
 				Expect(bodyString).To(ContainSubstring(`"droplet":"%s"`, a.AppGuid))
 				Expect(bodyString).To(ContainSubstring(`"droplet":"%s"`, b.AppGuid))
-				Expect(bodyString).To(ContainSubstring(`"instances":2`))
-				Expect(bodyString).To(ContainSubstring(`"instances":3`))
 			})
 		})
 

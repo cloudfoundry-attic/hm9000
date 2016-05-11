@@ -114,82 +114,21 @@ var _ = Describe("Freshness", func() {
 				})
 			})
 		})
-
-		Context("the desired state", func() {
-			bumpingFreshness("/hm/v1"+conf.DesiredFreshnessKey, conf.DesiredFreshnessTTL(), Store.BumpDesiredFreshness)
-		})
 	})
 
 	Describe("Verifying the store's freshness", func() {
-		Context("when neither the desired or actual state is fresh", func() {
+		Context("when the actual state is not fresh", func() {
 			It("To return the appropriate error", func() {
-				err := store.VerifyFreshness(time.Unix(100, 0))
-				Expect(err).To(Equal(ActualAndDesiredAreNotFreshError))
-			})
-		})
-
-		Context("when only the desired state is not fresh", func() {
-			It("To return the appropriate error", func() {
-				store.BumpActualFreshness(time.Unix(100, 0))
-				err := store.VerifyFreshness(time.Unix(int64(100+conf.ActualFreshnessTTL()), 0))
-				Expect(err).To(Equal(DesiredIsNotFreshError))
-			})
-		})
-
-		Context("when only the actual state is not fresh", func() {
-			It("To return the appropriate error", func() {
-				store.BumpDesiredFreshness(time.Unix(100, 0))
 				err := store.VerifyFreshness(time.Unix(100, 0))
 				Expect(err).To(Equal(ActualIsNotFreshError))
 			})
 		})
 
-		Context("when both are fresh", func() {
+		Context("when the actual state is fresh", func() {
 			It("To not error", func() {
 				store.BumpActualFreshness(time.Unix(100, 0))
-				store.BumpDesiredFreshness(time.Unix(100, 0))
 				err := store.VerifyFreshness(time.Unix(int64(100+conf.ActualFreshnessTTL()), 0))
 				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-	})
-
-	Describe("Checking desired state freshness", func() {
-		Context("if the freshness key is not present", func() {
-			It("returns that the state is not fresh", func() {
-				fresh, err := store.IsDesiredStateFresh()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(fresh).To(BeFalse())
-			})
-		})
-
-		Context("if the freshness key is present", func() {
-			BeforeEach(func() {
-				store.BumpDesiredFreshness(time.Unix(100, 0))
-			})
-
-			It("returns that the state is fresh", func() {
-				fresh, err := store.IsDesiredStateFresh()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(fresh).To(BeTrue())
-			})
-		})
-
-		Context("when the store returns an error", func() {
-			BeforeEach(func() {
-				err := storeAdapter.SetMulti([]storeadapter.StoreNode{
-					{
-						Key:   "/hm/v1/desired-fresh/mwahaha",
-						Value: []byte("i'm a directory...."),
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("To return the store's error", func() {
-				fresh, err := store.IsDesiredStateFresh()
-				Expect(err).To(Equal(storeadapter.ErrorNodeIsDirectory))
-				Expect(fresh).To(BeFalse())
 			})
 		})
 	})

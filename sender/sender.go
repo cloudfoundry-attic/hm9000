@@ -53,8 +53,10 @@ func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountan
 	}
 }
 
-func (sender *Sender) Send(clock clock.Clock) error {
+func (sender *Sender) Send(clock clock.Clock, apps map[string]*models.App) error {
 	sender.currentTime = clock.Now()
+	sender.apps = apps
+
 	err := sender.store.VerifyFreshness(sender.currentTime)
 	if err != nil {
 		sender.logger.Error("Store is not fresh", err)
@@ -70,12 +72,6 @@ func (sender *Sender) Send(clock clock.Clock) error {
 	pendingStopMessages, err := sender.store.GetPendingStopMessages()
 	if err != nil {
 		sender.logger.Error("Failed to fetch pending stop messages", err)
-		return err
-	}
-
-	sender.apps, err = sender.store.GetApps()
-	if err != nil {
-		sender.logger.Error("Failed to fetch apps", err)
 		return err
 	}
 
