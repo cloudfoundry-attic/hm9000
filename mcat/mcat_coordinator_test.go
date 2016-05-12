@@ -52,6 +52,7 @@ type MCATCoordinator struct {
 	DesiredStateServerBaseUrl string
 	DesiredStateServerPort    int
 	NatsPort                  int
+	NatsMonitoringPort        int
 	DropsondePort             int
 
 	ParallelNode int
@@ -84,6 +85,7 @@ func (coordinator *MCATCoordinator) computePorts() {
 	coordinator.DesiredStateServerPort = 6001 + coordinator.ParallelNode
 	coordinator.DesiredStateServerBaseUrl = "http://127.0.0.1:" + strconv.Itoa(coordinator.DesiredStateServerPort)
 	coordinator.NatsPort = 4223 + coordinator.ParallelNode
+	coordinator.NatsMonitoringPort = 8223 + coordinator.ParallelNode
 	coordinator.DropsondePort = 7879 + coordinator.ParallelNode
 }
 
@@ -98,13 +100,13 @@ func (coordinator *MCATCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *
 	}
 	coordinator.currentCLIRunner = NewCLIRunner(coordinator.hm9000Binary, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.DropsondePort, coordinator.ConsulRunner.ConsulCluster(), coordinator.Verbose)
 	store := storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
-	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus)
+	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus, coordinator.NatsMonitoringPort)
 
 	return coordinator.currentCLIRunner, simulator, coordinator.startStopListener, coordinator.metron
 }
 
 func (coordinator *MCATCoordinator) StartNats() {
-	coordinator.natsRunner = natsrunner.NewNATSRunner(coordinator.NatsPort)
+	coordinator.natsRunner = natsrunner.NewNATSRunner(coordinator.NatsPort, coordinator.NatsMonitoringPort)
 	coordinator.natsRunner.Start()
 	coordinator.MessageBus = coordinator.natsRunner.MessageBus
 }

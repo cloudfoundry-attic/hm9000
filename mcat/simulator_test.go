@@ -1,6 +1,11 @@
 package mcat_test
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
@@ -10,6 +15,16 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/gomega"
 )
+
+type NatsConnections struct {
+	NumConnections int              `json:"num_connections"`
+	Connections    []NatsConnection `json:"connections"`
+}
+
+type NatsConnection struct {
+	Subscriptions     int      `json:"subscriptions"`
+	SubscriptionsList []string `json:"subscriptions_list"`
+}
 
 type Simulator struct {
 	conf                   *config.Config
@@ -23,9 +38,10 @@ type Simulator struct {
 	TicksToExpireHeartbeat int
 	GracePeriod            int
 	messageBus             yagnats.NATSConn
+	natsMonitoringPort     int
 }
 
-func NewSimulator(conf *config.Config, storeRunner *etcdstorerunner.ETCDClusterRunner, store store.Store, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.NATSConn) *Simulator {
+func NewSimulator(conf *config.Config, storeRunner *etcdstorerunner.ETCDClusterRunner, store store.Store, desiredStateServer *desiredstateserver.DesiredStateServer, cliRunner *CLIRunner, messageBus yagnats.NATSConn, natsMonitoringPort int) *Simulator {
 	desiredStateServer.Reset()
 
 	return &Simulator{
@@ -39,6 +55,7 @@ func NewSimulator(conf *config.Config, storeRunner *etcdstorerunner.ETCDClusterR
 		TicksToExpireHeartbeat: int(conf.HeartbeatTTLInHeartbeats),
 		GracePeriod:            int(conf.GracePeriodInHeartbeats),
 		messageBus:             messageBus,
+		natsMonitoringPort:     natsMonitoringPort,
 	}
 }
 
@@ -56,6 +73,30 @@ func (s *Simulator) Tick(numTicks int) {
 func (s *Simulator) sendHeartbeats() {
 	s.cliRunner.StartListener(s.currentTimestamp)
 	metronAgent.Reset()
+
+	Eventually(func() bool {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/connz?subs=1", s.natsMonitoringPort))
+		Expect(err).ToNot(HaveOccurred())
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		Expect(err).ToNot(HaveOccurred())
+
+		var natsConns NatsConnections
+		err = json.Unmarshal(body, &natsConns)
+		Expect(err).ToNot(HaveOccurred())
+
+		for _, conn := range natsConns.Connections {
+			for _, subscription := range conn.SubscriptionsList {
+				if subscription == "dea.heartbeat" {
+					return true
+				}
+			}
+		}
+
+		return false
+	}, IterationTimeout).Should(BeTrue())
+
 	for _, heartbeat := range s.currentHeartbeats {
 		s.messageBus.Publish("dea.heartbeat", heartbeat.ToJSON())
 	}

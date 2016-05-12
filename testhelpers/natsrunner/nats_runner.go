@@ -15,14 +15,16 @@ import (
 var natsCommand *exec.Cmd
 
 type NATSRunner struct {
-	port        int
-	natsCommand *exec.Cmd
-	MessageBus  yagnats.NATSConn
+	natsPort           int
+	natsMonitoringPort int
+	natsCommand        *exec.Cmd
+	MessageBus         yagnats.NATSConn
 }
 
-func NewNATSRunner(port int) *NATSRunner {
+func NewNATSRunner(natsPort, natsMonitoringPort int) *NATSRunner {
 	return &NATSRunner{
-		port: port,
+		natsPort:           natsPort,
+		natsMonitoringPort: natsMonitoringPort,
 	}
 }
 
@@ -33,12 +35,12 @@ func (runner *NATSRunner) Start() {
 		os.Exit(1)
 	}
 
-	runner.natsCommand = exec.Command("gnatsd", "-p", strconv.Itoa(runner.port))
+	runner.natsCommand = exec.Command("gnatsd", "-p", strconv.Itoa(runner.natsPort), "-m", strconv.Itoa(runner.natsMonitoringPort))
 	err = runner.natsCommand.Start()
 	Ω(err).ShouldNot(HaveOccurred(), "Make sure to have gnatsd on your path")
 	var messageBus yagnats.NATSConn
 	Eventually(func() error {
-		messageBus, err = yagnats.Connect([]string{fmt.Sprintf("nats://127.0.0.1:%d", runner.port)})
+		messageBus, err = yagnats.Connect([]string{fmt.Sprintf("nats://127.0.0.1:%d", runner.natsPort)})
 		return err
 	}, 5, 0.1).ShouldNot(HaveOccurred())
 
