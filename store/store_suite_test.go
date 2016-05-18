@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	etcdRunner  *etcdstorerunner.ETCDClusterRunner
+	etcdRunner *etcdstorerunner.ETCDClusterRunner
 )
 
 func TestStore(t *testing.T) {

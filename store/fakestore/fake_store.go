@@ -10,14 +10,6 @@ import (
 )
 
 type FakeStore struct {
-	BumpDesiredFreshnessStub        func(timestamp time.Time) error
-	bumpDesiredFreshnessMutex       sync.RWMutex
-	bumpDesiredFreshnessArgsForCall []struct {
-		timestamp time.Time
-	}
-	bumpDesiredFreshnessReturns struct {
-		result1 error
-	}
 	BumpActualFreshnessStub        func(timestamp time.Time) error
 	bumpActualFreshnessMutex       sync.RWMutex
 	bumpActualFreshnessArgsForCall []struct {
@@ -31,13 +23,6 @@ type FakeStore struct {
 	revokeActualFreshnessArgsForCall []struct{}
 	revokeActualFreshnessReturns     struct {
 		result1 error
-	}
-	IsDesiredStateFreshStub        func() (bool, error)
-	isDesiredStateFreshMutex       sync.RWMutex
-	isDesiredStateFreshArgsForCall []struct{}
-	isDesiredStateFreshReturns     struct {
-		result1 bool
-		result2 error
 	}
 	IsActualStateFreshStub        func(time.Time) (bool, error)
 	isActualStateFreshMutex       sync.RWMutex
@@ -80,21 +65,6 @@ type FakeStore struct {
 	}
 	getAppReturns struct {
 		result1 *models.App
-		result2 error
-	}
-	SyncDesiredStateStub        func(desiredStates ...models.DesiredAppState) error
-	syncDesiredStateMutex       sync.RWMutex
-	syncDesiredStateArgsForCall []struct {
-		desiredStates []models.DesiredAppState
-	}
-	syncDesiredStateReturns struct {
-		result1 error
-	}
-	GetDesiredStateStub        func() (map[string]models.DesiredAppState, error)
-	getDesiredStateMutex       sync.RWMutex
-	getDesiredStateArgsForCall []struct{}
-	getDesiredStateReturns     struct {
-		result1 map[string]models.DesiredAppState
 		result2 error
 	}
 	SyncHeartbeatsStub        func(heartbeat ...*models.Heartbeat) error
@@ -202,38 +172,6 @@ type FakeStore struct {
 	}
 }
 
-func (fake *FakeStore) BumpDesiredFreshness(timestamp time.Time) error {
-	fake.bumpDesiredFreshnessMutex.Lock()
-	fake.bumpDesiredFreshnessArgsForCall = append(fake.bumpDesiredFreshnessArgsForCall, struct {
-		timestamp time.Time
-	}{timestamp})
-	fake.bumpDesiredFreshnessMutex.Unlock()
-	if fake.BumpDesiredFreshnessStub != nil {
-		return fake.BumpDesiredFreshnessStub(timestamp)
-	} else {
-		return fake.bumpDesiredFreshnessReturns.result1
-	}
-}
-
-func (fake *FakeStore) BumpDesiredFreshnessCallCount() int {
-	fake.bumpDesiredFreshnessMutex.RLock()
-	defer fake.bumpDesiredFreshnessMutex.RUnlock()
-	return len(fake.bumpDesiredFreshnessArgsForCall)
-}
-
-func (fake *FakeStore) BumpDesiredFreshnessArgsForCall(i int) time.Time {
-	fake.bumpDesiredFreshnessMutex.RLock()
-	defer fake.bumpDesiredFreshnessMutex.RUnlock()
-	return fake.bumpDesiredFreshnessArgsForCall[i].timestamp
-}
-
-func (fake *FakeStore) BumpDesiredFreshnessReturns(result1 error) {
-	fake.BumpDesiredFreshnessStub = nil
-	fake.bumpDesiredFreshnessReturns = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeStore) BumpActualFreshness(timestamp time.Time) error {
 	fake.bumpActualFreshnessMutex.Lock()
 	fake.bumpActualFreshnessArgsForCall = append(fake.bumpActualFreshnessArgsForCall, struct {
@@ -288,31 +226,6 @@ func (fake *FakeStore) RevokeActualFreshnessReturns(result1 error) {
 	fake.revokeActualFreshnessReturns = struct {
 		result1 error
 	}{result1}
-}
-
-func (fake *FakeStore) IsDesiredStateFresh() (bool, error) {
-	fake.isDesiredStateFreshMutex.Lock()
-	fake.isDesiredStateFreshArgsForCall = append(fake.isDesiredStateFreshArgsForCall, struct{}{})
-	fake.isDesiredStateFreshMutex.Unlock()
-	if fake.IsDesiredStateFreshStub != nil {
-		return fake.IsDesiredStateFreshStub()
-	} else {
-		return fake.isDesiredStateFreshReturns.result1, fake.isDesiredStateFreshReturns.result2
-	}
-}
-
-func (fake *FakeStore) IsDesiredStateFreshCallCount() int {
-	fake.isDesiredStateFreshMutex.RLock()
-	defer fake.isDesiredStateFreshMutex.RUnlock()
-	return len(fake.isDesiredStateFreshArgsForCall)
-}
-
-func (fake *FakeStore) IsDesiredStateFreshReturns(result1 bool, result2 error) {
-	fake.IsDesiredStateFreshStub = nil
-	fake.isDesiredStateFreshReturns = struct {
-		result1 bool
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakeStore) IsActualStateFresh(arg1 time.Time) (bool, error) {
@@ -468,63 +381,6 @@ func (fake *FakeStore) GetAppReturns(result1 *models.App, result2 error) {
 	fake.GetAppStub = nil
 	fake.getAppReturns = struct {
 		result1 *models.App
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStore) SyncDesiredState(desiredStates ...models.DesiredAppState) error {
-	fake.syncDesiredStateMutex.Lock()
-	fake.syncDesiredStateArgsForCall = append(fake.syncDesiredStateArgsForCall, struct {
-		desiredStates []models.DesiredAppState
-	}{desiredStates})
-	fake.syncDesiredStateMutex.Unlock()
-	if fake.SyncDesiredStateStub != nil {
-		return fake.SyncDesiredStateStub(desiredStates...)
-	} else {
-		return fake.syncDesiredStateReturns.result1
-	}
-}
-
-func (fake *FakeStore) SyncDesiredStateCallCount() int {
-	fake.syncDesiredStateMutex.RLock()
-	defer fake.syncDesiredStateMutex.RUnlock()
-	return len(fake.syncDesiredStateArgsForCall)
-}
-
-func (fake *FakeStore) SyncDesiredStateArgsForCall(i int) []models.DesiredAppState {
-	fake.syncDesiredStateMutex.RLock()
-	defer fake.syncDesiredStateMutex.RUnlock()
-	return fake.syncDesiredStateArgsForCall[i].desiredStates
-}
-
-func (fake *FakeStore) SyncDesiredStateReturns(result1 error) {
-	fake.SyncDesiredStateStub = nil
-	fake.syncDesiredStateReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeStore) GetDesiredState() (map[string]models.DesiredAppState, error) {
-	fake.getDesiredStateMutex.Lock()
-	fake.getDesiredStateArgsForCall = append(fake.getDesiredStateArgsForCall, struct{}{})
-	fake.getDesiredStateMutex.Unlock()
-	if fake.GetDesiredStateStub != nil {
-		return fake.GetDesiredStateStub()
-	} else {
-		return fake.getDesiredStateReturns.result1, fake.getDesiredStateReturns.result2
-	}
-}
-
-func (fake *FakeStore) GetDesiredStateCallCount() int {
-	fake.getDesiredStateMutex.RLock()
-	defer fake.getDesiredStateMutex.RUnlock()
-	return len(fake.getDesiredStateArgsForCall)
-}
-
-func (fake *FakeStore) GetDesiredStateReturns(result1 map[string]models.DesiredAppState, result2 error) {
-	fake.GetDesiredStateStub = nil
-	fake.getDesiredStateReturns = struct {
-		result1 map[string]models.DesiredAppState
 		result2 error
 	}{result1, result2}
 }

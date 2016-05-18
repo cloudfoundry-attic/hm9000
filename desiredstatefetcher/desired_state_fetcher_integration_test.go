@@ -4,7 +4,6 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/desiredstatefetcher"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
-	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant/fakemetricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
@@ -21,7 +20,7 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		a3         appfixture.AppFixture
 		resultChan chan desiredstatefetcher.DesiredStateFetcherResult
 		conf       *config.Config
-		appQueue   chan map[string]models.DesiredAppState
+		appQueue   *models.AppQueue
 	)
 
 	BeforeEach(func() {
@@ -39,10 +38,9 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		conf, _ = config.DefaultConfig()
 		conf.CCBaseURL = stateServer.URL()
 
-		appQueue = make(chan map[string]models.DesiredAppState, 2)
+		appQueue = models.NewAppQueue()
 
 		fetcher = desiredstatefetcher.New(conf,
-			&fakemetricsaccountant.FakeMetricsAccountant{},
 			httpclient.NewHttpClient(conf.SkipSSLVerification, conf.FetcherNetworkTimeout()),
 			clock.NewClock(),
 			fakelogger.NewFakeLogger(),
@@ -50,10 +48,10 @@ var _ = Describe("Fetching from CC and storing the result in the Store", func() 
 		fetcher.Fetch(resultChan, appQueue)
 	})
 
-	It("requests for the first set of data from the CC and stores the response", func() {
+	It("requests for the first set of data from the CC and sends the response", func() {
 		var desired map[string]models.DesiredAppState
 
-		Eventually(appQueue).Should(Receive(&desired))
+		Eventually(appQueue.DesiredApps).Should(Receive(&desired))
 
 		Expect(desired).To(HaveKey(a1.AppGuid + "," + a1.AppVersion))
 		Expect(desired).To(HaveKey(a2.AppGuid + "," + a2.AppVersion))

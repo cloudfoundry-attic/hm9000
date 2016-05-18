@@ -1,6 +1,7 @@
 package desiredstatefetcher
 
 import (
+	"errors"
 	"fmt"
 
 	"io/ioutil"
@@ -9,9 +10,7 @@ import (
 
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/httpclient"
-	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
-	// "github.com/cloudfoundry/hm9000/store"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 )
@@ -26,32 +25,27 @@ type DesiredStateFetcherResult struct {
 const initialBulkToken = "{}"
 
 type DesiredStateFetcher struct {
-	config            *config.Config
-	httpClient        httpclient.HttpClient
-	metricsAccountant metricsaccountant.MetricsAccountant
-	clock             clock.Clock
-	logger            lager.Logger
+	config     *config.Config
+	httpClient httpclient.HttpClient
+	clock      clock.Clock
+	logger     lager.Logger
 }
 
 func New(config *config.Config,
-	metricsAccountant metricsaccountant.MetricsAccountant,
 	httpClient httpclient.HttpClient,
 	clock clock.Clock,
 	logger lager.Logger,
 ) *DesiredStateFetcher {
 
 	return &DesiredStateFetcher{
-		config:            config,
-		httpClient:        httpClient,
-		metricsAccountant: metricsAccountant,
-		clock:             clock,
-		logger:            logger,
+		config:     config,
+		httpClient: httpClient,
+		clock:      clock,
+		logger:     logger,
 	}
 }
 
-func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult, appQueue chan map[string]models.DesiredAppState) {
-	fetcher.logger.Info("repakulus: inside the fetcher")
-
+func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherResult, appQueue *models.AppQueue) {
 	authInfo := models.BasicAuthInfo{
 		User:     fetcher.config.CCAuthUser,
 		Password: fetcher.config.CCAuthPassword,
@@ -60,7 +54,7 @@ func (fetcher *DesiredStateFetcher) Fetch(resultChan chan DesiredStateFetcherRes
 	fetcher.fetchBatch(authInfo.Encode(), initialBulkToken, 0, resultChan, appQueue)
 }
 
-func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult, appQueue chan map[string]models.DesiredAppState) {
+func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token string, numResults int, resultChan chan DesiredStateFetcherResult, appQueue *models.AppQueue) {
 	req, err := http.NewRequest("GET", fetcher.bulkURL(fetcher.config.DesiredStateBatchSize, token), nil)
 	if err != nil {
 		resultChan <- DesiredStateFetcherResult{Message: "Failed to generate URL request", Error: err}
@@ -100,12 +94,14 @@ func (fetcher *DesiredStateFetcher) fetchBatch(authorization string, token strin
 		}
 
 		if len(response.Results) == 0 {
-			close(appQueue)
 			resultChan <- DesiredStateFetcherResult{Success: true, NumResults: numResults}
 			return
 		}
-
-		fetcher.sendBatch(response, appQueue)
+		err = fetcher.sendBatch(response, appQueue)
+		if err != nil {
+			resultChan <- DesiredStateFetcherResult{Message: "Stopping fetcher", Error: err}
+			return
+		}
 		fetcher.fetchBatch(authorization, response.BulkTokenRepresentation(), numResults+len(response.Results), resultChan, appQueue)
 	})
 }
@@ -124,12 +120,18 @@ func (fetcher *DesiredStateFetcher) guids(desiredStates []models.DesiredAppState
 	return strings.Join(result, ",")
 }
 
-func (fetcher *DesiredStateFetcher) sendBatch(response DesiredStateServerResponse, appQueue chan map[string]models.DesiredAppState) {
+func (fetcher *DesiredStateFetcher) sendBatch(response DesiredStateServerResponse, appQueue *models.AppQueue) error {
 	cache := map[string]models.DesiredAppState{}
 	for _, desiredState := range response.Results {
 		if desiredState.State == models.AppStateStarted && (desiredState.PackageState == models.AppPackageStateStaged || desiredState.PackageState == models.AppPackageStatePending) {
 			cache[desiredState.StoreKey()] = desiredState
 		}
 	}
-	appQueue <- cache
+
+	select {
+	case <-appQueue.DoneAnalyzing:
+		return errors.New("Analyzer is not analyzing")
+	case appQueue.DesiredApps <- cache:
+	}
+	return nil
 }

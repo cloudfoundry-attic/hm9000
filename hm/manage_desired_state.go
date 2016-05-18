@@ -67,18 +67,27 @@ func analyze(l lager.Logger, sink lager.Sink, clock clock.Clock, client httpclie
 	logger := lager.NewLogger("fetcher")
 	logger.RegisterSink(sink)
 
-	appQueue := make(chan map[string]models.DesiredAppState, 5)
+	appQueue := models.NewAppQueue()
 
-	fetchDesiredErr := make(chan error)
+	fetchDesiredErr := make(chan error, 1)
 	go func() {
+		// fetching should always block. If we are successful we mark the appQueue.fetchDesiredAppsSuccess
+		// as successful. This will then signal the analyzer to know it is safe to delete apps.
+
+		// On an error we will still need to close the channel so the analyzer does not block.
+		// In this case the success flag will be false and so the analyzer should not send any updates.
+		defer close(appQueue.DesiredApps)
+		defer close(fetchDesiredErr)
 		e := fetchDesiredState(logger, clock, client, conf, appQueue)
 		fetchDesiredErr <- e
 	}()
 
-	analyzeStateErr := make(chan error)
-	analyzeStateApps := make(chan map[string]*models.App)
+	analyzeStateErr := make(chan error, 1)
+	analyzeStateApps := make(chan map[string]*models.App, 1)
 
 	go func() {
+		defer close(analyzeStateErr)
+		defer close(analyzeStateApps)
 		apps, e := analyzeState(l, clock, conf, store, appQueue)
 		analyzeStateErr <- e
 		analyzeStateApps <- apps
@@ -109,23 +118,24 @@ ANALYZE_LOOP:
 	return send(logger, conf, messageBus, store, clock, apps)
 }
 
-func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.HttpClient,
-	conf *config.Config, appQueue chan map[string]models.DesiredAppState) error {
+func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, appQueue *models.AppQueue) error {
 	l.Info("Fetching Desired State")
 	fetcher := desiredstatefetcher.New(
 		conf,
-		metricsaccountant.New(),
 		client,
 		clock,
 		l,
 	)
 
 	resultChan := make(chan desiredstatefetcher.DesiredStateFetcherResult, 1)
+	defer close(resultChan)
+
 	fetcher.Fetch(resultChan, appQueue)
 
 	result := <-resultChan
 
 	if result.Success {
+		appQueue.SetFetchDesiredAppsSuccess(true)
 		l.Info("Success", lager.Data{"Number of Desired Apps Fetched": strconv.Itoa(result.NumResults)})
 		return nil
 	}
@@ -134,8 +144,7 @@ func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.Http
 	return result.Error
 }
 
-func analyzeState(l lager.Logger, clk clock.Clock, conf *config.Config,
-	store store.Store, appQueue chan map[string]models.DesiredAppState) (map[string]*models.App, error) {
+func analyzeState(l lager.Logger, clk clock.Clock, conf *config.Config, store store.Store, appQueue *models.AppQueue) (map[string]*models.App, error) {
 	l.Info("Analyzing...")
 
 	t := time.Now()
