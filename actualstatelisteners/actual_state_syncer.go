@@ -87,8 +87,15 @@ func (syncer *actualStateSyncer) Heartbeat(heartbeat *models.Heartbeat) {
 }
 
 func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
+	var err error
 	syncInterval := syncer.clock.NewTicker(syncer.config.ListenerHeartbeatSyncInterval())
 	previousReceivedHeartbeats := -1
+
+	err = syncer.store.EnsureCacheIsReady()
+	if err != nil {
+		syncer.store.RevokeActualFreshness()
+		syncer.logger.Error("Could not load cache from store, starting with empty cache:", err)
+	}
 
 	for {
 		syncer.heartbeatMutex.Lock()
@@ -103,7 +110,7 @@ func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 			})
 
 			t := syncer.clock.Now()
-			err := syncer.store.SyncHeartbeats(heartbeatsToSave...)
+			err = syncer.store.SyncHeartbeats(heartbeatsToSave...)
 
 			if err != nil {
 				syncer.logger.Error("Could not put instance heartbeats in store:", err)

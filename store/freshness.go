@@ -9,6 +9,7 @@ import (
 )
 
 func (store *RealStore) BumpActualFreshness(timestamp time.Time) error {
+	store.instanceHeartbeatCacheTimestamp = timestamp
 	return store.bumpFreshness(store.SchemaRoot()+store.config.ActualFreshnessKey, store.config.ActualFreshnessTTL(), timestamp)
 }
 
@@ -36,6 +37,20 @@ func (store *RealStore) bumpFreshness(key string, ttl uint64, timestamp time.Tim
 }
 
 func (store *RealStore) IsActualStateFresh(currentTime time.Time) (bool, error) {
+	cacheIsFresh := store.isCachedActualStateFresh(currentTime)
+	storeIsFresh, err := store.isStoredActualStateFresh(currentTime)
+
+	return cacheIsFresh && storeIsFresh, err
+}
+
+func (store *RealStore) isCachedActualStateFresh(currentTime time.Time) bool {
+	freshnessTimestamp := store.instanceHeartbeatCacheTimestamp //models.FreshnessTimestamp{}
+	isUpToDate := currentTime.Sub(freshnessTimestamp) >= time.Duration(store.config.ActualFreshnessTTL())*time.Second
+
+	return isUpToDate
+}
+
+func (store *RealStore) isStoredActualStateFresh(currentTime time.Time) (bool, error) {
 	node, err := store.adapter.Get(store.SchemaRoot() + store.config.ActualFreshnessKey)
 	if err == storeadapter.ErrorKeyNotFound {
 		return false, nil
@@ -51,6 +66,7 @@ func (store *RealStore) IsActualStateFresh(currentTime time.Time) (bool, error) 
 	}
 
 	isUpToDate := currentTime.Sub(time.Unix(freshnessTimestamp.Timestamp, 0)) >= time.Duration(store.config.ActualFreshnessTTL())*time.Second
+
 	return isUpToDate, nil
 }
 
