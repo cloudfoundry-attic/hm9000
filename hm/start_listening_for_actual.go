@@ -11,6 +11,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/hashicorp/consul/api"
+	"github.com/nu7hatch/gouuid"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
@@ -53,12 +54,18 @@ func StartListeningForActual(logger lager.Logger, conf *config.Config) {
 
 	listenAddr := fmt.Sprintf("%s:%d", conf.HttpHeartbeatServerAddress, conf.HttpHeartbeatPort)
 
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		logger.Fatal("Couldn't generate uuid", err)
+	}
+
 	registration := &api.AgentServiceRegistration{
 		Name: "listener-hm9000",
 		Port: conf.HttpHeartbeatPort,
 		Check: &api.AgentServiceCheck{
 			TTL: locket.LockTTL.String(),
 		},
+		ID: uuid.String(),
 	}
 
 	registrationRunner := locket.NewRegistrationRunner(logger, registration, consulClient, locket.RetryInterval, clock)

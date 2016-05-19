@@ -111,7 +111,7 @@ var _ = Describe("Locking", func() {
 			}()
 
 			client := cf_http.NewStreamingClient()
-			Eventually(func() bool {
+			Eventually(func() string {
 				rsp, err := client.Get(coordinator.ConsulRunner.URL() + "/v1/catalog/service/listener-hm9000")
 				Expect(err).NotTo(HaveOccurred())
 				defer rsp.Body.Close()
@@ -122,10 +122,10 @@ var _ = Describe("Locking", func() {
 				err = json.Unmarshal(bs, &services)
 				Expect(err).NotTo(HaveOccurred())
 				if len(services) != 1 {
-					return false
+					return ""
 				}
-				return services[0]["ServiceID"] == "listener-hm9000"
-			}).Should(BeTrue())
+				return services[0]["ServiceID"].(string)
+			}).Should(MatchRegexp(`[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}`))
 
 			listenerA.Interrupt().Wait(5 * time.Second)
 			Eventually(listenerA, 10*time.Second).Should(gexec.Exit())
