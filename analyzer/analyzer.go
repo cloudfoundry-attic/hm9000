@@ -27,13 +27,13 @@ func New(store store.Store, clock clock.Clock, logger lager.Logger, conf *config
 	}
 }
 
-func (analyzer *Analyzer) Analyze(appQueue *models.AppQueue) (map[string]*models.App, error) {
+func (analyzer *Analyzer) Analyze(appQueue *models.AppQueue) (map[string]*models.App, []models.PendingStartMessage, []models.PendingStopMessage, error) {
 	defer close(appQueue.DoneAnalyzing)
 
 	err := analyzer.store.VerifyFreshness(analyzer.clock.Now())
 	if err != nil {
 		analyzer.logger.Error("Store is not fresh", err)
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	actualApps, err := analyzer.store.GetApps()
@@ -45,23 +45,31 @@ func (analyzer *Analyzer) Analyze(appQueue *models.AppQueue) (map[string]*models
 
 	if err != nil {
 		analyzer.logger.Error("Failed to fetch apps", err)
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	existingPendingStartMessages, err := analyzer.store.GetPendingStartMessages()
 	if err != nil {
 		analyzer.logger.Error("Failed to fetch pending start messages", err)
-		return nil, err
+		return nil, nil, nil, err
+	}
+	allStartMessages := []models.PendingStartMessage{}
+	for _, msg := range existingPendingStartMessages {
+		allStartMessages = append(allStartMessages, msg)
 	}
 
 	existingPendingStopMessages, err := analyzer.store.GetPendingStopMessages()
 	if err != nil {
 		analyzer.logger.Error("Failed to fetch pending stop messages", err)
-		return nil, err
+		return nil, nil, nil, err
+	}
+	allStopMessages := []models.PendingStopMessage{}
+	for _, msg := range existingPendingStopMessages {
+		allStopMessages = append(allStopMessages, msg)
 	}
 
-	allStartMessages := []models.PendingStartMessage{}
-	allStopMessages := []models.PendingStopMessage{}
+	newStartMessages := []models.PendingStartMessage{}
+	newStopMessages := []models.PendingStopMessage{}
 	allCrashCounts := []models.CrashCount{}
 
 	for desiredAppBatch := range appQueue.DesiredApps {
@@ -79,9 +87,11 @@ func (analyzer *Analyzer) Analyze(appQueue *models.AppQueue) (map[string]*models
 
 			startMessages, stopMessages, crashCounts := newAppAnalyzer(app, analyzer.clock.Now(), existingPendingStartMessages, existingPendingStopMessages, analyzer.logger, analyzer.conf).analyzeApp()
 			for _, startMessage := range startMessages {
+				newStartMessages = append(newStartMessages, startMessage)
 				allStartMessages = append(allStartMessages, startMessage)
 			}
 			for _, stopMessage := range stopMessages {
+				newStopMessages = append(newStopMessages, stopMessage)
 				allStopMessages = append(allStopMessages, stopMessage)
 			}
 			allCrashCounts = append(allCrashCounts, crashCounts...)
@@ -91,12 +101,13 @@ func (analyzer *Analyzer) Analyze(appQueue *models.AppQueue) (map[string]*models
 	if !appQueue.FetchDesiredAppsSuccess() {
 		err := errors.New("Desired State Fetcher exited unsuccessfully.")
 		analyzer.logger.Error("Analyzer is stopping", err)
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	for _, app := range appsPendingRemoval {
 		_, stopMessages, crashCounts := newAppAnalyzer(app, analyzer.clock.Now(), existingPendingStartMessages, existingPendingStopMessages, analyzer.logger, analyzer.conf).analyzeApp()
 		for _, stopMessage := range stopMessages {
+			newStopMessages = append(newStopMessages, stopMessage)
 			allStopMessages = append(allStopMessages, stopMessage)
 		}
 		allCrashCounts = append(allCrashCounts, crashCounts...)
@@ -105,20 +116,20 @@ func (analyzer *Analyzer) Analyze(appQueue *models.AppQueue) (map[string]*models
 	err = analyzer.store.SaveCrashCounts(allCrashCounts...)
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to save crash counts", err)
-		return nil, err
+		return nil, nil, nil, err
 	}
 
-	err = analyzer.store.SavePendingStartMessages(allStartMessages...)
+	err = analyzer.store.SavePendingStartMessages(newStartMessages...)
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to enqueue start messages", err)
-		return nil, err
+		return nil, nil, nil, err
 	}
 
-	err = analyzer.store.SavePendingStopMessages(allStopMessages...)
+	err = analyzer.store.SavePendingStopMessages(newStopMessages...)
 	if err != nil {
 		analyzer.logger.Error("Analyzer failed to enqueue stop messages", err)
-		return nil, err
+		return nil, nil, nil, err
 	}
 
-	return actualApps, nil
+	return actualApps, allStartMessages, allStopMessages, nil
 }

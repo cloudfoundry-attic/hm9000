@@ -122,7 +122,7 @@ func (s sortablePendingStartMessagesByPriority) Less(i, j int) bool {
 	return diff < 0
 }
 
-func SortStartMessagesByPriority(messages map[string]PendingStartMessage) []PendingStartMessage {
+func SortStartMessagesByPriority(messages []PendingStartMessage) []PendingStartMessage {
 	sortedStartMessages := make(sortablePendingStartMessagesByPriority, len(messages))
 	i := 0
 	for _, message := range messages {

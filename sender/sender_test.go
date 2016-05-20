@@ -31,6 +31,8 @@ var _ = Describe("Sender", func() {
 		conf              *config.Config
 		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
 		apps              map[string]*models.App
+		startMessages     []models.PendingStartMessage
+		stopMessages      []models.PendingStopMessage
 	)
 
 	BeforeEach(func() {
@@ -47,35 +49,14 @@ var _ = Describe("Sender", func() {
 		sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger(), timeProvider)
 		store.BumpActualFreshness(time.Unix(10, 0))
 		apps = make(map[string]*models.App)
-	})
 
-	Context("when the sender fails to pull messages out of the start queue", func() {
-		BeforeEach(func() {
-			storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("start", errors.New("oops"))
-		})
-
-		It("should return an error and not send any messages", func() {
-			err := sender.Send(timeProvider, apps)
-			Expect(err).To(Equal(errors.New("oops")))
-			Expect(messageBus.PublishedMessageCount()).To(Equal(0))
-		})
-	})
-
-	Context("when the sender fails to pull messages out of the stop queue", func() {
-		BeforeEach(func() {
-			storeAdapter.ListErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector("stop", errors.New("oops"))
-		})
-
-		It("should return an error and not send any messages", func() {
-			err := sender.Send(timeProvider, apps)
-			Expect(err).To(Equal(errors.New("oops")))
-			Expect(messageBus.PublishedMessageCount()).To(Equal(0))
-		})
+		startMessages = []models.PendingStartMessage{}
+		stopMessages = []models.PendingStopMessage{}
 	})
 
 	Context("when there are no start messages in the queue", func() {
 		It("should not send any messages", func() {
-			err := sender.Send(timeProvider, apps)
+			err := sender.Send(timeProvider, apps, startMessages, stopMessages)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(messageBus.PublishedMessageCount()).To(Equal(0))
 		})
@@ -83,7 +64,7 @@ var _ = Describe("Sender", func() {
 
 	Context("when there are no stop messages in the queue", func() {
 		It("should not send any messages", func() {
-			err := sender.Send(timeProvider, apps)
+			err := sender.Send(timeProvider, apps, startMessages, stopMessages)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(messageBus.PublishedMessageCount()).To(Equal(0))
 		})
@@ -102,11 +83,14 @@ var _ = Describe("Sender", func() {
 
 			pendingMessage = models.NewPendingStartMessage(time.Unix(100, 0), 30, keepAliveTime, app.AppGuid, app.AppVersion, 0, 1.0, models.PendingStartMessageReasonInvalid)
 			pendingMessage.SentOn = sentOn
+
 			store.SavePendingStartMessages(
 				pendingMessage,
 			)
+			startMessages = append(startMessages, pendingMessage)
+
 			storeAdapter.SetErrInjector = storeSetErrInjector
-			err = sender.Send(timeProvider, apps)
+			err = sender.Send(timeProvider, apps, startMessages, stopMessages)
 		})
 
 		BeforeEach(func() {
@@ -278,9 +262,10 @@ var _ = Describe("Sender", func() {
 			store.SavePendingStopMessages(
 				pendingMessage,
 			)
+			stopMessages = append(stopMessages, pendingMessage)
 
 			storeAdapter.SetErrInjector = storeSetErrInjector
-			err = sender.Send(timeProvider, apps)
+			err = sender.Send(timeProvider, apps, startMessages, stopMessages)
 		})
 
 		BeforeEach(func() {
@@ -456,8 +441,9 @@ var _ = Describe("Sender", func() {
 			store.SavePendingStartMessages(
 				pendingMessage,
 			)
+			startMessages = append(startMessages, pendingMessage)
 
-			err = sender.Send(timeProvider, apps)
+			err = sender.Send(timeProvider, apps, startMessages, stopMessages)
 		})
 
 		BeforeEach(func() {
@@ -599,7 +585,9 @@ var _ = Describe("Sender", func() {
 			store.SavePendingStopMessages(
 				pendingMessage,
 			)
-			err = sender.Send(timeProvider, apps)
+			stopMessages = append(stopMessages, pendingMessage)
+
+			err = sender.Send(timeProvider, apps, startMessages, stopMessages)
 		})
 
 		BeforeEach(func() {
@@ -767,6 +755,7 @@ var _ = Describe("Sender", func() {
 				store.SavePendingStartMessages(
 					validStartMessage,
 				)
+				startMessages = append(startMessages, validStartMessage)
 
 				//all of these should be deleted:
 				invalidStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, 1, 1.0, models.PendingStartMessageReasonInvalid)
@@ -774,6 +763,7 @@ var _ = Describe("Sender", func() {
 				store.SavePendingStartMessages(
 					invalidStartMessage,
 				)
+				startMessages = append(startMessages, invalidStartMessage)
 
 				//all of these should be deleted:
 				expiredStartMessage := models.NewPendingStartMessage(time.Unix(100, 0), 0, 20, a.AppGuid, a.AppVersion, 2, 1.0, models.PendingStartMessageReasonInvalid)
@@ -782,15 +772,17 @@ var _ = Describe("Sender", func() {
 				store.SavePendingStartMessages(
 					expiredStartMessage,
 				)
+				startMessages = append(startMessages, expiredStartMessage)
 
 				stopMessage := models.NewPendingStopMessage(time.Unix(100, 0), 30, 0, a.AppGuid, a.AppVersion, a.InstanceAtIndex(1).InstanceGuid, models.PendingStopMessageReasonInvalid)
 				store.SavePendingStopMessages(
 					stopMessage,
 				)
+				stopMessages = append(stopMessages, stopMessage)
 			}
 
 			timeProvider = fakeclock.NewFakeClock(time.Unix(130, 0))
-			err := sender.Send(timeProvider, apps)
+			err := sender.Send(timeProvider, apps, startMessages, stopMessages)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

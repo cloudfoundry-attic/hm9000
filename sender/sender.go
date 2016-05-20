@@ -53,25 +53,13 @@ func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountan
 	}
 }
 
-func (sender *Sender) Send(clock clock.Clock, apps map[string]*models.App) error {
+func (sender *Sender) Send(clock clock.Clock, apps map[string]*models.App, pendingStartMessages []models.PendingStartMessage, pendingStopMessages []models.PendingStopMessage) error {
 	sender.currentTime = clock.Now()
 	sender.apps = apps
 
 	err := sender.store.VerifyFreshness(sender.currentTime)
 	if err != nil {
 		sender.logger.Error("Store is not fresh", err)
-		return err
-	}
-
-	pendingStartMessages, err := sender.store.GetPendingStartMessages()
-	if err != nil {
-		sender.logger.Error("Failed to fetch pending start messages", err)
-		return err
-	}
-
-	pendingStopMessages, err := sender.store.GetPendingStopMessages()
-	if err != nil {
-		sender.logger.Error("Failed to fetch pending stop messages", err)
 		return err
 	}
 
@@ -115,7 +103,7 @@ func (sender *Sender) Send(clock clock.Clock, apps map[string]*models.App) error
 	return nil
 }
 
-func (sender *Sender) sendStartMessages(startMessages map[string]models.PendingStartMessage) {
+func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessage) {
 	sortedStartMessages := models.SortStartMessagesByPriority(startMessages)
 
 	for _, startMessage := range sortedStartMessages {
@@ -127,7 +115,7 @@ func (sender *Sender) sendStartMessages(startMessages map[string]models.PendingS
 	}
 }
 
-func (sender *Sender) sendStopMessages(stopMessages map[string]models.PendingStopMessage) {
+func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage) {
 	for _, stopMessage := range stopMessages {
 		if stopMessage.IsTimeToSend(sender.currentTime) {
 			sender.sendStopMessage(stopMessage)

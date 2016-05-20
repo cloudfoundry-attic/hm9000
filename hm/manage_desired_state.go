@@ -21,6 +21,12 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+type analyzeOutput struct {
+	Apps          map[string]*models.App
+	StartMessages []models.PendingStartMessage
+	StopMessages  []models.PendingStopMessage
+}
+
 func Analyze(l lager.Logger, sink lager.Sink, conf *config.Config, poll bool) {
 	store := connectToStore(l, conf)
 	messageBus := connectToMessageBus(l, conf)
@@ -83,17 +89,17 @@ func analyze(l lager.Logger, sink lager.Sink, clock clock.Clock, client httpclie
 	}()
 
 	analyzeStateErr := make(chan error, 1)
-	analyzeStateApps := make(chan map[string]*models.App, 1)
+	analyzeStateOutput := make(chan analyzeOutput, 1)
 
 	go func() {
 		defer close(analyzeStateErr)
-		defer close(analyzeStateApps)
-		apps, e := analyzeState(l, clock, conf, store, appQueue)
+		defer close(analyzeStateOutput)
+		output, e := analyzeState(l, clock, conf, store, appQueue)
 		analyzeStateErr <- e
-		analyzeStateApps <- apps
+		analyzeStateOutput <- output
 	}()
 
-	var apps map[string]*models.App
+	var output analyzeOutput
 
 ANALYZE_LOOP:
 	for {
@@ -106,8 +112,8 @@ ANALYZE_LOOP:
 			if analyzeErr != nil {
 				return analyzeErr
 			}
-		case apps = <-analyzeStateApps:
-			if apps != nil {
+		case output = <-analyzeStateOutput:
+			if output.Apps != nil {
 				break ANALYZE_LOOP
 			}
 		}
@@ -115,7 +121,7 @@ ANALYZE_LOOP:
 
 	logger = lager.NewLogger("sender")
 	logger.RegisterSink(sink)
-	return send(logger, conf, messageBus, store, clock, apps)
+	return send(logger, conf, messageBus, store, clock, output)
 }
 
 func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.HttpClient, conf *config.Config, appQueue *models.AppQueue) error {
@@ -144,30 +150,35 @@ func fetchDesiredState(l lager.Logger, clock clock.Clock, client httpclient.Http
 	return result.Error
 }
 
-func analyzeState(l lager.Logger, clk clock.Clock, conf *config.Config, store store.Store, appQueue *models.AppQueue) (map[string]*models.App, error) {
+func analyzeState(l lager.Logger, clk clock.Clock, conf *config.Config, store store.Store, appQueue *models.AppQueue) (analyzeOutput, error) {
 	l.Info("Analyzing...")
 
 	t := time.Now()
 	a := analyzer.New(store, clk, l, conf)
-	apps, err := a.Analyze(appQueue)
+	apps, startMessages, stopMessages, err := a.Analyze(appQueue)
 	analyzer.SendMetrics(apps, err)
 
 	if err != nil {
 		l.Error("Analyzer failed with error", err)
-		return nil, err
+		return analyzeOutput{}, err
 	}
 
 	l.Info("Analyzer completed succesfully", lager.Data{
 		"Duration": fmt.Sprintf("%.4f", time.Since(t).Seconds()),
 	})
-	return apps, nil
+	output := analyzeOutput{
+		Apps:          apps,
+		StartMessages: startMessages,
+		StopMessages:  stopMessages,
+	}
+	return output, nil
 }
 
-func send(l lager.Logger, conf *config.Config, messageBus yagnats.NATSConn, store store.Store, clock clock.Clock, apps map[string]*models.App) error {
+func send(l lager.Logger, conf *config.Config, messageBus yagnats.NATSConn, store store.Store, clock clock.Clock, outputFromAnalyze analyzeOutput) error {
 	l.Info("Sending...")
 
 	sender := sender.New(store, metricsaccountant.New(), conf, messageBus, l, clock)
-	err := sender.Send(clock, apps)
+	err := sender.Send(clock, outputFromAnalyze.Apps, outputFromAnalyze.StartMessages, outputFromAnalyze.StopMessages)
 
 	if err != nil {
 		l.Error("Sender failed with error", err)
