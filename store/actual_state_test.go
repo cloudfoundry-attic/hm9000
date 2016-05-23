@@ -44,6 +44,13 @@ var _ = Describe("Actual State", func() {
 		dea = appfixture.NewDeaFixture()
 		otherDea = appfixture.NewDeaFixture()
 
+		results, err := store.GetInstanceHeartbeats()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(results).To(BeEmpty())
+
+		results = store.GetCachedInstanceHeartbeats()
+		Expect(results).To(BeEmpty())
+
 		populate = func(heartbeats ...*models.Heartbeat) error {
 			nodes := make([]storeadapter.StoreNode, 0)
 
@@ -87,7 +94,7 @@ var _ = Describe("Actual State", func() {
 			})
 		})
 
-		Context("When the store contains heartbeats", func() {
+		Context("When the store contains heartbeats but the cache does not", func() {
 			BeforeEach(func() {
 				err := populate(dea.HeartbeatWith(
 					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
@@ -123,49 +130,51 @@ var _ = Describe("Actual State", func() {
 			))
 		})
 
-		Context("when there are no heartbeats stored for the DEA in question", func() {
-			BeforeEach(func() {
-				err := store.EnsureCacheIsReady()
-				Expect(err).NotTo(HaveOccurred())
+		Context("when saving heartbeats from a single DEA", func() {
+			Context("when there are no heartbeats stored for the DEA in question", func() {
+				BeforeEach(func() {
+					err := store.EnsureCacheIsReady()
+					Expect(err).NotTo(HaveOccurred())
 
-				results := store.GetCachedInstanceHeartbeats()
-				Expect(results).To(HaveLen(0))
+					results := store.GetCachedInstanceHeartbeats()
+					Expect(results).To(HaveLen(0))
+				})
+
+				It("stores the instance heartbeats in the cache", func() {
+					results := store.GetCachedInstanceHeartbeats()
+					Expect(results).To(HaveLen(2))
+					Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+				})
+
+				It("saves the instance heartbeats to the store", func() {
+					results, err := store.GetInstanceHeartbeats()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(2))
+					Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+				})
 			})
 
-			It("stores the instance heartbeats in the cache", func() {
-				results := store.GetCachedInstanceHeartbeats()
-				Expect(results).To(HaveLen(2))
-				Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
-			})
+			Context("when there are already instance heartbeats stored for the DEA in question", func() {
+				var modifiedHeartbeat models.InstanceHeartbeat
+				JustBeforeEach(func() {
+					modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+					modifiedHeartbeat.State = models.InstanceStateEvacuating
+					store.SyncHeartbeats(dea.HeartbeatWith(
+						modifiedHeartbeat,
+						dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
+					))
+				})
 
-			It("saves the instance heartbeats to the store", func() {
-				results, err := store.GetInstanceHeartbeats()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(results).To(HaveLen(2))
-				Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
-			})
-
-		})
-
-		Context("when there are already instance heartbeats stored for the DEA in question", func() {
-			var modifiedHeartbeat models.InstanceHeartbeat
-			JustBeforeEach(func() {
-				modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
-				modifiedHeartbeat.State = models.InstanceStateEvacuating
-				store.SyncHeartbeats(dea.HeartbeatWith(
-					modifiedHeartbeat,
-					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
-				))
-			})
-
-			It("syncs the heartbeats (add new ones, adjust ones that have changed state, and delete old ones)", func() {
-				results, err := store.GetInstanceHeartbeats()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(results).To(HaveLen(2))
-				Expect(results).To(ContainElement(modifiedHeartbeat))
-				Expect(results).To(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+				It("syncs the heartbeats (add new ones, adjust ones that have changed state, and delete old ones)", func() {
+					results := store.GetCachedInstanceHeartbeats()
+					// Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(2))
+					Expect(results).To(ContainElement(modifiedHeartbeat))
+					Expect(results).To(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+					Expect(results).NotTo(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+				})
 			})
 		})
 
@@ -185,37 +194,48 @@ var _ = Describe("Actual State", func() {
 				), yetAnotherDea.HeartbeatWith(
 					yetAnotherDea.GetApp(0).InstanceAtIndex(0).Heartbeat(),
 				))
-
-				modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
-				modifiedHeartbeat.State = models.InstanceStateEvacuating
-				store.SyncHeartbeats(dea.HeartbeatWith(
-					modifiedHeartbeat,
-					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
-				), otherDea.HeartbeatWith(
-					otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
-					otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat(),
-				))
 			})
 
-			It("collates the hearbeats", func() {
-				results, err := store.GetInstanceHeartbeats()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(results).To(HaveLen(5))
-				Expect(results).To(ContainElement(modifiedHeartbeat))
-				Expect(results).To(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
-				Expect(results).To(ContainElement(otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat()))
-				Expect(results).To(ContainElement(otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat()))
-				Expect(results).To(ContainElement(yetAnotherDea.GetApp(0).InstanceAtIndex(0).Heartbeat()))
+			Context("when we receive heartbeats from all DEAs at the same time", func() {
+				It("saves all the heartbeats", func() {
+
+					results, err := store.GetInstanceHeartbeats()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(5))
+
+					results = store.GetCachedInstanceHeartbeats()
+					Expect(results).To(HaveLen(5))
+				})
+			})
+
+			Context("when we receive heartbeats from a subset of the DEAs", func() {
+				JustBeforeEach(func() {
+					modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+					modifiedHeartbeat.State = models.InstanceStateEvacuating
+					store.SyncHeartbeats(dea.HeartbeatWith(
+						modifiedHeartbeat,
+						dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
+					), otherDea.HeartbeatWith(
+						otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
+						otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat(),
+					))
+				})
+
+				It("Saves the heartbeats from those DEAs without deleting any from the DEAS from which it did not receive heartbeats", func() {
+					results, err := store.GetInstanceHeartbeats()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(results).To(HaveLen(5))
+					Expect(results).To(ContainElement(modifiedHeartbeat))
+					Expect(results).To(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+					Expect(results).To(ContainElement(otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat()))
+					Expect(results).To(ContainElement(otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat()))
+					Expect(results).To(ContainElement(yetAnotherDea.GetApp(0).InstanceAtIndex(0).Heartbeat()))
+				})
 			})
 		})
 
 		Context("when one of the keys fails to delete", func() {
 			It("should soldier on", func() {
-				store.SyncHeartbeats(dea.HeartbeatWith(
-					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
-					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
-				))
-
 				done := make(chan error, 2)
 
 				go func() {
