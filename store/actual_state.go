@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -16,13 +17,15 @@ func (store *RealStore) EnsureCacheIsReady() error {
 
 	if time.Since(store.instanceHeartbeatCacheTimestamp) >= store.config.StoreHeartbeatCacheRefreshInterval() {
 		t := time.Now()
-		heartbeats, err := store.GetInstanceHeartbeats()
+		heartbeats, err := store.getStoredInstanceHeartbeats()
 		if err != nil {
 			return err
 		}
 
+		fmt.Fprintln(os.Stderr, "Got heartbeats")
 		store.instanceHeartbeatCache = map[string]models.InstanceHeartbeat{}
 		for _, heartbeat := range heartbeats {
+			fmt.Fprintf(os.Stderr, "AppGuid: %s\nInstance: %d\n", heartbeat.AppGuid, heartbeat.InstanceIndex)
 			store.instanceHeartbeatCache[heartbeat.InstanceGuid] = heartbeat
 		}
 		store.instanceHeartbeatCacheTimestamp = time.Now()
@@ -116,6 +119,10 @@ func (store *RealStore) GetCachedInstanceHeartbeats() []models.InstanceHeartbeat
 }
 
 func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
+	return store.getStoredInstanceHeartbeats()
+}
+
+func (store *RealStore) getStoredInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
 	results = []models.InstanceHeartbeat{}
 	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/actual")
 	if err == storeadapter.ErrorKeyNotFound {

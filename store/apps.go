@@ -60,12 +60,8 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 	results = make(map[string]*models.App)
 	representations := make(appRepresentations)
 
-	tActual := time.Now()
-	actualStates, err := store.GetInstanceHeartbeats()
-	dtActual := time.Since(tActual).Seconds()
-	if err != nil {
-		return results, err
-	}
+	actualStates := store.GetCachedInstanceHeartbeats()
+
 	for _, actualState := range actualStates {
 		representation := representations.representationForAppGuidVersion(actualState.AppGuid, actualState.AppVersion)
 		representation.actualState = append(representation.actualState, actualState)
@@ -98,7 +94,6 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 	store.logger.Debug(fmt.Sprintf("Get Duration Apps"), lager.Data{
 		"Number of Items":            fmt.Sprintf("%d", len(results)),
 		"Duration":                   fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
-		"Time to Fetch Actual":       fmt.Sprintf("%.4f seconds", dtActual),
 		"Time to Fetch Crash Counts": fmt.Sprintf("%.4f seconds", dtCrash),
 	})
 
