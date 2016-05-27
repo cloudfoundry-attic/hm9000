@@ -37,6 +37,7 @@ type Store interface {
 
 	SyncHeartbeats(heartbeat ...*models.Heartbeat) error
 	EnsureCacheIsReady() error
+	SyncCacheToStore() error
 	GetCachedInstanceHeartbeats() (results []models.InstanceHeartbeat)
 	GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
 	GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
@@ -62,7 +63,7 @@ type RealStore struct {
 	adapter storeadapter.StoreAdapter
 	logger  lager.Logger
 
-	instanceHeartbeatCache          map[string]models.InstanceHeartbeat
+	instanceHeartbeatCache          map[string]instanceHeartbeat
 	instanceHeartbeatCacheMutex     *sync.Mutex
 	instanceHeartbeatCacheTimestamp time.Time
 }
@@ -72,7 +73,7 @@ func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger l
 		config:                          config,
 		adapter:                         adapter,
 		logger:                          logger,
-		instanceHeartbeatCache:          map[string]models.InstanceHeartbeat{},
+		instanceHeartbeatCache:          map[string]instanceHeartbeat{},
 		instanceHeartbeatCacheMutex:     &sync.Mutex{},
 		instanceHeartbeatCacheTimestamp: time.Unix(0, 0),
 	}

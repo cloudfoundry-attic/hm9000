@@ -88,6 +88,12 @@ type FakeStore struct {
 	ensureCacheIsReadyReturns     struct {
 		result1 error
 	}
+	SyncCacheToStoreStub        func() error
+	syncCacheToStoreMutex       sync.RWMutex
+	syncCacheToStoreArgsForCall []struct{}
+	syncCacheToStoreReturns     struct {
+		result1 error
+	}
 	GetCachedInstanceHeartbeatsStub        func() []models.InstanceHeartbeat
 	getCachedInstanceHeartbeatsMutex       sync.RWMutex
 	getCachedInstanceHeartbeatsArgsForCall []struct{}
@@ -460,6 +466,17 @@ func (fake *FakeStore) EnsureCacheIsReady() error {
 		return fake.EnsureCacheIsReadyStub()
 	} else {
 		return fake.ensureCacheIsReadyReturns.result1
+	}
+}
+
+func (fake *FakeStore) SyncCacheToStore() error {
+	fake.syncCacheToStoreMutex.Lock()
+	fake.syncCacheToStoreArgsForCall = append(fake.syncCacheToStoreArgsForCall, struct{}{})
+	fake.syncCacheToStoreMutex.Unlock()
+	if fake.SyncCacheToStoreStub != nil {
+		return fake.SyncCacheToStoreStub()
+	} else {
+		return fake.syncCacheToStoreReturns.result1
 	}
 }
 

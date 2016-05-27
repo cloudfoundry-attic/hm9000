@@ -6,7 +6,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"fmt"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
@@ -66,8 +65,6 @@ var _ = Describe("Actual State", func() {
 						Key:   "/hm/v1/apps/actual/" + store.AppKey(ihb.AppGuid, ihb.AppVersion) + "/" + ihb.InstanceGuid,
 						Value: ihb.ToCSV(),
 					})
-
-					fmt.Printf("Added heartbeat with AppGuid %s and AppVersion %s\n", ihb.AppGuid, ihb.AppVersion)
 				}
 			}
 
@@ -230,43 +227,28 @@ var _ = Describe("Actual State", func() {
 					Expect(results).To(ContainElement(otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat()))
 					Expect(results).To(ContainElement(otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat()))
 					Expect(results).To(ContainElement(yetAnotherDea.GetApp(0).InstanceAtIndex(0).Heartbeat()))
+
+					Expect(results).NotTo(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+					Expect(results).NotTo(ContainElement(otherDea.GetApp(3).InstanceAtIndex(0).Heartbeat()))
 				})
 			})
 		})
 
-		Context("when one of the keys fails to delete", func() {
-			It("should soldier on", func() {
-				done := make(chan error, 2)
-
-				go func() {
-					done <- store.SyncHeartbeats(dea.HeartbeatWith(
-						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
-					))
-				}()
-
-				go func() {
-					done <- store.SyncHeartbeats(dea.HeartbeatWith(
-						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
-					))
-				}()
-
-				err1 := <-done
-				err2 := <-done
-				Expect(err1).NotTo(HaveOccurred())
-				Expect(err2).NotTo(HaveOccurred())
-			})
-		})
-
 		Context("when the in-memory cache no longer matches the store", func() {
-			It("recovers by updating the store when it receives the next heartbeat", func() {
+			JustBeforeEach(func() {
 				results, err := store.GetInstanceHeartbeats()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(2))
 
+				results = store.GetCachedInstanceHeartbeats()
+				Expect(results).To(HaveLen(2))
+			})
+
+			It("recovers by updating the store when it receives the next heartbeat", func() {
 				corruptedHeartbeat := dea.GetApp(0).InstanceAtIndex(1).Heartbeat()
 				storeAdapter.Delete("/hm/v1/apps/actual/" + store.AppKey(corruptedHeartbeat.AppGuid, corruptedHeartbeat.AppVersion) + "/" + corruptedHeartbeat.InstanceGuid)
 
-				results, err = store.GetInstanceHeartbeats()
+				results, err := store.GetInstanceHeartbeats()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
 
@@ -281,6 +263,39 @@ var _ = Describe("Actual State", func() {
 				results, err = store.GetInstanceHeartbeats()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(2))
+			})
+
+			It("syncs the cache to the store", func() {
+				err := populate(dea.HeartbeatWith(
+					dea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
+					dea.GetApp(4).InstanceAtIndex(0).Heartbeat(),
+				))
+
+				corruptedHeartbeat := dea.GetApp(0).InstanceAtIndex(1).Heartbeat()
+				storeAdapter.Delete("/hm/v1/apps/actual/" + store.AppKey(corruptedHeartbeat.AppGuid, corruptedHeartbeat.AppVersion) + "/" + corruptedHeartbeat.InstanceGuid)
+
+				results := store.GetCachedInstanceHeartbeats()
+				Expect(results).To(HaveLen(2))
+				Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+
+				results, err = store.GetInstanceHeartbeats()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(3))
+
+				err = store.SyncCacheToStore()
+				Expect(err).NotTo(HaveOccurred())
+
+				results, err = store.GetInstanceHeartbeats()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(2))
+				Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+
+				results = store.GetCachedInstanceHeartbeats()
+				Expect(results).To(HaveLen(2))
+				Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
 			})
 		})
 	})
