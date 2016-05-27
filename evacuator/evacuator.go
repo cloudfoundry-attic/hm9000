@@ -4,7 +4,9 @@ import (
 	"os"
 
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/nats-io/nats"
@@ -13,21 +15,23 @@ import (
 )
 
 type Evacuator struct {
-	messageBus yagnats.NATSConn
-	store      store.Store
-	clock      clock.Clock
-	config     *config.Config
-	logger     lager.Logger
-	sub        *nats.Subscription
+	messageBus        yagnats.NATSConn
+	store             store.Store
+	clock             clock.Clock
+	metricsAccountant metricsaccountant.MetricsAccountant
+	config            *config.Config
+	logger            lager.Logger
+	sub               *nats.Subscription
 }
 
-func New(messageBus yagnats.NATSConn, store store.Store, clock clock.Clock, config *config.Config, logger lager.Logger) *Evacuator {
+func New(messageBus yagnats.NATSConn, store store.Store, clock clock.Clock, metricsAccountant metricsaccountant.MetricsAccountant, config *config.Config, logger lager.Logger) *Evacuator {
 	return &Evacuator{
-		messageBus: messageBus,
-		store:      store,
-		clock:      clock,
-		config:     config,
-		logger:     logger,
+		messageBus:        messageBus,
+		store:             store,
+		clock:             clock,
+		metricsAccountant: metricsAccountant,
+		config:            config,
+		logger:            logger,
 	}
 }
 
@@ -81,5 +85,8 @@ func (e *Evacuator) handleExited(exited models.DropletExited) {
 		e.logger.Info("Scheduling start message for droplet.exited message", startMessage.LogDescription(), exited.LogDescription())
 
 		e.store.SavePendingStartMessages(startMessage)
+
+		evacuatorSender := sender.New(e.store, e.metricsAccountant, e.config, e.messageBus, e.logger, e.clock)
+		evacuatorSender.Send(e.clock, nil, []models.PendingStartMessage{startMessage}, nil)
 	}
 }

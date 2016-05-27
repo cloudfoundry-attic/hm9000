@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant/fakemetricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
@@ -24,10 +25,11 @@ import (
 
 var _ = Describe("Evacuator", func() {
 	var (
-		evacuator    *Evacuator
-		messageBus   *fakeyagnats.FakeNATSConn
-		storeAdapter *fakestoreadapter.FakeStoreAdapter
-		clock        *fakeclock.FakeClock
+		evacuator         *Evacuator
+		messageBus        *fakeyagnats.FakeNATSConn
+		storeAdapter      *fakestoreadapter.FakeStoreAdapter
+		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
+		clock             *fakeclock.FakeClock
 
 		store            storepackage.Store
 		app              appfixture.AppFixture
@@ -40,13 +42,15 @@ var _ = Describe("Evacuator", func() {
 		storeAdapter = fakestoreadapter.New()
 		messageBus = fakeyagnats.Connect()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
+		metricsAccountant = &fakemetricsaccountant.FakeMetricsAccountant{}
 		clock = fakeclock.NewFakeClock(time.Unix(100, 0))
 
 		app = appfixture.NewAppFixture()
+		store.BumpActualFreshness(time.Unix(10, 0))
 	})
 
 	JustBeforeEach(func() {
-		evacuator = New(messageBus, store, clock, conf, fakelogger.NewFakeLogger())
+		evacuator = New(messageBus, store, clock, metricsAccountant, conf, fakelogger.NewFakeLogger())
 		evacuatorProcess = ifrit.Background(evacuator)
 	})
 
@@ -100,8 +104,30 @@ var _ = Describe("Evacuator", func() {
 
 					expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 					expectedStartMessage.SkipVerification = true
+					expectedStartMessage.SentOn = expectedStartMessage.SendOn
 
 					Expect(pendingStarts).To(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
+				})
+
+				It("sends the message", func() {
+					pendingStarts, err := store.GetPendingStartMessages()
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(pendingStarts).To(HaveLen(1))
+
+					var expectedStartMessage models.PendingStartMessage
+					for _, msg := range pendingStarts {
+						expectedStartMessage = msg
+					}
+
+					Expect(messageBus.PublishedMessages("hm9000.start")).To(HaveLen(1))
+					message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.start")[0].Data))
+					Expect(message).To(Equal(models.StartMessage{
+						AppGuid:       app.AppGuid,
+						AppVersion:    app.AppVersion,
+						InstanceIndex: 1,
+						MessageId:     expectedStartMessage.MessageId,
+					}))
 				})
 			})
 
@@ -118,8 +144,31 @@ var _ = Describe("Evacuator", func() {
 
 					expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
 					expectedStartMessage.SkipVerification = true
+					expectedStartMessage.SentOn = expectedStartMessage.SendOn
 
 					Expect(pendingStarts).To(ContainElement(EqualPendingStartMessage(expectedStartMessage)))
+				})
+
+				It("sends the message", func() {
+
+					pendingStarts, err := store.GetPendingStartMessages()
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(pendingStarts).To(HaveLen(1))
+
+					var expectedStartMessage models.PendingStartMessage
+					for _, msg := range pendingStarts {
+						expectedStartMessage = msg
+					}
+
+					Expect(messageBus.PublishedMessages("hm9000.start")).To(HaveLen(1))
+					message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.start")[0].Data))
+					Expect(message).To(Equal(models.StartMessage{
+						AppGuid:       app.AppGuid,
+						AppVersion:    app.AppVersion,
+						InstanceIndex: 1,
+						MessageId:     expectedStartMessage.MessageId,
+					}))
 				})
 			})
 
