@@ -281,11 +281,8 @@ func (store *RealStore) getStoredInstanceHeartbeats() (results []models.Instance
 	return results, nil
 }
 
-func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
-	return store.getCachedInstanceHeartbeatsForApp(appGuid, appVersion)
-}
-
-func (store *RealStore) getCachedInstanceHeartbeatsForApp(appGuid string, appVersion string) ([]models.InstanceHeartbeat, error) {
+// DONE! Test?
+func (store *RealStore) GetCachedInstanceHeartbeatsForApp(appGuid string, appVersion string) ([]models.InstanceHeartbeat, error) {
 	key := store.AppKey(appGuid, appVersion)
 	results := []models.InstanceHeartbeat{}
 
@@ -302,34 +299,6 @@ func (store *RealStore) getCachedInstanceHeartbeatsForApp(appGuid string, appVer
 			delete(store.instanceHeartbeatCache[key], instanceGuid)
 			store.adapter.Delete(store.instanceHeartbeatStoreKey(hb.AppGuid, hb.AppVersion, instanceGuid))
 		}
-	}
-
-	return results, nil
-}
-
-func (store *RealStore) getStoredInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
-	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/actual/" + store.AppKey(appGuid, appVersion))
-	if err == storeadapter.ErrorKeyNotFound {
-		return []models.InstanceHeartbeat{}, nil
-	} else if err != nil {
-		return []models.InstanceHeartbeat{}, err
-	}
-
-	unexpiredDeas, err := store.unexpiredDeas()
-	if err != nil {
-		return results, err
-	}
-
-	results, expiredKeys, err := store.heartbeatsForNode(node, unexpiredDeas)
-	if err != nil {
-		return []models.InstanceHeartbeat{}, err
-	}
-
-	err = store.adapter.Delete(expiredKeys...)
-	if err == storeadapter.ErrorKeyNotFound {
-		store.logger.Debug("store.GetInstanceHeartbeatsForApp Failed to delete a key, soldiering on...")
-	} else if err != nil {
-		return []models.InstanceHeartbeat{}, err
 	}
 
 	return results, nil

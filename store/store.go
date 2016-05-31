@@ -40,7 +40,7 @@ type Store interface {
 	SyncCacheToStore() error
 	GetCachedInstanceHeartbeats() (results []models.InstanceHeartbeat)
 	GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
-	GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
+	GetCachedInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
 
 	SaveCrashCounts(crashCounts ...models.CrashCount) error
 

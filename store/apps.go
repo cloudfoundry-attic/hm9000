@@ -23,7 +23,7 @@ func (store *RealStore) GetApp(appGuid string, appVersion string) (*models.App, 
 	var err error
 
 	tActual := time.Now()
-	representation.actualState, err = store.GetInstanceHeartbeatsForApp(appGuid, appVersion)
+	representation.actualState, err = store.GetCachedInstanceHeartbeatsForApp(appGuid, appVersion)
 	if err != nil {
 		return nil, err
 	}

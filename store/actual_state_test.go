@@ -563,7 +563,7 @@ var _ = FDescribe("Actual State", func() {
 
 		Context("when there is none saved", func() {
 			It("comes back empty", func() {
-				results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+				results, err := store.GetCachedInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeEmpty())
 			})
@@ -596,7 +596,7 @@ var _ = FDescribe("Actual State", func() {
 
 			Context("when the corresponding DEA heartbeat has not expired", func() {
 				It("returns the instance heartbeats", func() {
-					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+					results, err := store.GetCachedInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(HaveLen(2))
 					Expect(results).To(ContainElement(heartbeatA))
@@ -610,7 +610,7 @@ var _ = FDescribe("Actual State", func() {
 				})
 
 				It("does not return any expired instance heartbeats", func() {
-					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+					results, err := store.GetCachedInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(HaveLen(1))
 					Expect(results).To(ContainElement(heartbeatB))
@@ -620,7 +620,7 @@ var _ = FDescribe("Actual State", func() {
 					_, err := storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+					_, err = store.GetCachedInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
@@ -632,13 +632,13 @@ var _ = FDescribe("Actual State", func() {
 						resultChan := make(chan []models.InstanceHeartbeat, 2)
 						errChan := make(chan error, 2)
 						go func() {
-							results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+							results, err := store.GetCachedInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 							resultChan <- results
 							errChan <- err
 						}()
 
 						go func() {
-							results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+							results, err := store.GetCachedInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 							resultChan <- results
 							errChan <- err
 						}()
@@ -657,7 +657,7 @@ var _ = FDescribe("Actual State", func() {
 				})
 
 				It("does not return any instance heartbeats", func() {
-					results, err := store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+					results, err := store.GetCachedInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).NotTo(BeNil())
 					Expect(results).To(HaveLen(0))
