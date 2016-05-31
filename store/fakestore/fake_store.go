@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
+	"github.com/cloudfoundry/storeadapter"
 )
 
 type FakeStore struct {
@@ -75,13 +76,6 @@ type FakeStore struct {
 	syncHeartbeatsReturns struct {
 		result1 error
 	}
-	GetInstanceHeartbeatsStub        func() (results []models.InstanceHeartbeat, err error)
-	getInstanceHeartbeatsMutex       sync.RWMutex
-	getInstanceHeartbeatsArgsForCall []struct{}
-	getInstanceHeartbeatsReturns     struct {
-		result1 []models.InstanceHeartbeat
-		result2 error
-	}
 	EnsureCacheIsReadyStub        func() error
 	ensureCacheIsReadyMutex       sync.RWMutex
 	ensureCacheIsReadyArgsForCall []struct{}
@@ -94,20 +88,26 @@ type FakeStore struct {
 	syncCacheToStoreReturns     struct {
 		result1 error
 	}
-	GetCachedInstanceHeartbeatsStub        func() []models.InstanceHeartbeat
+	GetCachedInstanceHeartbeatsStub        func() (results []models.InstanceHeartbeat)
 	getCachedInstanceHeartbeatsMutex       sync.RWMutex
 	getCachedInstanceHeartbeatsArgsForCall []struct{}
 	getCachedInstanceHeartbeatsReturns     struct {
 		result1 []models.InstanceHeartbeat
+	}
+	GetInstanceHeartbeatsStub        func() (results []models.InstanceHeartbeat, err error)
+	getInstanceHeartbeatsMutex       sync.RWMutex
+	getInstanceHeartbeatsArgsForCall []struct{}
+	getInstanceHeartbeatsReturns     struct {
+		result1 []models.InstanceHeartbeat
 		result2 error
 	}
-	GetInstanceHeartbeatsForAppStub        func(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
-	getInstanceHeartbeatsForAppMutex       sync.RWMutex
-	getInstanceHeartbeatsForAppArgsForCall []struct {
+	GetCachedInstanceHeartbeatsForAppStub        func(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
+	getCachedInstanceHeartbeatsForAppMutex       sync.RWMutex
+	getCachedInstanceHeartbeatsForAppArgsForCall []struct {
 		appGuid    string
 		appVersion string
 	}
-	getInstanceHeartbeatsForAppReturns struct {
+	getCachedInstanceHeartbeatsForAppReturns struct {
 		result1 []models.InstanceHeartbeat
 		result2 error
 	}
@@ -188,6 +188,24 @@ type FakeStore struct {
 	compactArgsForCall []struct{}
 	compactReturns     struct {
 		result1 error
+	}
+	GetDeaHeartbeatsStub        func() ([]storeadapter.StoreNode, error)
+	getDeaHeartbeatsMutex       sync.RWMutex
+	getDeaHeartbeatsArgsForCall []struct{}
+	getDeaHeartbeatsReturns     struct {
+		result1 []storeadapter.StoreNode
+		result2 error
+	}
+	GetCachedDeaHeartbeatsStub        func() map[string]time.Time
+	getCachedDeaHeartbeatsMutex       sync.RWMutex
+	getCachedDeaHeartbeatsArgsForCall []struct{}
+	getCachedDeaHeartbeatsReturns     struct {
+		result1 map[string]time.Time
+	}
+	AddDeaHeartbeatsStub        func([]string)
+	addDeaHeartbeatsMutex       sync.RWMutex
+	addDeaHeartbeatsArgsForCall []struct {
+		arg1 []string
 	}
 }
 
@@ -436,28 +454,6 @@ func (fake *FakeStore) SyncHeartbeatsReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
-	fake.getInstanceHeartbeatsMutex.Lock()
-	fake.getInstanceHeartbeatsArgsForCall = append(fake.getInstanceHeartbeatsArgsForCall, struct{}{})
-	fake.getInstanceHeartbeatsMutex.Unlock()
-	if fake.GetInstanceHeartbeatsStub != nil {
-		return fake.GetInstanceHeartbeatsStub()
-	} else {
-		return fake.getInstanceHeartbeatsReturns.result1, fake.getInstanceHeartbeatsReturns.result2
-	}
-}
-
-func (fake *FakeStore) GetCachedInstanceHeartbeats() (results []models.InstanceHeartbeat) {
-	fake.getCachedInstanceHeartbeatsMutex.Lock()
-	fake.getCachedInstanceHeartbeatsArgsForCall = append(fake.getInstanceHeartbeatsArgsForCall, struct{}{})
-	fake.getCachedInstanceHeartbeatsMutex.Unlock()
-	if fake.GetCachedInstanceHeartbeatsStub != nil {
-		return fake.GetCachedInstanceHeartbeatsStub()
-	} else {
-		return fake.getCachedInstanceHeartbeatsReturns.result1
-	}
-}
-
 func (fake *FakeStore) EnsureCacheIsReady() error {
 	fake.ensureCacheIsReadyMutex.Lock()
 	fake.ensureCacheIsReadyArgsForCall = append(fake.ensureCacheIsReadyArgsForCall, struct{}{})
@@ -469,6 +465,19 @@ func (fake *FakeStore) EnsureCacheIsReady() error {
 	}
 }
 
+func (fake *FakeStore) EnsureCacheIsReadyCallCount() int {
+	fake.ensureCacheIsReadyMutex.RLock()
+	defer fake.ensureCacheIsReadyMutex.RUnlock()
+	return len(fake.ensureCacheIsReadyArgsForCall)
+}
+
+func (fake *FakeStore) EnsureCacheIsReadyReturns(result1 error) {
+	fake.EnsureCacheIsReadyStub = nil
+	fake.ensureCacheIsReadyReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeStore) SyncCacheToStore() error {
 	fake.syncCacheToStoreMutex.Lock()
 	fake.syncCacheToStoreArgsForCall = append(fake.syncCacheToStoreArgsForCall, struct{}{})
@@ -477,6 +486,54 @@ func (fake *FakeStore) SyncCacheToStore() error {
 		return fake.SyncCacheToStoreStub()
 	} else {
 		return fake.syncCacheToStoreReturns.result1
+	}
+}
+
+func (fake *FakeStore) SyncCacheToStoreCallCount() int {
+	fake.syncCacheToStoreMutex.RLock()
+	defer fake.syncCacheToStoreMutex.RUnlock()
+	return len(fake.syncCacheToStoreArgsForCall)
+}
+
+func (fake *FakeStore) SyncCacheToStoreReturns(result1 error) {
+	fake.SyncCacheToStoreStub = nil
+	fake.syncCacheToStoreReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeStore) GetCachedInstanceHeartbeats() (results []models.InstanceHeartbeat) {
+	fake.getCachedInstanceHeartbeatsMutex.Lock()
+	fake.getCachedInstanceHeartbeatsArgsForCall = append(fake.getCachedInstanceHeartbeatsArgsForCall, struct{}{})
+	fake.getCachedInstanceHeartbeatsMutex.Unlock()
+	if fake.GetCachedInstanceHeartbeatsStub != nil {
+		return fake.GetCachedInstanceHeartbeatsStub()
+	} else {
+		return fake.getCachedInstanceHeartbeatsReturns.result1
+	}
+}
+
+func (fake *FakeStore) GetCachedInstanceHeartbeatsCallCount() int {
+	fake.getCachedInstanceHeartbeatsMutex.RLock()
+	defer fake.getCachedInstanceHeartbeatsMutex.RUnlock()
+	return len(fake.getCachedInstanceHeartbeatsArgsForCall)
+}
+
+func (fake *FakeStore) GetCachedInstanceHeartbeatsReturns(result1 []models.InstanceHeartbeat) {
+	fake.GetCachedInstanceHeartbeatsStub = nil
+	fake.getCachedInstanceHeartbeatsReturns = struct {
+		result1 []models.InstanceHeartbeat
+	}{result1}
+}
+
+func (fake *FakeStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
+	fake.getInstanceHeartbeatsMutex.Lock()
+	fake.getInstanceHeartbeatsArgsForCall = append(fake.getInstanceHeartbeatsArgsForCall, struct{}{})
+	fake.getInstanceHeartbeatsMutex.Unlock()
+	if fake.GetInstanceHeartbeatsStub != nil {
+		return fake.GetInstanceHeartbeatsStub()
+	} else {
+		return fake.getInstanceHeartbeatsReturns.result1, fake.getInstanceHeartbeatsReturns.result2
 	}
 }
 
@@ -494,35 +551,35 @@ func (fake *FakeStore) GetInstanceHeartbeatsReturns(result1 []models.InstanceHea
 	}{result1, result2}
 }
 
-func (fake *FakeStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
-	fake.getInstanceHeartbeatsForAppMutex.Lock()
-	fake.getInstanceHeartbeatsForAppArgsForCall = append(fake.getInstanceHeartbeatsForAppArgsForCall, struct {
+func (fake *FakeStore) GetCachedInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
+	fake.getCachedInstanceHeartbeatsForAppMutex.Lock()
+	fake.getCachedInstanceHeartbeatsForAppArgsForCall = append(fake.getCachedInstanceHeartbeatsForAppArgsForCall, struct {
 		appGuid    string
 		appVersion string
 	}{appGuid, appVersion})
-	fake.getInstanceHeartbeatsForAppMutex.Unlock()
-	if fake.GetInstanceHeartbeatsForAppStub != nil {
-		return fake.GetInstanceHeartbeatsForAppStub(appGuid, appVersion)
+	fake.getCachedInstanceHeartbeatsForAppMutex.Unlock()
+	if fake.GetCachedInstanceHeartbeatsForAppStub != nil {
+		return fake.GetCachedInstanceHeartbeatsForAppStub(appGuid, appVersion)
 	} else {
-		return fake.getInstanceHeartbeatsForAppReturns.result1, fake.getInstanceHeartbeatsForAppReturns.result2
+		return fake.getCachedInstanceHeartbeatsForAppReturns.result1, fake.getCachedInstanceHeartbeatsForAppReturns.result2
 	}
 }
 
-func (fake *FakeStore) GetInstanceHeartbeatsForAppCallCount() int {
-	fake.getInstanceHeartbeatsForAppMutex.RLock()
-	defer fake.getInstanceHeartbeatsForAppMutex.RUnlock()
-	return len(fake.getInstanceHeartbeatsForAppArgsForCall)
+func (fake *FakeStore) GetCachedInstanceHeartbeatsForAppCallCount() int {
+	fake.getCachedInstanceHeartbeatsForAppMutex.RLock()
+	defer fake.getCachedInstanceHeartbeatsForAppMutex.RUnlock()
+	return len(fake.getCachedInstanceHeartbeatsForAppArgsForCall)
 }
 
-func (fake *FakeStore) GetInstanceHeartbeatsForAppArgsForCall(i int) (string, string) {
-	fake.getInstanceHeartbeatsForAppMutex.RLock()
-	defer fake.getInstanceHeartbeatsForAppMutex.RUnlock()
-	return fake.getInstanceHeartbeatsForAppArgsForCall[i].appGuid, fake.getInstanceHeartbeatsForAppArgsForCall[i].appVersion
+func (fake *FakeStore) GetCachedInstanceHeartbeatsForAppArgsForCall(i int) (string, string) {
+	fake.getCachedInstanceHeartbeatsForAppMutex.RLock()
+	defer fake.getCachedInstanceHeartbeatsForAppMutex.RUnlock()
+	return fake.getCachedInstanceHeartbeatsForAppArgsForCall[i].appGuid, fake.getCachedInstanceHeartbeatsForAppArgsForCall[i].appVersion
 }
 
-func (fake *FakeStore) GetInstanceHeartbeatsForAppReturns(result1 []models.InstanceHeartbeat, result2 error) {
-	fake.GetInstanceHeartbeatsForAppStub = nil
-	fake.getInstanceHeartbeatsForAppReturns = struct {
+func (fake *FakeStore) GetCachedInstanceHeartbeatsForAppReturns(result1 []models.InstanceHeartbeat, result2 error) {
+	fake.GetCachedInstanceHeartbeatsForAppStub = nil
+	fake.getCachedInstanceHeartbeatsForAppReturns = struct {
 		result1 []models.InstanceHeartbeat
 		result2 error
 	}{result1, result2}
@@ -826,6 +883,78 @@ func (fake *FakeStore) CompactReturns(result1 error) {
 	fake.compactReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeStore) GetDeaHeartbeats() ([]storeadapter.StoreNode, error) {
+	fake.getDeaHeartbeatsMutex.Lock()
+	fake.getDeaHeartbeatsArgsForCall = append(fake.getDeaHeartbeatsArgsForCall, struct{}{})
+	fake.getDeaHeartbeatsMutex.Unlock()
+	if fake.GetDeaHeartbeatsStub != nil {
+		return fake.GetDeaHeartbeatsStub()
+	} else {
+		return fake.getDeaHeartbeatsReturns.result1, fake.getDeaHeartbeatsReturns.result2
+	}
+}
+
+func (fake *FakeStore) GetDeaHeartbeatsCallCount() int {
+	fake.getDeaHeartbeatsMutex.RLock()
+	defer fake.getDeaHeartbeatsMutex.RUnlock()
+	return len(fake.getDeaHeartbeatsArgsForCall)
+}
+
+func (fake *FakeStore) GetDeaHeartbeatsReturns(result1 []storeadapter.StoreNode, result2 error) {
+	fake.GetDeaHeartbeatsStub = nil
+	fake.getDeaHeartbeatsReturns = struct {
+		result1 []storeadapter.StoreNode
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeStore) GetCachedDeaHeartbeats() map[string]time.Time {
+	fake.getCachedDeaHeartbeatsMutex.Lock()
+	fake.getCachedDeaHeartbeatsArgsForCall = append(fake.getCachedDeaHeartbeatsArgsForCall, struct{}{})
+	fake.getCachedDeaHeartbeatsMutex.Unlock()
+	if fake.GetCachedDeaHeartbeatsStub != nil {
+		return fake.GetCachedDeaHeartbeatsStub()
+	} else {
+		return fake.getCachedDeaHeartbeatsReturns.result1
+	}
+}
+
+func (fake *FakeStore) GetCachedDeaHeartbeatsCallCount() int {
+	fake.getCachedDeaHeartbeatsMutex.RLock()
+	defer fake.getCachedDeaHeartbeatsMutex.RUnlock()
+	return len(fake.getCachedDeaHeartbeatsArgsForCall)
+}
+
+func (fake *FakeStore) GetCachedDeaHeartbeatsReturns(result1 map[string]time.Time) {
+	fake.GetCachedDeaHeartbeatsStub = nil
+	fake.getCachedDeaHeartbeatsReturns = struct {
+		result1 map[string]time.Time
+	}{result1}
+}
+
+func (fake *FakeStore) AddDeaHeartbeats(arg1 []string) {
+	fake.addDeaHeartbeatsMutex.Lock()
+	fake.addDeaHeartbeatsArgsForCall = append(fake.addDeaHeartbeatsArgsForCall, struct {
+		arg1 []string
+	}{arg1})
+	fake.addDeaHeartbeatsMutex.Unlock()
+	if fake.AddDeaHeartbeatsStub != nil {
+		fake.AddDeaHeartbeatsStub(arg1)
+	}
+}
+
+func (fake *FakeStore) AddDeaHeartbeatsCallCount() int {
+	fake.addDeaHeartbeatsMutex.RLock()
+	defer fake.addDeaHeartbeatsMutex.RUnlock()
+	return len(fake.addDeaHeartbeatsArgsForCall)
+}
+
+func (fake *FakeStore) AddDeaHeartbeatsArgsForCall(i int) []string {
+	fake.addDeaHeartbeatsMutex.RLock()
+	defer fake.addDeaHeartbeatsMutex.RUnlock()
+	return fake.addDeaHeartbeatsArgsForCall[i].arg1
 }
 
 var _ store.Store = new(FakeStore)

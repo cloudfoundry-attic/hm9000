@@ -14,7 +14,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
-var _ = Describe("Actual State", func() {
+var _ = FDescribe("Actual State", func() {
 	var (
 		store        Store
 		storeAdapter storeadapter.StoreAdapter
@@ -76,7 +76,7 @@ var _ = Describe("Actual State", func() {
 		storeAdapter.Disconnect()
 	})
 
-	Describe("#EnsureCacheIsReady", func() {
+	Describe(".EnsureCacheIsReady", func() {
 		Context("When the store is empty", func() {
 			It("creates an empty cache", func() {
 				results, err := store.GetInstanceHeartbeats()
@@ -117,9 +117,38 @@ var _ = Describe("Actual State", func() {
 				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
 			})
 		})
+
+		Context("when the store contains dea instances but the cache does not", func() {
+			BeforeEach(func() {
+				err := populate(dea.HeartbeatWith(
+					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+				))
+				Expect(err).NotTo(HaveOccurred())
+
+				results := store.GetCachedDeaHeartbeats()
+				Expect(results).To(HaveLen(0))
+
+				summaryNodes, err := storeAdapter.ListRecursively("/hm/v1/dea-presence/")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(summaryNodes.ChildNodes)).To(Equal(1))
+				Expect(summaryNodes.ChildNodes[0].Key).To(Equal("/hm/v1/dea-presence/" + dea.DeaGuid))
+			})
+
+			It("populates the local cache from the store", func() {
+				err := store.EnsureCacheIsReady()
+				Expect(err).NotTo(HaveOccurred())
+
+				results := store.GetCachedDeaHeartbeats()
+				Expect(results).To(HaveLen(1))
+				Expect(results).To(HaveKey(dea.DeaGuid))
+				Expect(results[dea.DeaGuid].IsZero()).To(BeFalse())
+			})
+
+		})
 	})
 
-	Describe("Saving actual state", func() {
+	Describe(".SyncHeartbeats", func() {
 		JustBeforeEach(func() {
 			store.SyncHeartbeats(dea.HeartbeatWith(
 				dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
@@ -151,26 +180,52 @@ var _ = Describe("Actual State", func() {
 					Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
 					Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
 				})
+
+				It("sets the dea instance on the cache with a ttl", func() { // cache is RealStore, store is etcd
+					results := store.GetCachedDeaHeartbeats()
+					Expect(results).To(HaveLen(1))
+					Expect(results).To(HaveKey(dea.DeaGuid))
+					Expect(results[dea.DeaGuid].IsZero()).To(BeFalse())
+				})
 			})
 
 			Context("when there are already instance heartbeats stored for the DEA in question", func() {
-				var modifiedHeartbeat models.InstanceHeartbeat
-				JustBeforeEach(func() {
-					modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
-					modifiedHeartbeat.State = models.InstanceStateEvacuating
-					store.SyncHeartbeats(dea.HeartbeatWith(
-						modifiedHeartbeat,
-						dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
-					))
-				})
+				var (
+					modifiedHeartbeat models.InstanceHeartbeat
+					updateHeartbeat   = func() {
+						modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+						modifiedHeartbeat.State = models.InstanceStateEvacuating
+						store.SyncHeartbeats(dea.HeartbeatWith(
+							modifiedHeartbeat,
+							dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
+						))
+					}
+				)
 
 				It("syncs the heartbeats (add new ones, adjust ones that have changed state, and delete old ones)", func() {
+					updateHeartbeat()
 					results := store.GetCachedInstanceHeartbeats()
 					// Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(HaveLen(2))
 					Expect(results).To(ContainElement(modifiedHeartbeat))
 					Expect(results).To(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
 					Expect(results).NotTo(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+				})
+
+				It("Updates the expiration time for the cached dea", func() {
+					results := store.GetCachedDeaHeartbeats()
+					Expect(results).To(HaveLen(1))
+					Expect(results).To(HaveKey(dea.DeaGuid))
+
+					initialTime := results[dea.DeaGuid].UnixNano()
+
+					updateHeartbeat()
+
+					updatedResults := store.GetCachedDeaHeartbeats()
+					Expect(updatedResults).To(HaveLen(1))
+					Expect(updatedResults).To(HaveKey(dea.DeaGuid))
+
+					Expect(initialTime).To(BeNumerically("<", updatedResults[dea.DeaGuid].UnixNano()))
 				})
 			})
 		})
@@ -193,6 +248,14 @@ var _ = Describe("Actual State", func() {
 				))
 			})
 
+			It("add all of the dea ID's to the dea cache", func() {
+				results := store.GetCachedDeaHeartbeats()
+				Expect(results).To(HaveLen(3))
+				Expect(results).To(HaveKey(dea.DeaGuid))
+				Expect(results).To(HaveKey(otherDea.DeaGuid))
+				Expect(results).To(HaveKey(yetAnotherDea.DeaGuid))
+			})
+
 			Context("when we receive heartbeats from all DEAs at the same time", func() {
 				It("saves all the heartbeats", func() {
 
@@ -206,19 +269,23 @@ var _ = Describe("Actual State", func() {
 			})
 
 			Context("when we receive heartbeats from a subset of the DEAs", func() {
-				JustBeforeEach(func() {
-					modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
-					modifiedHeartbeat.State = models.InstanceStateEvacuating
-					store.SyncHeartbeats(dea.HeartbeatWith(
-						modifiedHeartbeat,
-						dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
-					), otherDea.HeartbeatWith(
-						otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
-						otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat(),
-					))
-				})
+				var (
+					updateHeartbeat = func() {
+						modifiedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+						modifiedHeartbeat.State = models.InstanceStateEvacuating
+						store.SyncHeartbeats(dea.HeartbeatWith(
+							modifiedHeartbeat,
+							dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
+						), otherDea.HeartbeatWith(
+							otherDea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
+							otherDea.GetApp(3).InstanceAtIndex(2).Heartbeat(),
+						))
+					}
+				)
 
 				It("Saves the heartbeats from those DEAs without deleting any from the DEAS from which it did not receive heartbeats", func() {
+					updateHeartbeat()
+
 					results, err := store.GetInstanceHeartbeats()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(HaveLen(5))
@@ -231,6 +298,31 @@ var _ = Describe("Actual State", func() {
 					Expect(results).NotTo(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
 					Expect(results).NotTo(ContainElement(otherDea.GetApp(3).InstanceAtIndex(0).Heartbeat()))
 				})
+
+				// maybe remove?
+				It("Updates the expiration time for the received cached DEAs", func() {
+					results := store.GetCachedDeaHeartbeats()
+					Expect(results).To(HaveLen(3))
+					Expect(results).To(HaveKey(dea.DeaGuid))
+					Expect(results).To(HaveKey(otherDea.DeaGuid))
+					Expect(results).To(HaveKey(yetAnotherDea.DeaGuid))
+
+					deaTime := results[dea.DeaGuid].UnixNano()
+					otherDeaTime := results[otherDea.DeaGuid].UnixNano()
+					yetAnotherDeaTime := results[yetAnotherDea.DeaGuid].UnixNano()
+
+					updateHeartbeat()
+
+					updatedResults := store.GetCachedDeaHeartbeats()
+					Expect(results).To(HaveLen(3))
+					Expect(results).To(HaveKey(dea.DeaGuid))
+					Expect(results).To(HaveKey(otherDea.DeaGuid))
+					Expect(results).To(HaveKey(yetAnotherDea.DeaGuid))
+
+					Expect(deaTime).To(BeNumerically("<", updatedResults[dea.DeaGuid].UnixNano()))
+					Expect(otherDeaTime).To(BeNumerically("<", updatedResults[otherDea.DeaGuid].UnixNano()))
+					Expect(yetAnotherDeaTime).To(Equal(updatedResults[yetAnotherDea.DeaGuid].UnixNano()))
+				})
 			})
 		})
 
@@ -242,6 +334,26 @@ var _ = Describe("Actual State", func() {
 
 				results = store.GetCachedInstanceHeartbeats()
 				Expect(results).To(HaveLen(2))
+			})
+
+			It("adds any incoming dea heartbeats to the store", func() {
+				err := storeAdapter.Delete("/hm/v1/dea-presence/" + dea.DeaGuid)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = store.SyncHeartbeats(dea.HeartbeatWith(
+					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+				))
+				Expect(err).ToNot(HaveOccurred())
+
+				results := store.GetCachedDeaHeartbeats()
+				Expect(results).To(HaveLen(1))
+				Expect(results).To(HaveKey(dea.DeaGuid))
+
+				nodes, err := store.GetDeaHeartbeats()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(nodes)).To(Equal(1))
+				Expect(nodes[0].Key).To(ContainSubstring(dea.DeaGuid))
 			})
 
 			It("recovers by updating the store when it receives the next heartbeat", func() {
@@ -264,39 +376,69 @@ var _ = Describe("Actual State", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(2))
 			})
+		})
+	})
 
-			It("syncs the cache to the store", func() {
-				err := populate(dea.HeartbeatWith(
-					dea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
-					dea.GetApp(4).InstanceAtIndex(0).Heartbeat(),
-				))
+	Describe("SyncCacheToStore", func() {
+		JustBeforeEach(func() {
+			store.SyncHeartbeats(dea.HeartbeatWith(
+				dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+				dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+			))
+		})
 
-				corruptedHeartbeat := dea.GetApp(0).InstanceAtIndex(1).Heartbeat()
-				storeAdapter.Delete("/hm/v1/apps/actual/" + store.AppKey(corruptedHeartbeat.AppGuid, corruptedHeartbeat.AppVersion) + "/" + corruptedHeartbeat.InstanceGuid)
+		It("syncs the dea cache to the store", func() {
+			err := storeAdapter.Delete("/hm/v1/dea-presence/" + dea.DeaGuid)
+			Expect(err).ToNot(HaveOccurred())
 
-				results := store.GetCachedInstanceHeartbeats()
-				Expect(results).To(HaveLen(2))
-				Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+			results := store.GetCachedDeaHeartbeats()
+			Expect(results).To(HaveLen(1))
 
-				results, err = store.GetInstanceHeartbeats()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(results).To(HaveLen(3))
+			nodes, err := store.GetDeaHeartbeats()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(nodes)).To(Equal(0))
 
-				err = store.SyncCacheToStore()
-				Expect(err).NotTo(HaveOccurred())
+			err = store.SyncCacheToStore()
+			Expect(err).NotTo(HaveOccurred())
 
-				results, err = store.GetInstanceHeartbeats()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(results).To(HaveLen(2))
-				Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+			nodes, err = store.GetDeaHeartbeats()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(nodes)).To(Equal(1))
+			Expect(nodes[0].Key).To(ContainSubstring(dea.DeaGuid))
+		})
 
-				results = store.GetCachedInstanceHeartbeats()
-				Expect(results).To(HaveLen(2))
-				Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
-				Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
-			})
+		It("syncs the cache to the store", func() {
+			err := populate(dea.HeartbeatWith(
+				dea.GetApp(2).InstanceAtIndex(1).Heartbeat(),
+				dea.GetApp(4).InstanceAtIndex(0).Heartbeat(),
+			))
+			Expect(err).NotTo(HaveOccurred())
+
+			corruptedHeartbeat := dea.GetApp(0).InstanceAtIndex(1).Heartbeat()
+			storeAdapter.Delete("/hm/v1/apps/actual/" + store.AppKey(corruptedHeartbeat.AppGuid, corruptedHeartbeat.AppVersion) + "/" + corruptedHeartbeat.InstanceGuid)
+
+			results := store.GetCachedInstanceHeartbeats()
+			Expect(results).To(HaveLen(2))
+			Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+			Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+
+			results, err = store.GetInstanceHeartbeats()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(3))
+
+			err = store.SyncCacheToStore()
+			Expect(err).NotTo(HaveOccurred())
+
+			results, err = store.GetInstanceHeartbeats()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(2))
+			Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+			Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
+
+			results = store.GetCachedInstanceHeartbeats()
+			Expect(results).To(HaveLen(2))
+			Expect(results).To(ContainElement(dea.GetApp(0).InstanceAtIndex(1).Heartbeat()))
+			Expect(results).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
 		})
 	})
 

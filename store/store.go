@@ -56,13 +56,20 @@ type Store interface {
 	GetMetric(metric string) (float64, error)
 
 	Compact() error
+
+	GetDeaHeartbeats() ([]storeadapter.StoreNode, error)
+	GetCachedDeaHeartbeats() map[string]time.Time
+	AddDeaHeartbeats([]string)
 }
+
+type instanceHeartbeat map[string]models.InstanceHeartbeat
 
 type RealStore struct {
 	config  *config.Config
 	adapter storeadapter.StoreAdapter
 	logger  lager.Logger
 
+	deaHeartbeatCache               map[string]time.Time // dea guid -> experation time
 	instanceHeartbeatCache          map[string]instanceHeartbeat
 	instanceHeartbeatCacheMutex     *sync.Mutex
 	instanceHeartbeatCacheTimestamp time.Time
@@ -73,6 +80,7 @@ func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger l
 		config:                          config,
 		adapter:                         adapter,
 		logger:                          logger,
+		deaHeartbeatCache:               map[string]time.Time{},
 		instanceHeartbeatCache:          map[string]instanceHeartbeat{},
 		instanceHeartbeatCacheMutex:     &sync.Mutex{},
 		instanceHeartbeatCacheTimestamp: time.Unix(0, 0),
@@ -81,6 +89,17 @@ func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger l
 
 func (store *RealStore) SchemaRoot() string {
 	return "/hm/v" + strconv.Itoa(store.config.StoreSchemaVersion)
+}
+
+// TODO where to put this?
+func (store *RealStore) GetCachedDeaHeartbeats() map[string]time.Time {
+	return store.deaHeartbeatCache
+}
+
+func (store *RealStore) AddDeaHeartbeats(deaHeartbeatGuids []string) {
+	for _, deaGuid := range deaHeartbeatGuids {
+		store.deaHeartbeatCache[deaGuid] = time.Now().Add(time.Duration(store.config.HeartbeatTTL()) * time.Second)
+	}
 }
 
 func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
