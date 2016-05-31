@@ -128,12 +128,14 @@ var _ = Describe("Actual state listener", func() {
 				Eventually(store.BumpActualFreshnessCallCount).Should(Equal(1))
 			})
 
-			It("Adjusts the saved heartbeats", func() {
+			It("reports the saved heartbeats to the number just saved", func() {
 				Eventually(metricsAccountant.TrackSavedHeartbeatsCallCount).Should(Equal(1))
+				Expect(metricsAccountant.TrackSavedHeartbeatsArgsForCall(0)).To(Equal(1))
+
 				Expect(metricsAccountant.TrackSavedHeartbeatsArgsForCall(0)).To(Equal(1))
 			})
 
-			It("Adjusts the received heartbeats", func() {
+			It("reports the received heartbeats in the interval", func() {
 				receivedHeartbeats()
 			})
 		})
@@ -152,13 +154,18 @@ var _ = Describe("Actual state listener", func() {
 				Consistently(store.BumpActualFreshnessCallCount).Should(Equal(0))
 			})
 
-			It("Adjusts the saved heartbeats", func() {
+			It("reports the saved heartbeats", func() {
 				Eventually(metricsAccountant.TrackSavedHeartbeatsCallCount).Should(Equal(1))
 				Expect(metricsAccountant.TrackSavedHeartbeatsArgsForCall(0)).To(Equal(1))
 			})
 
-			It("Adjusts the received heartbeats", func() {
-				receivedHeartbeats()
+			It("reports the received heartbeats in the interval it was received", func() {
+				// one call per interval, clock incremented twice plus the original loop
+				Eventually(metricsAccountant.TrackReceivedHeartbeatsCallCount).Should(Equal(3))
+
+				Expect(metricsAccountant.TrackReceivedHeartbeatsArgsForCall(0)).To(Equal(0))
+				Expect(metricsAccountant.TrackReceivedHeartbeatsArgsForCall(1)).To(Equal(1))
+				Expect(metricsAccountant.TrackReceivedHeartbeatsArgsForCall(2)).To(Equal(0))
 			})
 		})
 

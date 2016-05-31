@@ -23,15 +23,13 @@ type Syncer interface {
 }
 
 type actualStateSyncer struct {
-	logger                  lager.Logger
-	config                  *config.Config
-	store                   store.Store
-	clock                   clock.Clock
-	storeUsageTracker       metricsaccountant.UsageTracker
-	metricsAccountant       metricsaccountant.MetricsAccountant
-	heartbeatsToSave        []*models.Heartbeat
-	totalReceivedHeartbeats int
-	totalSavedHeartbeats    int
+	logger            lager.Logger
+	config            *config.Config
+	store             store.Store
+	clock             clock.Clock
+	storeUsageTracker metricsaccountant.UsageTracker
+	metricsAccountant metricsaccountant.MetricsAccountant
+	heartbeatsToSave  []*models.Heartbeat
 
 	heartbeatMutex *sync.Mutex
 }
@@ -74,8 +72,6 @@ func (syncer *actualStateSyncer) Run(signals <-chan os.Signal, ready chan<- stru
 func (syncer *actualStateSyncer) Heartbeat(heartbeat *models.Heartbeat) {
 	syncer.heartbeatMutex.Lock()
 
-	syncer.totalReceivedHeartbeats++
-
 	syncer.heartbeatsToSave = append(syncer.heartbeatsToSave, heartbeat)
 	numToSave := len(syncer.heartbeatsToSave)
 
@@ -89,7 +85,6 @@ func (syncer *actualStateSyncer) Heartbeat(heartbeat *models.Heartbeat) {
 func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 	var err error
 	syncInterval := syncer.clock.NewTicker(syncer.config.ListenerHeartbeatSyncInterval())
-	previousReceivedHeartbeats := -1
 
 	err = syncer.store.EnsureCacheIsReady()
 	if err != nil {
@@ -101,12 +96,13 @@ func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 		syncer.heartbeatMutex.Lock()
 		heartbeatsToSave := syncer.heartbeatsToSave
 		syncer.heartbeatsToSave = []*models.Heartbeat{}
-		totalReceivedHeartbeats := syncer.totalReceivedHeartbeats
 		syncer.heartbeatMutex.Unlock()
 
-		if len(heartbeatsToSave) > 0 {
+		numHeartbeats := len(heartbeatsToSave)
+
+		if numHeartbeats > 0 {
 			syncer.logger.Info("Saving Heartbeats", lager.Data{
-				"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
+				"Heartbeats to Save": strconv.Itoa(numHeartbeats),
 			})
 
 			t := syncer.clock.Now()
@@ -123,34 +119,29 @@ func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 					syncer.logger.Info("Save took too long.  Not bumping freshness.")
 				}
 				syncer.logger.Info("Saved Heartbeats", lager.Data{
-					"Heartbeats to Save": strconv.Itoa(len(heartbeatsToSave)),
+					"Heartbeats to Save": strconv.Itoa(numHeartbeats),
 					"Duration":           time.Since(t).String(),
 				})
 
 				syncer.heartbeatMutex.Lock()
-				syncer.totalSavedHeartbeats += len(heartbeatsToSave)
-				totalSavedHeartbeats := syncer.totalSavedHeartbeats
 				syncer.heartbeatMutex.Unlock()
 
-				syncer.metricsAccountant.TrackSavedHeartbeats(totalSavedHeartbeats)
+				syncer.metricsAccountant.TrackSavedHeartbeats(numHeartbeats)
 			}
 		}
 
-		if previousReceivedHeartbeats != totalReceivedHeartbeats {
-			syncer.logger.Debug("Tracking Heartbeat Metrics", lager.Data{
-				"Total Received Heartbeats": strconv.Itoa(totalReceivedHeartbeats),
-			})
-			t := syncer.clock.Now()
+		syncer.logger.Debug("Tracking Heartbeat Metrics", lager.Data{
+			"Total Received Heartbeats in Interval": strconv.Itoa(numHeartbeats),
+		})
+		t := syncer.clock.Now()
 
-			syncer.metricsAccountant.TrackReceivedHeartbeats(totalReceivedHeartbeats)
+		syncer.metricsAccountant.TrackReceivedHeartbeats(numHeartbeats)
 
-			syncer.logger.Debug("Done Tracking Heartbeat Metrics", lager.Data{
-				"Total Received Heartbeats": strconv.Itoa(totalReceivedHeartbeats),
-				"Duration":                  time.Since(t).String(),
-			})
+		syncer.logger.Debug("Done Tracking Heartbeat Metrics", lager.Data{
+			"Total Received Heartbeats in Interval": strconv.Itoa(numHeartbeats),
+			"Duration":                              time.Since(t).String(),
+		})
 
-			previousReceivedHeartbeats = totalReceivedHeartbeats
-		}
 		select {
 		case <-ctlChan:
 			break
