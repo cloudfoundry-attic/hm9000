@@ -60,7 +60,10 @@ func (store *RealStore) GetApps() (results map[string]*models.App, err error) {
 	results = make(map[string]*models.App)
 	representations := make(appRepresentations)
 
-	actualStates := store.GetCachedInstanceHeartbeats()
+	actualStates, err := store.GetCachedInstanceHeartbeats()
+	if err != nil {
+		return results, err
+	}
 
 	for _, actualState := range actualStates {
 		representation := representations.representationForAppGuidVersion(actualState.AppGuid, actualState.AppVersion)

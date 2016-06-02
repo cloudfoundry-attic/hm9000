@@ -37,9 +37,8 @@ type Store interface {
 
 	SyncHeartbeats(heartbeat ...*models.Heartbeat) error
 	EnsureCacheIsReady() error
-	SyncCacheToStore() error
-	GetCachedInstanceHeartbeats() (results []models.InstanceHeartbeat)
-	GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
+	GetCachedInstanceHeartbeats() ([]models.InstanceHeartbeat, error)
+	GetStoredInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
 	GetCachedInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
 
 	SaveCrashCounts(crashCounts ...models.CrashCount) error
@@ -57,20 +56,23 @@ type Store interface {
 
 	Compact() error
 
-	GetDeaHeartbeats() ([]storeadapter.StoreNode, error)
-	GetCachedDeaHeartbeats() map[string]time.Time
+	GetStoredDeaHeartbeats() ([]storeadapter.StoreNode, error)
+	GetCachedDeaHeartbeats() map[string]int64
 	AddDeaHeartbeats([]string)
 }
 
-type instanceHeartbeat map[string]models.InstanceHeartbeat
+// [app_instance_id] -> models.InstanceHeartbeat
+type InstanceHeartbeats map[string]models.InstanceHeartbeat
 
 type RealStore struct {
 	config  *config.Config
 	adapter storeadapter.StoreAdapter
 	logger  lager.Logger
 
-	deaHeartbeatCache               map[string]time.Time // dea guid -> experation time
-	instanceHeartbeatCache          map[string]instanceHeartbeat
+	// dea guid -> experation time
+	deaHeartbeatCache map[string]int64
+	// [app_guid,app_version] -> InstanceHeartbeat
+	instanceHeartbeatCache          map[string]InstanceHeartbeats
 	instanceHeartbeatCacheMutex     *sync.Mutex
 	instanceHeartbeatCacheTimestamp time.Time
 }
@@ -80,8 +82,8 @@ func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger l
 		config:                          config,
 		adapter:                         adapter,
 		logger:                          logger,
-		deaHeartbeatCache:               map[string]time.Time{},
-		instanceHeartbeatCache:          map[string]instanceHeartbeat{},
+		deaHeartbeatCache:               map[string]int64{},
+		instanceHeartbeatCache:          map[string]InstanceHeartbeats{},
 		instanceHeartbeatCacheMutex:     &sync.Mutex{},
 		instanceHeartbeatCacheTimestamp: time.Unix(0, 0),
 	}
@@ -91,15 +93,14 @@ func (store *RealStore) SchemaRoot() string {
 	return "/hm/v" + strconv.Itoa(store.config.StoreSchemaVersion)
 }
 
-// TODO where to put this?
-func (store *RealStore) GetCachedDeaHeartbeats() map[string]time.Time {
-	return store.deaHeartbeatCache
+// test helper
+func (store *RealStore) InstanceHeartbeatCache() map[string]InstanceHeartbeats {
+	return store.instanceHeartbeatCache
 }
 
-func (store *RealStore) AddDeaHeartbeats(deaHeartbeatGuids []string) {
-	for _, deaGuid := range deaHeartbeatGuids {
-		store.deaHeartbeatCache[deaGuid] = time.Now().Add(time.Duration(store.config.HeartbeatTTL()) * time.Second)
-	}
+// test helper
+func (store *RealStore) SetInstanceHeartbeatCache(data map[string]InstanceHeartbeats) {
+	store.instanceHeartbeatCache = data
 }
 
 func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
