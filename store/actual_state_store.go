@@ -1,110 +1,108 @@
 package store
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
+	"github.com/pivotal-golang/lager"
 )
 
 // Done? Think we should delete old heartbeats here
 // make sure that if we have something in the cache and we receive a heartbeat that does not have something in our cache we need to delete it.
 func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) error {
-	/*
-		t := time.Now()
-		var err error
+	t := time.Now()
+	var err error
 
-		deaNodeGuids := []string{}
-		nodesToSave := []storeadapter.StoreNode{}
-		keysToDelete := []string{}
-		numberOfInstanceHeartbeats := 0
+	deaNodeGuids := []string{}
+	nodesToSave := []storeadapter.StoreNode{}
+	keysToDelete := []string{}
+	numberOfInstanceHeartbeats := 0
 
-		store.instanceHeartbeatCacheMutex.Lock()
+	store.instanceHeartbeatCacheMutex.Lock()
 
-		for _, incomingHeartbeat := range incomingHeartbeats {
-			numberOfInstanceHeartbeats += len(incomingHeartbeat.InstanceHeartbeats)
-			incomingInstanceGuids := map[string]bool{}
-			nodesToSave = append(nodesToSave, store.deaPresenceNode(incomingHeartbeat.DeaGuid))
-			deaNodeGuids = append(deaNodeGuids, incomingHeartbeat.DeaGuid)
+	for _, incomingHeartbeat := range incomingHeartbeats {
+		numberOfInstanceHeartbeats += len(incomingHeartbeat.InstanceHeartbeats)
+		incomingInstanceGuids := map[string]bool{}
+		nodesToSave = append(nodesToSave, store.deaPresenceNode(incomingHeartbeat.DeaGuid))
+		deaNodeGuids = append(deaNodeGuids, incomingHeartbeat.DeaGuid)
 
-			// Build a list of the instances for all instances in a dea's heartbeat
-			for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
-				incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
+		// Build a list of the instances for all instances in a dea's heartbeat
+		for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
+			incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
 
-				nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
+			nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
 
-				cacheKey := store.AppKey(incomingInstanceHeartbeat.AppGuid, incomingInstanceHeartbeat.AppVersion)
-				if store.instanceHeartbeatCache[cacheKey] == nil {
-					store.instanceHeartbeatCache[cacheKey] = instanceHeartbeat{}
-				}
-
-				store.instanceHeartbeatCache[cacheKey][incomingInstanceHeartbeat.InstanceGuid] = incomingInstanceHeartbeat
+			cacheKey := store.AppKey(incomingInstanceHeartbeat.AppGuid, incomingInstanceHeartbeat.AppVersion)
+			if store.instanceHeartbeatCache[cacheKey] == nil {
+				store.instanceHeartbeatCache[cacheKey] = InstanceHeartbeats{}
 			}
 
-			// Get instance heartbeats for the appGuid, appVersion tuple
-			for _, existingAppInstanceHeartbeats := range store.instanceHeartbeatCache {
+			store.instanceHeartbeatCache[cacheKey][incomingInstanceHeartbeat.InstanceGuid] = incomingInstanceHeartbeat
+		}
 
-				cacheKeysToDelete := []string{}
+		// Get instance heartbeats for the appGuid, appVersion tuple
+		for _, existingAppInstanceHeartbeats := range store.instanceHeartbeatCache {
 
-				// Iterate over individual instance heartbeats
-				for _, existingInstanceHeartbeat := range existingAppInstanceHeartbeats {
-					if existingInstanceHeartbeat.DeaGuid == incomingHeartbeat.DeaGuid && !incomingInstanceGuids[existingInstanceHeartbeat.InstanceGuid] {
-						// Schedule for deletion from store
-						storeKey := store.instanceHeartbeatStoreKey(existingInstanceHeartbeat.AppGuid, existingInstanceHeartbeat.AppVersion, existingInstanceHeartbeat.InstanceGuid)
-						keysToDelete = append(keysToDelete, storeKey)
+			cacheKeysToDelete := []string{}
 
-						// lookupKey := store.AppKey(existingInstanceHeartbeat.AppGuid, existingInstanceHeartbeat.AppVersion)
-						cacheKeysToDelete = append(cacheKeysToDelete, existingInstanceHeartbeat.InstanceGuid)
-						// instanceCache := store.instanceHeartbeatCache[lookupKey]
-						// delete(store.instanceHeartbeatCache[lookupKey], existingInstanceHeartbeat.InstanceGuid)
+			// Iterate over individual instance heartbeats
+			for _, existingInstanceHeartbeat := range existingAppInstanceHeartbeats {
+				if existingInstanceHeartbeat.DeaGuid == incomingHeartbeat.DeaGuid && !incomingInstanceGuids[existingInstanceHeartbeat.InstanceGuid] {
+					// Schedule for deletion from store
+					storeKey := store.instanceHeartbeatStoreKey(existingInstanceHeartbeat.AppGuid, existingInstanceHeartbeat.AppVersion, existingInstanceHeartbeat.InstanceGuid)
+					keysToDelete = append(keysToDelete, storeKey)
 
-					}
-				}
-
-				for _, key := range cacheKeysToDelete {
-					delete(existingAppInstanceHeartbeats, key)
+					cacheKeysToDelete = append(cacheKeysToDelete, existingInstanceHeartbeat.InstanceGuid)
 				}
 			}
-		}
 
-		for key, val := range store.instanceHeartbeatCache {
-			if len(val) == 0 {
-				delete(store.instanceHeartbeatCache, key)
+			for _, key := range cacheKeysToDelete {
+				delete(existingAppInstanceHeartbeats, key)
 			}
 		}
+	}
 
-		store.instanceHeartbeatCacheMutex.Unlock()
-
-		tSave := time.Now()
-		err = store.adapter.SetMulti(nodesToSave)
-		dtSave := time.Since(tSave).Seconds()
-
-		if err != nil {
-			return err
+	for key, val := range store.instanceHeartbeatCache {
+		if len(val) == 0 {
+			delete(store.instanceHeartbeatCache, key)
 		}
+	}
 
-		store.AddDeaHeartbeats(deaNodeGuids)
+	store.instanceHeartbeatCacheMutex.Unlock()
 
-		tDelete := time.Now()
-		err = store.adapter.Delete(keysToDelete...)
-		dtDelete := time.Since(tDelete).Seconds()
+	tSave := time.Now()
+	err = store.adapter.SetMulti(nodesToSave)
+	dtSave := time.Since(tSave).Seconds()
 
-		if err == storeadapter.ErrorKeyNotFound {
-			store.logger.Debug("store.SyncHeartbeats Failed to delete a key, soldiering on...")
-		} else if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
+	}
 
-		store.logger.Debug(fmt.Sprintf("Save Duration Actual"), lager.Data{
-			"Number of Heartbeats":          fmt.Sprintf("%d", len(incomingHeartbeats)),
-			"Number of Instance Heartbeats": fmt.Sprintf("%d", numberOfInstanceHeartbeats),
-			"Number of Items Saved":         fmt.Sprintf("%d", len(nodesToSave)),
-			"Number of Items Deleted":       fmt.Sprintf("%d", len(keysToDelete)),
-			"Duration":                      fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
-			"Save Duration":                 fmt.Sprintf("%.4f seconds", dtSave),
-			"Delete Duration":               fmt.Sprintf("%.4f seconds", dtDelete),
-		})
-	*/
+	store.AddDeaHeartbeats(deaNodeGuids)
+
+	tDelete := time.Now()
+	err = store.adapter.Delete(keysToDelete...)
+	dtDelete := time.Since(tDelete).Seconds()
+
+	if err == storeadapter.ErrorKeyNotFound {
+		store.logger.Debug("store.SyncHeartbeats Failed to delete a key, soldiering on...")
+	} else if err != nil {
+		return err
+	}
+
+	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), lager.Data{
+		"Number of Heartbeats":          fmt.Sprintf("%d", len(incomingHeartbeats)),
+		"Number of Instance Heartbeats": fmt.Sprintf("%d", numberOfInstanceHeartbeats),
+		"Number of Items Saved":         fmt.Sprintf("%d", len(nodesToSave)),
+		"Number of Items Deleted":       fmt.Sprintf("%d", len(keysToDelete)),
+		"Duration":                      fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Save Duration":                 fmt.Sprintf("%.4f seconds", dtSave),
+		"Delete Duration":               fmt.Sprintf("%.4f seconds", dtDelete),
+	})
+
 	return nil
 }
 

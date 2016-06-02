@@ -90,24 +90,37 @@ func (store *RealStore) GetCachedInstanceHeartbeats() ([]models.InstanceHeartbea
 
 func (store *RealStore) GetCachedInstanceHeartbeatsForApp(appGuid string, appVersion string) ([]models.InstanceHeartbeat, error) {
 	results := []models.InstanceHeartbeat{}
-	/*
-		key := store.AppKey(appGuid, appVersion)
 
-		unexpiredDeas, err := store.unexpiredDeas()
-		if err != nil {
+	key := store.AppKey(appGuid, appVersion)
+	cachedDeaHeartbeats := store.GetCachedDeaHeartbeats()
+
+	//instanceGuid => instanceHeartbeat
+	instancesToDelete := make(map[string]models.InstanceHeartbeat)
+
+	for instanceGuid, hb := range store.instanceHeartbeatCache[key] {
+		if cachedDeaHeartbeats[hb.DeaGuid] != 0 {
+			results = append(results, hb)
+		} else {
+			instancesToDelete[instanceGuid] = hb
+		}
+		/*if unexpiredDeas[hb.DeaGuid] {
+			results = append(results, hb)
+		} else {
+			// Delete from both cache and store
+			delete(store.instanceHeartbeatCache[key], instanceGuid)
+			store.adapter.Delete(store.instanceHeartbeatStoreKey(hb.AppGuid, hb.AppVersion, instanceGuid))
+		}*/
+
+	}
+
+	for instanceGuid, instanceHeartbeat := range instancesToDelete {
+		err := store.adapter.Delete(store.instanceHeartbeatStoreKey(instanceHeartbeat.AppGuid, instanceHeartbeat.AppVersion, instanceGuid))
+		if err == nil || err == storeadapter.ErrorKeyNotFound {
+			delete(store.instanceHeartbeatCache[key], instanceGuid)
+		} else {
 			return results, err
 		}
-
-		for instanceGuid, hb := range store.instanceHeartbeatCache[key] {
-			if unexpiredDeas[hb.DeaGuid] {
-				results = append(results, hb)
-			} else {
-				// Delete from both cache and store
-				delete(store.instanceHeartbeatCache[key], instanceGuid)
-				store.adapter.Delete(store.instanceHeartbeatStoreKey(hb.AppGuid, hb.AppVersion, instanceGuid))
-			}
-		}
-	*/
+	}
 	return results, nil
 }
 
@@ -129,7 +142,6 @@ func (store *RealStore) GetCachedDeaHeartbeats() map[string]int64 {
 	return store.deaHeartbeatCache
 }
 
-//TODO TEST ME
 func (store *RealStore) AddDeaHeartbeats(deaHeartbeatGuids []string) {
 	for _, deaGuid := range deaHeartbeatGuids {
 		store.deaHeartbeatCache[deaGuid] = time.Now().Add(time.Duration(store.config.HeartbeatTTL()) * time.Second).UnixNano()

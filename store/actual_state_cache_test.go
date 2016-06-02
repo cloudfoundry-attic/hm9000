@@ -336,6 +336,187 @@ var _ = FDescribe("Cached actual state", func() {
 		})
 	})
 
+	FDescribe(".GetCachedInstanceHeartbeatsForApp", func() {
+		Context("where there are no expired Instance Heartbeats", func() {
+			var (
+				otherApp appfixture.AppFixture
+				app1     appfixture.AppFixture
+			)
+
+			JustBeforeEach(func() {
+				err := populate(dea.HeartbeatWith(
+					dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+					dea.GetApp(0).InstanceAtIndex(2).Heartbeat(),
+					dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+				))
+				Expect(err).NotTo(HaveOccurred())
+
+				app1 = dea.GetApp(0)
+				otherApp = dea.GetApp(1)
+				store.AddDeaHeartbeats([]string{dea.DeaGuid})
+
+				err = store.EnsureCacheIsReady()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("returns the cached instance heartbeats for that app guid, app version", func() {
+				results, err := store.GetCachedInstanceHeartbeatsForApp(app1.AppGuid, app1.AppVersion)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(len(results)).To(Equal(2))
+				Expect(results).ToNot(ContainElement(otherApp.InstanceAtIndex(3).Heartbeat()))
+			})
+		})
+
+		Context("when there are expired Instance Heartbeats", func() {
+			var (
+				app1 appfixture.AppFixture
+				app2 appfixture.AppFixture
+				dea2 appfixture.DeaFixture
+			)
+			Context("when there are no errors", func() {
+				JustBeforeEach(func() {
+					dea2 = appfixture.NewDeaFixture()
+
+					app1 = dea.GetApp(0)
+					app2 = dea2.GetApp(1)
+					app2.AppGuid = app1.AppGuid
+					app2.AppVersion = app1.AppVersion
+
+					err := populate(
+						dea.HeartbeatWith(
+							app1.InstanceAtIndex(1).Heartbeat(),
+							app1.InstanceAtIndex(2).Heartbeat(),
+						),
+						dea2.HeartbeatWith(
+							app2.InstanceAtIndex(0).Heartbeat(),
+						),
+					)
+					Expect(err).NotTo(HaveOccurred())
+
+					store.AddDeaHeartbeats([]string{dea2.DeaGuid})
+					err = store.EnsureCacheIsReady()
+					Expect(err).ToNot(HaveOccurred())
+
+					conf.HeartbeatPeriod = 0
+					store.AddDeaHeartbeats([]string{dea.DeaGuid})
+				})
+
+				It("does not return the expired heartbeats", func() {
+					results, err := store.GetCachedInstanceHeartbeatsForApp(app1.AppGuid, app1.AppVersion)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(len(results)).To(Equal(1))
+					Expect(results).To(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
+				})
+
+				It("deletes the heartbeats from the expired dea from the cache", func() {
+					_, err := store.GetCachedInstanceHeartbeatsForApp(app1.AppGuid, app1.AppVersion)
+					Expect(err).ToNot(HaveOccurred())
+
+					cachedInstanceHeartbeats := store.InstanceHeartbeatCache()
+					Expect(len(cachedInstanceHeartbeats)).To(Equal(1))
+					Expect(len(cachedInstanceHeartbeats[store.AppKey(app2.AppGuid, app2.AppVersion)])).To(Equal(1))
+					Expect(cachedInstanceHeartbeats[store.AppKey(app2.AppGuid, app2.AppVersion)]).To(ContainElement(app2.InstanceAtIndex(0).Heartbeat()))
+				})
+
+				It("deletes the heartbeat from the expired dea from the store", func() {
+					_, err := store.GetCachedInstanceHeartbeatsForApp(app1.AppGuid, app1.AppVersion)
+					Expect(err).ToNot(HaveOccurred())
+
+					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app1.AppGuid, app1.AppVersion) + "/" + app1.InstanceAtIndex(1).Heartbeat().StoreKey())
+					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+
+					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app1.AppGuid, app1.AppVersion) + "/" + app1.InstanceAtIndex(2).Heartbeat().StoreKey())
+					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+
+					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app2.AppGuid, app2.AppVersion) + "/" + app2.InstanceAtIndex(0).Heartbeat().StoreKey())
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+			FContext("errors", func() {
+				Context("when deleting from the store", func() {
+					JustBeforeEach(func() {
+						err := populate(dea.HeartbeatWith(
+							dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+							dea.GetApp(0).InstanceAtIndex(2).Heartbeat(),
+							dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
+						))
+						Expect(err).NotTo(HaveOccurred())
+
+						app1 = dea.GetApp(0)
+						store.AddDeaHeartbeats([]string{dea.DeaGuid})
+
+						err = store.EnsureCacheIsReady()
+						Expect(err).ToNot(HaveOccurred())
+
+					})
+
+					Context("when a delete returns ErrorKeyNotFound", func() {
+						JustBeforeEach(func() {
+							err := store.EnsureCacheIsReady()
+							Expect(err).NotTo(HaveOccurred())
+
+							conf.HeartbeatPeriod = 0
+							store.AddDeaHeartbeats([]string{dea.DeaGuid})
+						})
+
+						It("does not return an error if we receive ErrorKeyNotFound and we delete the key from the cache", func() {
+							err := storeAdapter.Delete("/hm/v1/apps/actual/" + store.AppKey(app1.AppGuid, app1.AppVersion) + "/" + app1.InstanceAtIndex(1).Heartbeat().StoreKey())
+							Expect(err).ToNot(HaveOccurred())
+
+							results, err := store.GetCachedInstanceHeartbeatsForApp(app1.AppGuid, app1.AppVersion)
+							Expect(err).ToNot(HaveOccurred())
+							Expect(len(results)).To(Equal(0))
+							Expect(len(store.InstanceHeartbeatCache())).To(Equal(0))
+						})
+					})
+
+					Context("all other errors", func() {
+						var (
+							expectedInstanceHeartbeats = map[string]InstanceHeartbeats{
+								"app-guid,app-version": InstanceHeartbeats{
+									"instance-guid": models.InstanceHeartbeat{AppGuid: "app-guid", DeaGuid: "dea-guid"},
+								},
+							}
+						)
+
+						BeforeEach(func() {
+							fakeStoreAdapter := &fakes.FakeStoreAdapter{}
+							fakeStoreAdapter.DeleteReturns(errors.New("wops"))
+							storeAdapter = fakeStoreAdapter
+						})
+
+						JustBeforeEach(func() {
+							store.SetInstanceHeartbeatCache(expectedInstanceHeartbeats)
+
+							conf.HeartbeatPeriod = 0
+							store.AddDeaHeartbeats([]string{"dea-guid"})
+						})
+
+						It("returns all other errors and does not delete the instance cache", func() {
+							results, err := store.GetCachedInstanceHeartbeatsForApp("app-guid", "app-version")
+							Expect(err).To(HaveOccurred())
+							Expect(len(results)).To(Equal(0))
+							Expect(len(store.InstanceHeartbeatCache())).To(Equal(1))
+
+							Expect(store.InstanceHeartbeatCache()).To(Equal(expectedInstanceHeartbeats))
+						})
+					})
+				})
+			})
+
+			Context("when all the heartbeats are from expired deas", func() {
+				JustBeforeEach(func() {
+					store.AddDeaHeartbeats([]string{dea2.DeaGuid})
+				})
+
+				It("removes the instanceHeartbetCache key from the instanceHeartbetCache", func() {})
+			})
+		})
+	})
+
 	Describe(".GetCachedDeaHeartbeats", func() {
 		Context("when there are no expired DEAs", func() {
 			JustBeforeEach(func() {
@@ -369,7 +550,19 @@ var _ = FDescribe("Cached actual state", func() {
 		})
 	})
 
-	Describe(".GetCachedInstanceHeartbeatsForApp", func() {
+	Describe(".AddDeaHeartbeats", func() {
+		BeforeEach(func() {
+			conf.HeartbeatPeriod = 1000
+		})
 
+		It("adds a future expiration time for all heartbeats", func() {
+			heartbeatGuids := []string{"guid-1", "guid-2"}
+			store.AddDeaHeartbeats(heartbeatGuids)
+
+			cachedDeaHeartbeats := store.GetCachedDeaHeartbeats()
+			Expect(len(cachedDeaHeartbeats)).To(Equal(2))
+			Expect(cachedDeaHeartbeats["guid-1"]).To(BeNumerically(">", time.Now().UnixNano()))
+			Expect(cachedDeaHeartbeats["guid-2"]).To(BeNumerically(">", time.Now().UnixNano()))
+		})
 	})
 })
