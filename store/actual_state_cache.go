@@ -73,15 +73,14 @@ func (store *RealStore) GetCachedInstanceHeartbeats() ([]models.InstanceHeartbea
 
 	for storeKey, appInstance := range instancesToDelete {
 		err := store.adapter.Delete(storeKey)
-		if err == storeadapter.ErrorKeyNotFound {
+		if err == storeadapter.ErrorKeyNotFound || err == nil {
+			delete(store.instanceHeartbeatCache[store.AppKey(appInstance.AppGuid, appInstance.AppVersion)], appInstance.InstanceGuid)
+			if len(store.instanceHeartbeatCache[store.AppKey(appInstance.AppGuid, appInstance.AppVersion)]) == 0 {
+				delete(store.instanceHeartbeatCache, store.AppKey(appInstance.AppGuid, appInstance.AppVersion))
+			}
 			// Continue on. We somehow have an extra cache key and it should be deleted
 		} else if err != nil {
 			return results, err
-		}
-
-		delete(store.instanceHeartbeatCache[store.AppKey(appInstance.AppGuid, appInstance.AppVersion)], appInstance.InstanceGuid)
-		if len(store.instanceHeartbeatCache[store.AppKey(appInstance.AppGuid, appInstance.AppVersion)]) == 0 {
-			delete(store.instanceHeartbeatCache, store.AppKey(appInstance.AppGuid, appInstance.AppVersion))
 		}
 	}
 
@@ -103,20 +102,15 @@ func (store *RealStore) GetCachedInstanceHeartbeatsForApp(appGuid string, appVer
 		} else {
 			instancesToDelete[instanceGuid] = hb
 		}
-		/*if unexpiredDeas[hb.DeaGuid] {
-			results = append(results, hb)
-		} else {
-			// Delete from both cache and store
-			delete(store.instanceHeartbeatCache[key], instanceGuid)
-			store.adapter.Delete(store.instanceHeartbeatStoreKey(hb.AppGuid, hb.AppVersion, instanceGuid))
-		}*/
-
 	}
 
 	for instanceGuid, instanceHeartbeat := range instancesToDelete {
 		err := store.adapter.Delete(store.instanceHeartbeatStoreKey(instanceHeartbeat.AppGuid, instanceHeartbeat.AppVersion, instanceGuid))
 		if err == nil || err == storeadapter.ErrorKeyNotFound {
 			delete(store.instanceHeartbeatCache[key], instanceGuid)
+			if len(store.instanceHeartbeatCache[key]) == 0 {
+				delete(store.instanceHeartbeatCache, key)
+			}
 		} else {
 			return results, err
 		}

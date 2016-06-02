@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Cached actual state", func() {
+var _ = Describe("Cached actual state", func() {
 	var (
 		store        *RealStore
 		storeAdapter storeadapter.StoreAdapter
@@ -336,7 +336,7 @@ var _ = FDescribe("Cached actual state", func() {
 		})
 	})
 
-	FDescribe(".GetCachedInstanceHeartbeatsForApp", func() {
+	Describe(".GetCachedInstanceHeartbeatsForApp", func() {
 		Context("where there are no expired Instance Heartbeats", func() {
 			var (
 				otherApp appfixture.AppFixture
@@ -435,28 +435,20 @@ var _ = FDescribe("Cached actual state", func() {
 				})
 			})
 
-			FContext("errors", func() {
+			Context("errors", func() {
 				Context("when deleting from the store", func() {
-					JustBeforeEach(func() {
-						err := populate(dea.HeartbeatWith(
-							dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
-							dea.GetApp(0).InstanceAtIndex(2).Heartbeat(),
-							dea.GetApp(1).InstanceAtIndex(3).Heartbeat(),
-						))
-						Expect(err).NotTo(HaveOccurred())
-
-						app1 = dea.GetApp(0)
-						store.AddDeaHeartbeats([]string{dea.DeaGuid})
-
-						err = store.EnsureCacheIsReady()
-						Expect(err).ToNot(HaveOccurred())
-
-					})
-
 					Context("when a delete returns ErrorKeyNotFound", func() {
 						JustBeforeEach(func() {
-							err := store.EnsureCacheIsReady()
+							err := populate(dea.HeartbeatWith(
+								dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
+								dea.GetApp(0).InstanceAtIndex(2).Heartbeat(),
+							))
 							Expect(err).NotTo(HaveOccurred())
+
+							app1 = dea.GetApp(0)
+
+							err = store.EnsureCacheIsReady()
+							Expect(err).ToNot(HaveOccurred())
 
 							conf.HeartbeatPeriod = 0
 							store.AddDeaHeartbeats([]string{dea.DeaGuid})
