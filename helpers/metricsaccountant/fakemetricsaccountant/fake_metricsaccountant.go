@@ -43,14 +43,6 @@ type FakeMetricsAccountant struct {
 	trackDesiredStateSyncTimeReturns struct {
 		result1 error
 	}
-	TrackActualStateStoreUsageFractionStub        func(usage float64) error
-	trackActualStateStoreUsageFractionMutex       sync.RWMutex
-	trackActualStateStoreUsageFractionArgsForCall []struct {
-		usage float64
-	}
-	trackActualStateStoreUsageFractionReturns struct {
-		result1 error
-	}
 }
 
 func (fake *FakeMetricsAccountant) TrackReceivedHeartbeats(metric int) error {
@@ -178,38 +170,6 @@ func (fake *FakeMetricsAccountant) TrackDesiredStateSyncTimeArgsForCall(i int) t
 func (fake *FakeMetricsAccountant) TrackDesiredStateSyncTimeReturns(result1 error) {
 	fake.TrackDesiredStateSyncTimeStub = nil
 	fake.trackDesiredStateSyncTimeReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeMetricsAccountant) TrackActualStateStoreUsageFraction(usage float64) error {
-	fake.trackActualStateStoreUsageFractionMutex.Lock()
-	fake.trackActualStateStoreUsageFractionArgsForCall = append(fake.trackActualStateStoreUsageFractionArgsForCall, struct {
-		usage float64
-	}{usage})
-	fake.trackActualStateStoreUsageFractionMutex.Unlock()
-	if fake.TrackActualStateStoreUsageFractionStub != nil {
-		return fake.TrackActualStateStoreUsageFractionStub(usage)
-	} else {
-		return fake.trackActualStateStoreUsageFractionReturns.result1
-	}
-}
-
-func (fake *FakeMetricsAccountant) TrackActualStateStoreUsageFractionCallCount() int {
-	fake.trackActualStateStoreUsageFractionMutex.RLock()
-	defer fake.trackActualStateStoreUsageFractionMutex.RUnlock()
-	return len(fake.trackActualStateStoreUsageFractionArgsForCall)
-}
-
-func (fake *FakeMetricsAccountant) TrackActualStateStoreUsageFractionArgsForCall(i int) float64 {
-	fake.trackActualStateStoreUsageFractionMutex.RLock()
-	defer fake.trackActualStateStoreUsageFractionMutex.RUnlock()
-	return fake.trackActualStateStoreUsageFractionArgsForCall[i].usage
-}
-
-func (fake *FakeMetricsAccountant) TrackActualStateStoreUsageFractionReturns(result1 error) {
-	fake.TrackActualStateStoreUsageFractionStub = nil
-	fake.trackActualStateStoreUsageFractionReturns = struct {
 		result1 error
 	}{result1}
 }

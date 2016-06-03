@@ -78,13 +78,6 @@ var _ = Describe("Actual state listener", func() {
 		syncer.Heartbeat(app.Heartbeat(1))
 	}
 
-	It("To start tracking store usage", func() {
-		Expect(usageTracker.StartTrackingUsageCallCount()).To(Equal(1))
-		Expect(usageTracker.MeasureUsageCallCount()).To(Equal(1))
-		Expect(metricsAccountant.TrackActualStateStoreUsageFractionCallCount()).To(Equal(1))
-		Expect(metricsAccountant.TrackActualStateStoreUsageFractionArgsForCall(0)).To(Equal(0.7))
-	})
-
 	It("To save heartbeats on a timer", func() {
 		beat()
 		clock.Increment(conf.ListenerHeartbeatSyncInterval())

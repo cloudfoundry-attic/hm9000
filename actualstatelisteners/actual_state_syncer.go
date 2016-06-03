@@ -58,7 +58,6 @@ func (syncer *actualStateSyncer) Run(signals <-chan os.Signal, ready chan<- stru
 	go syncer.syncHeartbeats(syncCtl)
 
 	syncer.storeUsageTracker.StartTrackingUsage()
-	syncer.measureStoreUsage()
 
 	close(ready)
 
@@ -148,15 +147,6 @@ func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 		case <-syncInterval.C():
 		}
 	}
-}
-
-func (syncer *actualStateSyncer) measureStoreUsage() {
-	usage, _ := syncer.storeUsageTracker.MeasureUsage()
-	syncer.metricsAccountant.TrackActualStateStoreUsageFraction(usage)
-
-	time.AfterFunc(3*time.Duration(syncer.config.HeartbeatPeriod)*time.Second, func() {
-		syncer.measureStoreUsage()
-	})
 }
 
 func (syncer *actualStateSyncer) bumpFreshness() {

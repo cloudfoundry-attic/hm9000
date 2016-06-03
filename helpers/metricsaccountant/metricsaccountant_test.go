@@ -59,15 +59,6 @@ var _ = Describe("Metrics Accountant", func() {
 		})
 	})
 
-	Describe("TrackActualStateStoreUsageFraction", func() {
-		It("should record the passed in time duration appropriately", func() {
-			err := accountant.TrackActualStateStoreUsageFraction(0.723)
-			Expect(err).ToNot(HaveOccurred())
-			metric := sender.GetValue(ActualStateListenerStoreUsage)
-			Expect(metric).To(Equal(fake.Metric{72.3, "Metric"}))
-		})
-	})
-
 	Describe("IncrementSentMessageMetrics", func() {
 		var starts []models.PendingStartMessage
 		var stops []models.PendingStopMessage

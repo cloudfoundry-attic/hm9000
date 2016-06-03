@@ -8,16 +8,15 @@ import (
 )
 
 const (
-	ReceivedHeartbeats            = "ReceivedHeartbeats"
-	SavedHeartbeats               = "SavedHeartbeats"
-	DesiredStateSyncTime          = "DesiredStateSyncTimeInMilliseconds"
-	ActualStateListenerStoreUsage = "ActualStateListenerStoreUsagePercentage"
-	StartCrashed                  = "StartCrashed"
-	StartMissing                  = "StartMissing"
-	StartEvacuating               = "StartEvacuating"
-	StopExtra                     = "StopExtra"
-	StopDuplicate                 = "StopDuplicate"
-	StopEvacuationComplete        = "StopEvacuationComplete"
+	ReceivedHeartbeats     = "ReceivedHeartbeats"
+	SavedHeartbeats        = "SavedHeartbeats"
+	DesiredStateSyncTime   = "DesiredStateSyncTimeInMilliseconds"
+	StartCrashed           = "StartCrashed"
+	StartMissing           = "StartMissing"
+	StartEvacuating        = "StartEvacuating"
+	StopExtra              = "StopExtra"
+	StopDuplicate          = "StopDuplicate"
+	StopEvacuationComplete = "StopEvacuationComplete"
 )
 
 //go:generate counterfeiter -o fakemetricsaccountant/fake_usagetracker.go . UsageTracker
@@ -44,7 +43,6 @@ type MetricsAccountant interface {
 	TrackSavedHeartbeats(metric int) error
 	IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error
 	TrackDesiredStateSyncTime(dt time.Duration) error
-	TrackActualStateStoreUsageFraction(usage float64) error
 }
 
 type RealMetricsAccountant struct {
@@ -64,10 +62,6 @@ func (m *RealMetricsAccountant) TrackSavedHeartbeats(metric int) error {
 
 func (m *RealMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) error {
 	return metrics.SendValue(DesiredStateSyncTime, float64(dt/time.Millisecond), "ms")
-}
-
-func (m *RealMetricsAccountant) TrackActualStateStoreUsageFraction(usage float64) error {
-	return metrics.SendValue(ActualStateListenerStoreUsage, usage*100.0, "Metric")
 }
 
 func (m *RealMetricsAccountant) IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {
