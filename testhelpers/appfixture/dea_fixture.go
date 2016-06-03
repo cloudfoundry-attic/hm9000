@@ -37,6 +37,12 @@ func (dea DeaFixture) Heartbeat(numApps int) *models.Heartbeat {
 	}
 }
 
+func (dea DeaFixture) EmptyHeartbeat() *models.Heartbeat {
+	return &models.Heartbeat{
+		DeaGuid: dea.DeaGuid,
+	}
+}
+
 func (dea DeaFixture) HeartbeatWith(instanceHeartbeats ...models.InstanceHeartbeat) *models.Heartbeat {
 	return &models.Heartbeat{
 		DeaGuid:            dea.DeaGuid,

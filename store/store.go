@@ -103,6 +103,11 @@ func (store *RealStore) SetInstanceHeartbeatCache(data map[string]InstanceHeartb
 	store.instanceHeartbeatCache = data
 }
 
+// test helper
+func (store *RealStore) DeaHeartbeatCache() map[string]int64 {
+	return store.deaHeartbeatCache
+}
+
 func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
 	node, err := store.adapter.ListRecursively(dir)
 	if err != nil {
