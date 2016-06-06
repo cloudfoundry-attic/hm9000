@@ -92,6 +92,28 @@ func (store *RealStore) GetStoredInstanceHeartbeats() (results []models.Instance
 	return results, nil
 }
 
+func (store *RealStore) GetStoredInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
+	key := store.AppKey(appGuid, appVersion)
+	results = []models.InstanceHeartbeat{}
+
+	unexpiredDeas, err := store.unexpiredDeas()
+	if err != nil {
+		return results, err
+	}
+
+	for instanceGuid, hb := range store.instanceHeartbeatCache[key] {
+		if unexpiredDeas[hb.DeaGuid] {
+			results = append(results, hb)
+		} else {
+			// Delete from both cache and store
+			delete(store.instanceHeartbeatCache[key], instanceGuid)
+			store.adapter.Delete(store.instanceHeartbeatStoreKey(hb.AppGuid, hb.AppVersion, instanceGuid))
+		}
+	}
+
+	return results, nil
+}
+
 // Done
 func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode, unexpiredDeas map[string]bool) (results []models.InstanceHeartbeat, toDelete []string, err error) {
 	results = []models.InstanceHeartbeat{}

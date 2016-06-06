@@ -328,13 +328,13 @@ var _ = Describe("Actual State", func() {
 				})
 
 				It("does not return any expired instance heartbeats", func() {
-					results, err := store.GetCachedInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
+					results, err := store.GetStoredInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(HaveLen(1))
 					Expect(results).To(ContainElement(heartbeatB))
 				})
 
-				It("removes expired instance heartbeats from the store", func() {
+				FIt("removes expired instance heartbeats from the store", func() {
 					_, err := storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
 					Expect(err).NotTo(HaveOccurred())
 

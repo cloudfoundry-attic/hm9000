@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Cached actual state", func() {
+var _ = Describe("Cached actual state", func() {
 	var (
 		store        *RealStore
 		storeAdapter storeadapter.StoreAdapter
@@ -127,10 +127,13 @@ var _ = FDescribe("Cached actual state", func() {
 						dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
 					))
 
+					app1 := dea.GetApp(1)
+					app2 := dea.GetApp(2)
+
 					cachedResults := store.InstanceHeartbeatCache()
 					Expect(cachedResults).To(HaveLen(2))
-					Expect(cachedResults).To(ContainElement(dea.GetApp(1).InstanceAtIndex(3).Heartbeat()))
-					Expect(cachedResults).To(ContainElement(dea.GetApp(2).InstanceAtIndex(2).Heartbeat()))
+					Expect(cachedResults[store.AppKey(app1.AppGuid, app1.AppVersion)]).To(ContainElement(app1.InstanceAtIndex(3).Heartbeat()))
+					Expect(cachedResults[store.AppKey(app2.AppGuid, app2.AppVersion)]).To(ContainElement(app2.InstanceAtIndex(2).Heartbeat()))
 
 					results, err := store.GetStoredInstanceHeartbeats()
 					Expect(err).ToNot(HaveOccurred())
@@ -148,7 +151,7 @@ var _ = FDescribe("Cached actual state", func() {
 
 					cachedResults := store.InstanceHeartbeatCache()
 					Expect(cachedResults).To(HaveLen(1))
-					Expect(cachedResults).To(ContainElement(modifiedHeartbeat))
+					Expect(cachedResults[store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion)]).To(ContainElement(modifiedHeartbeat))
 
 					results, err := store.GetStoredInstanceHeartbeats()
 					Expect(err).ToNot(HaveOccurred())
@@ -190,26 +193,6 @@ var _ = FDescribe("Cached actual state", func() {
 					Expect(updatedResults).To(HaveKey(dea.DeaGuid))
 
 					Expect(initialTime).To(BeNumerically("<", updatedResults[dea.DeaGuid]))
-				})
-
-				// fake adapter
-				// make sure that on second call that the TTL is set again
-				FIt("Updates the ttl for the dea in the store", func() {
-					results, err := store.GetStoredDeaHeartbeats()
-					Expect(err).ToNot(HaveOccurred())
-					Expect(results).To(HaveLen(1))
-					Expect(results[0].Key).To(ContainSubstring(dea.DeaGuid))
-
-					initialTTL := results[0].TTL
-
-					store.SyncHeartbeats(dea.EmptyHeartbeat())
-
-					updatedResults, err := store.GetStoredDeaHeartbeats()
-					Expect(err).ToNot(HaveOccurred())
-					Expect(results).To(HaveLen(1))
-					Expect(results[0].Key).To(ContainSubstring(dea.DeaGuid))
-
-					Expect(initialTTL).To(BeNumerically("<", updatedResults[0].TTL))
 				})
 			})
 		})
@@ -308,12 +291,6 @@ var _ = FDescribe("Cached actual state", func() {
 					Expect(yetAnotherDeaTime).To(Equal(updatedResults[yetAnotherDea.DeaGuid]))
 				})
 			})
-		})
-
-		Context("when the there are extra cache keys for a dea heartbeat", func() {
-			It("removes the extra keys from the cache", func() {})
-
-			It("removes the extra keys from the store", func() {})
 		})
 	})
 
