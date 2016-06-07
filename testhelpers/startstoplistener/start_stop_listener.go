@@ -1,6 +1,9 @@
 package startstoplistener
 
 import (
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -16,7 +19,7 @@ type StartStopListener struct {
 	messageBus yagnats.NATSConn
 }
 
-func NewStartStopListener(messageBus yagnats.NATSConn, conf *config.Config) *StartStopListener {
+func NewStartStopListener(messageBus yagnats.NATSConn, conf *config.Config) (*StartStopListener, string) {
 	listener := &StartStopListener{
 		messageBus: messageBus,
 	}
@@ -31,17 +34,25 @@ func NewStartStopListener(messageBus yagnats.NATSConn, conf *config.Config) *Sta
 		listener.mutex.Unlock()
 	})
 
-	messageBus.Subscribe(conf.SenderNatsStopSubject, func(message *nats.Msg) {
-		stopMessage, err := models.NewStopMessageFromJSON([]byte(message.Data))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+
+		stopMessage, err := models.NewStopMessageFromJSON(bodyBytes)
 		if err != nil {
 			panic(err)
 		}
 		listener.mutex.Lock()
 		listener.stops = append(listener.stops, stopMessage)
 		listener.mutex.Unlock()
-	})
 
-	return listener
+		w.WriteHeader(200)
+	}))
+
+	return listener, server.URL
 }
 
 func (listener *StartStopListener) StartCount() int {

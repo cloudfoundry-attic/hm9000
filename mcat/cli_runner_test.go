@@ -33,16 +33,16 @@ type CLIRunner struct {
 	verbose bool
 }
 
-func NewCLIRunner(hm9000Binary string, storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int, consulCluster string, verbose bool) *CLIRunner {
+func NewCLIRunner(hm9000Binary string, storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int, consulCluster string, ccInternalURL string, verbose bool) *CLIRunner {
 	runner := &CLIRunner{
 		hm9000Binary: hm9000Binary,
 		verbose:      verbose,
 	}
-	runner.config = runner.generateConfig(storeURLs, ccBaseURL, natsPort, dropsondePort, consulCluster)
+	runner.config = runner.generateConfig(storeURLs, ccBaseURL, natsPort, dropsondePort, consulCluster, ccInternalURL)
 	return runner
 }
 
-func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int, consulCluster string) *config.Config {
+func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, natsPort int, dropsondePort int, consulCluster string, ccInternalURL string) *config.Config {
 	tmpFile, err := ioutil.TempFile("/tmp", "hm9000_clirunner")
 	defer tmpFile.Close()
 	Expect(err).NotTo(HaveOccurred())
@@ -63,6 +63,7 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	conf.LogLevelString = "DEBUG"
 	conf.ConsulCluster = consulCluster
 	conf.HttpHeartbeatPort = int(5335 + ginkgo.GinkgoParallelNode())
+	conf.CCInternalURL = ccInternalURL
 
 	keyFilepath, _ := filepath.Abs("../testhelpers/fake_certs/hm9000_server.key")
 	serverCertFilepath, _ := filepath.Abs("../testhelpers/fake_certs/hm9000_server.crt")

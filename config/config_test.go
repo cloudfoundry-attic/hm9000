@@ -27,6 +27,7 @@ var _ = Describe("Config", func() {
         "cc_auth_password": "testing",
         "cc_base_url": "http://127.0.0.1:6001",
         "skip_cert_verify": true,
+        "cc_internal_url": "http://cloud-controller-ng.service.cf.internal:9022",
         "store_schema_version": 1,
         "store_urls": ["http://127.0.0.1:4001"],
         "store_max_concurrent_requests": 30,
@@ -101,6 +102,8 @@ var _ = Describe("Config", func() {
 			Expect(config.CCAuthPassword).To(Equal("testing"))
 			Expect(config.CCBaseURL).To(Equal("http://127.0.0.1:6001"))
 			Expect(config.SkipSSLVerification).To(BeTrue())
+
+			Expect(config.CCInternalURL).To(Equal("http://cloud-controller-ng.service.cf.internal:9022"))
 
 			Expect(config.ListenerHeartbeatSyncInterval()).To(Equal(time.Second))
 			Expect(config.StoreHeartbeatCacheRefreshInterval()).To(Equal(20 * time.Second))

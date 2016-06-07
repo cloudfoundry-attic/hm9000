@@ -91,3 +91,15 @@ func (logger *FakeLogger) LoggedSubjects() []string {
 	logger.mutex.Lock()
 	return logger.loggedSubjects[:]
 }
+
+func (logger *FakeLogger) LoggedErrors() []error {
+	defer logger.mutex.Unlock()
+	logger.mutex.Lock()
+	return logger.loggedErrors[:]
+}
+
+func (logger *FakeLogger) LoggedMessages() []string {
+	defer logger.mutex.Unlock()
+	logger.mutex.Lock()
+	return logger.loggedMessages[:]
+}

@@ -98,7 +98,7 @@ func (coordinator *MCATCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *
 	if coordinator.currentCLIRunner != nil {
 		coordinator.currentCLIRunner.Cleanup()
 	}
-	coordinator.currentCLIRunner = NewCLIRunner(coordinator.hm9000Binary, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.DropsondePort, coordinator.ConsulRunner.ConsulCluster(), coordinator.Verbose)
+	coordinator.currentCLIRunner = NewCLIRunner(coordinator.hm9000Binary, coordinator.StoreRunner.NodeURLS(), coordinator.DesiredStateServerBaseUrl, coordinator.NatsPort, coordinator.DropsondePort, coordinator.ConsulRunner.ConsulCluster(), coordinator.Conf.CCInternalURL, coordinator.Verbose)
 	store := storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
 	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus, coordinator.NatsMonitoringPort)
 
@@ -117,7 +117,7 @@ func (coordinator *MCATCoordinator) StartDesiredStateServer() {
 }
 
 func (coordinator *MCATCoordinator) StartStartStopListener() {
-	coordinator.startStopListener = startstoplistener.NewStartStopListener(coordinator.MessageBus, coordinator.Conf)
+	coordinator.startStopListener, coordinator.Conf.CCInternalURL = startstoplistener.NewStartStopListener(coordinator.MessageBus, coordinator.Conf)
 }
 
 func (coordinator *MCATCoordinator) StartETCD() {

@@ -1,8 +1,10 @@
 package sender
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -118,7 +120,7 @@ func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessa
 func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage) {
 	for _, stopMessage := range stopMessages {
 		if stopMessage.IsTimeToSend(sender.currentTime) {
-			sender.sendStopMessage(stopMessage)
+			sender.sendStopMessageHttp(stopMessage)
 		} else if stopMessage.IsExpired(sender.currentTime) {
 			sender.queueStopMessageForDeletion(stopMessage, "expired stop message")
 		}
@@ -153,13 +155,36 @@ func (sender *Sender) sendStartMessage(startMessage models.PendingStartMessage) 
 	}
 }
 
-func (sender *Sender) sendStopMessage(stopMessage models.PendingStopMessage) {
+func (sender *Sender) sendStopMessageHttp(stopMessage models.PendingStopMessage) {
 	messageToSend, shouldSend := sender.stopMessageToSend(stopMessage)
+
 	if shouldSend {
-		err := sender.messageBus.Publish(sender.conf.SenderNatsStopSubject, messageToSend.ToJSON())
+		client := http.Client{}
+		targetURL := fmt.Sprintf("%s/internal/dea/hm9000/stop/%s", sender.conf.CCInternalURL, stopMessage.AppGuid)
+		req, err := http.NewRequest("POST", targetURL, bytes.NewReader(messageToSend.ToJSON()))
+
+		authorization := models.BasicAuthInfo{
+			User:     sender.conf.APIServerUsername,
+			Password: sender.conf.APIServerPassword,
+		}.Encode()
+
+		req.Header.Add("Authorization", authorization)
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := client.Do(req)
 
 		if err != nil {
 			sender.logger.Error("Failed to send stop message", err, stopMessage.LogDescription())
+			sender.didSucceed = false
+			return
+		}
+
+		if resp.StatusCode != 200 {
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(resp.Body)
+			respBody := buf.String()
+			err = errors.New(respBody)
+
+			sender.logger.Error("Cloud Controller did not accept stop message", err, stopMessage.LogDescription())
 			sender.didSucceed = false
 			return
 		}

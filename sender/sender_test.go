@@ -4,6 +4,11 @@ import (
 	"errors"
 	"time"
 
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant/fakemetricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
@@ -21,18 +26,25 @@ import (
 
 var _ = Describe("Sender", func() {
 	var (
-		storeAdapter      *fakestoreadapter.FakeStoreAdapter
-		store             storepackage.Store
-		sender            *Sender
-		messageBus        *fakeyagnats.FakeNATSConn
-		timeProvider      *fakeclock.FakeClock
-		dea               appfixture.DeaFixture
-		app               appfixture.AppFixture
-		conf              *config.Config
-		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
-		apps              map[string]*models.App
-		startMessages     []models.PendingStartMessage
-		stopMessages      []models.PendingStopMessage
+		storeAdapter         *fakestoreadapter.FakeStoreAdapter
+		store                storepackage.Store
+		sender               *Sender
+		messageBus           *fakeyagnats.FakeNATSConn
+		timeProvider         *fakeclock.FakeClock
+		logger               *fakelogger.FakeLogger
+		dea                  appfixture.DeaFixture
+		app                  appfixture.AppFixture
+		conf                 *config.Config
+		metricsAccountant    *fakemetricsaccountant.FakeMetricsAccountant
+		apps                 map[string]*models.App
+		startMessages        []models.PendingStartMessage
+		stopMessages         []models.PendingStopMessage
+		receivedStopMessages []models.StopMessage
+		server               *httptest.Server
+		stopRequest          models.StopMessage
+		httpError            error
+		receivedEndpoint     string
+		receivedAuth         string
 	)
 
 	BeforeEach(func() {
@@ -46,12 +58,38 @@ var _ = Describe("Sender", func() {
 
 		storeAdapter = fakestoreadapter.New()
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
-		sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger(), timeProvider)
+		logger = fakelogger.NewFakeLogger()
+		sender = New(store, metricsAccountant, conf, messageBus, logger, timeProvider)
 		store.BumpActualFreshness(time.Unix(10, 0))
 		apps = make(map[string]*models.App)
 
 		startMessages = []models.PendingStartMessage{}
 		stopMessages = []models.PendingStopMessage{}
+
+		receivedStopMessages = []models.StopMessage{}
+
+		stopRequest = models.StopMessage{}
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, err := ioutil.ReadAll(r.Body)
+			r.Body.Close()
+			Expect(err).ToNot(HaveOccurred())
+
+			var stopMessage models.StopMessage
+
+			stopMessage, httpError = models.NewStopMessageFromJSON(b)
+			Expect(err).ToNot(HaveOccurred())
+
+			receivedStopMessages = append(receivedStopMessages, stopMessage)
+
+			receivedEndpoint = r.URL.String()
+			receivedAuth = r.Header.Get("Authorization")
+			w.WriteHeader(200)
+		}))
+		conf.CCInternalURL = server.URL
+	})
+
+	AfterEach(func() {
+		server.Close()
 	})
 
 	Context("when there are no start messages in the queue", func() {
@@ -67,6 +105,7 @@ var _ = Describe("Sender", func() {
 			err := sender.Send(timeProvider, apps, startMessages, stopMessages)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(messageBus.PublishedMessageCount()).To(Equal(0))
+			Expect(receivedStopMessages).To(HaveLen(0))
 		})
 	})
 
@@ -286,6 +325,7 @@ var _ = Describe("Sender", func() {
 
 			It("should not send the messages", func() {
 				Expect(messageBus.PublishedMessages("hm9000.stop")).To(HaveLen(0))
+				Expect(receivedStopMessages).To(HaveLen(0))
 			})
 
 			It("should leave the messages in the queue", func() {
@@ -308,16 +348,25 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should send the message", func() {
-				Expect(messageBus.PublishedMessages("hm9000.stop")).To(HaveLen(1))
-				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.stop")[0].Data))
-				Expect(message).To(Equal(models.StopMessage{
-					AppGuid:       app.AppGuid,
-					AppVersion:    app.AppVersion,
-					InstanceIndex: 0,
-					InstanceGuid:  app.InstanceAtIndex(0).InstanceGuid,
-					IsDuplicate:   false,
-					MessageId:     pendingMessage.MessageId,
-				}))
+				Expect(receivedStopMessages).To(HaveLen(1))
+				Expect(httpError).NotTo(HaveOccurred())
+
+				expectedEndpoint := fmt.Sprintf("/internal/dea/hm9000/stop/%s", app.AppGuid)
+				Expect(receivedEndpoint).To(Equal(expectedEndpoint))
+			})
+
+			It("uses the correct authorization", func() {
+				expectedAuth := models.BasicAuthInfo{
+					User:     "magnet",
+					Password: "orangutan4sale",
+				}.Encode()
+
+				Expect(receivedAuth).To(Equal(expectedAuth))
+			})
+
+			It("Stops the correct app", func() {
+				Expect(receivedStopMessages).To(HaveLen(1))
+				Expect(receivedStopMessages[0].AppGuid).To(Equal(app.AppGuid))
 			})
 
 			It("should increment the metrics", func() {
@@ -371,15 +420,35 @@ var _ = Describe("Sender", func() {
 
 			Context("when the message fails to send", func() {
 				BeforeEach(func() {
-					messageBus.WhenPublishing("hm9000.stop", func(*nats.Msg) error {
-						return errors.New("oops")
-					})
+					server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						b, err := ioutil.ReadAll(r.Body)
+						r.Body.Close()
+						Expect(err).ToNot(HaveOccurred())
+
+						stopMessage, err := models.NewStopMessageFromJSON(b)
+						Expect(err).ToNot(HaveOccurred())
+
+						receivedStopMessages = append(receivedStopMessages, stopMessage)
+
+						w.WriteHeader(500)
+						fmt.Fprintln(w, "Throwing a 500")
+					}))
+
+					conf.CCInternalURL = server.URL
 				})
 
 				It("should return an error", func() {
 					Expect(err).To(HaveOccurred())
-
+					Expect(err.Error()).To(Equal("Sender failed. See logs for details."))
 				})
+
+				It("logs the specific error", func() {
+					Expect(logger.LoggedSubjects()).To(ContainElement("Cloud Controller did not accept stop message"))
+
+					expectedError := errors.New("Throwing a 500\n")
+					Expect(logger.LoggedErrors()).To(ContainElement(expectedError))
+				})
+
 				It("should not increment the metrics", func() {
 					Expect(pendingStartMessages(metricsAccountant.IncrementSentMessageMetricsArgsForCall(0))).To(HaveLen(0))
 				})
@@ -619,8 +688,8 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should send the stop message", func() {
-				Expect(messageBus.PublishedMessages("hm9000.stop")).To(HaveLen(1))
-				message, _ := models.NewStopMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.stop")[0].Data))
+				Expect(receivedStopMessages).To(HaveLen(1))
+				message := receivedStopMessages[0]
 				Expect(message).To(Equal(models.StopMessage{
 					AppGuid:       app.AppGuid,
 					AppVersion:    app.AppVersion,
@@ -740,6 +809,7 @@ var _ = Describe("Sender", func() {
 
 		BeforeEach(func() {
 			conf, _ = config.DefaultConfig()
+			conf.CCInternalURL = server.URL
 			conf.SenderMessageLimit = 20
 
 			sender = New(store, metricsAccountant, conf, messageBus, fakelogger.NewFakeLogger(), timeProvider)
@@ -815,7 +885,7 @@ var _ = Describe("Sender", func() {
 		It("should send all the stop messages, as they are cheap to handle", func() {
 			remainingStopMessages, _ := store.GetPendingStopMessages()
 			Expect(remainingStopMessages).To(BeEmpty())
-			Expect(messageBus.PublishedMessages("hm9000.stop")).To(HaveLen(40))
+			Expect(receivedStopMessages).To(HaveLen(40))
 			Expect(pendingStopMessages(metricsAccountant.IncrementSentMessageMetricsArgsForCall(0))).To(HaveLen(40))
 		})
 	})

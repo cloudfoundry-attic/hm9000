@@ -46,6 +46,8 @@ type Config struct {
 	CCBaseURL                      string `json:"cc_base_url"`
 	SkipSSLVerification            bool   `json:"skip_cert_verify"`
 
+	CCInternalURL string `json:"cc_internal_url"`
+
 	StoreSchemaVersion         int      `json:"store_schema_version"`
 	StoreURLs                  []string `json:"store_urls"`
 	StoreMaxConcurrentRequests int      `json:"store_max_concurrent_requests"`
