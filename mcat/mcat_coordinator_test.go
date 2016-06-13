@@ -212,6 +212,37 @@ func (metron *Metron) MatchEvent(origin string, eventType events.Envelope_EventT
 	return false
 }
 
+func (metron *Metron) GetMatchingEventTotal(origin string, eventType events.Envelope_EventType, name string) (eventCount float64) {
+	metron.lock.RLock()
+	defer metron.lock.RUnlock()
+
+	eventCount = 0
+
+	for _, e := range metron.receivedEvents {
+		if e.Origin() == origin && e.EventType() == proto.EnumName(events.Envelope_EventType_name, int32(eventType)) && e.Name() == name {
+			eventCount += e.Value()
+		}
+	}
+
+	return eventCount
+}
+
+func (e eventTracker) Origin() string {
+	return e.origin
+}
+
+func (e eventTracker) EventType() string {
+	return e.eventType
+}
+
+func (e eventTracker) Name() string {
+	return e.name
+}
+
+func (e eventTracker) Value() float64 {
+	return e.value
+}
+
 func (metron *Metron) listenForEvents() {
 	for {
 		buffer := make([]byte, 1024)
