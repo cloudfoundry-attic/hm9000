@@ -3,7 +3,6 @@ package fakemetricsaccountant
 
 import (
 	"sync"
-	"time"
 
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
@@ -33,14 +32,6 @@ type FakeMetricsAccountant struct {
 		stops  []models.PendingStopMessage
 	}
 	incrementSentMessageMetricsReturns struct {
-		result1 error
-	}
-	TrackDesiredStateSyncTimeStub        func(dt time.Duration) error
-	trackDesiredStateSyncTimeMutex       sync.RWMutex
-	trackDesiredStateSyncTimeArgsForCall []struct {
-		dt time.Duration
-	}
-	trackDesiredStateSyncTimeReturns struct {
 		result1 error
 	}
 }
@@ -138,38 +129,6 @@ func (fake *FakeMetricsAccountant) IncrementSentMessageMetricsArgsForCall(i int)
 func (fake *FakeMetricsAccountant) IncrementSentMessageMetricsReturns(result1 error) {
 	fake.IncrementSentMessageMetricsStub = nil
 	fake.incrementSentMessageMetricsReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) error {
-	fake.trackDesiredStateSyncTimeMutex.Lock()
-	fake.trackDesiredStateSyncTimeArgsForCall = append(fake.trackDesiredStateSyncTimeArgsForCall, struct {
-		dt time.Duration
-	}{dt})
-	fake.trackDesiredStateSyncTimeMutex.Unlock()
-	if fake.TrackDesiredStateSyncTimeStub != nil {
-		return fake.TrackDesiredStateSyncTimeStub(dt)
-	} else {
-		return fake.trackDesiredStateSyncTimeReturns.result1
-	}
-}
-
-func (fake *FakeMetricsAccountant) TrackDesiredStateSyncTimeCallCount() int {
-	fake.trackDesiredStateSyncTimeMutex.RLock()
-	defer fake.trackDesiredStateSyncTimeMutex.RUnlock()
-	return len(fake.trackDesiredStateSyncTimeArgsForCall)
-}
-
-func (fake *FakeMetricsAccountant) TrackDesiredStateSyncTimeArgsForCall(i int) time.Duration {
-	fake.trackDesiredStateSyncTimeMutex.RLock()
-	defer fake.trackDesiredStateSyncTimeMutex.RUnlock()
-	return fake.trackDesiredStateSyncTimeArgsForCall[i].dt
-}
-
-func (fake *FakeMetricsAccountant) TrackDesiredStateSyncTimeReturns(result1 error) {
-	fake.TrackDesiredStateSyncTimeStub = nil
-	fake.trackDesiredStateSyncTimeReturns = struct {
 		result1 error
 	}{result1}
 }

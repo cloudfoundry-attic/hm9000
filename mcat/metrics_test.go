@@ -1,6 +1,7 @@
 package mcat_test
 
 import (
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -61,7 +62,7 @@ var _ = Describe("Serving Metrics", func() {
 				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfUndesiredRunningApps", 0.0)
 			}).Should(BeTrue())
 			Eventually(func() bool {
-				return metronAgent.MatchEvent("analyzer", events.Envelope_CounterEvent, "StartMissing", 1.0)
+				return metronAgent.MatchEvent("analyzer", events.Envelope_CounterEvent, metricsaccountant.StartMissing, 1.0)
 			}).Should(BeTrue())
 		})
 	})

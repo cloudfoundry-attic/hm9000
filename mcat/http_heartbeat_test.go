@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
@@ -92,7 +93,7 @@ var _ = Describe("Serving HTTP Heartbeat", func() {
 
 				metronAgent.Reset()
 				Eventually(func() bool {
-					return metronAgent.MatchEvent("listener", events.Envelope_ValueMetric, "SavedHeartbeats", 1)
+					return metronAgent.MatchEvent("listener", events.Envelope_ValueMetric, metricsaccountant.SavedHeartbeats, 1)
 				}, 5.0, 0.05).Should(BeTrue())
 			})
 		})

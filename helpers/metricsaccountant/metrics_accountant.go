@@ -10,7 +10,6 @@ import (
 const (
 	ReceivedHeartbeats     = "ReceivedHeartbeats"
 	SavedHeartbeats        = "SavedHeartbeats"
-	DesiredStateSyncTime   = "DesiredStateSyncTimeInMilliseconds"
 	StartCrashed           = "StartCrashed"
 	StartMissing           = "StartMissing"
 	StartEvacuating        = "StartEvacuating"
@@ -26,15 +25,15 @@ type UsageTracker interface {
 }
 
 var startMetrics = map[models.PendingStartMessageReason]string{
-	models.PendingStartMessageReasonCrashed:    "StartCrashed",
-	models.PendingStartMessageReasonMissing:    "StartMissing",
-	models.PendingStartMessageReasonEvacuating: "StartEvacuating",
+	models.PendingStartMessageReasonCrashed:    StartCrashed,
+	models.PendingStartMessageReasonMissing:    StartMissing,
+	models.PendingStartMessageReasonEvacuating: StartEvacuating,
 }
 
 var stopMetrics = map[models.PendingStopMessageReason]string{
-	models.PendingStopMessageReasonDuplicate:          "StopDuplicate",
-	models.PendingStopMessageReasonExtra:              "StopExtra",
-	models.PendingStopMessageReasonEvacuationComplete: "StopEvacuationComplete",
+	models.PendingStopMessageReasonDuplicate:          StopDuplicate,
+	models.PendingStopMessageReasonExtra:              StopExtra,
+	models.PendingStopMessageReasonEvacuationComplete: StopEvacuationComplete,
 }
 
 //go:generate counterfeiter -o fakemetricsaccountant/fake_metricsaccountant.go . MetricsAccountant
@@ -42,7 +41,6 @@ type MetricsAccountant interface {
 	TrackReceivedHeartbeats(metric int) error
 	TrackSavedHeartbeats(metric int) error
 	IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error
-	TrackDesiredStateSyncTime(dt time.Duration) error
 }
 
 type RealMetricsAccountant struct {
@@ -58,10 +56,6 @@ func (m *RealMetricsAccountant) TrackReceivedHeartbeats(metric int) error {
 
 func (m *RealMetricsAccountant) TrackSavedHeartbeats(metric int) error {
 	return metrics.SendValue(SavedHeartbeats, float64(metric), "Metric")
-}
-
-func (m *RealMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) error {
-	return metrics.SendValue(DesiredStateSyncTime, float64(dt/time.Millisecond), "ms")
 }
 
 func (m *RealMetricsAccountant) IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {

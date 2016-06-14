@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/cloudfoundry/hm9000/config"
+	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/desiredstateserver"
@@ -103,7 +104,7 @@ func (s *Simulator) sendHeartbeats() {
 
 	nHeartbeats := len(s.currentHeartbeats)
 	Eventually(func() bool {
-		return metronAgent.GetMatchingEventTotal("listener", events.Envelope_ValueMetric, "SavedHeartbeats") == float64(nHeartbeats)
+		return metronAgent.GetMatchingEventTotal("listener", events.Envelope_ValueMetric, metricsaccountant.SavedHeartbeats) == float64(nHeartbeats)
 	}, IterationTimeout, 1.05).Should(BeTrue())
 
 	s.cliRunner.StopListener()
