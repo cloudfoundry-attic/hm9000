@@ -1,8 +1,6 @@
 package metricsaccountant_test
 
 import (
-	"time"
-
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/hm9000/config"
@@ -47,15 +45,6 @@ var _ = Describe("Metrics Accountant", func() {
 			Expect(err).ToNot(HaveOccurred())
 			hbs := sender.GetValue(SavedHeartbeats)
 			Expect(hbs).To(Equal(fake.Metric{91, "Metric"}))
-		})
-	})
-
-	Describe("TrackDesiredStateSyncTime", func() {
-		It("should record the passed in time duration appropriately", func() {
-			err := accountant.TrackDesiredStateSyncTime(1138 * time.Millisecond)
-			Expect(err).ToNot(HaveOccurred())
-			dst := sender.GetValue(DesiredStateSyncTime)
-			Expect(dst).To(Equal(fake.Metric{1138, "ms"}))
 		})
 	})
 

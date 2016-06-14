@@ -42,7 +42,6 @@ type MetricsAccountant interface {
 	TrackReceivedHeartbeats(metric int) error
 	TrackSavedHeartbeats(metric int) error
 	IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error
-	TrackDesiredStateSyncTime(dt time.Duration) error
 }
 
 type RealMetricsAccountant struct {
@@ -58,10 +57,6 @@ func (m *RealMetricsAccountant) TrackReceivedHeartbeats(metric int) error {
 
 func (m *RealMetricsAccountant) TrackSavedHeartbeats(metric int) error {
 	return metrics.SendValue(SavedHeartbeats, float64(metric), "Metric")
-}
-
-func (m *RealMetricsAccountant) TrackDesiredStateSyncTime(dt time.Duration) error {
-	return metrics.SendValue(DesiredStateSyncTime, float64(dt/time.Millisecond), "ms")
 }
 
 func (m *RealMetricsAccountant) IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {
