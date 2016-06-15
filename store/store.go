@@ -36,8 +36,6 @@ type Store interface {
 	GetApp(appGuid string, appVersion string) (*models.App, error)
 
 	SyncHeartbeats(heartbeat ...*models.Heartbeat) error
-	EnsureCacheIsReady() error
-	GetCachedInstanceHeartbeats() (results []models.InstanceHeartbeat)
 	GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
 	GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
 

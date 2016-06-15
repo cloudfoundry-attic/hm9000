@@ -10,7 +10,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-func (store *RealStore) EnsureCacheIsReady() error {
+func (store *RealStore) ensureCacheIsReady() error {
 	store.instanceHeartbeatCacheMutex.Lock()
 	defer store.instanceHeartbeatCacheMutex.Unlock()
 
@@ -26,7 +26,7 @@ func (store *RealStore) EnsureCacheIsReady() error {
 			store.instanceHeartbeatCache[heartbeat.InstanceGuid] = heartbeat
 		}
 		store.instanceHeartbeatCacheTimestamp = time.Now()
-		store.logger.Info("Loaded actual state cache from store", lager.Data{
+		store.logger.Debug("Busting store cache", lager.Data{
 			"Duration":                   time.Since(t).String(),
 			"Instance Heartbeats Loaded": fmt.Sprintf("%d", len(store.instanceHeartbeatCache)),
 		})
@@ -38,7 +38,11 @@ func (store *RealStore) EnsureCacheIsReady() error {
 
 func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) error {
 	t := time.Now()
-	var err error
+
+	err := store.ensureCacheIsReady()
+	if err != nil {
+		return err
+	}
 
 	nodesToSave := []storeadapter.StoreNode{}
 	keysToDelete := []string{}
@@ -52,6 +56,11 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 		nodesToSave = append(nodesToSave, store.deaPresenceNode(incomingHeartbeat.DeaGuid))
 		for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
 			incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
+			existingInstanceHeartbeat, found := store.instanceHeartbeatCache[incomingInstanceHeartbeat.InstanceGuid]
+
+			if found && existingInstanceHeartbeat.State == incomingInstanceHeartbeat.State {
+				continue
+			}
 
 			nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
 			store.instanceHeartbeatCache[incomingInstanceHeartbeat.InstanceGuid] = incomingInstanceHeartbeat
@@ -103,16 +112,6 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 	})
 
 	return nil
-}
-
-func (store *RealStore) GetCachedInstanceHeartbeats() []models.InstanceHeartbeat {
-	results := make([]models.InstanceHeartbeat, 0, len(store.instanceHeartbeatCache))
-
-	for _, hb := range store.instanceHeartbeatCache {
-		results = append(results, hb)
-	}
-
-	return results
 }
 
 func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {

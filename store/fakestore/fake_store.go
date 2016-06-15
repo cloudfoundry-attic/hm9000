@@ -82,19 +82,6 @@ type FakeStore struct {
 		result1 []models.InstanceHeartbeat
 		result2 error
 	}
-	EnsureCacheIsReadyStub        func() error
-	ensureCacheIsReadyMutex       sync.RWMutex
-	ensureCacheIsReadyArgsForCall []struct{}
-	ensureCacheIsReadyReturns     struct {
-		result1 error
-	}
-	GetCachedInstanceHeartbeatsStub        func() []models.InstanceHeartbeat
-	getCachedInstanceHeartbeatsMutex       sync.RWMutex
-	getCachedInstanceHeartbeatsArgsForCall []struct{}
-	getCachedInstanceHeartbeatsReturns     struct {
-		result1 []models.InstanceHeartbeat
-		result2 error
-	}
 	GetInstanceHeartbeatsForAppStub        func(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
 	getInstanceHeartbeatsForAppMutex       sync.RWMutex
 	getInstanceHeartbeatsForAppArgsForCall []struct {
@@ -438,28 +425,6 @@ func (fake *FakeStore) GetInstanceHeartbeats() (results []models.InstanceHeartbe
 		return fake.GetInstanceHeartbeatsStub()
 	} else {
 		return fake.getInstanceHeartbeatsReturns.result1, fake.getInstanceHeartbeatsReturns.result2
-	}
-}
-
-func (fake *FakeStore) GetCachedInstanceHeartbeats() (results []models.InstanceHeartbeat) {
-	fake.getCachedInstanceHeartbeatsMutex.Lock()
-	fake.getCachedInstanceHeartbeatsArgsForCall = append(fake.getInstanceHeartbeatsArgsForCall, struct{}{})
-	fake.getCachedInstanceHeartbeatsMutex.Unlock()
-	if fake.GetCachedInstanceHeartbeatsStub != nil {
-		return fake.GetCachedInstanceHeartbeatsStub()
-	} else {
-		return fake.getCachedInstanceHeartbeatsReturns.result1
-	}
-}
-
-func (fake *FakeStore) EnsureCacheIsReady() error {
-	fake.ensureCacheIsReadyMutex.Lock()
-	fake.ensureCacheIsReadyArgsForCall = append(fake.ensureCacheIsReadyArgsForCall, struct{}{})
-	fake.ensureCacheIsReadyMutex.Unlock()
-	if fake.EnsureCacheIsReadyStub != nil {
-		return fake.EnsureCacheIsReadyStub()
-	} else {
-		return fake.ensureCacheIsReadyReturns.result1
 	}
 }
 
