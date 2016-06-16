@@ -159,6 +159,30 @@ var _ = Describe("Analyzer", func() {
 				})
 			})
 
+			Context("and one of the instances is evacuating", func() {
+				BeforeEach(func() {
+					evacuatingHeartbeat := app.InstanceAtIndex(0).Heartbeat()
+					evacuatingHeartbeat.State = models.InstanceStateEvacuating
+
+					store.SyncHeartbeats(dea.HeartbeatWith(
+						evacuatingHeartbeat,
+					))
+				})
+
+				It("should send a start message with the correct reason", func() {
+					_, err := analyzer.Analyze(appQueue)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(stopMessages()).To(BeEmpty())
+					Expect(startMessages()).To(HaveLen(2))
+
+					expectedMessage := models.NewPendingStartMessage(clock.Now(), 0, 30, app.AppGuid, app.AppVersion, 0, 2, models.PendingStartMessageReasonEvacuating)
+					Expect(startMessages()).To(ContainElement(EqualPendingStartMessage(expectedMessage)))
+
+					expectedMessage = models.NewPendingStartMessage(clock.Now(), conf.GracePeriod(), 0, app.AppGuid, app.AppVersion, 1, 1, models.PendingStartMessageReasonMissing)
+					Expect(startMessages()).To(ContainElement(EqualPendingStartMessage(expectedMessage)))
+				})
+			})
+
 			Context("when there is an existing start message", func() {
 				var existingMessage models.PendingStartMessage
 				BeforeEach(func() {

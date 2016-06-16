@@ -63,7 +63,7 @@ func (a *appAnalyzer) generatePendingStartsForMissingInstances(priority float64)
 	}
 
 	for index := 0; a.app.IsIndexDesired(index); index++ {
-		if !a.app.HasStartingOrRunningInstanceAtIndex(index) && !a.app.HasCrashedInstanceAtIndex(index) {
+		if !a.app.HasStartingOrRunningInstanceAtIndex(index) && !a.app.HasCrashedInstanceAtIndex(index) && !a.app.HasEvacuatingInstanceAtIndex(index) {
 			message := models.NewPendingStartMessage(a.currentTime, a.conf.GracePeriod(), 0, a.app.AppGuid, a.app.AppVersion, index, priority, models.PendingStartMessageReasonMissing)
 
 			a.appendStartMessageIfNotDuplicate(message, "Identified missing instance", lager.Data{
