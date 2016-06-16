@@ -371,6 +371,22 @@ var _ = Describe("App", func() {
 		})
 	})
 
+	Describe("HasEvacuatingInstanceAtIndex", func() {
+		It("should return true if there is at least one evacuating instance at the passed in index", func() {
+			Expect(app().HasEvacuatingInstanceAtIndex(1)).To(BeFalse())
+			instanceHeartbeats = []InstanceHeartbeat{
+				heartbeat(0, InstanceStateRunning),
+				heartbeat(1, InstanceStateEvacuating),
+				heartbeat(1, InstanceStateCrashed),
+				heartbeat(2, InstanceStateStarting),
+				heartbeat(2, InstanceStateRunning),
+			}
+			Expect(app().HasEvacuatingInstanceAtIndex(0)).To(BeFalse())
+			Expect(app().HasEvacuatingInstanceAtIndex(1)).To(BeTrue())
+			Expect(app().HasEvacuatingInstanceAtIndex(2)).To(BeFalse())
+		})
+	})
+
 	Describe("HasCrashedInstanceAtIndex", func() {
 		It("should return true if there is a crashed instance at the passed in index", func() {
 			Ω(app().HasCrashedInstanceAtIndex(1)).Should(BeFalse())

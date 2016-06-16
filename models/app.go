@@ -206,6 +206,10 @@ func (a *App) HasStartingOrRunningInstanceAtIndex(index int) bool {
 	return false
 }
 
+func (a *App) HasEvacuatingInstanceAtIndex(index int) bool {
+	return len(a.EvacuatingInstancesAtIndex(index)) > 0
+}
+
 func (a *App) HasCrashedInstanceAtIndex(index int) bool {
 	for _, heartbeat := range a.InstanceHeartbeatsAtIndex(index) {
 		if heartbeat.IsCrashed() {
