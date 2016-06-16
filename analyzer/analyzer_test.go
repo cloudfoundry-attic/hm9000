@@ -170,7 +170,7 @@ var _ = Describe("Analyzer", func() {
 				})
 
 				It("should send a start message with the correct reason", func() {
-					_, _, _, _, err := analyzer.Analyze(appQueue)
+					_, _, _, err := analyzer.Analyze(appQueue)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(stopMessages()).To(BeEmpty())
 					Expect(startMessages()).To(HaveLen(2))
