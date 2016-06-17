@@ -75,7 +75,7 @@ func StartListeningForActual(logger lager.Logger, conf *config.Config) {
 
 	registrationRunner := locket.NewRegistrationRunner(logger, registration, consulClient, locket.RetryInterval, clock)
 
-	tlsConfig, err := cfhttp.NewTLSConfig(conf.SSLCerts.ServerCertFile, conf.SSLCerts.KeyFile, conf.SSLCerts.CACertFile)
+	tlsConfig, err := cfhttp.NewTLSConfig(conf.SSLCerts.CertFile, conf.SSLCerts.KeyFile, conf.SSLCerts.CACertFile)
 	if err != nil {
 		logger.Error("tls-configuration-failed", err)
 		os.Exit(1)

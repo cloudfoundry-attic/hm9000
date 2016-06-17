@@ -13,9 +13,9 @@ import (
 )
 
 type SSL struct {
-	KeyFile        string `json:"key_file"`
-	ServerCertFile string `json:"cert_file"`
-	CACertFile     string `json:"ca_file"`
+	KeyFile    string `json:"key_file"`
+	CertFile   string `json:"cert_file"`
+	CACertFile string `json:"ca_file"`
 }
 
 type Config struct {
@@ -87,7 +87,8 @@ type Config struct {
 
 	ConsulCluster string `json:"config_cluster"`
 
-	ETCD SSL `json:"etcd"`
+	ETCDRequireSSL bool `json:"etcd_require_ssl"`
+	ETCDSSLOptions SSL  `json:"etcd"`
 }
 
 func defaults() Config {
@@ -221,15 +222,6 @@ func (conf *Config) LogLevel() (lager.LogLevel, error) {
 	default:
 		return 0, errors.New(fmt.Sprintf("Unknown log level %s", conf.LogLevelString))
 	}
-}
-
-func (conf *Config) ETCDSSL() SSL {
-	if conf.ETCD == (SSL{}) {
-		return SSL{}
-	} else if conf.ETCD.KeyFile == "" || conf.ETCD.ServerCertFile == "" || conf.ETCD.CACertFile == "" {
-		return SSL{}
-	}
-	return conf.ETCD
 }
 
 func DefaultConfig() (*Config, error) {

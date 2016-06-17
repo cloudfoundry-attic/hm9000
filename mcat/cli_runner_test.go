@@ -69,10 +69,20 @@ func (runner *CLIRunner) generateConfig(storeURLs []string, ccBaseURL string, na
 	serverCertFilepath, _ := filepath.Abs("../testhelpers/fake_certs/hm9000_server.crt")
 	caCertFilepath, _ := filepath.Abs("../testhelpers/fake_certs/hm9000_ca.crt")
 	conf.SSLCerts = config.SSL{
-		KeyFile:        keyFilepath,
-		ServerCertFile: serverCertFilepath,
-		CACertFile:     caCertFilepath,
+		KeyFile:    keyFilepath,
+		CertFile:   serverCertFilepath,
+		CACertFile: caCertFilepath,
 	}
+
+	keyFilepath, _ = filepath.Abs("../testhelpers/fake_certs/etcd_client.key")
+	certFilepath, _ := filepath.Abs("../testhelpers/fake_certs/etcd_client.crt")
+	caCertFilepath, _ = filepath.Abs("../testhelpers/fake_certs/etcd_ca.crt")
+	conf.ETCDSSLOptions = config.SSL{
+		KeyFile:    keyFilepath,
+		CertFile:   certFilepath,
+		CACertFile: caCertFilepath,
+	}
+	conf.ETCDRequireSSL = true
 
 	err = json.NewEncoder(tmpFile).Encode(conf)
 	Expect(err).NotTo(HaveOccurred())

@@ -3,6 +3,7 @@ package mcat_test
 import (
 	"fmt"
 	"net"
+	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -122,13 +123,31 @@ func (coordinator *MCATCoordinator) StartStartStopListener() {
 
 func (coordinator *MCATCoordinator) StartETCD() {
 	etcdPort := 5000 + (coordinator.ParallelNode-1)*10
-	coordinator.StoreRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
+
+	keyFilepath, _ := filepath.Abs("../testhelpers/fake_certs/etcd_server.key")
+	certFilepath, _ := filepath.Abs("../testhelpers/fake_certs/etcd_server.crt")
+	caCertFilepath, _ := filepath.Abs("../testhelpers/fake_certs/etcd_ca.crt")
+
+	sslConfig := &etcdstorerunner.SSLConfig{
+		CertFile: certFilepath,
+		KeyFile:  keyFilepath,
+		CAFile:   caCertFilepath,
+	}
+	coordinator.StoreRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, sslConfig)
 	coordinator.StoreRunner.Start()
 
 	pool, err := workpool.NewWorkPool(coordinator.Conf.StoreMaxConcurrentRequests)
 	Expect(err).NotTo(HaveOccurred())
 
-	coordinator.StoreAdapter, err = etcdstoreadapter.New(&etcdstoreadapter.ETCDOptions{ClusterUrls: coordinator.StoreRunner.NodeURLS()}, pool)
+	etcdOptions := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: coordinator.StoreRunner.NodeURLS(),
+		IsSSL:       true,
+		CertFile:    certFilepath,
+		KeyFile:     keyFilepath,
+		CAFile:      caCertFilepath,
+	}
+
+	coordinator.StoreAdapter, err = etcdstoreadapter.New(etcdOptions, pool)
 	Expect(err).NotTo(HaveOccurred())
 	err = coordinator.StoreAdapter.Connect()
 	Expect(err).NotTo(HaveOccurred())

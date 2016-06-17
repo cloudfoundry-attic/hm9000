@@ -68,6 +68,7 @@ var _ = Describe("Config", func() {
 		},
 		"dropsonde_port": 12344,
 		"consul_cluster": "http://127.0.0.1:8500",
+		"etcd_require_ssl":true,
 		"etcd":{
 			"key_file": "etcd_key_file",
 			"cert_file": "etcd_cert_file",
@@ -142,14 +143,15 @@ var _ = Describe("Config", func() {
 			Expect(config.HttpHeartbeatServerAddress).To(Equal("0.0.0.0"))
 			Expect(config.HttpHeartbeatPort).To(Equal(5335))
 			Expect(config.SSLCerts.KeyFile).To(Equal("/var/vcap/jobs/hm9000/config/certs/server.key"))
-			Expect(config.SSLCerts.ServerCertFile).To(Equal("/var/vcap/jobs/hm9000/config/certs/server.crt"))
+			Expect(config.SSLCerts.CertFile).To(Equal("/var/vcap/jobs/hm9000/config/certs/server.crt"))
 			Expect(config.SSLCerts.CACertFile).To(Equal("/var/vcap/jobs/hm9000/config/certs/ca.crt"))
 
 			Expect(config.ConsulCluster).To(Equal("http://127.0.0.1:8500"))
 
-			Expect(config.ETCD.KeyFile).To(Equal("etcd_key_file"))
-			Expect(config.ETCD.ServerCertFile).To(Equal("etcd_cert_file"))
-			Expect(config.ETCD.CACertFile).To(Equal("etcd_ca_file"))
+			Expect(config.ETCDRequireSSL).To(Equal(true))
+			Expect(config.ETCDSSLOptions.KeyFile).To(Equal("etcd_key_file"))
+			Expect(config.ETCDSSLOptions.CertFile).To(Equal("etcd_cert_file"))
+			Expect(config.ETCDSSLOptions.CACertFile).To(Equal("etcd_ca_file"))
 		})
 	})
 
@@ -203,37 +205,6 @@ var _ = Describe("Config", func() {
 			config, err := FromJSON([]byte("¥"))
 			Expect(err).To(HaveOccurred())
 			Expect(config).To(BeNil())
-		})
-	})
-
-	Describe("ETCDSSL", func() {
-		It("returns the provided etcd ssl options", func() {
-			expectedConfig, _ := FromJSON([]byte(configJSON))
-
-			etcdSSLOptions := expectedConfig.ETCDSSL()
-
-			Expect(etcdSSLOptions.KeyFile).To(Equal("etcd_key_file"))
-			Expect(etcdSSLOptions.ServerCertFile).To(Equal("etcd_cert_file"))
-			Expect(etcdSSLOptions.CACertFile).To(Equal("etcd_ca_file"))
-		})
-
-		Context("when only some of the etcd ssl options are provided", func() {
-			It("returns an empty set of ssl options", func() {
-				simple_config := `
-				{
-					"etcd":{
-						"key_file":"etcd_key_file",
-						"ca_file":"etcd_ca_file"
-					}
-				}
-				`
-				defaultConfig, err := FromJSON([]byte(simple_config))
-				Expect(err).ToNot(HaveOccurred())
-
-				etcdSSLOptions := defaultConfig.ETCDSSL()
-
-				Expect(etcdSSLOptions).To(Equal(SSL{}))
-			})
 		})
 	})
 })
