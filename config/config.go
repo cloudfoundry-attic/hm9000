@@ -86,6 +86,8 @@ type Config struct {
 	DropsondePort int `json:"dropsonde_port"`
 
 	ConsulCluster string `json:"config_cluster"`
+
+	ETCD SSL `json:"etcd"`
 }
 
 func defaults() Config {
@@ -219,6 +221,15 @@ func (conf *Config) LogLevel() (lager.LogLevel, error) {
 	default:
 		return 0, errors.New(fmt.Sprintf("Unknown log level %s", conf.LogLevelString))
 	}
+}
+
+func (conf *Config) ETCDSSL() SSL {
+	if conf.ETCD == (SSL{}) {
+		return SSL{}
+	} else if conf.ETCD.KeyFile == "" || conf.ETCD.ServerCertFile == "" || conf.ETCD.CACertFile == "" {
+		return SSL{}
+	}
+	return conf.ETCD
 }
 
 func DefaultConfig() (*Config, error) {

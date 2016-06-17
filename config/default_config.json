@@ -20,7 +20,8 @@
 
     "ssl":{
         "key_file": "/var/vcap/jobs/hm9000/config/certs/server.key",
-        "cert_file": "/var/vcap/jobs/"
+        "cert_file": "/var/vcap/jobs/hm9000/config/certs/server.crt",
+        "ca_file": "/var/vcap/jobs/hm9000/config/certs/ca.crt"
     },
 
     "nats": [{

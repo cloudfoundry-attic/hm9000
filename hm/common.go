@@ -72,9 +72,22 @@ func connectToStoreAdapter(l lager.Logger, conf *config.Config) storeadapter.Sto
 		os.Exit(1)
 	}
 
-	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: conf.StoreURLs,
+	var options *etcdstoreadapter.ETCDOptions
+
+	if conf.ETCD == (config.SSL{}) {
+		options = &etcdstoreadapter.ETCDOptions{
+			ClusterUrls: conf.StoreURLs,
+		}
+	} else {
+		options = &etcdstoreadapter.ETCDOptions{
+			ClusterUrls: conf.StoreURLs,
+			CertFile:    conf.ETCD.ServerCertFile,
+			KeyFile:     conf.ETCD.KeyFile,
+			CAFile:      conf.ETCD.CACertFile,
+			IsSSL:       true,
+		}
 	}
+
 	adapter, err = etcdstoreadapter.New(options, workPool)
 	if err != nil {
 		l.Error("Failed to create the store adapter", err)
