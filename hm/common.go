@@ -74,17 +74,17 @@ func connectToStoreAdapter(l lager.Logger, conf *config.Config) storeadapter.Sto
 
 	var options *etcdstoreadapter.ETCDOptions
 
-	if conf.ETCD == (config.SSL{}) {
+	if conf.ETCDRequireSSL {
 		options = &etcdstoreadapter.ETCDOptions{
 			ClusterUrls: conf.StoreURLs,
+			CertFile:    conf.ETCDSSLOptions.CertFile,
+			KeyFile:     conf.ETCDSSLOptions.KeyFile,
+			CAFile:      conf.ETCDSSLOptions.CACertFile,
+			IsSSL:       true,
 		}
 	} else {
 		options = &etcdstoreadapter.ETCDOptions{
 			ClusterUrls: conf.StoreURLs,
-			CertFile:    conf.ETCD.ServerCertFile,
-			KeyFile:     conf.ETCD.KeyFile,
-			CAFile:      conf.ETCD.CACertFile,
-			IsSSL:       true,
 		}
 	}
 
