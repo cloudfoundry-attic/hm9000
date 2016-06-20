@@ -324,7 +324,6 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should not send the messages", func() {
-				Expect(messageBus.PublishedMessages("hm9000.stop")).To(HaveLen(0))
 				Expect(receivedStopMessages).To(HaveLen(0))
 			})
 
@@ -477,7 +476,7 @@ var _ = Describe("Sender", func() {
 				It("should delete the message and not send it", func() {
 					messages, _ := store.GetPendingStopMessages()
 					Expect(messages).To(BeEmpty())
-					Expect(messageBus.PublishedMessages("hm9000.stop")).To(HaveLen(0))
+					Expect(receivedStopMessages).To(HaveLen(0))
 				})
 			})
 
@@ -490,7 +489,7 @@ var _ = Describe("Sender", func() {
 					messages, _ := store.GetPendingStopMessages()
 					Expect(messages).To(HaveLen(1))
 
-					Expect(messageBus.PublishedMessages("hm9000.stop")).To(HaveLen(0))
+					Expect(receivedStopMessages).To(HaveLen(0))
 				})
 			})
 		})
@@ -670,7 +669,7 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should not send the stop message", func() {
-				Expect(messageBus.PublishedMessages("hm9000.stop")).To(HaveLen(0))
+				Expect(receivedStopMessages).To(HaveLen(0))
 			})
 
 			It("should not increment the metrics", func() {
