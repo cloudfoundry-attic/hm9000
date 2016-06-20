@@ -2,6 +2,7 @@ package sender_test
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"fmt"
@@ -18,7 +19,6 @@ import (
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
-	"github.com/nats-io/nats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/clock/fakeclock"
@@ -26,25 +26,25 @@ import (
 
 var _ = Describe("Sender", func() {
 	var (
-		storeAdapter         *fakestoreadapter.FakeStoreAdapter
-		store                storepackage.Store
-		sender               *Sender
-		messageBus           *fakeyagnats.FakeNATSConn
-		timeProvider         *fakeclock.FakeClock
-		logger               *fakelogger.FakeLogger
-		dea                  appfixture.DeaFixture
-		app                  appfixture.AppFixture
-		conf                 *config.Config
-		metricsAccountant    *fakemetricsaccountant.FakeMetricsAccountant
-		apps                 map[string]*models.App
-		startMessages        []models.PendingStartMessage
-		stopMessages         []models.PendingStopMessage
-		receivedStopMessages []models.StopMessage
-		server               *httptest.Server
-		stopRequest          models.StopMessage
-		httpError            error
-		receivedEndpoint     string
-		receivedAuth         string
+		storeAdapter          *fakestoreadapter.FakeStoreAdapter
+		store                 storepackage.Store
+		sender                *Sender
+		messageBus            *fakeyagnats.FakeNATSConn
+		timeProvider          *fakeclock.FakeClock
+		logger                *fakelogger.FakeLogger
+		dea                   appfixture.DeaFixture
+		app                   appfixture.AppFixture
+		conf                  *config.Config
+		metricsAccountant     *fakemetricsaccountant.FakeMetricsAccountant
+		apps                  map[string]*models.App
+		startMessages         []models.PendingStartMessage
+		stopMessages          []models.PendingStopMessage
+		receivedStartMessages []models.StartMessage
+		receivedStopMessages  []models.StopMessage
+		server                *httptest.Server
+		httpError             error
+		receivedEndpoint      string
+		receivedAuth          string
 	)
 
 	BeforeEach(func() {
@@ -66,20 +66,25 @@ var _ = Describe("Sender", func() {
 		startMessages = []models.PendingStartMessage{}
 		stopMessages = []models.PendingStopMessage{}
 
+		receivedStartMessages = []models.StartMessage{}
 		receivedStopMessages = []models.StopMessage{}
 
-		stopRequest = models.StopMessage{}
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			b, err := ioutil.ReadAll(r.Body)
 			r.Body.Close()
 			Expect(err).ToNot(HaveOccurred())
 
 			var stopMessage models.StopMessage
-
-			stopMessage, httpError = models.NewStopMessageFromJSON(b)
-			Expect(err).ToNot(HaveOccurred())
-
-			receivedStopMessages = append(receivedStopMessages, stopMessage)
+			var startMessage models.StartMessage
+			if strings.Contains((string)(b), "is_duplicate") {
+				stopMessage, httpError = models.NewStopMessageFromJSON(b)
+				Expect(err).ToNot(HaveOccurred())
+				receivedStopMessages = append(receivedStopMessages, stopMessage)
+			} else {
+				startMessage, httpError = models.NewStartMessageFromJSON(b)
+				Expect(err).ToNot(HaveOccurred())
+				receivedStartMessages = append(receivedStartMessages, startMessage)
+			}
 
 			receivedEndpoint = r.URL.String()
 			receivedAuth = r.Header.Get("Authorization")
@@ -168,9 +173,8 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should send the message", func() {
-				Expect(messageBus.PublishedMessages("hm9000.start")).To(HaveLen(1))
-				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.start")[0].Data))
-				Expect(message).To(Equal(models.StartMessage{
+				Expect(receivedStartMessages).To(HaveLen(1))
+				Expect(receivedStartMessages[0]).To(Equal(models.StartMessage{
 					AppGuid:       app.AppGuid,
 					AppVersion:    app.AppVersion,
 					InstanceIndex: 0,
@@ -233,9 +237,21 @@ var _ = Describe("Sender", func() {
 
 			Context("when the message fails to send", func() {
 				BeforeEach(func() {
-					messageBus.WhenPublishing("hm9000.start", func(*nats.Msg) error {
-						return errors.New("oops")
-					})
+					server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						b, err := ioutil.ReadAll(r.Body)
+						r.Body.Close()
+						Expect(err).ToNot(HaveOccurred())
+
+						startMessage, err := models.NewStartMessageFromJSON(b)
+						Expect(err).ToNot(HaveOccurred())
+
+						receivedStartMessages = append(receivedStartMessages, startMessage)
+
+						w.WriteHeader(500)
+						fmt.Fprintln(w, "Throwing a 500")
+					}))
+
+					conf.CCInternalURL = server.URL
 				})
 
 				It("should return an error", func() {
@@ -527,7 +543,7 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should not send the start message", func() {
-				Expect(messageBus.PublishedMessages("hm9000.start")).To(HaveLen(0))
+				Expect(receivedStartMessages).To(HaveLen(0))
 			})
 
 			It("should not increment the metrics", func() {
@@ -545,9 +561,8 @@ var _ = Describe("Sender", func() {
 			})
 
 			It("should send the start message", func() {
-				Expect(messageBus.PublishedMessages("hm9000.start")).To(HaveLen(1))
-				message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.start")[0].Data))
-				Expect(message).To(Equal(models.StartMessage{
+				Expect(receivedStartMessages).To(HaveLen(1))
+				Expect(receivedStartMessages[0]).To(Equal(models.StartMessage{
 					AppGuid:       app.AppGuid,
 					AppVersion:    app.AppVersion,
 					InstanceIndex: 0,
@@ -858,7 +873,7 @@ var _ = Describe("Sender", func() {
 		It("should limit the number of start messages that it sends", func() {
 			remainingStartMessages, _ := store.GetPendingStartMessages()
 			Expect(remainingStartMessages).To(HaveLen(20))
-			Expect(messageBus.PublishedMessages("hm9000.start")).To(HaveLen(20))
+			Expect(receivedStartMessages).To(HaveLen(20))
 			Expect(pendingStartMessages(metricsAccountant.IncrementSentMessageMetricsArgsForCall(0))).To(HaveLen(20))
 
 			for _, remainingStartMessage := range remainingStartMessages {

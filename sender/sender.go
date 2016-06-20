@@ -110,7 +110,7 @@ func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessa
 
 	for _, startMessage := range sortedStartMessages {
 		if startMessage.IsTimeToSend(sender.currentTime) {
-			sender.sendStartMessage(startMessage)
+			sender.sendStartMessageHttp(startMessage)
 		} else if startMessage.IsExpired(sender.currentTime) {
 			sender.queueStartMessageForDeletion(startMessage, "expired start message")
 		}
@@ -149,6 +149,57 @@ func (sender *Sender) sendStartMessage(startMessage models.PendingStartMessage) 
 			}
 
 			sender.numberOfStartMessagesSent += 1
+		}
+	} else {
+		sender.queueStartMessageForDeletion(startMessage, "start message that will not be sent")
+	}
+}
+
+func (sender *Sender) sendStartMessageHttp(startMessage models.PendingStartMessage) {
+	messageToSend, shouldSend := sender.startMessageToSend(startMessage)
+
+	if shouldSend {
+		if sender.numberOfStartMessagesSent < sender.conf.SenderMessageLimit {
+			sender.logger.Info("Sending message", startMessage.LogDescription())
+
+			client := http.Client{}
+			targetURL := fmt.Sprintf("%s/internal/dea/hm9000/start/%s", sender.conf.CCInternalURL, startMessage.AppGuid)
+			req, err := http.NewRequest("POST", targetURL, bytes.NewReader(messageToSend.ToJSON()))
+
+			authorization := models.BasicAuthInfo{
+				User:     sender.conf.APIServerUsername,
+				Password: sender.conf.APIServerPassword,
+			}.Encode()
+
+			req.Header.Add("Authorization", authorization)
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := client.Do(req)
+
+			if err != nil {
+				sender.logger.Error("Failed to send start message", err, startMessage.LogDescription())
+				sender.didSucceed = false
+				return
+			}
+
+			if resp.StatusCode != 200 {
+				buf := new(bytes.Buffer)
+				buf.ReadFrom(resp.Body)
+				respBody := buf.String()
+				err = errors.New(respBody)
+
+				sender.logger.Error("Cloud Controller did not accept start message", err, startMessage.LogDescription())
+				sender.didSucceed = false
+				return
+			}
+
+			sender.sentStartMessages = append(sender.sentStartMessages, startMessage)
+			sender.numberOfStartMessagesSent += 1
+
+			if startMessage.KeepAlive == 0 {
+				sender.queueStartMessageForDeletion(startMessage, "sent start message with no keep alive")
+			} else {
+				sender.markStartMessageSent(startMessage)
+			}
 		}
 	} else {
 		sender.queueStartMessageForDeletion(startMessage, "start message that will not be sent")
