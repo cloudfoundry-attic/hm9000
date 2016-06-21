@@ -2,6 +2,10 @@ package evacuator_test
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"time"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -25,11 +29,14 @@ import (
 
 var _ = Describe("Evacuator", func() {
 	var (
-		evacuator         *Evacuator
-		messageBus        *fakeyagnats.FakeNATSConn
-		storeAdapter      *fakestoreadapter.FakeStoreAdapter
-		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
-		clock             *fakeclock.FakeClock
+		evacuator             *Evacuator
+		messageBus            *fakeyagnats.FakeNATSConn
+		storeAdapter          *fakestoreadapter.FakeStoreAdapter
+		metricsAccountant     *fakemetricsaccountant.FakeMetricsAccountant
+		clock                 *fakeclock.FakeClock
+		server                *httptest.Server
+		receivedStartMessages []models.StartMessage
+		httpError             error
 
 		store            storepackage.Store
 		app              appfixture.AppFixture
@@ -47,6 +54,20 @@ var _ = Describe("Evacuator", func() {
 
 		app = appfixture.NewAppFixture()
 		store.BumpActualFreshness(time.Unix(10, 0))
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, err := ioutil.ReadAll(r.Body)
+			r.Body.Close()
+			Expect(err).ToNot(HaveOccurred())
+
+			var startMessage models.StartMessage
+			startMessage, httpError = models.NewStartMessageFromJSON(b)
+			Expect(err).ToNot(HaveOccurred())
+			receivedStartMessages = append(receivedStartMessages, startMessage)
+
+			w.WriteHeader(200)
+		}))
+		conf.CCInternalURL = server.URL
 	})
 
 	JustBeforeEach(func() {
@@ -56,6 +77,7 @@ var _ = Describe("Evacuator", func() {
 
 	AfterEach(func() {
 		ginkgomon.Kill(evacuatorProcess)
+		server.Close()
 	})
 
 	Context("when the subscription fails", func() {
@@ -91,7 +113,7 @@ var _ = Describe("Evacuator", func() {
 				})
 			})
 
-			Context("when the reason is DEA_EVACUATION", func() {
+			FContext("when the reason is DEA_EVACUATION", func() {
 				JustBeforeEach(func() {
 					messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
 						Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonDEAEvacuation).ToJSON(),
@@ -100,6 +122,7 @@ var _ = Describe("Evacuator", func() {
 
 				It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
 					pendingStarts, err := store.GetPendingStartMessages()
+					fmt.Println(pendingStarts)
 					Expect(err).NotTo(HaveOccurred())
 
 					expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
@@ -120,9 +143,8 @@ var _ = Describe("Evacuator", func() {
 						expectedStartMessage = msg
 					}
 
-					Expect(messageBus.PublishedMessages("hm9000.start")).To(HaveLen(1))
-					message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.start")[0].Data))
-					Expect(message).To(Equal(models.StartMessage{
+					Expect(receivedStartMessages).To(HaveLen(1))
+					Expect(receivedStartMessages[0]).To(Equal(models.StartMessage{
 						AppGuid:       app.AppGuid,
 						AppVersion:    app.AppVersion,
 						InstanceIndex: 1,
@@ -161,9 +183,8 @@ var _ = Describe("Evacuator", func() {
 						expectedStartMessage = msg
 					}
 
-					Expect(messageBus.PublishedMessages("hm9000.start")).To(HaveLen(1))
-					message, _ := models.NewStartMessageFromJSON([]byte(messageBus.PublishedMessages("hm9000.start")[0].Data))
-					Expect(message).To(Equal(models.StartMessage{
+					Expect(receivedStartMessages).To(HaveLen(1))
+					Expect(receivedStartMessages[0]).To(Equal(models.StartMessage{
 						AppGuid:       app.AppGuid,
 						AppVersion:    app.AppVersion,
 						InstanceIndex: 1,
