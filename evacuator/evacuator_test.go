@@ -2,7 +2,6 @@ package evacuator_test
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -51,7 +50,7 @@ var _ = Describe("Evacuator", func() {
 		store = storepackage.NewStore(conf, storeAdapter, fakelogger.NewFakeLogger())
 		metricsAccountant = &fakemetricsaccountant.FakeMetricsAccountant{}
 		clock = fakeclock.NewFakeClock(time.Unix(100, 0))
-
+		receivedStartMessages = []models.StartMessage{}
 		app = appfixture.NewAppFixture()
 		store.BumpActualFreshness(time.Unix(10, 0))
 
@@ -113,7 +112,7 @@ var _ = Describe("Evacuator", func() {
 				})
 			})
 
-			FContext("when the reason is DEA_EVACUATION", func() {
+			Context("when the reason is DEA_EVACUATION", func() {
 				JustBeforeEach(func() {
 					messageBus.SubjectCallbacks("droplet.exited")[0](&nats.Msg{
 						Data: app.InstanceAtIndex(1).DropletExited(models.DropletExitedReasonDEAEvacuation).ToJSON(),
@@ -122,7 +121,6 @@ var _ = Describe("Evacuator", func() {
 
 				It("should put a high priority pending start message (configured to skip verification) into the queue", func() {
 					pendingStarts, err := store.GetPendingStartMessages()
-					fmt.Println(pendingStarts)
 					Expect(err).NotTo(HaveOccurred())
 
 					expectedStartMessage := models.NewPendingStartMessage(clock.Now(), 0, conf.GracePeriod(), app.AppGuid, app.AppVersion, 1, 2.0, models.PendingStartMessageReasonEvacuating)
