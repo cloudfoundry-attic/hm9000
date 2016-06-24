@@ -133,15 +133,17 @@ var _ = Describe("Actual State", func() {
 				done := make(chan error, 2)
 
 				go func() {
-					done <- store.SyncHeartbeats(dea.HeartbeatWith(
+					_, err := store.SyncHeartbeats(dea.HeartbeatWith(
 						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					))
+					done <- err
 				}()
 
 				go func() {
-					done <- store.SyncHeartbeats(dea.HeartbeatWith(
+					_, err := store.SyncHeartbeats(dea.HeartbeatWith(
 						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					))
+					done <- err
 				}()
 
 				err1 := <-done
@@ -185,6 +187,31 @@ var _ = Describe("Actual State", func() {
 					return results
 				}, 1.0, 0.05).Should(HaveLen(2)) //...and the heartbeat should return
 			})
+		})
+
+		Context("When a Heartbeat's Instance heartbeat is in the Evacuating state", func() {
+			FIt("sends a start request for the evacuating droplet", func() {
+				modifiedHeartbeat := dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+				modifiedHeartbeat.State = models.InstanceStateEvacuating
+				heartbeatsToEvac, err := store.SyncHeartbeats(dea.HeartbeatWith(
+					modifiedHeartbeat,
+					dea.GetApp(2).InstanceAtIndex(2).Heartbeat(),
+				))
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(heartbeatsToEvac)).To(Equal(1))
+				Expect(heartbeatsToEvac).To(ContainElement(modifiedHeartbeat))
+			})
+
+			It("sets the app state to evacuating", func() {})
+
+			Context("when a second request comes in and the app is still evacuating", func() {
+				It("does not send a second start request", func() {})
+			})
+		})
+
+		Context("when the DEA expires from the store", func() {
+			It("removes the cached heartbeat start request for the evacuating DEA", func() {})
 		})
 	})
 

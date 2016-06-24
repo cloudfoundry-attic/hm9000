@@ -79,6 +79,8 @@ func (syncer *actualStateSyncer) Heartbeat(heartbeat *models.Heartbeat) {
 	syncer.logger.Info("Received a heartbeat", lager.Data{
 		"Heartbeats Pending Save": strconv.Itoa(numToSave),
 	})
+
+	// send start here?
 }
 
 func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {

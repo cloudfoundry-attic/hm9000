@@ -35,7 +35,7 @@ type Store interface {
 	GetApps() (map[string]*models.App, error)
 	GetApp(appGuid string, appVersion string) (*models.App, error)
 
-	SyncHeartbeats(heartbeat ...*models.Heartbeat) error
+	SyncHeartbeats(heartbeat ...*models.Heartbeat) ([]models.InstanceHeartbeat, error)
 	GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error)
 	GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error)
 
