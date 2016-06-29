@@ -28,7 +28,7 @@ var _ = Describe("Sender", func() {
 	var (
 		storeAdapter          *fakestoreadapter.FakeStoreAdapter
 		store                 storepackage.Store
-		sender                *Sender
+		sender                Sender
 		messageBus            *fakeyagnats.FakeNATSConn
 		timeProvider          *fakeclock.FakeClock
 		logger                *fakelogger.FakeLogger

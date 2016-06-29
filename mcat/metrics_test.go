@@ -34,7 +34,7 @@ var _ = Describe("Serving Metrics", func() {
 			simulator.SetDesiredState(desiredState)
 			simulator.SetCurrentHeartbeats(a.Heartbeat(1))
 
-			simulator.Tick(simulator.TicksToAttainFreshness)
+			simulator.Tick(simulator.TicksToAttainFreshness, false)
 		})
 
 		It("should not count as an app with missing instances", func() {
@@ -50,8 +50,8 @@ var _ = Describe("Serving Metrics", func() {
 
 	Context("when the store is fresh", func() {
 		BeforeEach(func() {
-			simulator.Tick(simulator.TicksToAttainFreshness)
-			simulator.Tick(simulator.GracePeriod)
+			simulator.Tick(simulator.TicksToAttainFreshness, false)
+			simulator.Tick(simulator.GracePeriod, false)
 		})
 
 		It("should return the metrics", func() {
@@ -69,7 +69,7 @@ var _ = Describe("Serving Metrics", func() {
 
 	Context("when the store is not fresh", func() {
 		BeforeEach(func() {
-			simulator.Tick(simulator.TicksToAttainFreshness - 1)
+			simulator.Tick(simulator.TicksToAttainFreshness - 1, false)
 		})
 
 		It("should return -1 for all metrics", func() {

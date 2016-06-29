@@ -51,7 +51,7 @@ var _ = Describe("Serving API", func() {
 
 		Context("when the store is fresh", func() {
 			BeforeEach(func() {
-				simulator.Tick(simulator.TicksToAttainFreshness)
+				simulator.Tick(simulator.TicksToAttainFreshness, false)
 				cliRunner.StartAPIServer(simulator.currentTimestamp)
 			})
 
@@ -81,7 +81,7 @@ var _ = Describe("Serving API", func() {
 
 		Context("when the store is not fresh", func() {
 			BeforeEach(func() {
-				simulator.Tick(simulator.TicksToAttainFreshness - 1)
+				simulator.Tick(simulator.TicksToAttainFreshness - 1, false)
 				cliRunner.StartAPIServer(simulator.currentTimestamp)
 			})
 
@@ -110,7 +110,7 @@ var _ = Describe("Serving API", func() {
 
 		Context("when not authenticated", func() {
 			BeforeEach(func() {
-				simulator.Tick(simulator.TicksToAttainFreshness)
+				simulator.Tick(simulator.TicksToAttainFreshness, false)
 				cliRunner.StartAPIServer(simulator.currentTimestamp)
 			})
 

@@ -36,15 +36,16 @@ func (store *RealStore) ensureCacheIsReady() error {
 	return nil
 }
 
-func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) error {
+func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) ([]models.InstanceHeartbeat, error) {
 	t := time.Now()
 
 	err := store.ensureCacheIsReady()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	nodesToSave := []storeadapter.StoreNode{}
+	heartbeatsToEvac := []models.InstanceHeartbeat{}
 	keysToDelete := []string{}
 	numberOfInstanceHeartbeats := 0
 
@@ -60,6 +61,10 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 
 			if found && existingInstanceHeartbeat.State == incomingInstanceHeartbeat.State {
 				continue
+			}
+
+			if incomingInstanceHeartbeat.State == models.InstanceStateEvacuating && existingInstanceHeartbeat.State != models.InstanceStateCrashed {
+				heartbeatsToEvac = append(heartbeatsToEvac, incomingInstanceHeartbeat)
 			}
 
 			nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
@@ -88,7 +93,7 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 	dtSave := time.Since(tSave).Seconds()
 
 	if err != nil {
-		return err
+		return heartbeatsToEvac, err
 	}
 
 	tDelete := time.Now()
@@ -98,7 +103,7 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 	if err == storeadapter.ErrorKeyNotFound {
 		store.logger.Debug("store.SyncHeartbeats Failed to delete a key, soldiering on...")
 	} else if err != nil {
-		return err
+		return heartbeatsToEvac, err
 	}
 
 	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), lager.Data{
@@ -111,7 +116,7 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 		"Delete Duration":               fmt.Sprintf("%.4f seconds", dtDelete),
 	})
 
-	return nil
+	return heartbeatsToEvac, nil
 }
 
 func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {

@@ -42,8 +42,8 @@ var _ = Describe("Prioritizing and sending messages in batches", func() {
 
 			simulator.SetDesiredState(desiredStates...)
 			simulator.SetCurrentHeartbeats(heartbeats...)
-			simulator.Tick(simulator.TicksToAttainFreshness)
-			simulator.Tick(simulator.GracePeriod)
+			simulator.Tick(simulator.TicksToAttainFreshness, false)
+			simulator.Tick(simulator.GracePeriod, false)
 		})
 
 		It("should send all the stops", func() {

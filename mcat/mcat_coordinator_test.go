@@ -44,7 +44,7 @@ type MCATCoordinator struct {
 
 	hm9000Binary      string
 	natsRunner        *natsrunner.NATSRunner
-	startStopListener *startstoplistener.StartStopListener
+	StartStopListener *startstoplistener.StartStopListener
 	metron            *Metron
 
 	Conf *config.Config
@@ -91,7 +91,7 @@ func (coordinator *MCATCoordinator) computePorts() {
 
 func (coordinator *MCATCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *startstoplistener.StartStopListener, *Metron) {
 	coordinator.StoreRunner.Reset()
-	coordinator.startStopListener.Reset()
+	coordinator.StartStopListener.Reset()
 	coordinator.StateServer.Reset()
 	coordinator.metron.Reset()
 
@@ -102,7 +102,7 @@ func (coordinator *MCATCoordinator) PrepForNextTest() (*CLIRunner, *Simulator, *
 	store := storepackage.NewStore(coordinator.Conf, coordinator.StoreAdapter, fakelogger.NewFakeLogger())
 	simulator := NewSimulator(coordinator.Conf, coordinator.StoreRunner, store, coordinator.StateServer, coordinator.currentCLIRunner, coordinator.MessageBus, coordinator.NatsMonitoringPort)
 
-	return coordinator.currentCLIRunner, simulator, coordinator.startStopListener, coordinator.metron
+	return coordinator.currentCLIRunner, simulator, coordinator.StartStopListener, coordinator.metron
 }
 
 func (coordinator *MCATCoordinator) StartNats() {
@@ -117,7 +117,7 @@ func (coordinator *MCATCoordinator) StartDesiredStateServer() {
 }
 
 func (coordinator *MCATCoordinator) StartStartStopListener() {
-	coordinator.startStopListener, coordinator.Conf.CCInternalURL = startstoplistener.NewStartStopListener(coordinator.MessageBus, coordinator.Conf)
+	coordinator.StartStopListener, coordinator.Conf.CCInternalURL = startstoplistener.NewStartStopListener(coordinator.MessageBus, coordinator.Conf)
 }
 
 func (coordinator *MCATCoordinator) StartETCD() {

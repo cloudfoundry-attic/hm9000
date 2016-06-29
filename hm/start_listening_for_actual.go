@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/hm9000/actualstatelisteners"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
+	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/hashicorp/consul/api"
 	"github.com/nu7hatch/gouuid"
 	"github.com/pivotal-golang/lager"
@@ -29,12 +30,15 @@ func StartListeningForActual(logger lager.Logger, conf *config.Config) {
 
 	lockRunner := locket.NewLock(logger, consulClient, "hm9000.listener", make([]byte, 0), clock, locket.RetryInterval, locket.LockTTL)
 
+	metricsAccountant := metricsaccountant.New()
+	evacuatorSender := sender.New(store, metricsAccountant, conf, messageBus, logger, clock)
 	syncer := actualstatelisteners.NewSyncer(logger,
 		conf,
 		store,
 		usageTracker,
-		metricsaccountant.New(),
+		metricsAccountant,
 		clock,
+		evacuatorSender,
 	)
 
 	natsListener := actualstatelisteners.NewNatsListener(logger,

@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
+	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
@@ -30,6 +31,7 @@ type actualStateSyncer struct {
 	storeUsageTracker metricsaccountant.UsageTracker
 	metricsAccountant metricsaccountant.MetricsAccountant
 	heartbeatsToSave  []*models.Heartbeat
+	sender            sender.Sender
 
 	heartbeatMutex *sync.Mutex
 }
@@ -39,7 +41,8 @@ func NewSyncer(logger lager.Logger,
 	store store.Store,
 	storeUsageTracker metricsaccountant.UsageTracker,
 	metricsAccountant metricsaccountant.MetricsAccountant,
-	clock clock.Clock) Syncer {
+	clock clock.Clock,
+	sender sender.Sender) Syncer {
 
 	return &actualStateSyncer{
 		logger:            logger,
@@ -50,6 +53,7 @@ func NewSyncer(logger lager.Logger,
 		clock:             clock,
 		heartbeatsToSave:  []*models.Heartbeat{},
 		heartbeatMutex:    &sync.Mutex{},
+		sender:            sender,
 	}
 }
 
@@ -98,7 +102,7 @@ func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 			})
 
 			t := syncer.clock.Now()
-			err := syncer.store.SyncHeartbeats(heartbeatsToSave...)
+			evacuatingHeartbeats, err := syncer.store.SyncHeartbeats(heartbeatsToSave...)
 
 			if err != nil {
 				syncer.logger.Error("Could not put instance heartbeats in store:", err)
@@ -120,6 +124,29 @@ func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 
 				syncer.metricsAccountant.TrackSavedHeartbeats(numHeartbeats)
 			}
+
+			pendingStartMessages := []models.PendingStartMessage{}
+			for _, heartbeat := range evacuatingHeartbeats {
+				pendingStartMessage := models.NewPendingStartMessage(
+					syncer.clock.Now(),
+					0,
+					syncer.config.GracePeriod(),
+					heartbeat.AppGuid,
+					heartbeat.AppVersion,
+					heartbeat.InstanceIndex,
+					2.0,
+					models.PendingStartMessageReasonEvacuating,
+				)
+				pendingStartMessage.SkipVerification = true
+
+				pendingStartMessages = append(pendingStartMessages, pendingStartMessage)
+			}
+			syncer.logger.Info("Sending start for evacuating instances.")
+			err = syncer.sender.Send(syncer.clock, nil, pendingStartMessages, nil)
+			if err != nil {
+				syncer.logger.Error("Failure sending start for evacuating instances", err)
+			}
+			syncer.logger.Info("Finished sending start for evacuating instances.")
 		}
 
 		syncer.logger.Debug("Tracking Heartbeat Metrics", lager.Data{

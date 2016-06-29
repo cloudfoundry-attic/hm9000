@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	. "github.com/cloudfoundry/hm9000/actualstatelisteners"
+	"github.com/cloudfoundry/hm9000/sender/fakesender"
 	"github.com/cloudfoundry/hm9000/store/fakestore"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -38,6 +39,7 @@ var _ = Describe("Actual state listener", func() {
 		usageTracker      *fakemetricsaccountant.FakeUsageTracker
 		metricsAccountant *fakemetricsaccountant.FakeMetricsAccountant
 		syncerProcess     ifrit.Process
+		sender            *fakesender.FakeSender
 	)
 
 	BeforeEach(func() {
@@ -62,10 +64,11 @@ var _ = Describe("Actual state listener", func() {
 		usageTracker = &fakemetricsaccountant.FakeUsageTracker{}
 		usageTracker.MeasureUsageReturns(0.7, 0)
 		metricsAccountant = &fakemetricsaccountant.FakeMetricsAccountant{}
+		sender = &fakesender.FakeSender{}
 	})
 
 	JustBeforeEach(func() {
-		syncer = NewSyncer(logger, conf, store, usageTracker, metricsAccountant, clock)
+		syncer = NewSyncer(logger, conf, store, usageTracker, metricsAccountant, clock, sender)
 		syncerProcess = ifrit.Background(syncer)
 		Eventually(syncerProcess.Ready()).Should(BeClosed())
 	})
@@ -107,13 +110,63 @@ var _ = Describe("Actual state listener", func() {
 			clock.Increment(conf.ListenerHeartbeatSyncInterval())
 		})
 
+		Context("when there are evacuating heartbeat instances", func() {
+			var (
+				heartbeats []InstanceHeartbeat
+			)
+
+			BeforeEach(func() {
+				heartbeats = []InstanceHeartbeat{
+					{
+						AppGuid:       "guid-1",
+						AppVersion:    "version-1",
+						InstanceGuid:  "instance-guid-1",
+						InstanceIndex: 1,
+						State:         InstanceStateEvacuating,
+						DeaGuid:       "dea-guid-1",
+					},
+					{
+						AppGuid:       "guid-2",
+						AppVersion:    "version-2",
+						InstanceGuid:  "instance-guid-2",
+						InstanceIndex: 1,
+						State:         InstanceStateEvacuating,
+						DeaGuid:       "dea-guid-1",
+					},
+				}
+				store.SyncHeartbeatsReturns(heartbeats, nil)
+			})
+
+			JustBeforeEach(func() {
+				syncer.Heartbeat(&Heartbeat{DeaGuid: "dea-guid-1", InstanceHeartbeats: heartbeats})
+			})
+
+			It("send the start messages for all instances", func() {
+				Eventually(sender.SendCallCount).Should(Equal(1))
+
+				_, _, startMessages, _ := sender.SendArgsForCall(0)
+				Expect(len(startMessages)).To(Equal(2))
+				Expect(startMessages[0].AppGuid).To(Equal("guid-1"))
+				Expect(startMessages[1].AppGuid).To(Equal("guid-2"))
+			})
+
+			It("Sets the message's SkipVerification to true", func() {
+				Eventually(sender.SendCallCount).Should(Equal(1))
+
+				_, _, startMessages, _ := sender.SendArgsForCall(0)
+				Expect(len(startMessages)).To(Equal(2))
+				Expect(startMessages[0].SkipVerification).To(BeTrue())
+				Expect(startMessages[1].SkipVerification).To(BeTrue())
+			})
+		})
+
 		Context("and the SyncHeartbeats completes before the next interval", func() {
 			BeforeEach(func() {
 				clock := clock
 				interval := conf.ListenerHeartbeatSyncInterval()
-				store.SyncHeartbeatsStub = func(_ ...*Heartbeat) error {
+				store.SyncHeartbeatsStub = func(_ ...*Heartbeat) ([]InstanceHeartbeat, error) {
 					clock.Increment(interval - 1)
-					return nil
+					return []InstanceHeartbeat{}, nil
 				}
 			})
 
@@ -137,9 +190,9 @@ var _ = Describe("Actual state listener", func() {
 			BeforeEach(func() {
 				interval := conf.ListenerHeartbeatSyncInterval()
 				clock := clock
-				store.SyncHeartbeatsStub = func(_ ...*Heartbeat) error {
+				store.SyncHeartbeatsStub = func(_ ...*Heartbeat) ([]InstanceHeartbeat, error) {
 					clock.Increment(interval)
-					return nil
+					return []InstanceHeartbeat{}, nil
 				}
 			})
 
@@ -164,7 +217,7 @@ var _ = Describe("Actual state listener", func() {
 
 		Context("and SyncHeartbeats had an error", func() {
 			BeforeEach(func() {
-				store.SyncHeartbeatsReturns(errors.New("an error"))
+				store.SyncHeartbeatsReturns([]InstanceHeartbeat{}, errors.New("an error"))
 			})
 
 			It("revokes the actual state freshness", func() {

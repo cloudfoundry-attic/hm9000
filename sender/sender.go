@@ -16,7 +16,12 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-type Sender struct {
+//go:generate counterfeiter -o fakesender/fake_sender.go . Sender
+type Sender interface {
+	Send(clock.Clock, map[string]*models.App, []models.PendingStartMessage, []models.PendingStopMessage) error
+}
+
+type sender struct {
 	store  store.Store
 	conf   *config.Config
 	logger lager.Logger
@@ -37,8 +42,8 @@ type Sender struct {
 	didSucceed                bool
 }
 
-func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.NATSConn, logger lager.Logger, clock clock.Clock) *Sender {
-	return &Sender{
+func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountant, conf *config.Config, messageBus yagnats.NATSConn, logger lager.Logger, clock clock.Clock) *sender {
+	return &sender{
 		store:                 store,
 		conf:                  conf,
 		logger:                logger,
@@ -55,7 +60,7 @@ func New(store store.Store, metricsAccountant metricsaccountant.MetricsAccountan
 	}
 }
 
-func (sender *Sender) Send(clock clock.Clock, apps map[string]*models.App, pendingStartMessages []models.PendingStartMessage, pendingStopMessages []models.PendingStopMessage) error {
+func (sender *sender) Send(clock clock.Clock, apps map[string]*models.App, pendingStartMessages []models.PendingStartMessage, pendingStopMessages []models.PendingStopMessage) error {
 	sender.currentTime = clock.Now()
 	sender.apps = apps
 
@@ -105,7 +110,7 @@ func (sender *Sender) Send(clock clock.Clock, apps map[string]*models.App, pendi
 	return nil
 }
 
-func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessage) {
+func (sender *sender) sendStartMessages(startMessages []models.PendingStartMessage) {
 	sortedStartMessages := models.SortStartMessagesByPriority(startMessages)
 
 	for _, startMessage := range sortedStartMessages {
@@ -117,7 +122,7 @@ func (sender *Sender) sendStartMessages(startMessages []models.PendingStartMessa
 	}
 }
 
-func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage) {
+func (sender *sender) sendStopMessages(stopMessages []models.PendingStopMessage) {
 	for _, stopMessage := range stopMessages {
 		if stopMessage.IsTimeToSend(sender.currentTime) {
 			sender.sendStopMessageHttp(stopMessage)
@@ -127,7 +132,7 @@ func (sender *Sender) sendStopMessages(stopMessages []models.PendingStopMessage)
 	}
 }
 
-func (sender *Sender) sendStartMessage(startMessage models.PendingStartMessage) {
+func (sender *sender) sendStartMessage(startMessage models.PendingStartMessage) {
 	messageToSend, shouldSend := sender.startMessageToSend(startMessage)
 	if shouldSend {
 		if sender.numberOfStartMessagesSent < sender.conf.SenderMessageLimit {
@@ -155,7 +160,7 @@ func (sender *Sender) sendStartMessage(startMessage models.PendingStartMessage) 
 	}
 }
 
-func (sender *Sender) sendStartMessageHttp(startMessage models.PendingStartMessage) {
+func (sender *sender) sendStartMessageHttp(startMessage models.PendingStartMessage) {
 	messageToSend, shouldSend := sender.startMessageToSend(startMessage)
 
 	if shouldSend {
@@ -206,7 +211,7 @@ func (sender *Sender) sendStartMessageHttp(startMessage models.PendingStartMessa
 	}
 }
 
-func (sender *Sender) sendStopMessageHttp(stopMessage models.PendingStopMessage) {
+func (sender *sender) sendStopMessageHttp(stopMessage models.PendingStopMessage) {
 	messageToSend, shouldSend := sender.stopMessageToSend(stopMessage)
 
 	if shouldSend {
@@ -252,27 +257,27 @@ func (sender *Sender) sendStopMessageHttp(stopMessage models.PendingStopMessage)
 	}
 }
 
-func (sender *Sender) markStartMessageSent(startMessage models.PendingStartMessage) {
+func (sender *sender) markStartMessageSent(startMessage models.PendingStartMessage) {
 	startMessage.SentOn = sender.currentTime.Unix()
 	sender.startMessagesToSave = append(sender.startMessagesToSave, startMessage)
 }
 
-func (sender *Sender) markStopMessageSent(stopMessage models.PendingStopMessage) {
+func (sender *sender) markStopMessageSent(stopMessage models.PendingStopMessage) {
 	stopMessage.SentOn = sender.currentTime.Unix()
 	sender.stopMessagesToSave = append(sender.stopMessagesToSave, stopMessage)
 }
 
-func (sender *Sender) queueStartMessageForDeletion(startMessage models.PendingStartMessage, reason string) {
+func (sender *sender) queueStartMessageForDeletion(startMessage models.PendingStartMessage, reason string) {
 	sender.logger.Info(fmt.Sprintf("Deleting %s", reason), startMessage.LogDescription())
 	sender.startMessagesToDelete = append(sender.startMessagesToDelete, startMessage)
 }
 
-func (sender *Sender) queueStopMessageForDeletion(stopMessage models.PendingStopMessage, reason string) {
+func (sender *sender) queueStopMessageForDeletion(stopMessage models.PendingStopMessage, reason string) {
 	sender.logger.Info(fmt.Sprintf("Deleting %s", reason), stopMessage.LogDescription())
 	sender.stopMessagesToDelete = append(sender.stopMessagesToDelete, stopMessage)
 }
 
-func (sender *Sender) startMessageToSend(message models.PendingStartMessage) (models.StartMessage, bool) {
+func (sender *sender) startMessageToSend(message models.PendingStartMessage) (models.StartMessage, bool) {
 	messageToSend := models.StartMessage{
 		MessageId:     message.MessageId,
 		AppGuid:       message.AppGuid,
@@ -312,7 +317,7 @@ func (sender *Sender) startMessageToSend(message models.PendingStartMessage) (mo
 	return messageToSend, true
 }
 
-func (sender *Sender) stopMessageToSend(message models.PendingStopMessage) (models.StopMessage, bool) {
+func (sender *sender) stopMessageToSend(message models.PendingStopMessage) (models.StopMessage, bool) {
 	appKey := sender.store.AppKey(message.AppGuid, message.AppVersion)
 	app, found := sender.apps[appKey]
 

@@ -1,10 +1,14 @@
 package mcat_test
 
 import (
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
@@ -15,6 +19,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/gomega"
+	"github.com/tedsuo/rata"
 )
 
 type NatsConnections struct {
@@ -60,18 +65,26 @@ func NewSimulator(conf *config.Config, storeRunner *etcdstorerunner.ETCDClusterR
 	}
 }
 
-func (s *Simulator) Tick(numTicks int) {
+func (s *Simulator) Tick(numTicks int, useHttp bool) {
 	timeBetweenTicks := int(s.conf.HeartbeatPeriod)
 
 	for i := 0; i < numTicks; i++ {
 		s.currentTimestamp += timeBetweenTicks
 		s.storeRunner.FastForwardTime(timeBetweenTicks)
-		s.sendHeartbeats()
+		s.sendHeartbeats(useHttp)
 		s.cliRunner.Run("analyze", s.currentTimestamp)
 	}
 }
 
-func (s *Simulator) sendHeartbeats() {
+func (s *Simulator) sendHeartbeats(useHttp bool) {
+	if useHttp {
+		s.sendHeartbeatsHttp()
+	} else {
+		s.sendHeartbeatsNats()
+	}
+}
+
+func (s *Simulator) sendHeartbeatsNats() {
 	s.cliRunner.StartListener(s.currentTimestamp)
 	metronAgent.Reset()
 
@@ -108,6 +121,71 @@ func (s *Simulator) sendHeartbeats() {
 	}, IterationTimeout, 1.05).Should(BeTrue())
 
 	s.cliRunner.StopListener()
+}
+
+func (s *Simulator) sendHeartbeatsHttp() {
+	metronAgent.Reset()
+
+	serverAddr := fmt.Sprintf("https://%s:%d", cliRunner.config.HttpHeartbeatServerAddress, cliRunner.config.HttpHeartbeatPort)
+	routes := rata.Routes{{Method: "POST", Name: "dea_heartbeat_handler", Path: "/dea/heartbeat"}}
+	requestGenerator := rata.NewRequestGenerator(serverAddr, routes)
+
+	certFile, err := filepath.Abs("../testhelpers/fake_certs/hm9000_client.crt")
+	Expect(err).NotTo(HaveOccurred())
+
+	keyFile, err := filepath.Abs("../testhelpers/fake_certs/hm9000_client.key")
+	Expect(err).NotTo(HaveOccurred())
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	Expect(err).NotTo(HaveOccurred())
+
+	caCertFile, err := filepath.Abs("../testhelpers/fake_certs/hm9000_ca.crt")
+	Expect(err).NotTo(HaveOccurred())
+
+	caCert, err := ioutil.ReadFile(caCertFile)
+	Expect(err).NotTo(HaveOccurred())
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
+
+	tlsConfig.BuildNameToCertificate()
+
+	tlsTransport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
+	httpClient := &http.Client{
+		Transport: tlsTransport,
+	}
+
+	cliRunner.StartListener(s.currentTimestamp)
+	for _, heartbeat := range s.currentHeartbeats {
+		sendHeartbeat, err := requestGenerator.CreateRequest(
+			"dea_heartbeat_handler",
+			nil,
+			bytes.NewBuffer(heartbeat.ToJSON()),
+		)
+
+		Expect(err).NotTo(HaveOccurred())
+
+		response, err := httpClient.Do(sendHeartbeat)
+		Expect(err).NotTo(HaveOccurred())
+		defer response.Body.Close()
+
+		Expect(response.StatusCode).To(Equal(http.StatusAccepted))
+	}
+
+	nHeartbeats := len(s.currentHeartbeats)
+	Eventually(func() bool {
+		return metronAgent.GetMatchingEventTotal("listener", events.Envelope_ValueMetric, metricsaccountant.SavedHeartbeats) == float64(nHeartbeats)
+	}, IterationTimeout, 1.05).Should(BeTrue())
+
+	cliRunner.StopListener()
 }
 
 func (s *Simulator) SetDesiredState(desiredStates ...models.DesiredAppState) {

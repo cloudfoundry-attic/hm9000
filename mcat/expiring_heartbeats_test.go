@@ -23,7 +23,7 @@ var _ = Describe("Expiring Heartbeats Test", func() {
 			dea2.HeartbeatWith(app3.InstanceAtIndex(0).Heartbeat()),
 		)
 		simulator.SetDesiredState(app1.DesiredState(1), app2.DesiredState(1), app3.DesiredState(1))
-		simulator.Tick(simulator.TicksToAttainFreshness)
+		simulator.Tick(simulator.TicksToAttainFreshness, false)
 	})
 
 	Context("when a dea reports than an instance is no longer present", func() {
@@ -35,9 +35,9 @@ var _ = Describe("Expiring Heartbeats Test", func() {
 		})
 
 		It("should start the instance after a grace period", func() {
-			simulator.Tick(simulator.GracePeriod)
+			simulator.Tick(simulator.GracePeriod, false)
 			Expect(startStopListener.StartCount()).To(Equal(0))
-			simulator.Tick(1)
+			simulator.Tick(1, false)
 			Expect(startStopListener.StartCount()).To(Equal(1))
 			Expect(startStopListener.Start(0).AppGuid).To(Equal(app2.AppGuid))
 
@@ -53,9 +53,9 @@ var _ = Describe("Expiring Heartbeats Test", func() {
 		})
 
 		It("should start all the instances on that dea after two grace periods (one to see the app is gone, the other to wait for it not to return)", func() {
-			simulator.Tick(simulator.GracePeriod)
+			simulator.Tick(simulator.GracePeriod, false)
 			Expect(startStopListener.StartCount()).To(Equal(0))
-			simulator.Tick(simulator.GracePeriod)
+			simulator.Tick(simulator.GracePeriod, false)
 			Expect(startStopListener.StartCount()).To(Equal(2))
 
 			appGuids := []string{

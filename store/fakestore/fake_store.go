@@ -67,13 +67,14 @@ type FakeStore struct {
 		result1 *models.App
 		result2 error
 	}
-	SyncHeartbeatsStub        func(heartbeat ...*models.Heartbeat) error
+	SyncHeartbeatsStub        func(heartbeat ...*models.Heartbeat) ([]models.InstanceHeartbeat, error)
 	syncHeartbeatsMutex       sync.RWMutex
 	syncHeartbeatsArgsForCall []struct {
 		heartbeat []*models.Heartbeat
 	}
 	syncHeartbeatsReturns struct {
-		result1 error
+		result1 []models.InstanceHeartbeat
+		result2 error
 	}
 	GetInstanceHeartbeatsStub        func() (results []models.InstanceHeartbeat, err error)
 	getInstanceHeartbeatsMutex       sync.RWMutex
@@ -170,6 +171,8 @@ type FakeStore struct {
 	compactReturns     struct {
 		result1 error
 	}
+	invocations      map[string][][]interface{}
+	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeStore) BumpActualFreshness(timestamp time.Time) error {
@@ -177,6 +180,7 @@ func (fake *FakeStore) BumpActualFreshness(timestamp time.Time) error {
 	fake.bumpActualFreshnessArgsForCall = append(fake.bumpActualFreshnessArgsForCall, struct {
 		timestamp time.Time
 	}{timestamp})
+	fake.recordInvocation("BumpActualFreshness", []interface{}{timestamp})
 	fake.bumpActualFreshnessMutex.Unlock()
 	if fake.BumpActualFreshnessStub != nil {
 		return fake.BumpActualFreshnessStub(timestamp)
@@ -207,6 +211,7 @@ func (fake *FakeStore) BumpActualFreshnessReturns(result1 error) {
 func (fake *FakeStore) RevokeActualFreshness() error {
 	fake.revokeActualFreshnessMutex.Lock()
 	fake.revokeActualFreshnessArgsForCall = append(fake.revokeActualFreshnessArgsForCall, struct{}{})
+	fake.recordInvocation("RevokeActualFreshness", []interface{}{})
 	fake.revokeActualFreshnessMutex.Unlock()
 	if fake.RevokeActualFreshnessStub != nil {
 		return fake.RevokeActualFreshnessStub()
@@ -233,6 +238,7 @@ func (fake *FakeStore) IsActualStateFresh(arg1 time.Time) (bool, error) {
 	fake.isActualStateFreshArgsForCall = append(fake.isActualStateFreshArgsForCall, struct {
 		arg1 time.Time
 	}{arg1})
+	fake.recordInvocation("IsActualStateFresh", []interface{}{arg1})
 	fake.isActualStateFreshMutex.Unlock()
 	if fake.IsActualStateFreshStub != nil {
 		return fake.IsActualStateFreshStub(arg1)
@@ -266,6 +272,7 @@ func (fake *FakeStore) VerifyFreshness(arg1 time.Time) error {
 	fake.verifyFreshnessArgsForCall = append(fake.verifyFreshnessArgsForCall, struct {
 		arg1 time.Time
 	}{arg1})
+	fake.recordInvocation("VerifyFreshness", []interface{}{arg1})
 	fake.verifyFreshnessMutex.Unlock()
 	if fake.VerifyFreshnessStub != nil {
 		return fake.VerifyFreshnessStub(arg1)
@@ -299,6 +306,7 @@ func (fake *FakeStore) AppKey(appGuid string, appVersion string) string {
 		appGuid    string
 		appVersion string
 	}{appGuid, appVersion})
+	fake.recordInvocation("AppKey", []interface{}{appGuid, appVersion})
 	fake.appKeyMutex.Unlock()
 	if fake.AppKeyStub != nil {
 		return fake.AppKeyStub(appGuid, appVersion)
@@ -329,6 +337,7 @@ func (fake *FakeStore) AppKeyReturns(result1 string) {
 func (fake *FakeStore) GetApps() (map[string]*models.App, error) {
 	fake.getAppsMutex.Lock()
 	fake.getAppsArgsForCall = append(fake.getAppsArgsForCall, struct{}{})
+	fake.recordInvocation("GetApps", []interface{}{})
 	fake.getAppsMutex.Unlock()
 	if fake.GetAppsStub != nil {
 		return fake.GetAppsStub()
@@ -357,6 +366,7 @@ func (fake *FakeStore) GetApp(appGuid string, appVersion string) (*models.App, e
 		appGuid    string
 		appVersion string
 	}{appGuid, appVersion})
+	fake.recordInvocation("GetApp", []interface{}{appGuid, appVersion})
 	fake.getAppMutex.Unlock()
 	if fake.GetAppStub != nil {
 		return fake.GetAppStub(appGuid, appVersion)
@@ -385,16 +395,17 @@ func (fake *FakeStore) GetAppReturns(result1 *models.App, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeStore) SyncHeartbeats(heartbeat ...*models.Heartbeat) error {
+func (fake *FakeStore) SyncHeartbeats(heartbeat ...*models.Heartbeat) ([]models.InstanceHeartbeat, error) {
 	fake.syncHeartbeatsMutex.Lock()
 	fake.syncHeartbeatsArgsForCall = append(fake.syncHeartbeatsArgsForCall, struct {
 		heartbeat []*models.Heartbeat
 	}{heartbeat})
+	fake.recordInvocation("SyncHeartbeats", []interface{}{heartbeat})
 	fake.syncHeartbeatsMutex.Unlock()
 	if fake.SyncHeartbeatsStub != nil {
 		return fake.SyncHeartbeatsStub(heartbeat...)
 	} else {
-		return fake.syncHeartbeatsReturns.result1
+		return fake.syncHeartbeatsReturns.result1, fake.syncHeartbeatsReturns.result2
 	}
 }
 
@@ -410,16 +421,18 @@ func (fake *FakeStore) SyncHeartbeatsArgsForCall(i int) []*models.Heartbeat {
 	return fake.syncHeartbeatsArgsForCall[i].heartbeat
 }
 
-func (fake *FakeStore) SyncHeartbeatsReturns(result1 error) {
+func (fake *FakeStore) SyncHeartbeatsReturns(result1 []models.InstanceHeartbeat, result2 error) {
 	fake.SyncHeartbeatsStub = nil
 	fake.syncHeartbeatsReturns = struct {
-		result1 error
-	}{result1}
+		result1 []models.InstanceHeartbeat
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
 	fake.getInstanceHeartbeatsMutex.Lock()
 	fake.getInstanceHeartbeatsArgsForCall = append(fake.getInstanceHeartbeatsArgsForCall, struct{}{})
+	fake.recordInvocation("GetInstanceHeartbeats", []interface{}{})
 	fake.getInstanceHeartbeatsMutex.Unlock()
 	if fake.GetInstanceHeartbeatsStub != nil {
 		return fake.GetInstanceHeartbeatsStub()
@@ -448,6 +461,7 @@ func (fake *FakeStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion st
 		appGuid    string
 		appVersion string
 	}{appGuid, appVersion})
+	fake.recordInvocation("GetInstanceHeartbeatsForApp", []interface{}{appGuid, appVersion})
 	fake.getInstanceHeartbeatsForAppMutex.Unlock()
 	if fake.GetInstanceHeartbeatsForAppStub != nil {
 		return fake.GetInstanceHeartbeatsForAppStub(appGuid, appVersion)
@@ -481,6 +495,7 @@ func (fake *FakeStore) SaveCrashCounts(crashCounts ...models.CrashCount) error {
 	fake.saveCrashCountsArgsForCall = append(fake.saveCrashCountsArgsForCall, struct {
 		crashCounts []models.CrashCount
 	}{crashCounts})
+	fake.recordInvocation("SaveCrashCounts", []interface{}{crashCounts})
 	fake.saveCrashCountsMutex.Unlock()
 	if fake.SaveCrashCountsStub != nil {
 		return fake.SaveCrashCountsStub(crashCounts...)
@@ -513,6 +528,7 @@ func (fake *FakeStore) SavePendingStartMessages(startMessages ...models.PendingS
 	fake.savePendingStartMessagesArgsForCall = append(fake.savePendingStartMessagesArgsForCall, struct {
 		startMessages []models.PendingStartMessage
 	}{startMessages})
+	fake.recordInvocation("SavePendingStartMessages", []interface{}{startMessages})
 	fake.savePendingStartMessagesMutex.Unlock()
 	if fake.SavePendingStartMessagesStub != nil {
 		return fake.SavePendingStartMessagesStub(startMessages...)
@@ -543,6 +559,7 @@ func (fake *FakeStore) SavePendingStartMessagesReturns(result1 error) {
 func (fake *FakeStore) GetPendingStartMessages() (map[string]models.PendingStartMessage, error) {
 	fake.getPendingStartMessagesMutex.Lock()
 	fake.getPendingStartMessagesArgsForCall = append(fake.getPendingStartMessagesArgsForCall, struct{}{})
+	fake.recordInvocation("GetPendingStartMessages", []interface{}{})
 	fake.getPendingStartMessagesMutex.Unlock()
 	if fake.GetPendingStartMessagesStub != nil {
 		return fake.GetPendingStartMessagesStub()
@@ -570,6 +587,7 @@ func (fake *FakeStore) DeletePendingStartMessages(startMessages ...models.Pendin
 	fake.deletePendingStartMessagesArgsForCall = append(fake.deletePendingStartMessagesArgsForCall, struct {
 		startMessages []models.PendingStartMessage
 	}{startMessages})
+	fake.recordInvocation("DeletePendingStartMessages", []interface{}{startMessages})
 	fake.deletePendingStartMessagesMutex.Unlock()
 	if fake.DeletePendingStartMessagesStub != nil {
 		return fake.DeletePendingStartMessagesStub(startMessages...)
@@ -602,6 +620,7 @@ func (fake *FakeStore) SavePendingStopMessages(stopMessages ...models.PendingSto
 	fake.savePendingStopMessagesArgsForCall = append(fake.savePendingStopMessagesArgsForCall, struct {
 		stopMessages []models.PendingStopMessage
 	}{stopMessages})
+	fake.recordInvocation("SavePendingStopMessages", []interface{}{stopMessages})
 	fake.savePendingStopMessagesMutex.Unlock()
 	if fake.SavePendingStopMessagesStub != nil {
 		return fake.SavePendingStopMessagesStub(stopMessages...)
@@ -632,6 +651,7 @@ func (fake *FakeStore) SavePendingStopMessagesReturns(result1 error) {
 func (fake *FakeStore) GetPendingStopMessages() (map[string]models.PendingStopMessage, error) {
 	fake.getPendingStopMessagesMutex.Lock()
 	fake.getPendingStopMessagesArgsForCall = append(fake.getPendingStopMessagesArgsForCall, struct{}{})
+	fake.recordInvocation("GetPendingStopMessages", []interface{}{})
 	fake.getPendingStopMessagesMutex.Unlock()
 	if fake.GetPendingStopMessagesStub != nil {
 		return fake.GetPendingStopMessagesStub()
@@ -659,6 +679,7 @@ func (fake *FakeStore) DeletePendingStopMessages(stopMessages ...models.PendingS
 	fake.deletePendingStopMessagesArgsForCall = append(fake.deletePendingStopMessagesArgsForCall, struct {
 		stopMessages []models.PendingStopMessage
 	}{stopMessages})
+	fake.recordInvocation("DeletePendingStopMessages", []interface{}{stopMessages})
 	fake.deletePendingStopMessagesMutex.Unlock()
 	if fake.DeletePendingStopMessagesStub != nil {
 		return fake.DeletePendingStopMessagesStub(stopMessages...)
@@ -692,6 +713,7 @@ func (fake *FakeStore) SaveMetric(metric string, value float64) error {
 		metric string
 		value  float64
 	}{metric, value})
+	fake.recordInvocation("SaveMetric", []interface{}{metric, value})
 	fake.saveMetricMutex.Unlock()
 	if fake.SaveMetricStub != nil {
 		return fake.SaveMetricStub(metric, value)
@@ -724,6 +746,7 @@ func (fake *FakeStore) GetMetric(metric string) (float64, error) {
 	fake.getMetricArgsForCall = append(fake.getMetricArgsForCall, struct {
 		metric string
 	}{metric})
+	fake.recordInvocation("GetMetric", []interface{}{metric})
 	fake.getMetricMutex.Unlock()
 	if fake.GetMetricStub != nil {
 		return fake.GetMetricStub(metric)
@@ -755,6 +778,7 @@ func (fake *FakeStore) GetMetricReturns(result1 float64, result2 error) {
 func (fake *FakeStore) Compact() error {
 	fake.compactMutex.Lock()
 	fake.compactArgsForCall = append(fake.compactArgsForCall, struct{}{})
+	fake.recordInvocation("Compact", []interface{}{})
 	fake.compactMutex.Unlock()
 	if fake.CompactStub != nil {
 		return fake.CompactStub()
@@ -774,6 +798,64 @@ func (fake *FakeStore) CompactReturns(result1 error) {
 	fake.compactReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeStore) Invocations() map[string][][]interface{} {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	fake.bumpActualFreshnessMutex.RLock()
+	defer fake.bumpActualFreshnessMutex.RUnlock()
+	fake.revokeActualFreshnessMutex.RLock()
+	defer fake.revokeActualFreshnessMutex.RUnlock()
+	fake.isActualStateFreshMutex.RLock()
+	defer fake.isActualStateFreshMutex.RUnlock()
+	fake.verifyFreshnessMutex.RLock()
+	defer fake.verifyFreshnessMutex.RUnlock()
+	fake.appKeyMutex.RLock()
+	defer fake.appKeyMutex.RUnlock()
+	fake.getAppsMutex.RLock()
+	defer fake.getAppsMutex.RUnlock()
+	fake.getAppMutex.RLock()
+	defer fake.getAppMutex.RUnlock()
+	fake.syncHeartbeatsMutex.RLock()
+	defer fake.syncHeartbeatsMutex.RUnlock()
+	fake.getInstanceHeartbeatsMutex.RLock()
+	defer fake.getInstanceHeartbeatsMutex.RUnlock()
+	fake.getInstanceHeartbeatsForAppMutex.RLock()
+	defer fake.getInstanceHeartbeatsForAppMutex.RUnlock()
+	fake.saveCrashCountsMutex.RLock()
+	defer fake.saveCrashCountsMutex.RUnlock()
+	fake.savePendingStartMessagesMutex.RLock()
+	defer fake.savePendingStartMessagesMutex.RUnlock()
+	fake.getPendingStartMessagesMutex.RLock()
+	defer fake.getPendingStartMessagesMutex.RUnlock()
+	fake.deletePendingStartMessagesMutex.RLock()
+	defer fake.deletePendingStartMessagesMutex.RUnlock()
+	fake.savePendingStopMessagesMutex.RLock()
+	defer fake.savePendingStopMessagesMutex.RUnlock()
+	fake.getPendingStopMessagesMutex.RLock()
+	defer fake.getPendingStopMessagesMutex.RUnlock()
+	fake.deletePendingStopMessagesMutex.RLock()
+	defer fake.deletePendingStopMessagesMutex.RUnlock()
+	fake.saveMetricMutex.RLock()
+	defer fake.saveMetricMutex.RUnlock()
+	fake.getMetricMutex.RLock()
+	defer fake.getMetricMutex.RUnlock()
+	fake.compactMutex.RLock()
+	defer fake.compactMutex.RUnlock()
+	return fake.invocations
+}
+
+func (fake *FakeStore) recordInvocation(key string, args []interface{}) {
+	fake.invocationsMutex.Lock()
+	defer fake.invocationsMutex.Unlock()
+	if fake.invocations == nil {
+		fake.invocations = map[string][][]interface{}{}
+	}
+	if fake.invocations[key] == nil {
+		fake.invocations[key] = [][]interface{}{}
+	}
+	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ store.Store = new(FakeStore)

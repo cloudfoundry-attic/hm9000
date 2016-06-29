@@ -133,15 +133,17 @@ var _ = Describe("Actual State", func() {
 				done := make(chan error, 2)
 
 				go func() {
-					done <- store.SyncHeartbeats(dea.HeartbeatWith(
+					_, err := store.SyncHeartbeats(dea.HeartbeatWith(
 						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					))
+					done <- err
 				}()
 
 				go func() {
-					done <- store.SyncHeartbeats(dea.HeartbeatWith(
+					_, err := store.SyncHeartbeats(dea.HeartbeatWith(
 						dea.GetApp(0).InstanceAtIndex(1).Heartbeat(),
 					))
+					done <- err
 				}()
 
 				err1 := <-done
@@ -184,6 +186,95 @@ var _ = Describe("Actual State", func() {
 					Expect(err).NotTo(HaveOccurred())
 					return results
 				}, 1.0, 0.05).Should(HaveLen(2)) //...and the heartbeat should return
+			})
+		})
+
+		Context("When a Heartbeat contains Instance heartbeats in the Evacuating state", func() {
+			var (
+				err                    error
+				evacuatingHeartbeat    models.InstanceHeartbeat
+				notEvacuatingHeartbeat models.InstanceHeartbeat
+				heartbeatsToEvac       []models.InstanceHeartbeat
+				crashedHeartbeat       models.InstanceHeartbeat
+			)
+
+			BeforeEach(func() {
+				evacuatingHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+				evacuatingHeartbeat.State = models.InstanceStateEvacuating
+				notEvacuatingHeartbeat = dea.GetApp(2).InstanceAtIndex(2).Heartbeat()
+				crashedHeartbeat = dea.GetApp(1).InstanceAtIndex(3).Heartbeat()
+				crashedHeartbeat.State = models.InstanceStateCrashed
+			})
+
+			It("does return the heartbeats if the cached is empty", func() {
+				newEvacuatingHeartbeat := dea.GetApp(2).InstanceAtIndex(0).Heartbeat()
+				newEvacuatingHeartbeat.State = models.InstanceStateEvacuating
+
+				heartbeatsToEvac, err = store.SyncHeartbeats(dea.HeartbeatWith(
+					newEvacuatingHeartbeat,
+				))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(heartbeatsToEvac)).To(Equal(1))
+				Expect(heartbeatsToEvac).To(ContainElement(newEvacuatingHeartbeat))
+			})
+
+			Context("when the the instance states are in the running state", func() {
+				BeforeEach(func() {
+					heartbeatsToEvac, err = store.SyncHeartbeats(dea.HeartbeatWith(
+						evacuatingHeartbeat,
+						notEvacuatingHeartbeat,
+					))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns the instance heartbeats that should send a start message", func() {
+					Expect(len(heartbeatsToEvac)).To(Equal(1))
+					Expect(heartbeatsToEvac).To(ContainElement(evacuatingHeartbeat))
+				})
+
+				It("does not return the heartbeat in the evacuating state", func() {
+					Expect(heartbeatsToEvac).ToNot(ContainElement(notEvacuatingHeartbeat))
+				})
+			})
+
+			Context("when the instance states are in the CRASHED state", func() {
+				BeforeEach(func() {
+					heartbeatsToEvac, err = store.SyncHeartbeats(dea.HeartbeatWith(
+						crashedHeartbeat,
+						notEvacuatingHeartbeat,
+					))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("does not return the heartbeat for evacuation", func() {
+					heartbeatsToEvac, err = store.SyncHeartbeats(dea.HeartbeatWith(
+						evacuatingHeartbeat,
+						notEvacuatingHeartbeat,
+					))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(heartbeatsToEvac)).To(Equal(0))
+					Expect(heartbeatsToEvac).ToNot(ContainElement(evacuatingHeartbeat))
+				})
+			})
+
+			Context("when a second request comes in and the instance states are already evacuating", func() {
+				BeforeEach(func() {
+					heartbeatsToEvac, err = store.SyncHeartbeats(dea.HeartbeatWith(
+						evacuatingHeartbeat,
+						notEvacuatingHeartbeat,
+					))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("does not return the instance heartbeats", func() {
+					heartbeatsToEvac, err := store.SyncHeartbeats(dea.HeartbeatWith(
+						evacuatingHeartbeat,
+						notEvacuatingHeartbeat,
+					))
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(heartbeatsToEvac)).To(Equal(0))
+				})
 			})
 		})
 	})
