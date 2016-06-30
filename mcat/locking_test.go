@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudfoundry-incubator/cf_http"
+	"code.cloudfoundry.org/cfhttp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -110,7 +110,7 @@ var _ = Describe("Locking", func() {
 				listenerA.Interrupt().Wait(5 * time.Second)
 			}()
 
-			client := cf_http.NewStreamingClient()
+			client := cfhttp.NewStreamingClient()
 			Eventually(func() string {
 				rsp, err := client.Get(coordinator.ConsulRunner.URL() + "/v1/catalog/service/listener-hm9000")
 				Expect(err).NotTo(HaveOccurred())

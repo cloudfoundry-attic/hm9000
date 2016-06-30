@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/consuladapter/consulrunner"
+	"code.cloudfoundry.org/consuladapter/consulrunner"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/hm9000/config"
 	storepackage "github.com/cloudfoundry/hm9000/store"

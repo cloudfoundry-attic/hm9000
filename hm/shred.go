@@ -3,8 +3,8 @@ package hm
 import (
 	"os"
 
-	"github.com/cloudfoundry-incubator/consuladapter"
-	"github.com/cloudfoundry-incubator/locket"
+	"code.cloudfoundry.org/consuladapter"
+	"code.cloudfoundry.org/locket"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/shredder"
 	"github.com/cloudfoundry/hm9000/store"

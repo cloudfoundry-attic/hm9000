@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/cf-debug-server"
+	"code.cloudfoundry.org/debugserver"
 	"github.com/cloudfoundry/dropsonde"
 
 	"github.com/cloudfoundry/hm9000/config"
@@ -147,7 +147,7 @@ func loadConfig(c *cli.Context, component string) *config.Config {
 func startDebugServer(c *cli.Context, logger lager.Logger) {
 	debugAddr := c.String("debugAddr")
 	if debugAddr != "" {
-		_, err := cf_debug_server.Run(debugAddr, nil)
+		_, err := debugserver.Run(debugAddr, nil)
 		if err != nil {
 			logger.Error("Failed to start debug server", err)
 			os.Exit(1)
