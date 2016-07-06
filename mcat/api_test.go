@@ -81,7 +81,7 @@ var _ = Describe("Serving API", func() {
 
 		Context("when the store is not fresh", func() {
 			BeforeEach(func() {
-				simulator.Tick(simulator.TicksToAttainFreshness - 1, false)
+				simulator.Tick(simulator.TicksToAttainFreshness-1, false)
 				cliRunner.StartAPIServer(simulator.currentTimestamp)
 			})
 
