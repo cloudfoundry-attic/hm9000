@@ -141,12 +141,14 @@ func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 
 				pendingStartMessages = append(pendingStartMessages, pendingStartMessage)
 			}
-			syncer.logger.Info("Sending start for evacuating instances.")
-			err = syncer.sender.Send(syncer.clock, nil, pendingStartMessages, nil)
-			if err != nil {
-				syncer.logger.Error("Failure sending start for evacuating instances", err)
+			if len(pendingStartMessages) > 0 {
+				syncer.logger.Info("Sending start for evacuating instances.")
+				err = syncer.sender.Send(syncer.clock, nil, pendingStartMessages, nil)
+				if err != nil {
+					syncer.logger.Error("Failure sending start for evacuating instances", err)
+				}
+				syncer.logger.Info("Finished sending start for evacuating instances.")
 			}
-			syncer.logger.Info("Finished sending start for evacuating instances.")
 		}
 
 		syncer.logger.Debug("Tracking Heartbeat Metrics", lager.Data{
