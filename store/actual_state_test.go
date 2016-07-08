@@ -1,6 +1,8 @@
 package store_test
 
 import (
+	"errors"
+
 	"github.com/cloudfoundry/gunk/workpool"
 	. "github.com/cloudfoundry/hm9000/store"
 	. "github.com/onsi/ginkgo"
@@ -380,48 +382,6 @@ var _ = Describe("Actual State", func() {
 				})
 			})
 
-			Context("when the cache has been updated", func() {
-				var fakeStoreAdapter *fakes.FakeStoreAdapter
-
-				BeforeEach(func() {
-					fakeStoreAdapter = &fakes.FakeStoreAdapter{}
-
-					conf.HeartbeatPeriod = 100000
-					store = NewStore(conf, fakeStoreAdapter, fakelogger.NewFakeLogger())
-
-					store.GetInstanceHeartbeats()
-				})
-
-				Context("and a heartbeat interval has not passed", func() {
-					It("does not update the cache on the next request", func() {
-						store.GetInstanceHeartbeats()
-
-						// once for the DEA query and 2 times for the "app/actual" queries
-						Expect(fakeStoreAdapter.ListRecursivelyCallCount()).To(Equal(3))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(0)).ToNot(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(1)).To(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(2)).ToNot(ContainSubstring("dea"))
-					})
-				})
-
-				Context("and a heartbeat interval has passed", func() {
-					BeforeEach(func() {
-						conf.HeartbeatPeriod = 0
-					})
-
-					It("does updates the cache on the next request", func() {
-						store.GetInstanceHeartbeats()
-
-						// 2 DEA queries and 2 times for the "app/actual" queries
-						Expect(fakeStoreAdapter.ListRecursivelyCallCount()).To(Equal(4))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(0)).ToNot(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(1)).To(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(2)).ToNot(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(3)).To(ContainSubstring("dea"))
-					})
-				})
-			})
-
 			Context("failures", func() {
 				var fakeStoreAdapter *fakes.FakeStoreAdapter
 
@@ -529,48 +489,6 @@ var _ = Describe("Actual State", func() {
 				})
 			})
 
-			Context("when the cache has been updated", func() {
-				var fakeStoreAdapter *fakes.FakeStoreAdapter
-
-				BeforeEach(func() {
-					fakeStoreAdapter = &fakes.FakeStoreAdapter{}
-
-					conf.HeartbeatPeriod = 100000
-					store = NewStore(conf, fakeStoreAdapter, fakelogger.NewFakeLogger())
-
-					store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
-				})
-
-				Context("and a heartbeat interval has not passed", func() {
-					It("does not update the cache on the next request", func() {
-						store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
-
-						// once for the DEA query and 2 times for the "app/actual" queries
-						Expect(fakeStoreAdapter.ListRecursivelyCallCount()).To(Equal(3))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(0)).ToNot(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(1)).To(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(2)).ToNot(ContainSubstring("dea"))
-					})
-				})
-
-				Context("and a heartbeat interval has passed", func() {
-					BeforeEach(func() {
-						conf.HeartbeatPeriod = 0
-					})
-
-					It("does updates the cache on the next request", func() {
-						store.GetInstanceHeartbeatsForApp(app.AppGuid, app.AppVersion)
-
-						// 2 DEA queries and 2 times for the "app/actual" queries
-						Expect(fakeStoreAdapter.ListRecursivelyCallCount()).To(Equal(4))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(0)).ToNot(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(1)).To(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(2)).ToNot(ContainSubstring("dea"))
-						Expect(fakeStoreAdapter.ListRecursivelyArgsForCall(3)).To(ContainSubstring("dea"))
-					})
-				})
-			})
-
 			Context("failures", func() {
 				var fakeStoreAdapter *fakes.FakeStoreAdapter
 
@@ -590,6 +508,134 @@ var _ = Describe("Actual State", func() {
 				})
 			})
 
+		})
+	})
+
+	Describe("Updating the dea cache", func() {
+		var fakeStoreAdapter *fakes.FakeStoreAdapter
+
+		Context("when there are no DEAs in the etcd store", func() {
+			It("returns an empty cache and no error", func() {
+				deaCache, err := store.GetDeaCache()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(deaCache).To(BeEmpty())
+			})
+		})
+
+		Context("Errors", func() {
+			BeforeEach(func() {
+				fakeStoreAdapter = &fakes.FakeStoreAdapter{}
+
+				store = NewStore(conf, fakeStoreAdapter, fakelogger.NewFakeLogger())
+			})
+
+			Context("when the etcd store cannot be reached", func() {
+				BeforeEach(func() {
+					fakeStoreAdapter.ListRecursivelyReturns(
+						storeadapter.StoreNode{
+							Key:   "key",
+							Value: []byte("value"),
+							Dir:   true,
+							TTL:   10,
+							Index: 1,
+						},
+						errors.New("bad request"),
+					)
+				})
+
+				It("returns an empty cache and the error", func() {
+					deaCache, err := store.GetDeaCache()
+					Expect(err).To(HaveOccurred())
+					Expect(deaCache).To(BeEmpty())
+				})
+			})
+
+			Context("when the etcd store returns a key not found error", func() {
+				BeforeEach(func() {
+					fakeStoreAdapter.ListRecursivelyReturns(storeadapter.StoreNode{}, storeadapter.ErrorKeyNotFound)
+				})
+
+				It("returns an empty cache and no error", func() {
+					deaCache, err := store.GetDeaCache()
+					Expect(err).ToNot(HaveOccurred())
+					Expect(deaCache).To(BeEmpty())
+				})
+			})
+		})
+
+		Context("when there are DEAs in the etcd store", func() {
+			var firstDeaCache map[string]struct{}
+
+			BeforeEach(func() {
+				app := appfixture.NewAppFixture()
+
+				heartbeatA := app.InstanceAtIndex(0).Heartbeat()
+				heartbeatA.DeaGuid = "A"
+
+				store.SyncHeartbeats(&models.Heartbeat{
+					DeaGuid: "A",
+					InstanceHeartbeats: []models.InstanceHeartbeat{
+						heartbeatA,
+					},
+				})
+
+				heartbeatB := app.InstanceAtIndex(1).Heartbeat()
+				heartbeatB.DeaGuid = "B"
+
+				store.SyncHeartbeats(&models.Heartbeat{
+					DeaGuid: "B",
+					InstanceHeartbeats: []models.InstanceHeartbeat{
+						heartbeatB,
+					},
+				})
+			})
+
+			JustBeforeEach(func() {
+				var err error
+				firstDeaCache, err = store.GetDeaCache()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("returns all valid DEAs", func() {
+				deaCache, err := store.GetDeaCache()
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(deaCache).To(HaveKey("A"))
+				Expect(deaCache).To(HaveKey("B"))
+			})
+
+			Context("and a heartbeat interval has not passed", func() {
+				BeforeEach(func() {
+					conf.HeartbeatPeriod = 100000
+				})
+
+				It("does not update the cache on the next request", func() {
+					secondDeaCache, err := store.GetDeaCache()
+					Expect(err).ToNot(HaveOccurred())
+					Expect(secondDeaCache).To(Equal(firstDeaCache))
+				})
+			})
+
+			Context("and a heartbeat interval has passed", func() {
+				Context("and a DEA has expired", func() {
+					BeforeEach(func() {
+						conf.HeartbeatPeriod = 0
+					})
+
+					JustBeforeEach(func() {
+						storeAdapter.Delete("/hm/v1/dea-presence/A")
+					})
+
+					It("removes an expired DEA from the cache", func() {
+						secondDeaCache, err := store.GetDeaCache()
+						Expect(err).ToNot(HaveOccurred())
+						Expect(secondDeaCache).ToNot(Equal(firstDeaCache))
+
+						Expect(secondDeaCache).ToNot(HaveKey("A"))
+						Expect(secondDeaCache).To(HaveKey("B"))
+					})
+				})
+			})
 		})
 	})
 })
