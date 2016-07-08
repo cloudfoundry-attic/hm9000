@@ -128,14 +128,14 @@ func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartb
 		return results, err
 	}
 
-	err = store.updateDeaCache()
+	deaCache, err := store.GetDeaCache()
 	if err != nil {
 		return results, err
 	}
 
 	expiredKeys := []string{}
 	for _, actualNode := range node.ChildNodes {
-		heartbeats, toDelete, err := store.heartbeatsForNode(actualNode)
+		heartbeats, toDelete, err := store.heartbeatsForNode(actualNode, deaCache)
 		if err != nil {
 			return []models.InstanceHeartbeat{}, nil
 		}
@@ -161,12 +161,12 @@ func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion s
 		return []models.InstanceHeartbeat{}, err
 	}
 
-	err = store.updateDeaCache()
+	deaCache, err := store.GetDeaCache()
 	if err != nil {
 		return results, err
 	}
 
-	results, expiredKeys, err := store.heartbeatsForNode(node)
+	results, expiredKeys, err := store.heartbeatsForNode(node, deaCache)
 	if err != nil {
 		return []models.InstanceHeartbeat{}, err
 	}
@@ -181,11 +181,8 @@ func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion s
 	return results, nil
 }
 
-func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode) (results []models.InstanceHeartbeat, toDelete []string, err error) {
+func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode, deaCache map[string]struct{}) (results []models.InstanceHeartbeat, toDelete []string, err error) {
 	results = []models.InstanceHeartbeat{}
-
-	store.deaRWLock.RLock()
-	defer store.deaRWLock.RUnlock()
 
 	for _, heartbeatNode := range node.ChildNodes {
 		components := strings.Split(heartbeatNode.Key, "/")
@@ -196,7 +193,7 @@ func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode) (results 
 			return []models.InstanceHeartbeat{}, []string{}, err
 		}
 
-		if store.deaCache[heartbeat.DeaGuid] {
+		if _, ok := store.deaCache[heartbeat.DeaGuid]; ok {
 			results = append(results, heartbeat)
 		} else {
 			toDelete = append(toDelete, heartbeatNode.Key)
@@ -206,26 +203,29 @@ func (store *RealStore) heartbeatsForNode(node storeadapter.StoreNode) (results 
 	return results, toDelete, nil
 }
 
-func (store *RealStore) updateDeaCache() (err error) {
-	store.deaTimestampLock.Lock()
-	defer store.deaTimestampLock.Unlock()
+func (store *RealStore) GetDeaCache() (map[string]struct{}, error) {
+	store.deaLock.Lock()
+	defer store.deaLock.Unlock()
 
-	if time.Now().After(store.deaCacheTimestamp.Add(time.Duration(store.config.HeartbeatPeriod) * time.Second)) {
-		store.deaRWLock.Lock()
-		defer store.deaRWLock.Unlock()
+	if time.Now().After(store.deaCacheExperationTimestamp) {
+		deaCache := map[string]struct{}{}
 
 		summaryNodes, err := store.adapter.ListRecursively(store.SchemaRoot() + "/dea-presence")
 		if err != nil && err != storeadapter.ErrorKeyNotFound {
 			store.logger.Error("Error in updating Dea cache from the store", err)
-			return err
+			return deaCache, err
 		}
 
+		store.deaCache = deaCache
+
 		for _, deaPresenceNode := range summaryNodes.ChildNodes {
-			store.deaCache[string(deaPresenceNode.Value)] = true
+			deaCache[string(deaPresenceNode.Value)] = struct{}{}
 		}
-		store.deaCacheTimestamp = time.Now()
+
+		store.deaCacheExperationTimestamp = time.Now().Add(time.Duration(store.config.HeartbeatPeriod) * time.Second)
 	}
-	return nil
+
+	return store.deaCache, nil
 }
 
 func (store *RealStore) instanceHeartbeatStoreKey(appGuid string, appVersion string, instanceGuid string) string {

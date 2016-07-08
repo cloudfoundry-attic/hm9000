@@ -53,6 +53,8 @@ type Store interface {
 	GetMetric(metric string) (float64, error)
 
 	Compact() error
+
+	GetDeaCache() (map[string]struct{}, error)
 }
 
 type RealStore struct {
@@ -64,11 +66,9 @@ type RealStore struct {
 	instanceHeartbeatCacheMutex     *sync.Mutex
 	instanceHeartbeatCacheTimestamp time.Time
 
-	deaRWLock *sync.RWMutex
-	deaCache  map[string]bool
-
-	deaTimestampLock  *sync.Mutex
-	deaCacheTimestamp time.Time
+	deaLock                     *sync.Mutex
+	deaCache                    map[string]struct{}
+	deaCacheExperationTimestamp time.Time
 }
 
 func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger lager.Logger) *RealStore {
@@ -79,9 +79,8 @@ func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger l
 		instanceHeartbeatCache:          map[string]models.InstanceHeartbeat{},
 		instanceHeartbeatCacheMutex:     &sync.Mutex{},
 		instanceHeartbeatCacheTimestamp: time.Unix(0, 0),
-		deaCache:                        map[string]bool{},
-		deaRWLock:                       &sync.RWMutex{},
-		deaTimestampLock:                &sync.Mutex{},
+		deaCache:                        map[string]struct{}{},
+		deaLock:                         &sync.Mutex{},
 	}
 }
 
