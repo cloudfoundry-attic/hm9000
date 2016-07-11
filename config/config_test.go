@@ -4,10 +4,10 @@ import (
 	"io/ioutil"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	. "github.com/cloudfoundry/hm9000/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Config", func() {

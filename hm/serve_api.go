@@ -9,7 +9,7 @@ import (
 
 	"github.com/tedsuo/ifrit/http_server"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 func ServeAPI(l lager.Logger, conf *config.Config) {

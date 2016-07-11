@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/consuladapter"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/locket"
 	"github.com/cloudfoundry/hm9000/analyzer"
 	"github.com/cloudfoundry/hm9000/config"
@@ -17,8 +18,7 @@ import (
 	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
-	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/clock"
 )
 
 type analyzeOutput struct {

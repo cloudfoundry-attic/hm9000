@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/pivotal-golang/lager"
 )
 
 func (store *RealStore) AppKey(appGuid string, appVersion string) string {

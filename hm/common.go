@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
@@ -14,8 +15,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/nats-io/nats"
-	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/clock"
 
 	"os"
 )

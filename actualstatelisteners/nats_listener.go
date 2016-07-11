@@ -3,10 +3,10 @@ package actualstatelisteners
 import (
 	"os"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/nats-io/nats"
-	"github.com/pivotal-golang/lager"
 
 	"github.com/cloudfoundry/yagnats"
 )

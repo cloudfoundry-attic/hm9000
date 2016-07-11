@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
-	"github.com/pivotal-golang/lager"
 )
 
 var ActualIsNotFreshError = errors.New("Actual state is not fresh")

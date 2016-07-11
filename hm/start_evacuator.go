@@ -4,11 +4,11 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/consuladapter"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/locket"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/evacuator"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
-	"github.com/pivotal-golang/lager"
 )
 
 func StartEvacuator(logger lager.Logger, conf *config.Config) {

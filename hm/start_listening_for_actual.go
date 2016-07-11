@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/cfhttp"
 
 	"code.cloudfoundry.org/consuladapter"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/locket"
 	"github.com/cloudfoundry/hm9000/actualstatelisteners"
 	"github.com/cloudfoundry/hm9000/config"
@@ -14,7 +15,6 @@ import (
 	"github.com/cloudfoundry/hm9000/sender"
 	"github.com/hashicorp/consul/api"
 	"github.com/nu7hatch/gouuid"
-	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"

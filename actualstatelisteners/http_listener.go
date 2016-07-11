@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
-	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/rata"
 )
 

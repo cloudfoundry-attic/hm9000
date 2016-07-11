@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
-	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/clock"
 )
 
 func Dump(l lager.Logger, conf *config.Config, raw bool) {

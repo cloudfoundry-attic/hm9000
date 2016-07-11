@@ -1,8 +1,8 @@
 package shredder
 
 import (
+	"code.cloudfoundry.org/lager"
 	storepackage "github.com/cloudfoundry/hm9000/store"
-	"github.com/pivotal-golang/lager"
 )
 
 type Shredder struct {

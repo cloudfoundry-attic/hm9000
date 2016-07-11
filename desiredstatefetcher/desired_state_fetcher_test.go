@@ -11,7 +11,7 @@ import (
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
-	"github.com/pivotal-golang/clock/fakeclock"
+	"code.cloudfoundry.org/clock/fakeclock"
 
 	"time"
 

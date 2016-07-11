@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/storeadapter"
-	"github.com/pivotal-golang/lager"
 )
 
 func (store *RealStore) Compact() error {

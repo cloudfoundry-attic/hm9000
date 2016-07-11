@@ -3,6 +3,7 @@ package evacuator
 import (
 	"os"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
@@ -10,8 +11,7 @@ import (
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/nats-io/nats"
-	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/clock"
 )
 
 type Evacuator struct {

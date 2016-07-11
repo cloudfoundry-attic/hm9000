@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/yagnats"
-	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/clock"
 )
 
 //go:generate counterfeiter -o fakesender/fake_sender.go . Sender

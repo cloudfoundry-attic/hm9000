@@ -1,10 +1,10 @@
 package models_test
 
 import (
+	"code.cloudfoundry.org/lager"
 	. "github.com/cloudfoundry/hm9000/models"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("InstanceHeartbeat", func() {

@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/storeadapter"
-	"github.com/pivotal-golang/lager"
 )
 
 func (store *RealStore) crashCountStoreKey(crashCount models.CrashCount) string {

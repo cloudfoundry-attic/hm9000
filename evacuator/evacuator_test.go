@@ -17,7 +17,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"github.com/nats-io/nats"
-	"github.com/pivotal-golang/clock/fakeclock"
+	"code.cloudfoundry.org/clock/fakeclock"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 

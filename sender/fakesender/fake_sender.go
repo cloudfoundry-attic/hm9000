@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/sender"
-	"github.com/pivotal-golang/clock"
+	"code.cloudfoundry.org/clock"
 )
 
 type FakeSender struct {

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/apiserver/handlers"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
@@ -17,8 +18,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/clock/fakeclock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/clock/fakeclock"
 )
 
 func decodeBulkResponse(response string) (bulkAppResp map[string]AppResponse) {

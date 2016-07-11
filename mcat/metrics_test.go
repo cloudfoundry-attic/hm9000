@@ -7,7 +7,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 )
 
 var _ = Describe("Serving Metrics", func() {

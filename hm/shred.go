@@ -4,11 +4,11 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/consuladapter"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/locket"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/shredder"
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/pivotal-golang/lager"
 )
 
 func Shred(l lager.Logger, conf *config.Config, poll bool) {

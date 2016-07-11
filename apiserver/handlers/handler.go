@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/hm9000/apiserver"
 	"github.com/cloudfoundry/hm9000/store"
-	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/clock"
 	"github.com/tedsuo/rata"
 )
 

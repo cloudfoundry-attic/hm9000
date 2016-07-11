@@ -10,7 +10,7 @@ import (
 	"github.com/cloudfoundry/hm9000/hm"
 	"github.com/codegangsta/cli"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 
 	"os"
 )
