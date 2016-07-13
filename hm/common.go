@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/hm9000/config"
@@ -15,7 +16,6 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/nats-io/nats"
-	"code.cloudfoundry.org/clock"
 
 	"os"
 )
@@ -45,7 +45,11 @@ func connectToMessageBus(l lager.Logger, conf *config.Config) yagnats.NATSConn {
 		members = append(members, uri.String())
 	}
 
-	natsClient, err := yagnats.Connect(members)
+	opts := nats.DefaultOptions
+	opts.Servers = members
+	opts.PingInterval = time.Duration(conf.NatsClientPingInterval) * time.Second
+
+	natsClient, err := yagnats.ConnectWithOptions(opts)
 	if err != nil {
 		l.Error("Failed to connect to the message bus", err)
 		os.Exit(1)
