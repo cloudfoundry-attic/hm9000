@@ -78,9 +78,9 @@ type Config struct {
 		Password string `json:"password"`
 	} `json:"nats"`
 
-	NatsClientPingInterval int `json: "nats_client_ping_interval"`
+	NatsClientPingInterval int `json:"nats_client_ping_interval"`
 
-	HttpHeartbeatServerAddress string `json: "http_heartbeat_server_address"`
+	HttpHeartbeatServerAddress string `json:"http_heartbeat_server_address"`
 	HttpHeartbeatPort          int    `json:"http_heartbeat_port"`
 
 	SSLCerts SSL `json:"ssl"`

@@ -24,6 +24,7 @@
         "ca_file": "/var/vcap/jobs/hm9000/config/certs/ca.crt"
     },
 
+    "nats_client_ping_interval": 30,
     "nats": [{
         "host": "127.0.0.1",
         "port": 4222,
