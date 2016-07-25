@@ -45,11 +45,10 @@ func connectToMessageBus(l lager.Logger, conf *config.Config) yagnats.NATSConn {
 		members = append(members, uri.String())
 	}
 
-	opts := nats.DefaultOptions
-	opts.Servers = members
+	opts := yagnats.DefaultOptions()
 	opts.PingInterval = time.Duration(conf.NatsClientPingInterval) * time.Second
 
-	natsClient, err := yagnats.ConnectWithOptions(opts)
+	natsClient, err := yagnats.ConnectWithOptions(members, opts)
 	if err != nil {
 		l.Error("Failed to connect to the message bus", err)
 		os.Exit(1)
