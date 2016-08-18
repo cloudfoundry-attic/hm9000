@@ -17,25 +17,8 @@ For more information, see [the HM9000 release announcement](http://blog.cloudfou
 ### Recovering from Failure
 
 If HM9000 enters a bad state, the simplest solution - typically - is to delete the contents of the data store.
-
-1. `bosh ssh` into each etcd node (`bosh vms` is your friend here.  We typically have `etcd_leader_z1/0`, `etcd_z1/0`, and `etcd_z2/0`)
-2. `monit stop etcd` on all the boxes (better to stop them all simultaenously!)
-3. Delete (or move) the etcd storage directory located under `/var/vcap/store`
-4. Run `monit start etcd` on each etcd node
-5. HM9000 should recover on its own.
-
-### If Clustered etcd can't handle the load
-
-You can identify this scenario by monitoring the `DesiredStateSyncTimeInMilliseconds` metric.  If the `DesiredStateSyncTimeInMilliseconds` exceeds ~5000 (5 seconds) then clustered etcd *may* be unable to handle the load.
-
-To resolve this, you'll need to pick one of the HM9000 nodes (`hm9000_z1/0` or `hm9000_z2/0`) and make it the solitary HM9000 node and point it at its local etcd database.  Here's how - let's say we want to keep `hm9000_z1/0` around:
-
-1. `bosh ssh` onto `hm9000_z2/0` and issue a `monit stop all`
-2. `bosh ssh` onto `hm9000_z1/0` and issue a `monit stop all`
-3. Edit `/var/vcap/jobs/hm9000/config/hm9000.json` and set `store_urls` to a single entry: `"store_urls": ["http://127.0.0.1:4001"],`
-4. Now `monit start all` and tail `/var/vcap/sys/log/hm9000/hm9000_listener.stdout.log` you should see heartbeats come in and get succesfully saved to the store.
-5. Eventually, `/var/vcap/packages/hm9000/hm9000 dump --config=/var/vcap/jobs/hm9000/config/hm9000.json` should report that the store is fresh (this is near the top of the output).
-
+Follow the steps defined by the etcd-release for [Disaster Recovery](https://github.com/cloudfoundry-incubator/etcd-release#disaster-recovery)
+HM9000 should recover on its own.
 
 ## Installing HM9000 locally
 
