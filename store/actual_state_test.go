@@ -3,7 +3,7 @@ package store_test
 import (
 	"errors"
 
-	"github.com/cloudfoundry/gunk/workpool"
+	"code.cloudfoundry.org/workpool"
 	. "github.com/cloudfoundry/hm9000/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

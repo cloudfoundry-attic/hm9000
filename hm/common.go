@@ -8,7 +8,7 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/workpool"
+	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/store"

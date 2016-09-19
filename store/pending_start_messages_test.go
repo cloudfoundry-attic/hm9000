@@ -3,7 +3,7 @@ package store_test
 import (
 	"time"
 
-	"github.com/cloudfoundry/gunk/workpool"
+	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/hm9000/config"
 	"github.com/cloudfoundry/hm9000/models"
 	. "github.com/cloudfoundry/hm9000/store"

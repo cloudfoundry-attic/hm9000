@@ -1,7 +1,7 @@
 package store_test
 
 import (
-	"github.com/cloudfoundry/gunk/workpool"
+	"code.cloudfoundry.org/workpool"
 	. "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/storeadapter/storenodematchers"
 	. "github.com/onsi/ginkgo"
