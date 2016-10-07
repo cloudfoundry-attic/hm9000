@@ -62,6 +62,7 @@ type RealStore struct {
 	adapter storeadapter.StoreAdapter
 	logger  lager.Logger
 
+	heartbeatCache                  map[string]map[string]struct{}
 	instanceHeartbeatCache          map[string]models.InstanceHeartbeat
 	instanceHeartbeatCacheMutex     *sync.Mutex
 	instanceHeartbeatCacheTimestamp time.Time
@@ -76,6 +77,7 @@ func NewStore(config *config.Config, adapter storeadapter.StoreAdapter, logger l
 		config:                          config,
 		adapter:                         adapter,
 		logger:                          logger,
+		heartbeatCache:                  map[string]map[string]struct{}{},
 		instanceHeartbeatCache:          map[string]models.InstanceHeartbeat{},
 		instanceHeartbeatCacheMutex:     &sync.Mutex{},
 		instanceHeartbeatCacheTimestamp: time.Unix(0, 0),

@@ -21,16 +21,23 @@ func (store *RealStore) ensureCacheIsReady() error {
 			return err
 		}
 
+		store.heartbeatCache = map[string]map[string]struct{}{}
 		store.instanceHeartbeatCache = map[string]models.InstanceHeartbeat{}
 		for _, heartbeat := range heartbeats {
 			store.instanceHeartbeatCache[heartbeat.InstanceGuid] = heartbeat
+			dea, found := store.heartbeatCache[heartbeat.DeaGuid]
+			if !found {
+				dea = map[string]struct{}{}
+				store.heartbeatCache[heartbeat.DeaGuid] = dea
+			}
+			dea[heartbeat.InstanceGuid] = struct{}{}
 		}
+
 		store.instanceHeartbeatCacheTimestamp = time.Now()
-		store.logger.Debug("Busting store cache", lager.Data{
+		store.logger.Debug("Rebuild store cache", lager.Data{
 			"Duration":                   time.Since(t).String(),
 			"Instance Heartbeats Loaded": fmt.Sprintf("%d", len(store.instanceHeartbeatCache)),
 		})
-
 	}
 
 	return nil
@@ -51,9 +58,20 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 
 	store.instanceHeartbeatCacheMutex.Lock()
 
-	for _, incomingHeartbeat := range incomingHeartbeats {
+	latestHeartbeats := map[string]*models.Heartbeat{}
+	for _, heartbeat := range incomingHeartbeats {
+		latestHeartbeats[heartbeat.DeaGuid] = heartbeat
+	}
+
+	for _, incomingHeartbeat := range latestHeartbeats {
 		numberOfInstanceHeartbeats += len(incomingHeartbeat.InstanceHeartbeats)
 		incomingInstanceGuids := map[string]bool{}
+		deaHeartbeat, found := store.heartbeatCache[incomingHeartbeat.DeaGuid]
+		if !found {
+			deaHeartbeat = map[string]struct{}{}
+			store.heartbeatCache[incomingHeartbeat.DeaGuid] = deaHeartbeat
+		}
+
 		nodesToSave = append(nodesToSave, store.deaPresenceNode(incomingHeartbeat.DeaGuid))
 		for _, incomingInstanceHeartbeat := range incomingHeartbeat.InstanceHeartbeats {
 			incomingInstanceGuids[incomingInstanceHeartbeat.InstanceGuid] = true
@@ -69,20 +87,26 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 
 			nodesToSave = append(nodesToSave, store.storeNodeForInstanceHeartbeat(incomingInstanceHeartbeat))
 			store.instanceHeartbeatCache[incomingInstanceHeartbeat.InstanceGuid] = incomingInstanceHeartbeat
+			deaHeartbeat[incomingInstanceHeartbeat.InstanceGuid] = struct{}{}
 		}
 
 		cacheKeysToDelete := []string{}
-
-		for _, existingInstanceHeartbeat := range store.instanceHeartbeatCache {
-			if existingInstanceHeartbeat.DeaGuid == incomingHeartbeat.DeaGuid && !incomingInstanceGuids[existingInstanceHeartbeat.InstanceGuid] {
+		for instanceGuid, _ := range deaHeartbeat {
+			if !incomingInstanceGuids[instanceGuid] {
+				existingInstanceHeartbeat := store.instanceHeartbeatCache[instanceGuid]
 				key := store.instanceHeartbeatStoreKey(existingInstanceHeartbeat.AppGuid, existingInstanceHeartbeat.AppVersion, existingInstanceHeartbeat.InstanceGuid)
 				keysToDelete = append(keysToDelete, key)
 				cacheKeysToDelete = append(cacheKeysToDelete, existingInstanceHeartbeat.InstanceGuid)
 			}
 		}
 
-		for _, key := range cacheKeysToDelete {
-			delete(store.instanceHeartbeatCache, key)
+		for _, k := range cacheKeysToDelete {
+			delete(deaHeartbeat, k)
+			delete(store.instanceHeartbeatCache, k)
+		}
+
+		if len(deaHeartbeat) == 0 {
+			delete(store.heartbeatCache, incomingHeartbeat.DeaGuid)
 		}
 	}
 
@@ -107,13 +131,14 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 	}
 
 	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), lager.Data{
-		"Number of Heartbeats":          fmt.Sprintf("%d", len(incomingHeartbeats)),
-		"Number of Instance Heartbeats": fmt.Sprintf("%d", numberOfInstanceHeartbeats),
-		"Number of Items Saved":         fmt.Sprintf("%d", len(nodesToSave)),
-		"Number of Items Deleted":       fmt.Sprintf("%d", len(keysToDelete)),
-		"Duration":                      fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
-		"Save Duration":                 fmt.Sprintf("%.4f seconds", dtSave),
-		"Delete Duration":               fmt.Sprintf("%.4f seconds", dtDelete),
+		"Number of Received Heartbeats":  fmt.Sprintf("%d", len(incomingHeartbeats)),
+		"Number of Processed Heartbeats": fmt.Sprintf("%d", len(latestHeartbeats)),
+		"Number of Instance Heartbeats":  fmt.Sprintf("%d", numberOfInstanceHeartbeats),
+		"Number of Items Saved":          fmt.Sprintf("%d", len(nodesToSave)),
+		"Number of Items Deleted":        fmt.Sprintf("%d", len(keysToDelete)),
+		"Duration":                       fmt.Sprintf("%.4f seconds", time.Since(t).Seconds()),
+		"Save Duration":                  fmt.Sprintf("%.4f seconds", dtSave),
+		"Delete Duration":                fmt.Sprintf("%.4f seconds", dtDelete),
 	})
 
 	return heartbeatsToEvac, nil
