@@ -43,7 +43,7 @@ func (handler *bulkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal(bodyBytes, &requests)
 	if err != nil {
-		handler.logger.Error("Failed to handle bulk_app_state request", err, lager.Data{
+		handler.logger.Error("Failed to unmarshal bulk app state request", err, lager.Data{
 			"payload":      string(bodyBytes),
 			"elapsed time": fmt.Sprintf("%s", time.Since(startTime)),
 		})
@@ -53,7 +53,7 @@ func (handler *bulkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err = handler.store.VerifyFreshness(handler.clock.Now())
 	if err != nil {
-		handler.logger.Error("Failed to handle bulk_app_state request", err, lager.Data{
+		handler.logger.Error("Failed to verify freshness while handling bulk app state request", err, lager.Data{
 			"payload":      string(bodyBytes),
 			"elapsed time": fmt.Sprintf("%s", time.Since(startTime)),
 		})
@@ -71,7 +71,7 @@ func (handler *bulkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	appsJson, err := json.Marshal(apps)
 	if err != nil {
-		handler.logger.Error("Failed to handle bulk_app_state request", err, lager.Data{
+		handler.logger.Error("Failed to marshal app states while handling bulk app state request", err, lager.Data{
 			"payload":      string(bodyBytes),
 			"elapsed time": fmt.Sprintf("%s", time.Since(startTime)),
 		})
