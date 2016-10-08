@@ -138,6 +138,10 @@ func defaults() Config {
 	}
 }
 
+func (conf *Config) HeartbeatDuration() time.Duration {
+	return time.Duration(conf.HeartbeatPeriod) * time.Second
+}
+
 func (conf *Config) HeartbeatTTL() uint64 {
 	return conf.HeartbeatTTLInHeartbeats * conf.HeartbeatPeriod
 }
@@ -159,43 +163,43 @@ func (conf *Config) FetcherNetworkTimeout() time.Duration {
 }
 
 func (conf *Config) SenderPollingInterval() time.Duration {
-	return time.Duration(conf.SenderPollingIntervalInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.SenderPollingIntervalInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) SenderTimeout() time.Duration {
-	return time.Duration(conf.SenderTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.SenderTimeoutInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) FetcherPollingInterval() time.Duration {
-	return time.Duration(conf.FetcherPollingIntervalInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.FetcherPollingIntervalInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) FetcherTimeout() time.Duration {
-	return time.Duration(conf.FetcherTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.FetcherTimeoutInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) ShredderPollingInterval() time.Duration {
-	return time.Duration(conf.ShredderPollingIntervalInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.ShredderPollingIntervalInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) ShredderTimeout() time.Duration {
-	return time.Duration(conf.ShredderTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.ShredderTimeoutInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) AnalyzerPollingInterval() time.Duration {
-	return time.Duration(conf.AnalyzerPollingIntervalInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.AnalyzerPollingIntervalInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) AnalyzerTimeout() time.Duration {
-	return time.Duration(conf.AnalyzerTimeoutInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.AnalyzerTimeoutInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) StartingBackoffDelay() time.Duration {
-	return time.Duration(conf.StartingBackoffDelayInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.StartingBackoffDelayInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) MaximumBackoffDelay() time.Duration {
-	return time.Duration(conf.MaximumBackoffDelayInHeartbeats*int(conf.HeartbeatPeriod)) * time.Second
+	return time.Duration(conf.MaximumBackoffDelayInHeartbeats) * conf.HeartbeatDuration()
 }
 
 func (conf *Config) ListenerHeartbeatSyncInterval() time.Duration {

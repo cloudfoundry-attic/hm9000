@@ -110,7 +110,7 @@ func (syncer *actualStateSyncer) syncHeartbeats(ctlChan <-chan bool) {
 				syncer.store.RevokeActualFreshness()
 			} else {
 				dt := syncer.clock.Since(t)
-				if dt < syncer.config.ListenerHeartbeatSyncInterval() {
+				if dt < syncer.config.HeartbeatDuration() {
 					syncer.bumpFreshness()
 				} else {
 					syncer.logger.Info("Save took too long.  Not bumping freshness.")
