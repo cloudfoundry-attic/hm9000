@@ -10,10 +10,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-func (store *RealStore) ensureCacheIsReady() error {
-	store.instanceHeartbeatCacheMutex.Lock()
-	defer store.instanceHeartbeatCacheMutex.Unlock()
-
+func (store *RealStore) loadCache() error {
 	if time.Since(store.instanceHeartbeatCacheTimestamp) >= store.config.StoreHeartbeatCacheRefreshInterval() {
 		t := time.Now()
 		heartbeats, err := store.GetInstanceHeartbeats()
@@ -21,6 +18,7 @@ func (store *RealStore) ensureCacheIsReady() error {
 			return err
 		}
 
+		store.instanceHeartbeatCacheTimestamp = t
 		store.heartbeatCache = map[string]map[string]struct{}{}
 		store.instanceHeartbeatCache = map[string]models.InstanceHeartbeat{}
 		for _, heartbeat := range heartbeats {
@@ -32,8 +30,6 @@ func (store *RealStore) ensureCacheIsReady() error {
 			}
 			dea[heartbeat.InstanceGuid] = struct{}{}
 		}
-
-		store.instanceHeartbeatCacheTimestamp = time.Now()
 		store.logger.Debug("Rebuild store cache", lager.Data{
 			"Duration":                   time.Since(t).String(),
 			"Instance Heartbeats Loaded": fmt.Sprintf("%d", len(store.instanceHeartbeatCache)),
@@ -46,7 +42,10 @@ func (store *RealStore) ensureCacheIsReady() error {
 func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) error {
 	t := time.Now()
 
-	err := store.ensureCacheIsReady()
+	store.instanceHeartbeatCacheMutex.Lock()
+	defer store.instanceHeartbeatCacheMutex.Unlock()
+
+	err := store.loadCache()
 	if err != nil {
 		return err
 	}
@@ -54,8 +53,6 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 	nodesToSave := []storeadapter.StoreNode{}
 	keysToDelete := []string{}
 	numberOfInstanceHeartbeats := 0
-
-	store.instanceHeartbeatCacheMutex.Lock()
 
 	latestHeartbeats := map[string]*models.Heartbeat{}
 	for _, heartbeat := range incomingHeartbeats {
@@ -104,8 +101,6 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 			delete(store.heartbeatCache, incomingHeartbeat.DeaGuid)
 		}
 	}
-
-	store.instanceHeartbeatCacheMutex.Unlock()
 
 	tSave := time.Now()
 	err = store.adapter.SetMulti(nodesToSave)
