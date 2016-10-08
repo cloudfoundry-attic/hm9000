@@ -186,9 +186,9 @@ var _ = Describe("Actual state listener", func() {
 			})
 		})
 
-		Context("and the SyncHeartbeats completes after the next interval", func() {
+		Context("and the SyncHeartbeats completes after the heartbeat period", func() {
 			BeforeEach(func() {
-				interval := conf.ListenerHeartbeatSyncInterval()
+				interval := conf.HeartbeatDuration()
 				clock := clock
 				store.SyncHeartbeatsStub = func(_ ...*Heartbeat) ([]InstanceHeartbeat, error) {
 					clock.Increment(interval)
