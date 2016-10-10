@@ -39,9 +39,7 @@ func ifritizeComponent(hm *Component) error {
 	return ifritize(hm.logger, hm.component, hm, hm.conf)
 }
 
-func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *config.Config) error {
-	releaseLockChannel := acquireLock(logger, conf, name)
-
+func ifritizeNoLock(logger lager.Logger, name string, runner ifrit.Runner, conf *config.Config) error {
 	group := grouper.NewOrdered(os.Interrupt, grouper.Members{
 		{name, runner},
 	})
@@ -53,6 +51,14 @@ func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *confi
 	if err != nil {
 		logger.Error(fmt.Sprintf("%s exiting on error", name), err)
 	}
+
+	return err
+}
+
+func ifritize(logger lager.Logger, name string, runner ifrit.Runner, conf *config.Config) error {
+	releaseLockChannel := acquireLock(logger, conf, name)
+
+	err := ifritizeNoLock(logger, name, runner, conf)
 
 	released := make(chan bool)
 	releaseLockChannel <- released
