@@ -1,11 +1,11 @@
 package analyzer_test
 
 import (
+	"code.cloudfoundry.org/clock/fakeclock"
 	. "github.com/cloudfoundry/hm9000/analyzer"
 	. "github.com/cloudfoundry/hm9000/testhelpers/custommatchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/clock/fakeclock"
 
 	"errors"
 	"time"
@@ -15,6 +15,7 @@ import (
 	storepackage "github.com/cloudfoundry/hm9000/store"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/hm9000/testhelpers/fakelogger"
+	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 )
 
@@ -947,7 +948,7 @@ var _ = Describe("Analyzer", func() {
 
 			It("should return the store's error and not send any start/stop messages", func() {
 				_, _, _, err := analyzer.Analyze(appQueue)
-				Expect(err).To(Equal(errors.New("oops!")))
+				Expect(err.(storeadapter.Error).Error()).To(Equal("oops!"))
 				Expect(startMessages()).To(BeEmpty())
 				Expect(stopMessages()).To(BeEmpty())
 			})

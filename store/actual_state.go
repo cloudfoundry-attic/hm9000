@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -100,10 +101,12 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 	err = store.adapter.Delete(keysToDelete...)
 	dtDelete := time.Since(tDelete).Seconds()
 
-	if err == storeadapter.ErrorKeyNotFound {
-		store.logger.Debug("store.SyncHeartbeats Failed to delete a key, soldiering on...")
-	} else if err != nil {
-		return heartbeatsToEvac, err
+	if err != nil {
+		if err.(storeadapter.Error).Type() == storeadapter.ErrorKeyNotFound {
+			store.logger.Debug("store.SyncHeartbeats Failed to delete a key, soldiering on...")
+		} else {
+			return heartbeatsToEvac, err
+		}
 	}
 
 	store.logger.Debug(fmt.Sprintf("Save Duration Actual"), lager.Data{
@@ -122,10 +125,12 @@ func (store *RealStore) SyncHeartbeats(incomingHeartbeats ...*models.Heartbeat) 
 func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartbeat, err error) {
 	results = []models.InstanceHeartbeat{}
 	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/actual")
-	if err == storeadapter.ErrorKeyNotFound {
-		return results, nil
-	} else if err != nil {
-		return results, err
+	if err != nil {
+		if err.(storeadapter.Error).Type() == storeadapter.ErrorKeyNotFound {
+			return results, nil
+		} else {
+			return results, err
+		}
 	}
 
 	deaCache, err := store.GetDeaCache()
@@ -144,10 +149,12 @@ func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartb
 	}
 
 	err = store.adapter.Delete(expiredKeys...)
-	if err == storeadapter.ErrorKeyNotFound {
-		store.logger.Debug("store.GetInstanceHeartbeats Failed to delete a key, soldiering on...")
-	} else if err != nil {
-		return []models.InstanceHeartbeat{}, err
+	if err != nil {
+		if err.(storeadapter.Error).Type() == storeadapter.ErrorKeyNotFound {
+			store.logger.Debug("store.GetInstanceHeartbeats Failed to delete a key, soldiering on...")
+		} else {
+			return []models.InstanceHeartbeat{}, err
+		}
 	}
 
 	return results, nil
@@ -155,10 +162,12 @@ func (store *RealStore) GetInstanceHeartbeats() (results []models.InstanceHeartb
 
 func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion string) (results []models.InstanceHeartbeat, err error) {
 	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/actual/" + store.AppKey(appGuid, appVersion))
-	if err == storeadapter.ErrorKeyNotFound {
-		return []models.InstanceHeartbeat{}, nil
-	} else if err != nil {
-		return []models.InstanceHeartbeat{}, err
+	if err != nil {
+		if err.(storeadapter.Error).Type() == storeadapter.ErrorKeyNotFound {
+			return []models.InstanceHeartbeat{}, nil
+		} else {
+			return []models.InstanceHeartbeat{}, err
+		}
 	}
 
 	deaCache, err := store.GetDeaCache()
@@ -172,10 +181,12 @@ func (store *RealStore) GetInstanceHeartbeatsForApp(appGuid string, appVersion s
 	}
 
 	err = store.adapter.Delete(expiredKeys...)
-	if err == storeadapter.ErrorKeyNotFound {
-		store.logger.Debug("store.GetInstanceHeartbeatsForApp Failed to delete a key, soldiering on...")
-	} else if err != nil {
-		return []models.InstanceHeartbeat{}, err
+	if err != nil {
+		if err.(storeadapter.Error).Type() == storeadapter.ErrorKeyNotFound {
+			store.logger.Debug("store.GetInstanceHeartbeatsForApp Failed to delete a key, soldiering on...")
+		} else {
+			return []models.InstanceHeartbeat{}, err
+		}
 	}
 
 	return results, nil
@@ -211,8 +222,15 @@ func (store *RealStore) GetDeaCache() (map[string]struct{}, error) {
 		deaCache := map[string]struct{}{}
 
 		summaryNodes, err := store.adapter.ListRecursively(store.SchemaRoot() + "/dea-presence")
-		if err != nil && err != storeadapter.ErrorKeyNotFound {
-			store.logger.Error("Error in updating Dea cache from the store", err)
+		if err != nil {
+			et := reflect.TypeOf(err)
+			if et.Implements(reflect.TypeOf((*storeadapter.Error)(nil)).Elem()) {
+				if err.(storeadapter.Error).Type() != storeadapter.ErrorKeyNotFound {
+					store.logger.Error("Error in updating Dea cache from the store", err)
+					return deaCache, err
+				}
+			}
+
 			return deaCache, err
 		}
 

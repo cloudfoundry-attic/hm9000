@@ -37,7 +37,7 @@ func (store *RealStore) bumpFreshness(key string, ttl uint64, timestamp time.Tim
 
 func (store *RealStore) IsActualStateFresh(currentTime time.Time) (bool, error) {
 	node, err := store.adapter.Get(store.SchemaRoot() + store.config.ActualFreshnessKey)
-	if err == storeadapter.ErrorKeyNotFound {
+	if err != nil && err.(storeadapter.Error).Type() == storeadapter.ErrorKeyNotFound {
 		return false, nil
 	}
 	if err != nil {

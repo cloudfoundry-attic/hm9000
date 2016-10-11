@@ -376,9 +376,9 @@ var _ = Describe("Actual State", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(0).AppGuid, dea.GetApp(0).AppVersion) + "/" + dea.GetApp(0).InstanceAtIndex(1).Heartbeat().StoreKey())
-					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(dea.GetApp(1).AppGuid, dea.GetApp(1).AppVersion) + "/" + dea.GetApp(1).InstanceAtIndex(3).Heartbeat().StoreKey())
-					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 				})
 			})
 
@@ -388,7 +388,7 @@ var _ = Describe("Actual State", func() {
 				Context("When the storeadapter does not have a key for an app", func() {
 					BeforeEach(func() {
 						fakeStoreAdapter = &fakes.FakeStoreAdapter{}
-						fakeStoreAdapter.DeleteReturns(storeadapter.ErrorKeyNotFound)
+						fakeStoreAdapter.DeleteReturns(storeadapter.NewError(errors.New(storeadapter.ErrorKeyNotFoundDescription), storeadapter.ErrorKeyNotFound))
 
 						store = NewStore(conf, fakeStoreAdapter, fakelogger.NewFakeLogger())
 					})
@@ -472,7 +472,7 @@ var _ = Describe("Actual State", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = storeAdapter.Get("/hm/v1/apps/actual/" + store.AppKey(app.AppGuid, app.AppVersion) + "/" + heartbeatA.StoreKey())
-					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 				})
 			})
 
@@ -495,7 +495,7 @@ var _ = Describe("Actual State", func() {
 				Context("When the storeadapter does not have a key for an app", func() {
 					BeforeEach(func() {
 						fakeStoreAdapter = &fakes.FakeStoreAdapter{}
-						fakeStoreAdapter.DeleteReturns(storeadapter.ErrorKeyNotFound)
+						fakeStoreAdapter.DeleteReturns(storeadapter.NewError(errors.New(storeadapter.ErrorKeyNotFoundDescription), storeadapter.ErrorKeyNotFound))
 
 						store = NewStore(conf, fakeStoreAdapter, fakelogger.NewFakeLogger())
 					})
@@ -543,7 +543,7 @@ var _ = Describe("Actual State", func() {
 					)
 				})
 
-				It("returns an empty cache and the error", func() {
+				FIt("returns an empty cache and the error", func() {
 					deaCache, err := store.GetDeaCache()
 					Expect(err).To(HaveOccurred())
 					Expect(deaCache).To(BeEmpty())
@@ -552,7 +552,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when the etcd store returns a key not found error", func() {
 				BeforeEach(func() {
-					fakeStoreAdapter.ListRecursivelyReturns(storeadapter.StoreNode{}, storeadapter.ErrorKeyNotFound)
+					fakeStoreAdapter.ListRecursivelyReturns(storeadapter.StoreNode{}, storeadapter.NewError(errors.New(storeadapter.ErrorKeyNotFoundDescription), storeadapter.ErrorKeyNotFound))
 				})
 
 				It("returns an empty cache and no error", func() {

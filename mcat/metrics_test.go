@@ -1,13 +1,13 @@
 package mcat_test
 
 import (
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/hm9000/helpers/metricsaccountant"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/testhelpers/appfixture"
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/localip"
 )
 
 var _ = Describe("Serving Metrics", func() {
@@ -69,13 +69,13 @@ var _ = Describe("Serving Metrics", func() {
 
 	Context("when the store is not fresh", func() {
 		BeforeEach(func() {
-			simulator.Tick(simulator.TicksToAttainFreshness - 1, false)
+			simulator.Tick(simulator.TicksToAttainFreshness-1, false)
 		})
 
 		It("should return -1 for all metrics", func() {
 			Eventually(func() bool {
 				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfAppsWithMissingInstances", -1.0)
-			}).Should(BeTrue())
+			}, "5s").Should(BeTrue())
 			Eventually(func() bool {
 				return metronAgent.MatchEvent("analyzer", events.Envelope_ValueMetric, "NumberOfUndesiredRunningApps", -1.0)
 			}).Should(BeTrue())

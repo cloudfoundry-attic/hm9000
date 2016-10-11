@@ -59,10 +59,10 @@ var _ = Describe("Compact", func() {
 
 		It("To delete everything under older versions", func() {
 			_, err := storeAdapter.Get("/hm/v3/delete/me")
-			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 
 			_, err = storeAdapter.Get("/hm/v16/delete/me")
-			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 		})
 
 		It("To leave the current version alone", func() {
@@ -85,13 +85,13 @@ var _ = Describe("Compact", func() {
 
 		It("To delete anything that's unversioned", func() {
 			_, err := storeAdapter.Get("/hm/delete/me")
-			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 
 			_, err = storeAdapter.Get("/hm/v1ola/delete/me")
-			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 
 			_, err = storeAdapter.Get("/hm/delete/me/too")
-			Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+			Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 		})
 
 		It("To not touch anything that isn't under the hm namespace", func() {
@@ -126,7 +126,7 @@ var _ = Describe("Compact", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = storeAdapter.Get("/hm/v17/pokemon")
-					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 				})
 			})
 
@@ -149,10 +149,10 @@ var _ = Describe("Compact", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						_, err = storeAdapter.Get("/hm/v17/deep-pokemon/abra/kadabra")
-						Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+						Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 
 						_, err = storeAdapter.Get("/hm/v17/deep-pokemon/abra")
-						Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+						Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 					})
 				})
 			})
