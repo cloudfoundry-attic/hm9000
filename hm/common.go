@@ -90,6 +90,7 @@ func connectToStoreAdapter(l lager.Logger, conf *config.Config) storeadapter.Sto
 			ClusterUrls: conf.StoreURLs,
 		}
 	}
+	options.MaxIdleConns = conf.StoreMaxConcurrentRequests
 
 	adapter, err = etcdstoreadapter.New(options, workPool)
 	if err != nil {
