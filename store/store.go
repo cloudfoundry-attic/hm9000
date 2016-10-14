@@ -93,11 +93,12 @@ func (store *RealStore) SchemaRoot() string {
 func (store *RealStore) fetchNodesUnderDir(dir string) ([]storeadapter.StoreNode, error) {
 	node, err := store.adapter.ListRecursively(dir)
 	if err != nil {
-		if err == storeadapter.ErrorKeyNotFound {
+		if storeErr, ok := err.(storeadapter.Error); ok && storeErr.Type() == storeadapter.ErrorKeyNotFound {
 			return []storeadapter.StoreNode{}, nil
 		}
 		return []storeadapter.StoreNode{}, err
 	}
+
 	return node.ChildNodes, nil
 }
 

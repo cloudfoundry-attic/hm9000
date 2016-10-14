@@ -114,7 +114,7 @@ var _ = Describe("Storing PendingStartMessages", func() {
 		Context("When the start message key is missing", func() {
 			BeforeEach(func() {
 				_, err := storeAdapter.ListRecursively("/hm/v1/start")
-				Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+				Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 			})
 
 			It("returns an empty array and no error", func() {

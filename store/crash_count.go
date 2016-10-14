@@ -37,10 +37,10 @@ func (store *RealStore) SaveCrashCounts(crashCounts ...models.CrashCount) error 
 
 func (store *RealStore) getCrashCounts() (results []models.CrashCount, err error) {
 	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/crashes")
-
-	if err == storeadapter.ErrorKeyNotFound {
-		return results, nil
-	} else if err != nil {
+	if err != nil {
+		if storeErr, ok := err.(storeadapter.Error); ok && storeErr.Type() == storeadapter.ErrorKeyNotFound {
+			return results, nil
+		}
 		return results, err
 	}
 
@@ -57,9 +57,10 @@ func (store *RealStore) getCrashCounts() (results []models.CrashCount, err error
 
 func (store *RealStore) getCrashCountForApp(appGuid string, appVersion string) (results []models.CrashCount, err error) {
 	node, err := store.adapter.ListRecursively(store.SchemaRoot() + "/apps/crashes/" + store.AppKey(appGuid, appVersion))
-	if err == storeadapter.ErrorKeyNotFound {
-		return []models.CrashCount{}, nil
-	} else if err != nil {
+	if err != nil {
+		if storeErr, ok := err.(storeadapter.Error); ok && storeErr.Type() == storeadapter.ErrorKeyNotFound {
+			return []models.CrashCount{}, nil
+		}
 		return []models.CrashCount{}, err
 	}
 

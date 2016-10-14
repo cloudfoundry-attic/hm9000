@@ -114,7 +114,7 @@ var _ = Describe("Storing PendingStopMessages", func() {
 		Context("When the stop message key is missing", func() {
 			BeforeEach(func() {
 				_, err := storeAdapter.ListRecursively("/hm/v1/stop")
-				Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+				Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 			})
 
 			It("returns an empty array and no error", func() {

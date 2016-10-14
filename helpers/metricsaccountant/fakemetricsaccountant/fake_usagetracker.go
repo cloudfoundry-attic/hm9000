@@ -19,11 +19,14 @@ type FakeUsageTracker struct {
 		result1 float64
 		result2 time.Duration
 	}
+	invocations      map[string][][]interface{}
+	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeUsageTracker) StartTrackingUsage() {
 	fake.startTrackingUsageMutex.Lock()
 	fake.startTrackingUsageArgsForCall = append(fake.startTrackingUsageArgsForCall, struct{}{})
+	fake.recordInvocation("StartTrackingUsage", []interface{}{})
 	fake.startTrackingUsageMutex.Unlock()
 	if fake.StartTrackingUsageStub != nil {
 		fake.StartTrackingUsageStub()
@@ -39,6 +42,7 @@ func (fake *FakeUsageTracker) StartTrackingUsageCallCount() int {
 func (fake *FakeUsageTracker) MeasureUsage() (usage float64, measurementDuration time.Duration) {
 	fake.measureUsageMutex.Lock()
 	fake.measureUsageArgsForCall = append(fake.measureUsageArgsForCall, struct{}{})
+	fake.recordInvocation("MeasureUsage", []interface{}{})
 	fake.measureUsageMutex.Unlock()
 	if fake.MeasureUsageStub != nil {
 		return fake.MeasureUsageStub()
@@ -59,6 +63,28 @@ func (fake *FakeUsageTracker) MeasureUsageReturns(result1 float64, result2 time.
 		result1 float64
 		result2 time.Duration
 	}{result1, result2}
+}
+
+func (fake *FakeUsageTracker) Invocations() map[string][][]interface{} {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	fake.startTrackingUsageMutex.RLock()
+	defer fake.startTrackingUsageMutex.RUnlock()
+	fake.measureUsageMutex.RLock()
+	defer fake.measureUsageMutex.RUnlock()
+	return fake.invocations
+}
+
+func (fake *FakeUsageTracker) recordInvocation(key string, args []interface{}) {
+	fake.invocationsMutex.Lock()
+	defer fake.invocationsMutex.Unlock()
+	if fake.invocations == nil {
+		fake.invocations = map[string][][]interface{}{}
+	}
+	if fake.invocations[key] == nil {
+		fake.invocations[key] = [][]interface{}{}
+	}
+	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ metricsaccountant.UsageTracker = new(FakeUsageTracker)

@@ -24,6 +24,8 @@ type FakeSyncer struct {
 	heartbeatArgsForCall []struct {
 		heartbeat *models.Heartbeat
 	}
+	invocations      map[string][][]interface{}
+	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
@@ -32,6 +34,7 @@ func (fake *FakeSyncer) Run(signals <-chan os.Signal, ready chan<- struct{}) err
 		signals <-chan os.Signal
 		ready   chan<- struct{}
 	}{signals, ready})
+	fake.recordInvocation("Run", []interface{}{signals, ready})
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
 		return fake.RunStub(signals, ready)
@@ -64,6 +67,7 @@ func (fake *FakeSyncer) Heartbeat(heartbeat *models.Heartbeat) {
 	fake.heartbeatArgsForCall = append(fake.heartbeatArgsForCall, struct {
 		heartbeat *models.Heartbeat
 	}{heartbeat})
+	fake.recordInvocation("Heartbeat", []interface{}{heartbeat})
 	fake.heartbeatMutex.Unlock()
 	if fake.HeartbeatStub != nil {
 		fake.HeartbeatStub(heartbeat)
@@ -80,6 +84,28 @@ func (fake *FakeSyncer) HeartbeatArgsForCall(i int) *models.Heartbeat {
 	fake.heartbeatMutex.RLock()
 	defer fake.heartbeatMutex.RUnlock()
 	return fake.heartbeatArgsForCall[i].heartbeat
+}
+
+func (fake *FakeSyncer) Invocations() map[string][][]interface{} {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	fake.runMutex.RLock()
+	defer fake.runMutex.RUnlock()
+	fake.heartbeatMutex.RLock()
+	defer fake.heartbeatMutex.RUnlock()
+	return fake.invocations
+}
+
+func (fake *FakeSyncer) recordInvocation(key string, args []interface{}) {
+	fake.invocationsMutex.Lock()
+	defer fake.invocationsMutex.Unlock()
+	if fake.invocations == nil {
+		fake.invocations = map[string][][]interface{}{}
+	}
+	if fake.invocations[key] == nil {
+		fake.invocations[key] = [][]interface{}{}
+	}
+	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ actualstatelisteners.Syncer = new(FakeSyncer)

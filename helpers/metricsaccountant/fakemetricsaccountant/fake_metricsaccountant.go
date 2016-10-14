@@ -34,6 +34,8 @@ type FakeMetricsAccountant struct {
 	incrementSentMessageMetricsReturns struct {
 		result1 error
 	}
+	invocations      map[string][][]interface{}
+	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeMetricsAccountant) TrackReceivedHeartbeats(metric int) error {
@@ -41,6 +43,7 @@ func (fake *FakeMetricsAccountant) TrackReceivedHeartbeats(metric int) error {
 	fake.trackReceivedHeartbeatsArgsForCall = append(fake.trackReceivedHeartbeatsArgsForCall, struct {
 		metric int
 	}{metric})
+	fake.recordInvocation("TrackReceivedHeartbeats", []interface{}{metric})
 	fake.trackReceivedHeartbeatsMutex.Unlock()
 	if fake.TrackReceivedHeartbeatsStub != nil {
 		return fake.TrackReceivedHeartbeatsStub(metric)
@@ -73,6 +76,7 @@ func (fake *FakeMetricsAccountant) TrackSavedHeartbeats(metric int) error {
 	fake.trackSavedHeartbeatsArgsForCall = append(fake.trackSavedHeartbeatsArgsForCall, struct {
 		metric int
 	}{metric})
+	fake.recordInvocation("TrackSavedHeartbeats", []interface{}{metric})
 	fake.trackSavedHeartbeatsMutex.Unlock()
 	if fake.TrackSavedHeartbeatsStub != nil {
 		return fake.TrackSavedHeartbeatsStub(metric)
@@ -101,11 +105,22 @@ func (fake *FakeMetricsAccountant) TrackSavedHeartbeatsReturns(result1 error) {
 }
 
 func (fake *FakeMetricsAccountant) IncrementSentMessageMetrics(starts []models.PendingStartMessage, stops []models.PendingStopMessage) error {
+	var startsCopy []models.PendingStartMessage
+	if starts != nil {
+		startsCopy = make([]models.PendingStartMessage, len(starts))
+		copy(startsCopy, starts)
+	}
+	var stopsCopy []models.PendingStopMessage
+	if stops != nil {
+		stopsCopy = make([]models.PendingStopMessage, len(stops))
+		copy(stopsCopy, stops)
+	}
 	fake.incrementSentMessageMetricsMutex.Lock()
 	fake.incrementSentMessageMetricsArgsForCall = append(fake.incrementSentMessageMetricsArgsForCall, struct {
 		starts []models.PendingStartMessage
 		stops  []models.PendingStopMessage
-	}{starts, stops})
+	}{startsCopy, stopsCopy})
+	fake.recordInvocation("IncrementSentMessageMetrics", []interface{}{startsCopy, stopsCopy})
 	fake.incrementSentMessageMetricsMutex.Unlock()
 	if fake.IncrementSentMessageMetricsStub != nil {
 		return fake.IncrementSentMessageMetricsStub(starts, stops)
@@ -131,6 +146,30 @@ func (fake *FakeMetricsAccountant) IncrementSentMessageMetricsReturns(result1 er
 	fake.incrementSentMessageMetricsReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeMetricsAccountant) Invocations() map[string][][]interface{} {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	fake.trackReceivedHeartbeatsMutex.RLock()
+	defer fake.trackReceivedHeartbeatsMutex.RUnlock()
+	fake.trackSavedHeartbeatsMutex.RLock()
+	defer fake.trackSavedHeartbeatsMutex.RUnlock()
+	fake.incrementSentMessageMetricsMutex.RLock()
+	defer fake.incrementSentMessageMetricsMutex.RUnlock()
+	return fake.invocations
+}
+
+func (fake *FakeMetricsAccountant) recordInvocation(key string, args []interface{}) {
+	fake.invocationsMutex.Lock()
+	defer fake.invocationsMutex.Unlock()
+	if fake.invocations == nil {
+		fake.invocations = map[string][][]interface{}{}
+	}
+	if fake.invocations[key] == nil {
+		fake.invocations[key] = [][]interface{}{}
+	}
+	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ metricsaccountant.MetricsAccountant = new(FakeMetricsAccountant)

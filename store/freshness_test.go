@@ -49,7 +49,7 @@ var _ = Describe("Freshness", func() {
 			Context("when the key is missing", func() {
 				BeforeEach(func() {
 					_, err := storeAdapter.Get(key)
-					Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+					Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 
 					err = bump(store, timestamp)
 					Expect(err).NotTo(HaveOccurred())
@@ -194,7 +194,7 @@ var _ = Describe("Freshness", func() {
 
 			It("To return the store's error", func() {
 				fresh, err := store.IsActualStateFresh(time.Unix(130, 0))
-				Expect(err).To(Equal(storeadapter.ErrorNodeIsDirectory))
+				Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorNodeIsDirectory))
 				Expect(fresh).To(BeFalse())
 			})
 		})

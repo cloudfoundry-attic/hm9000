@@ -4,9 +4,9 @@ package fakesender
 import (
 	"sync"
 
+	"code.cloudfoundry.org/clock"
 	"github.com/cloudfoundry/hm9000/models"
 	"github.com/cloudfoundry/hm9000/sender"
-	"code.cloudfoundry.org/clock"
 )
 
 type FakeSender struct {

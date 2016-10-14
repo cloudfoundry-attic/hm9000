@@ -69,7 +69,7 @@ var _ = Describe("Metrics", func() {
 		Context("when the metric is not present", func() {
 			It("To return -1 and an error", func() {
 				value, err := store.GetMetric("nonexistent")
-				Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+				Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 				Expect(value).To(BeNumerically("==", -1))
 			})
 		})
