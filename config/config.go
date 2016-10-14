@@ -122,7 +122,7 @@ func defaults() Config {
 		MaximumBackoffDelayInHeartbeats:    96, // why?
 
 		ListenerHeartbeatSyncIntervalInMilliseconds:      1000,  // TODO: convert to time.Duration
-		StoreHeartbeatCacheRefreshIntervalInMilliseconds: 20000, // TODO: convert to time.Duration
+		StoreHeartbeatCacheRefreshIntervalInMilliseconds: 60000, // TODO: convert to time.Duration
 
 		MetricsServerPort: 7879,
 
