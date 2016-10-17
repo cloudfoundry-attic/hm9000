@@ -454,6 +454,7 @@ var _ = Describe("Actual State", func() {
 
 			Context("when an associated DEA heartbeat has expired", func() {
 				BeforeEach(func() {
+					conf.HeartbeatPeriod = 0
 					storeAdapter.Delete("/hm/v1/dea-presence/A")
 				})
 
