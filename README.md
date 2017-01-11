@@ -2,7 +2,7 @@
 
 HM9000 will only be updated in response to vulnerability discoveries and major bugs. No new features will be introduced during this period.
 
-See [EOL Timeline for Legacy DEA Backend](https://lists.cloudfoundry.org/archives/list/cf-dev@lists.cloudfoundry.org/message/GMXXJTTM2Q
+See [EOL Timeline for Legacy DEA Backend](https://lists.cloudfoundry.org/archives/list/cf-dev@lists.cloudfoundry.org/message/GMXXJTTM2Q6SIRGVXSQH4TPLHTVHKNNG/)
 
 # Health Manager 9000
 
