@@ -1,3 +1,9 @@
+## Please read before you submit any issue or PR ##
+
+HM9000 will only be updated in response to vulnerability discoveries and major bugs. No new features will be introduced during this period.
+
+See [EOL Timeline for Legacy DEA Backend](https://lists.cloudfoundry.org/archives/list/cf-dev@lists.cloudfoundry.org/message/GMXXJTTM2Q
+
 # Health Manager 9000
 
 HM 9000 is a rewrite of CloudFoundry's Health Manager.  HM 9000 is written in Golang and has a more modular architecture compared to the original ruby implementation.  HM 9000's dependencies are locked down in a separate repo, the [hm-workspace](https://github.com/cloudfoundry/hm-workspace).
